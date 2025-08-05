@@ -115,13 +115,6 @@
             <version>2.19.1</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/io.github.stepio.jgforms/jgforms -->
-        <dependency>
-            <groupId>io.github.stepio.jgforms</groupId>
-            <artifactId>jgforms</artifactId>
-            <version>1.0.1</version>
-        </dependency>
-
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
@@ -147,8 +140,6 @@
             <artifactId>javafx-web</artifactId>
             <version>${javafx.version}</version>
         </dependency>
-
-
 
     </dependencies>
 
