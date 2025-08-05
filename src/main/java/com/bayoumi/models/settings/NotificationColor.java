@@ -2,11 +2,16 @@ package com.bayoumi.models.settings;
 
 import com.bayoumi.storage.preferences.Preferences;
 import com.bayoumi.storage.preferences.PreferencesType;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class NotificationColor {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(NotificationColor.class);
+
     public static final NotificationColor LIGHT_THEME = new NotificationColor("#E9C46A", "#FFFFFF", "#000000");
     public static final NotificationColor DARK_THEME = new NotificationColor("#2C3F51", "#192735", "#FFFFFF");
 
@@ -44,7 +49,7 @@ public class NotificationColor {
             this.backgroundColor = Preferences.getInstance().get(PreferencesType.NOTIFICATION_BACKGROUND_COLOR, PreferencesType.NOTIFICATION_BACKGROUND_COLOR.getDefaultValue());
             this.textColor = Preferences.getInstance().get(PreferencesType.NOTIFICATION_TEXT_COLOR, PreferencesType.NOTIFICATION_TEXT_COLOR.getDefaultValue());
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".loadSettings()");
+            LOGGER.log(Level.SEVERE, "loadSettings failed", ex);
         }
     }
 

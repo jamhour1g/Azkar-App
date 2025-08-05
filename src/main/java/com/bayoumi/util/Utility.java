@@ -7,22 +7,27 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Helper methods
  */
 public class Utility {
 
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(Utility.class);
+
+
     public static void printAllRunningThreads() {
         Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
-        threadSet.forEach(thread -> Logger.debug(thread.getName()));
+        threadSet.forEach(thread -> LOGGER.info(() -> "Running Thread: " + thread.getName()));
     }
 
     public static String toUTF(String val) {
         try {
             return new String(val.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
         } catch (Exception ex) {
-            Logger.error(null, ex, com.bayoumi.util.time.Utilities.class.getName() + ".toUTF()");
+            LOGGER.log(Level.SEVERE, "Failed to convert to UTF-8", ex);
         }
         return val;
     }
@@ -35,8 +40,8 @@ public class Utility {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             Long exitTime = System.currentTimeMillis();
-            Logger.info("App closed - Used for "
-                    + (exitTime - Launcher.startTime) + " ms\n");
+            LOGGER.info(() -> "App closed - Used for "
+                               + (exitTime - Launcher.startTime) + " ms\n");
         }));
         System.exit(0);
     }

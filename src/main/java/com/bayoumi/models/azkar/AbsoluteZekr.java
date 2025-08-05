@@ -2,7 +2,7 @@ package com.bayoumi.models.azkar;
 
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.storage.DatabaseManager;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.button.TableViewButton;
@@ -16,6 +16,8 @@ import javafx.event.Event;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
     public final static ObservableList<AbsoluteZekr> absoluteZekrObservableList = FXCollections.observableArrayList();
@@ -23,6 +25,9 @@ public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
     private String text;
     private TableViewButton edit;
     private TableViewButton delete;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(AbsoluteZekr.class);
+
 
     public AbsoluteZekr(int id, String text) {
         this.id = id;
@@ -45,7 +50,7 @@ public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
                 fetchData();
             }
         } catch (Exception ex) {
-            Logger.error(null, ex, AbsoluteZekr.class.getName() + ".returnDefault()");
+            LOGGER.log(Level.SEVERE, "Show retrieveDefaultAzkarWarning failed", ex);
         }
     }
 
@@ -58,7 +63,7 @@ public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
             }
             return true;
         } catch (Exception ex) {
-            Logger.error(null, ex, AbsoluteZekr.class.getName() + ".fetchData()");
+            LOGGER.log(Level.SEVERE, "fetchData", ex);
         }
         return false;
     }
@@ -75,7 +80,7 @@ public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
                 AbsoluteZekr.fetchData();
             }
         } catch (SQLException ex) {
-            Logger.error(null, ex, getClass().getName() + ".update(id: " + this.id + ")");
+            LOGGER.log(Level.SEVERE, "update", ex);
         }
     }
 
@@ -90,7 +95,7 @@ public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
                 AbsoluteZekr.fetchData();
             }
         } catch (SQLException ex) {
-            Logger.error(null, ex, getClass().getName() + ".delete(id: " + this.id + ")");
+            LOGGER.log(Level.SEVERE, "delete", ex);
         }
     }
 
@@ -101,7 +106,7 @@ public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
             databaseManager.stat.setString(1, this.text);
             databaseManager.stat.execute();
         } catch (SQLException ex) {
-            Logger.error(null, ex, getClass().getName() + ".insert(text: " + this.text + ")");
+            LOGGER.log(Level.SEVERE, "insert", ex);
         }
     }
 

@@ -6,7 +6,7 @@ import com.bayoumi.models.settings.*;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.statistics.StatisticsType;
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.*;
 import com.bayoumi.util.gui.load.Loader;
@@ -45,6 +45,8 @@ import java.net.URL;
 import java.util.Objects;
 import java.util.Random;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class AzkarSettingsController implements Initializable, SettingsInterface {
 
@@ -57,6 +59,10 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
     private MediaPlayer MEDIA_PLAYER;
     private double previousValue = 50;
     private boolean isMuted = false;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(AzkarSettingsController.class);
+
+
     @FXML
     private ScrollPane scrollPane;
     @FXML
@@ -222,12 +228,12 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
             playButton.setGraphic(playIcon);
         } else {
             String fileName = azkarAlarmComboBox.getValue();
-            Logger.debug(fileName);
+            LOGGER.info(() -> fileName);
             if (!fileName.equals("بدون صوت")) {
                 try {
                     MEDIA_PLAYER = new MediaPlayer(new Media(new File(Constants.assetsPath + "/audio/" + fileName).toURI().toString()));
                 } catch (Exception e) {
-                    Logger.error(null, e, getClass().getName() + ".play()");
+                    LOGGER.log(Level.SEVERE, "Play failed", e);
                     BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(bundle.getString("errorPlayingAudio")), bundle);
                     return;
                 }
@@ -309,7 +315,7 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
             ((ChooseNotificationColorController) popUp.getController()).setData();
             popUp.showAndWait();
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".goToNotificationColor()");
+            LOGGER.log(Level.SEVERE, "Go to notification color failed", e);
         }
     }
 
@@ -325,7 +331,7 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.showAndWait();
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".goToAzkar()");
+            LOGGER.log(Level.SEVERE, "Go to azkar failed", e);
         }
     }
 
@@ -335,7 +341,7 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
             highFrequency.fire();
             azkarSettings.notifyObservers();
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".saveToDB()");
+            LOGGER.log(Level.SEVERE, "Save to DB failed", ex);
         }
     }
 
@@ -378,7 +384,7 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
                         .position(notificationSettings.getPosition())
                         .show();
             } catch (Exception ex) {
-                Logger.error("createControlsFX", ex, getClass().getName() + "showZekr().runLater => createControlsFX()");
+                LOGGER.log(Level.SEVERE, "Show zekr failed", ex);
             }
         });
     }

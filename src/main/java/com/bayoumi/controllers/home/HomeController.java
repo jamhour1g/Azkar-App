@@ -17,7 +17,7 @@ import com.bayoumi.services.reminders.ReminderUtil;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.preferences.PreferencesType;
 import com.bayoumi.storage.statistics.StatisticsType;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.HelperMethods;
@@ -54,8 +54,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class HomeController implements Initializable {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(HomeController.class);
 
     // ==== Helper Objects ====
     public Date date;
@@ -98,7 +102,7 @@ public class HomeController implements Initializable {
             prayerTimesController = fxmlLoader.getController();
             prayerTimesController.setData(prayerTimesToday);
         } catch (Exception ex) {
-            Logger.error("loading PrayerTimes", ex, getClass().getName() + ".initialize()");
+            LOGGER.log(Level.SEVERE, "Initialize failed", ex);
             Launcher.workFine.setValue(false);
         }
 
@@ -122,7 +126,7 @@ public class HomeController implements Initializable {
             azkarPeriodsController.setData();
             container.getChildren().add(2, periodBox);
         } catch (Exception ex) {
-            Logger.error("loading AzkarPeriods", ex, getClass().getName() + ".initialize()");
+            LOGGER.log(Level.SEVERE, "Loading AzkarPeriods", ex);
             Launcher.workFine.setValue(false);
         }
 
@@ -241,7 +245,7 @@ public class HomeController implements Initializable {
             HelperMethods.ExitKeyCodeCombination(stage.getScene(), stage);
             stage.showAndWait();
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".showTimedAzkar()");
+            LOGGER.log(Level.SEVERE, "showTimedAzkar", e);
         }
     }
 
@@ -253,7 +257,7 @@ public class HomeController implements Initializable {
             HelperMethods.ExitKeyCodeCombination(popUp.getStage().getScene(), popUp.getStage());
             popUp.showAndWait();
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".goToSettings()");
+            LOGGER.log(Level.SEVERE, "Go to settings failed", e);
         }
     }
 
@@ -357,7 +361,7 @@ public class HomeController implements Initializable {
     }
 
     private void playAdhan(String prayerName) {
-        Logger.debug("playAdhan() => " + prayerName);
+        LOGGER.info(() -> "Playing adhan for " + prayerName);
         String adhanFileName = Settings.getInstance().getPrayerTimeSettings().getAdhanAudio();
         if (adhanFileName == null || adhanFileName.isEmpty()) {
             adhanFileName = "";

@@ -2,7 +2,7 @@ package com.bayoumi.controllers.feedback;
 
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.util.AppPropertiesUtil;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.web.forms.Feedback;
 import com.jfoenix.controls.JFXButton;
@@ -27,8 +27,12 @@ import org.controlsfx.control.Notifications;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class FeedbackController implements Initializable {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(FeedbackController.class);
 
     @FXML
     private Label title;
@@ -163,7 +167,7 @@ public class FeedbackController implements Initializable {
                     Notifications.create().graphic(vBox).show();
                 });
             } catch (Exception ex) {
-                Logger.error(null, ex, getClass().getName() + ".send()");
+                LOGGER.log(Level.SEVERE, "send failed", ex);
                 Platform.runLater(() -> {
                     VBox vBox = new VBox(10);
                     vBox.setAlignment(Pos.CENTER);

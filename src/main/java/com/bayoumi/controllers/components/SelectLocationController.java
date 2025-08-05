@@ -6,7 +6,7 @@ import com.bayoumi.models.settings.Language;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.PrayerTimeSettings;
 import com.bayoumi.models.settings.Settings;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.ComboBoxAutoComplete;
 import com.bayoumi.util.web.IpChecker;
@@ -24,6 +24,8 @@ import javafx.util.StringConverter;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SelectLocationController implements Initializable {
     private PrayerTimeSettings prayerTimeSettings;
@@ -43,6 +45,9 @@ public class SelectLocationController implements Initializable {
     private ComboBoxAutoComplete<Country> countryComboBoxAutoComplete;
     @FXML
     private VBox manualContainer, autoContainer;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(SelectLocationController.class);
+
 
     public void setData() {
         updateBundle(LanguageBundle.getInstance().getResourceBundle());
@@ -201,7 +206,7 @@ public class SelectLocationController implements Initializable {
         new Thread(() -> {
             try {
                 City city = LocationService.getCity(IpChecker.getIp());
-                Logger.debug("LocationService.getCity(IP): " + city);
+                LOGGER.info(() -> "LocationService.getCity(IP): " + city);
                 Platform.runLater(() -> {
                     autoCountry.setText(city.getCountryName());
                     autoCity.setText(city.getEnglishName());
@@ -211,7 +216,7 @@ public class SelectLocationController implements Initializable {
                     onAutoLocationUpdate();
                 });
             } catch (Exception ex) {
-                Logger.error(null, ex, getClass().getName() + ".getAutoLocation()");
+                LOGGER.log(Level.SEVERE, "getAutoLocation failed", ex);
                 Platform.runLater(() -> {
                     statusLabel.setVisible(true);
                     statusLabel.setText(Utility.toUTF(bundle.getString("autoSelectionError")));

@@ -3,7 +3,7 @@ package com.bayoumi.controllers.settings;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.statistics.StatisticsType;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.load.Locations;
 import com.jfoenix.controls.JFXButton;
@@ -15,6 +15,8 @@ import javafx.scene.layout.BorderPane;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SettingsController implements Initializable {
 
@@ -29,6 +31,9 @@ public class SettingsController implements Initializable {
     private JFXButton otherButton;
     @FXML
     private BorderPane borderPane;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(SettingsController.class);
+
 
 
     public void updateBundle(ResourceBundle bundle) {
@@ -66,7 +71,7 @@ public class SettingsController implements Initializable {
                 settingsI = loader.getController();
             }
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".openAzkarSettings()");
+            LOGGER.log(java.util.logging.Level.SEVERE, "openAzkarSettings failed", ex);
         }
     }
 
@@ -81,7 +86,7 @@ public class SettingsController implements Initializable {
                 settingsI = loader.getController();
             }
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".openCitySettings()");
+            LOGGER.log(Level.SEVERE, "openCitySettings failed", ex);
         }
     }
 
@@ -96,7 +101,7 @@ public class SettingsController implements Initializable {
                 settingsI = loader.getController();
             }
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".openOtherSettings()");
+            LOGGER.log(Level.SEVERE, "openOtherSettings failed", ex);
         }
     }
 

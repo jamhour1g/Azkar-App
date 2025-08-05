@@ -7,7 +7,7 @@ import com.bayoumi.models.settings.Settings;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.statistics.StatisticsType;
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.PopOverUtil;
@@ -42,6 +42,8 @@ import java.io.File;
 import java.net.URL;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TimedAzkarController implements Initializable {
     private MediaPlayer mediaPlayer;
@@ -50,6 +52,9 @@ public class TimedAzkarController implements Initializable {
     private Image morningImage, nightImage;
     private FontAwesomeIconView pauseIcon, playIcon;
     private int currentIndex = 0;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(TimedAzkarController.class);
+
     // =============== FXML Elements ===============
     @FXML
     private StackPane sp;
@@ -226,7 +231,7 @@ public class TimedAzkarController implements Initializable {
             }
             setValuesForCurrentIndex();
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".initAzkarContainer()");
+            LOGGER.log(Level.SEVERE, "Init azkar container failed", ex);
         }
     }
 
@@ -262,7 +267,7 @@ public class TimedAzkarController implements Initializable {
             ((ZekrDescriptionController) loader.getController()).setData(dialog, zekrDTO.getHadithText(), zekrDTO.getExplanationOfHadithVocabulary());
             dialog.show();
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".onToggleZekrDescription()");
+            LOGGER.log(Level.SEVERE, "Exception in onToggleZekrDescription", ex);
         }
     }
 
@@ -275,7 +280,7 @@ public class TimedAzkarController implements Initializable {
             ((SettingsController) loader.getController()).setData(dialog, this::updateFontSize);
             dialog.show();
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".openSettings()");
+            LOGGER.log(Level.SEVERE, "Exception in openSettings", ex);
         }
     }
 
@@ -309,10 +314,10 @@ public class TimedAzkarController implements Initializable {
             pauseOrStopMedia(null);
         } else {
             final String audioPath = timedAzkarList.get(currentIndex).getAudio();
-            Logger.debug(audioPath);
+            LOGGER.info(() -> "Audio path: " + audioPath);
             final File audioFile = new File(System.getProperty("java.io.tmpdir") + "/" + Constants.APP_NAME + "/" + "downloaded_audio.mp3");
             if (audioFile.delete()) {
-                Logger.debug("File deleted successfully");
+                LOGGER.info(() -> "File deleted successfully");
             }
             progressBox.setVisible(true);
             new Thread(() -> {
@@ -333,7 +338,7 @@ public class TimedAzkarController implements Initializable {
             mediaPlayer = null;
         }
         if (audioFile != null && audioFile.exists() && !audioFile.delete()) {
-            Logger.error("Failed to delete audio file.", new Exception("Failed to delete audio file."), getClass().getName() + ".pauseOrStopMedia()");
+            LOGGER.severe(() -> "Failed to delete audio file.");
         }
         playButton.setGraphic(playIcon);
         playButton.setPadding(new Insets(5, 11, 5, 11));
@@ -344,15 +349,15 @@ public class TimedAzkarController implements Initializable {
         try {
             mediaPlayer = new MediaPlayer(new Media(audioFile.toURI().toString()));
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".playMedia()");
+            LOGGER.log(Level.SEVERE, "Error playing audio", e);
             BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(bundle.getString("errorPlayingAudio")), bundle);
             return;
         }
         mediaPlayer.setVolume(100);
         mediaPlayer.play();
-        mediaPlayer.setOnReady(() -> Logger.debug("Media is ready to play."));
+        mediaPlayer.setOnReady(() -> LOGGER.info(() -> "Media is ready."));
         mediaPlayer.setOnPlaying(() -> {
-            Logger.debug("Media is playing.");
+            LOGGER.info(() -> "Media is playing.");
             if (isWindowClosed()) {
                 pauseOrStopMedia(audioFile);
             }

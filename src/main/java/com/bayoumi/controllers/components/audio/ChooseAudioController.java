@@ -6,7 +6,7 @@ import com.bayoumi.models.settings.Language;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.PopOverUtil;
@@ -36,6 +36,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ChooseAudioController implements Initializable {
     public static MediaPlayer MEDIA_PLAYER;
@@ -44,6 +46,9 @@ public class ChooseAudioController implements Initializable {
     private FontAwesomeIconView playIcon;
     private double previousValue = 50;
     private boolean isMuted = false;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(ChooseAudioController.class);
+
 
     // ======= FXML =======
     @FXML
@@ -179,7 +184,7 @@ public class ChooseAudioController implements Initializable {
                         .orElse(Muezzin.NO_SOUND);
                 audioBox.setValue(newMuezzin);
             } catch (IOException e) {
-                Logger.error(null, e, getClass().getName() + ".uploadAudio()");
+                LOGGER.log(Level.SEVERE, "Upload audio failed", e);
                 final ResourceBundle bundle = LanguageBundle.getInstance().getResourceBundle();
                 BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(bundle.getString("errorUploadAudio")), bundle);
             }
@@ -192,12 +197,12 @@ public class ChooseAudioController implements Initializable {
             setPlayIcon();
         } else {
             final Muezzin muezzin = audioBox.getValue();
-            Logger.debug(muezzin);
+            LOGGER.info(() -> "Playing audio: " + muezzin);
             if (!muezzin.equals(Muezzin.NO_SOUND)) {
                 try {
                     MEDIA_PLAYER = new MediaPlayer(new Media(new File(muezzin.getPath()).toURI().toString()));
                 } catch (Exception e) {
-                    Logger.error(null, e, getClass().getName() + ".play()");
+                    LOGGER.log(Level.SEVERE, "Error playing audio", e);
                     final ResourceBundle bundle = LanguageBundle.getInstance().getResourceBundle();
                     BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(bundle.getString("errorPlayingAudio")), bundle);
                     return;

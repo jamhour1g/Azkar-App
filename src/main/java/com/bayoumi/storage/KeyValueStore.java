@@ -1,6 +1,7 @@
 package com.bayoumi.storage;
 
-import com.bayoumi.util.Logger;
+
+import com.bayoumi.util.LoggerWrapper;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -8,6 +9,8 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Generic key–value store backed by a table of (key TEXT PRIMARY KEY, value TEXT).
@@ -15,6 +18,9 @@ import java.util.Map;
  * @param <K> any Enum whose name() is used as the key.
  */
 public abstract class KeyValueStore<K extends Enum<K> & KeyValueDefault> {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(KeyValueStore.class);
+
     private final String tableName;
     private final Class<K> keyClass;
 
@@ -44,10 +50,10 @@ public abstract class KeyValueStore<K extends Enum<K> & KeyValueDefault> {
 
     public void set(K key, String value) {
         if (exists(key)) {
-            Logger.debug("[KeyValueStore] Update >> " + key + ": [" + value + "]");
+            LOGGER.info(() -> "[KeyValueStore] Update >> " + key + ": [" + value + "]");
             update(key, value);
         } else {
-            Logger.debug("[KeyValueStore] Insert >> " + key + ": [" + value + "]");
+            LOGGER.info(() -> "[KeyValueStore] Insert >> " + key + ": [" + value + "]");
             insert(key, value);
         }
     }
@@ -59,7 +65,7 @@ public abstract class KeyValueStore<K extends Enum<K> & KeyValueDefault> {
             ps.setString(1, key.getName());
             return ps.executeQuery().next();
         } catch (Exception ex) {
-            Logger.error("Exists check failed on " + tableName, ex, getClass().getName() + ".exists()");
+            LOGGER.log(Level.SEVERE, "Exists check failed on " + tableName, ex);
         }
         return false;
     }
@@ -72,7 +78,7 @@ public abstract class KeyValueStore<K extends Enum<K> & KeyValueDefault> {
             ps.setString(2, value);
             ps.executeUpdate();
         } catch (Exception ex) {
-            Logger.error("Insert failed on " + tableName, ex, getClass().getName() + ".insert()");
+            LOGGER.log(Level.SEVERE, "Insert failed on " + tableName, ex);
         }
     }
 
@@ -84,7 +90,7 @@ public abstract class KeyValueStore<K extends Enum<K> & KeyValueDefault> {
             ps.setString(2, key.getName());
             ps.executeUpdate();
         } catch (Exception ex) {
-            Logger.error("Update failed on " + tableName, ex, getClass().getName() + ".update()");
+            LOGGER.log(Level.SEVERE, "Update failed on " + tableName, ex);
         }
     }
 
@@ -113,7 +119,7 @@ public abstract class KeyValueStore<K extends Enum<K> & KeyValueDefault> {
             // not found → insert default
             set(key, defaultValue);
         } catch (Exception ex) {
-            Logger.error("Read error from " + tableName, ex, getClass().getName() + ".get()");
+            LOGGER.log(Level.SEVERE, "Read failed on " + tableName, ex);
         }
 
         return defaultValue;
@@ -134,7 +140,7 @@ public abstract class KeyValueStore<K extends Enum<K> & KeyValueDefault> {
                 }
             }
         } catch (Exception ex) {
-            Logger.error("getAllValues failed on " + tableName, ex, getClass().getName() + ".getAllValues()");
+            LOGGER.log(Level.SEVERE, "getAllValues failed on " + tableName, ex);
         }
         return map;
     }
@@ -152,7 +158,7 @@ public abstract class KeyValueStore<K extends Enum<K> & KeyValueDefault> {
                 map.put(keyPrefix + rs.getString("key"), rs.getString("value"));
             }
         } catch (Exception ex) {
-            Logger.error("getAll failed on " + tableName, ex, getClass().getName() + ".getAll()");
+            LOGGER.log(Level.SEVERE, "getAll failed on " + tableName, ex);
         }
         return map;
     }

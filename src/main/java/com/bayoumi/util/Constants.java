@@ -4,6 +4,8 @@ import io.sentry.Sentry;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Constants {
     public enum Mode {PRODUCTION, DEVELOPMENT}
@@ -19,6 +21,9 @@ public class Constants {
 
     public static boolean isAssetsPathChanged = false;
 
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(Constants.class);
+
+
     static {
         try {
             if (Files.isWritable(Paths.get(Constants.class.getProtectionDomain().getCodeSource().getLocation().toURI()))) {
@@ -29,8 +34,7 @@ public class Constants {
             }
         } catch (Exception ex) {
             Sentry.captureException(ex);
-            // TODO is Logger valid here or its not initialized yet ?
-            Logger.error(ex.getLocalizedMessage(), ex, Constants.class.getName() + " -> static init");
+            LOGGER.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
         }
     }
 }

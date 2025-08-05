@@ -2,16 +2,20 @@ package com.bayoumi.storage;
 
 
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import org.flywaydb.core.Flyway;
 
 import java.sql.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DatabaseManager {
 
     private static DatabaseManager databaseManager = null;
     public PreparedStatement stat = null;
     public Connection con = null;
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(DatabaseManager.class);
+
 
     private DatabaseManager() {
     }
@@ -35,7 +39,7 @@ public class DatabaseManager {
             }
             return true;
         } catch (Exception ex) {
-            Logger.error(ex.getLocalizedMessage(), ex, getClass().getName() + ".init()");
+            LOGGER.log(Level.SEVERE, "DatabaseManager init error", ex);
         }
         return false;
     }
@@ -51,7 +55,7 @@ public class DatabaseManager {
             }
         } catch (ClassNotFoundException | SQLException ex) {
             con = null;
-            Logger.error(ex.getLocalizedMessage(), ex, getClass().getName() + ".connectToDatabase()");
+            LOGGER.log(Level.SEVERE, "Cannot connect to database", ex);
         }
         return false;
     }
@@ -70,7 +74,7 @@ public class DatabaseManager {
                 if (id != null && !id.isEmpty()) return id;
             }
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".getID()");
+            LOGGER.log(Level.SEVERE, "DatabaseManager getID error", ex);
         }
         return "";
     }
@@ -82,7 +86,7 @@ public class DatabaseManager {
             databaseManager.stat.setString(1, ID);
             databaseManager.stat.executeUpdate();
         } catch (SQLException ex) {
-            Logger.error(null, ex, getClass().getName() + ".setID(ID: " + ID + ")");
+            LOGGER.log(Level.SEVERE, "DatabaseManager setID error", ex);
         }
     }
 }

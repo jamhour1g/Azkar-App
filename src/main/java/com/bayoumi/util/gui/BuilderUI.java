@@ -5,10 +5,9 @@ import com.bayoumi.controllers.alert.edit.textfield.EditTextFieldController;
 import com.bayoumi.controllers.dialog.UpdateConfirmController;
 import com.bayoumi.models.UpdateInfo;
 import com.bayoumi.models.settings.Settings;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.load.Locations;
-import com.bayoumi.util.validation.SingleInstance;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
@@ -20,11 +19,15 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Bayoumi
  */
 public class BuilderUI {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(BuilderUI.class);
 
     public static boolean showUpdateDetails(UpdateInfo updateInfo, String currentVersion) {
         try {
@@ -40,7 +43,7 @@ public class BuilderUI {
             stage.showAndWait();
             return controller.isConfirmed;
         } catch (Exception ex) {
-            Logger.error(null, ex, BuilderUI.class.getName() + ".showUpdateDetails()");
+            LOGGER.log(Level.SEVERE, "Show update details failed", ex);
             return false;
         }
     }
@@ -77,7 +80,7 @@ public class BuilderUI {
             stage.showAndWait();
             return controller.isConfirmed;
         } catch (Exception ex) {
-            Logger.error(null, ex, BuilderUI.class.getName() + ".showConfirmAlert()");
+            LOGGER.log(Level.SEVERE, "Show confirm alert failed", ex);
             return false;
         }
 
@@ -97,7 +100,7 @@ public class BuilderUI {
             stage.showAndWait();
             return controller.returnValue;
         } catch (Exception ex) {
-            Logger.error(null, ex, BuilderUI.class.getName() + ".showEditTextField()");
+            LOGGER.log(Level.SEVERE, "Show edit text field failed", ex);
             return "";
         }
     }

@@ -2,7 +2,7 @@ package com.bayoumi.services.update;
 
 import com.bayoumi.models.UpdateInfo;
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.gui.BuilderUI;
 import com.install4j.api.launcher.ApplicationLauncher;
 import com.install4j.api.launcher.Variables;
@@ -15,6 +15,8 @@ import javafx.application.Platform;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class UpdateHandler {
     private static final String UPDATE_APPLICATION_ID = "64";
@@ -22,6 +24,8 @@ public class UpdateHandler {
     private UpdateDescriptorEntry validUpdateDescriptorEntry;
     private boolean error = false;
     private UpdateInfo updateInfo = null;
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(UpdateHandler.class);
+
 
     private UpdateHandler() {
     }
@@ -49,25 +53,25 @@ public class UpdateHandler {
         try {
             getUpdateDescriptor(future);
         } catch (Exception ex) {
-            Logger.info(getClass().getName() + ".checkUpdate()" + "Can't update current application: " + ex.getMessage());
+            LOGGER.log(Level.SEVERE, "Exception during update check", ex);
         }
         UpdateDescriptorEntry updateDescriptorEntry = null;
         try {
             updateDescriptorEntry = future.get(); // wait for future to be assigned a result and retrieve it
         } catch (InterruptedException | ExecutionException ex) {
-            Logger.info(getClass().getName() + ".checkUpdate(): " + "While waiting for file browser: " + ex.getMessage());
+            LOGGER.log(Level.SEVERE, "Exception while waiting for file browser", ex);
         }
         if (error) {
-            Logger.info(getClass().getName() + ".checkUpdate(): " + "Update check Server Error");
+            LOGGER.severe(() -> "Update check Server Error");
             return -1;
         }
         if (updateDescriptorEntry == null) {
-            Logger.info(getClass().getName() + ".checkUpdate()" + "No updates found (OK).");
+            LOGGER.info(() -> "No updates found (OK).");
             return 0;
         }
         // only installers and single bundle archives on macOS are supported for background updates
         if (updateDescriptorEntry.isArchive() && !updateDescriptorEntry.isSingleBundle()) {
-            Logger.info(getClass().getName() + ".checkUpdate(): " + "Only installers and single bundle archives on macOS are supported for background update (can't update):" + updateDescriptorEntry.getURL());
+            LOGGER.severe(() -> "Only installers and single bundle archives on macOS are supported for background updates (can't update)");
             return -1;
         }
         validUpdateDescriptorEntry = updateDescriptorEntry;
@@ -78,14 +82,14 @@ public class UpdateHandler {
                     updateDescriptorEntry.getFileSizeVerbose(), updateDescriptorEntry.getFileName(),
                     updateDescriptorEntry.getComment());
         } catch (IOException ex) {
-            Logger.error("While getting 'sys.updatesUrl' ", ex, getClass().getName() + ".checkUpdate()");
+            LOGGER.log(Level.SEVERE, "IOException during update check", ex);
             return -1;
         }
 
-        Logger.info(getClass().getName() + ".checkUpdate(): " + "A new version " +
-                updateDescriptorEntry.getNewVersion() + " is available for update: " +
-                updateDescriptorEntry.getFileName()
-                + ". Url=" + updateDescriptorEntry.getURL());
+        LOGGER.info("New update found" +
+                    updateDescriptorEntry.getNewVersion() + " is available for update: " +
+                    updateDescriptorEntry.getFileName()
+                    + ". Url=" + updateDescriptorEntry.getURL());
         return 1;
     }
 
@@ -95,7 +99,7 @@ public class UpdateHandler {
             try {
                 version = Variables.getCompilerVariable("sys.version");
             } catch (Exception ex) {
-                Logger.info(getClass().getName() + ".showInstallPrompt(): " + "error => cannot get sys.version");
+                LOGGER.log(Level.SEVERE, "Can't get sys.version", ex);
                 version = Constants.VERSION;
             }
             if (BuilderUI.showUpdateDetails(UpdateHandler.getInstance().getUpdateInfo(), version)) {
@@ -111,27 +115,27 @@ public class UpdateHandler {
      */
     public void install() {
         if (validUpdateDescriptorEntry == null) {
-            Logger.info("Nothing to install. No valid update available.");
+            LOGGER.info(() -> "Nothing to install. No valid update available.");
             return;
         }
         try {
-            Logger.info(UpdateHandler.class.getName() + ".install(): " + "New update found");
-            Logger.info(UpdateHandler.class.getName() + ".install(): " + "Current Version: " + Constants.VERSION);
-            Logger.info(UpdateHandler.class.getName() + ".install(): " + "New Version: " + UpdateHandler.getInstance().getUpdateInfo());
-            Logger.info(UpdateHandler.class.getName() + "Launching updater on local desktop.");
+            LOGGER.info(UpdateHandler.class.getName() + ".install(): " + "Installing update...");
+            LOGGER.info(UpdateHandler.class.getName() + ".install(): " + "Current Version: " + Constants.VERSION);
+            LOGGER.info(UpdateHandler.class.getName() + ".install(): " + "New Version: " + UpdateHandler.getInstance().getUpdateInfo());
+            LOGGER.info(UpdateHandler.class.getName() + "Launching updater on local desktop.");
 
             ApplicationLauncher.launchApplication(UPDATE_APPLICATION_ID, null, false, new ApplicationLauncher.Callback() {
                         public void exited(int exitValue) {
-                            Logger.info("Launcher exited.");
+                            LOGGER.info("Launcher exited.");
                         }
 
                         public void prepareShutdown() {
-                            Logger.info("Shutdown in progress.");
+                            LOGGER.info("Shutdown in progress.");
                         }
                     }
             );
         } catch (IOException ex) {
-            Logger.info("Error while updating: " + ex.getMessage());
+            LOGGER.info("Error while updating: " + ex.getMessage());
         }
     }
 
@@ -143,17 +147,17 @@ public class UpdateHandler {
         try {
             updateUrl = Variables.getCompilerVariable("sys.updatesUrl");
         } catch (IOException ex) {
-            Logger.info(getClass().getName() + ".getUpdateDescriptor(): " + "Can't check update url: " + ex.getMessage());
+            LOGGER.info(getClass().getName() + ".getUpdateDescriptor(): " + "Can't check update url: " + ex.getMessage());
             future.complete(null);
             error = true;
             return;
         }
-        Logger.info(getClass().getName() + ".getUpdateDescriptor(): " + "Checking update: " + updateUrl);
+        LOGGER.info(getClass().getName() + ".getUpdateDescriptor(): " + "Checking update: " + updateUrl);
         UpdateDescriptor updateDescriptor;
         try {
             updateDescriptor = UpdateChecker.getUpdateDescriptor(updateUrl, ApplicationDisplayMode.UNATTENDED);
         } catch (Exception ex) {
-            Logger.info(getClass().getName() + ".getUpdateDescriptor(): " + "Can't get updates: " + ex.getMessage());
+            LOGGER.info(getClass().getName() + ".getUpdateDescriptor(): " + "Can't get updates: " + ex.getMessage());
             future.complete(null);
             error = true;
             return;

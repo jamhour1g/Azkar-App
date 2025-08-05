@@ -8,7 +8,7 @@ import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.statistics.StatisticsType;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.prayertimes.PrayerTimesUtil;
 import com.bayoumi.util.time.Utilities;
@@ -28,8 +28,12 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import java.util.TimeZone;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class PrayerTimesController implements Initializable {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(PrayerTimesController.class);
 
     // ==== Helper Objects ====
     private String currentPrayerValue;
@@ -233,7 +237,7 @@ public class PrayerTimesController implements Initializable {
 
     @FXML
     private void reload() {
-        Logger.debug("reload() start");
+        LOGGER.info(() -> "Reloading prayer times");
         new Thread(() -> {
             try {
                 Platform.runLater(() -> loadingBox.setVisible(true));
@@ -241,7 +245,7 @@ public class PrayerTimesController implements Initializable {
                 Thread.sleep(200);
                 Platform.runLater(() -> loadingBox.setVisible(false));
             } catch (Exception e) {
-                Logger.error(e.getLocalizedMessage(), e, getClass().getName() + ".reload()");
+                LOGGER.log(Level.SEVERE, "Reload prayer times failed", e);
             }
         }).start();
     }

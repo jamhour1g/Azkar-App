@@ -3,7 +3,7 @@ package com.bayoumi.controllers.components.audio;
 import com.bayoumi.Launcher;
 import com.bayoumi.models.Muezzin;
 import com.bayoumi.models.settings.Settings;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.load.Locations;
 import javafx.fxml.FXMLLoader;
@@ -11,8 +11,13 @@ import javafx.scene.layout.Pane;
 
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ChooseAudioUtil {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(ChooseAudioUtil.class);
+
 
     public static ChooseAudioController adhan(ResourceBundle bundle, Pane container) {
         try {
@@ -26,7 +31,7 @@ public class ChooseAudioUtil {
 
             return chooseAudioController;
         } catch (Exception ex) {
-            Logger.error("Loading ChooseAudio", ex, ChooseAudioUtil.class.getName() + ".adhan()");
+            LOGGER.log(Level.SEVERE, "Loading ChooseAudio", ex);
             Launcher.workFine.setValue(false);
         }
         return null;

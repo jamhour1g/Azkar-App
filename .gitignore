@@ -40,6 +40,9 @@ build/
 ### Archives ###
 *.zip
 
+## development ##
+logs/
+
 ### Temp ignores until i fix the code ###
 out/
 jarFiles/

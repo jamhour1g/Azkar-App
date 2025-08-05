@@ -6,7 +6,7 @@ import com.bayoumi.models.settings.Language;
 import com.bayoumi.storage.preferences.Preferences;
 import com.bayoumi.storage.preferences.PreferencesType;
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.VersionComparator;
 import com.bayoumi.util.file.FileUtils;
 import com.bayoumi.util.gui.load.Loader;
@@ -21,8 +21,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TimedAzkarService {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(TimedAzkarService.class);
 
     private static final String FOLDER_NAME = "azkar";
     private static final String USER_AND_REPO = "Seen-Arabic/Morning-And-Evening-Adhkar-DB";
@@ -35,7 +39,7 @@ public class TimedAzkarService {
             copyAzkarFilesToAssetsPath();
             scheduleUpdateCheck();
         } catch (IOException e) {
-            Logger.error("IOException during initialization", e, TimedAzkarService.class.getName() + ".init()");
+            LOGGER.log(Level.SEVERE, "IOException during initialization", e);
         }
     }
 
@@ -91,14 +95,14 @@ public class TimedAzkarService {
         final String storedVersion = Preferences.getInstance().get(PreferencesType.TIMED_AZKAR_DATA_VERSION);
 
         if (!exists) {
-            Logger.debug("[TimedAzkarService] Files not found, downloading latest release files.");
+            LOGGER.info(() -> "Files not found, downloading latest release files.");
             downloadLatestReleaseFilesSilent(latestVersion);
         } else if (VersionComparator.isNewerVersion(latestVersion, storedVersion)) {
-            Logger.debug("[TimedAzkarService] New version available: " + latestVersion);
+            LOGGER.info(() -> "New version available: " + latestVersion);
             downloadLatestReleaseFilesSilent(latestVersion);
             Preferences.getInstance().set(PreferencesType.TIMED_AZKAR_DATA_VERSION, latestVersion);
         } else {
-            Logger.debug("[TimedAzkarService] No new version available.");
+            LOGGER.info(() -> "No new version available.");
         }
     }
 
@@ -107,10 +111,10 @@ public class TimedAzkarService {
             final Path from = Paths.get("jarFiles" + "/" + FOLDER_NAME + "/" + language.getLocale() + ".json").toAbsolutePath();
             final Path to = Paths.get(Constants.assetsPath + "/" + FOLDER_NAME + "/" + language.getLocale() + ".json").toAbsolutePath();
             if (from.equals(to)) {
-                Logger.debug("[TimedAzkarService] Skipping from: " + from + " to: " + to);
+                LOGGER.info(() -> "Skipping from: " + from + " to: " + to);
                 break;
             }
-            Logger.debug("[TimedAzkarService] Copying from: " + from + " to: " + to);
+            LOGGER.info(() -> "Copying from: " + from + " to: " + to);
             FileUtils.copyIfNotExist(from, to);
         }
     }
@@ -131,7 +135,7 @@ public class TimedAzkarService {
                 try {
                     Files.delete(path);
                 } catch (IOException e) {
-                    Logger.error(e.getLocalizedMessage(), e, TimedAzkarService.class.getName() + ".deleteFilesIfExists()");
+                    LOGGER.log(Level.SEVERE, "IOException during initialization", e);
                 }
             }
         }
@@ -140,10 +144,10 @@ public class TimedAzkarService {
     private static void downloadLatestReleaseFilesSilent(String version) throws Exception {
         deleteFilesIfExists();
         for (Language language : Language.values()) {
-            Logger.debug("[TimedAzkarService] Downloading " + language.getLocale() + ".json");
+            LOGGER.info(() -> "Downloading " + language.getLocale() + ".json");
             WebUtilities.downloadFile("https://github.com/" + USER_AND_REPO + "/releases/download/" + version + "/" + language.getLocale() + ".json"
                     , Constants.assetsPath + "/" + FOLDER_NAME + "/" + language.getLocale() + ".json", null);
-            Logger.debug("[TimedAzkarService] Downloaded " + language.getLocale() + ".json");
+            LOGGER.info(() -> "Downloaded " + language.getLocale() + ".json");
         }
     }
 
@@ -155,9 +159,9 @@ public class TimedAzkarService {
                         try {
                             checkForUpdateSilent();
                         } catch (IOException e) {
-                            Logger.error("IOException during update check", e, TimedAzkarService.class.getName() + ".scheduleUpdateCheck()");
+                            LOGGER.log(Level.SEVERE, "IOException during update check", e);
                         } catch (Exception e) {
-                            Logger.error("Exception during update check", e, TimedAzkarService.class.getName() + ".scheduleUpdateCheck()");
+                            LOGGER.log(Level.SEVERE, "Exception during update check", e);
                         }
                     }
                 },

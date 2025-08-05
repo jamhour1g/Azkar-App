@@ -8,7 +8,7 @@ import com.bayoumi.models.settings.NotificationColor;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.services.update.UpdateHandler;
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.HelperMethods;
@@ -35,8 +35,12 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Objects;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class OtherSettingsController implements Initializable, SettingsInterface {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(OtherSettingsController.class);
 
     private ResourceBundle bundle;
     @FXML
@@ -116,7 +120,7 @@ public class OtherSettingsController implements Initializable, SettingsInterface
             updateBundle(LanguageBundle.getInstance().getResourceBundle());
             LanguageBundle.getInstance().addObserver((o, arg) -> updateBundle(LanguageBundle.getInstance().getResourceBundle()));
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".initialize()");
+            LOGGER.log(Level.SEVERE, "Initialize failed", e);
         }
     }
 
@@ -124,7 +128,7 @@ public class OtherSettingsController implements Initializable, SettingsInterface
         try {
             Desktop.getDesktop().browse(new URI(link));
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + "." + methodName + "()");
+            LOGGER.log(Level.SEVERE, "Open link failed", e);
         }
     }
 
@@ -159,7 +163,7 @@ public class OtherSettingsController implements Initializable, SettingsInterface
         try {
             Desktop.getDesktop().browse(new URI("https://azkar-site.web.app/desktop/usage-data/"));
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".openUsageDataSite()");
+            LOGGER.log(Level.SEVERE, "Open usage data site failed", e);
         }
     }
 
@@ -186,7 +190,7 @@ public class OtherSettingsController implements Initializable, SettingsInterface
             HelperMethods.ExitKeyCodeCombination(stage.getScene(), stage);
             stage.showAndWait();
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".openFeedback()");
+            LOGGER.log(Level.SEVERE, "Open feedback failed", e);
         }
     }
 
@@ -196,14 +200,14 @@ public class OtherSettingsController implements Initializable, SettingsInterface
         new Thread(() -> {
             switch (UpdateHandler.getInstance().checkUpdate()) {
                 case 0:
-                    Logger.info(getClass().getName() + ".checkForUpdate(): " + "No Update Found");
+                    LOGGER.info(() -> "No Update Found");
                     Platform.runLater(() -> BuilderUI.showOkAlert(Alert.AlertType.INFORMATION, Utility.toUTF(this.bundle.getString("thereAreNoNewUpdates")), bundle));
                     break;
                 case 1:
                     UpdateHandler.getInstance().showInstallPrompt();
                     break;
                 case -1:
-                    Logger.info(getClass().getName() + ".checkForUpdate(): " + "error => only installers and single bundle archives on macOS are supported for background updates");
+                    LOGGER.info(() -> "Only installers and single bundle archives on macOS are supported for background updates");
                     Platform.runLater(() -> BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(this.bundle.getString("problemInSearchingForUpdates")), bundle));
                     break;
             }

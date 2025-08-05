@@ -1,7 +1,7 @@
 package com.bayoumi.util.gui.tray;
 
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import javafx.application.Platform;
 import javafx.stage.Stage;
@@ -13,12 +13,17 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TrayUtil {
 
     private final Stage stage;
     private java.awt.SystemTray tray;
     private TrayIcon trayIcon;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(TrayUtil.class);
+
 
     public TrayUtil(Stage stage) {
         // stores a reference to the stage.
@@ -30,12 +35,12 @@ public class TrayUtil {
             try {
                 addAppToTray();
             } catch (Exception e) {
-                Logger.error("Error adding app to system tray", e, TrayUtil.class.getName() + ".TrayUtil()");
+                LOGGER.log(Level.SEVERE, "Error adding app to system tray", e);
                 Platform.setImplicitExit(true);
             }
         });
         stage.setOnCloseRequest(event -> {
-            Logger.debug(event);
+            LOGGER.info(() -> "onCloseRequest");
             if (event.getEventType().equals(WindowEvent.WINDOW_CLOSE_REQUEST)) {
                 if (Platform.isImplicitExit()) {
                     if (tray != null) {
@@ -46,7 +51,7 @@ public class TrayUtil {
                 this.stage.hide();
                 event.consume();
             } else {
-                Logger.info("TERMINATED !!"); // TODO does not work, remove if stmt
+                LOGGER.info(() -> "onCloseRequest else");
             }
         });
     }
@@ -83,7 +88,7 @@ public class TrayUtil {
             // add the application tray icon to the system tray.
             tray.add(trayIcon);
         } catch (Exception ex) {
-            Logger.error("Unable to init system tray", ex, TrayUtil.class.getName() + ".addAppToTray()");
+            LOGGER.log(Level.SEVERE, "Error adding app to system tray", ex);
             throw ex;
         }
     }
@@ -118,7 +123,7 @@ public class TrayUtil {
         // tray icon (removing the tray icon will also shut down AWT).
         java.awt.MenuItem exitItem = new java.awt.MenuItem("Exit");
         exitItem.addActionListener(event -> {
-            Logger.debug(event);
+            LOGGER.info(() -> "exitItem");
             tray.remove(trayIcon);
             Utility.exitProgramAction();
         });

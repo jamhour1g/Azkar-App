@@ -1,7 +1,7 @@
 package com.bayoumi.util.time;
 
 import com.bayoumi.models.settings.Settings;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 
 import java.text.ParseException;
@@ -9,8 +9,13 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Utilities {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(Utilities.class);
+
     public static Date getCurrentDate() {
         Date date = new Date();
         if (Settings.getInstance().getPrayerTimeSettings().isSummerTiming()) {
@@ -62,7 +67,7 @@ public class Utilities {
 
             return Utility.formatIntToTwoDigit(difference_In_Hours) + ":" + Utility.formatIntToTwoDigit(difference_In_Minutes) + ":" + Utility.formatIntToTwoDigit(difference_In_Seconds);
         } catch (Exception e) {
-            Logger.error(e.getLocalizedMessage(), e, Utilities.class.getName() + ".findDifference()");
+            LOGGER.log(Level.SEVERE, e.getMessage(), e);
         }
         return null;
     }

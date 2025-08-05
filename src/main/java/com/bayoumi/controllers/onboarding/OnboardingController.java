@@ -7,7 +7,7 @@ import com.bayoumi.controllers.components.audio.ChooseAudioController;
 import com.bayoumi.controllers.components.audio.ChooseAudioUtil;
 import com.bayoumi.models.settings.*;
 import com.bayoumi.repositry.OnboardingRepository;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.ScrollHandler;
 import com.bayoumi.util.gui.load.Loader;
@@ -24,10 +24,15 @@ import javafx.stage.Stage;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class OnboardingController implements Initializable {
     private ResourceBundle bundle;
     private PrayerTimeSettings prayerTimeSettings;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(OnboardingController.class);
+
 
     @FXML
     private ScrollPane scrollPane;
@@ -63,7 +68,7 @@ public class OnboardingController implements Initializable {
             minimizeAtStart.setSelected(true);
             ScrollHandler.init(container, scrollPane, 4);
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".initialize()");
+            LOGGER.log(Level.SEVERE, "Initialize failed", ex);
         }
     }
 

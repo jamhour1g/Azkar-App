@@ -1,7 +1,7 @@
 package com.bayoumi.util.gui.notfication;
 
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.file.FileUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -14,8 +14,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class NotificationAudio {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(NotificationAudio.class);
 
     public static String PARENT_PATH = "jarFiles/audio/";
 
@@ -25,7 +29,7 @@ public class NotificationAudio {
             try {
                 copyAudioFilesToAssetsPath();
             } catch (IOException e) {
-                Logger.error(e.getLocalizedMessage(), e, NotificationAudio.class.getName() + ".copyAudioFilesToAssetsPath()");
+                LOGGER.log(Level.SEVERE, "Failed to copy audio files to assets path", e);
             }
         }
     }
@@ -37,10 +41,10 @@ public class NotificationAudio {
             final Path from = Paths.get("jarFiles/audio/" + audioFile).toAbsolutePath();
             final Path to = Paths.get(Constants.assetsPath + "/audio/" + audioFile).toAbsolutePath();
             if (from.equals(to)) {
-                Logger.debug("[NotificationAudio] Skipping from: " + from + " to: " + to);
+                LOGGER.info("[NotificationAudio] Skipping from: " + from + " to: " + to);
                 break;
             }
-            Logger.debug("[NotificationAudio] Copying from: " + from + " to: " + to);
+            LOGGER.info("[NotificationAudio] Copying from: " + from + " to: " + to);
             FileUtils.copyIfNotExist(from, to);
         }
     }
@@ -77,7 +81,7 @@ public class NotificationAudio {
                 mediaPlayer.play();
             }
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".play()");
+            LOGGER.log(Level.SEVERE, "Failed to play audio", e);
         }
     }
 

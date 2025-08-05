@@ -1,6 +1,7 @@
 package com.bayoumi.storage;
 
-import com.bayoumi.util.Logger;
+
+import com.bayoumi.util.LoggerWrapper;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -8,11 +9,16 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class LocationsDBManager {
 
     private static LocationsDBManager databaseManager = null;  // static
     public Connection con = null;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(LocationsDBManager.class);
+
 
     private LocationsDBManager() throws Exception {
         try {
@@ -66,7 +72,7 @@ public class LocationsDBManager {
             }
         } catch (ClassNotFoundException | SQLException ex) {
             con = null;
-            Logger.error(ex.getLocalizedMessage(), ex, getClass().getName() + ".connectToDatabase()");
+            LOGGER.log(Level.SEVERE, "Cannot connect to database", ex);
         }
         return false;
     }

@@ -1,6 +1,6 @@
 package com.bayoumi.util.validation;
 
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.stage.Stage;
@@ -11,6 +11,8 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author Bayoumi
@@ -21,6 +23,8 @@ public class SingleInstance {
     private final int PORT = 12347;
     private ServerSocket server;
     private Stage currentStage;
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(SingleInstance.class);
+
 
     private SingleInstance() {
         singleInstanceApplicationCheck();
@@ -44,9 +48,9 @@ public class SingleInstance {
     private void singleInstanceApplicationCheck() {
         try {
             InetAddress localAddress = InetAddress.getLocalHost();
-            Logger.debug("InetAddress.getLocalHost(): " + localAddress + ":" + PORT);
+            LOGGER.info(() -> "InetAddress.getLocalHost(): " + localAddress + ":" + PORT);
             server = new ServerSocket(PORT, 1, localAddress);
-            Logger.debug("Server Online ...");
+            LOGGER.info(() -> "ServerSocket: " + server);
             // listen to other Instances
             new Thread(() -> {
                 try {
@@ -55,7 +59,7 @@ public class SingleInstance {
                         listenToInstance(serverClient);
                     }
                 } catch (Exception ex) {
-                    Logger.error("Error in => listen to other Instances", ex, getClass().getName() + ".singleInstanceApplicationCheck()");
+                    LOGGER.log(Level.SEVERE, "Error in => listen to other Instances", ex);
                 }
             }).start();
         } catch (IOException iOException) {
@@ -73,35 +77,35 @@ public class SingleInstance {
             Scanner scan = new Scanner(serverClient.getInputStream());
             while (scan.hasNext()) {
                 clientMessage = scan.next();
-                Logger.debug("Other Instance: " + clientMessage);
+                LOGGER.info("clientMessage: " + clientMessage);
                 Platform.runLater(this::openCurrentStage);
             }
         } catch (IOException ex) {
-            Logger.error("Error in => listen to other Instances => ", ex, getClass().getName() + ".listenToInstance()");
+            LOGGER.log(Level.SEVERE, "Error in => listen to other Instances", ex);
         }
     }
 
     private void sendToServer() {
         try {
             final Socket socket = new Socket(InetAddress.getLocalHost(), PORT);
-            Logger.debug("Connection Success ...");
+            LOGGER.info(() -> "Socket: " + socket);
             try {
                 PrintWriter pw = new PrintWriter(socket.getOutputStream(), true);
                 String clientMessage = "1";
                 pw.println(clientMessage);
                 System.exit(0);
             } catch (Exception e) {
-                Logger.error("Exception in sending to server", e, getClass().getName() + "sendToServer()");
+                LOGGER.log(Level.SEVERE, "Error in => sendToServer", e);
             }
         } catch (Exception e) {
-            Logger.error("Exception in Connecting to server : ", e, getClass().getName() + "sendToServer()");
+            LOGGER.log(Level.SEVERE, "Error in => sendToServer", e);
             Platform.runLater(this::showAlreadyRunningError);
         }
     }
 
     private void showAlreadyRunningError() {
         // catch anything unexpected !
-        Logger.debug("Program already running, exiting");
+        LOGGER.log(Level.SEVERE, "Error in => showAlreadyRunningError");
         Alert warning = new Alert(Alert.AlertType.WARNING);
         warning.setHeaderText("Program already running, exiting");
         warning.showAndWait();
@@ -111,17 +115,17 @@ public class SingleInstance {
     public void openCurrentStage() {
         Platform.runLater(() -> {
             if (currentStage == null) {
-                Logger.debug("null");
+                LOGGER.info(() -> "currentStage == null");
                 System.exit(0);
             } else if (currentStage.isIconified()) {
-                Logger.debug("isIconified");
+                LOGGER.info(() -> "currentStage.isIconified()");
                 currentStage.setIconified(false);
             } else if (!currentStage.isShowing()) {
-                Logger.debug("not isShowing");
+                LOGGER.info(() -> "!currentStage.isShowing()");
                 currentStage.show();
                 currentStage.toFront();
             } else {
-                Logger.debug("setAlwaysOnTop");
+                LOGGER.info(() -> "setAlwaysOnTop");
                 currentStage.setAlwaysOnTop(true);
                 currentStage.setAlwaysOnTop(false);
             }

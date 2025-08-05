@@ -7,7 +7,7 @@ import com.bayoumi.controllers.components.audio.ChooseAudioUtil;
 import com.bayoumi.controllers.settings.SettingsInterface;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.Settings;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.HelperMethods;
@@ -28,6 +28,8 @@ import javafx.stage.Stage;
 import java.net.URL;
 import java.util.Objects;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class PrayerTimeSettingsController implements Initializable, SettingsInterface {
     @FXML
@@ -41,6 +43,9 @@ public class PrayerTimeSettingsController implements Initializable, SettingsInte
     @FXML
     private JFXCheckBox stopPrayersReminder;
     private ResourceBundle bundle;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(PrayerTimeSettingsController.class);
+
 
     public void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
@@ -64,7 +69,7 @@ public class PrayerTimeSettingsController implements Initializable, SettingsInte
             container.getChildren().add(container.getChildren().size() - 1, Loader.getInstance().getView(Locations.PrayerCalculations));
             ((PrayerCalculationsController) Loader.getInstance().getController(Locations.PrayerCalculations)).setData();
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".initialize()");
+            LOGGER.log(Level.SEVERE, "Initialize failed", ex);
         }
     }
 
@@ -82,7 +87,7 @@ public class PrayerTimeSettingsController implements Initializable, SettingsInte
             HelperMethods.ExitKeyCodeCombination(stage.getScene(), stage);
             stage.showAndWait();
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".openFeedback()");
+            LOGGER.log(Level.SEVERE, "Go to azkar failed", e);
         }
     }
 
@@ -92,7 +97,7 @@ public class PrayerTimeSettingsController implements Initializable, SettingsInte
             // if auto calc is selected but values is not valid, then => set manual select = true;
             ChooseAudioController.stopIfPlaying();
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".saveToDB()");
+            LOGGER.log(Level.SEVERE, "Save to DB failed", e);
         }
     }
 

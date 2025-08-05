@@ -1,7 +1,7 @@
 package com.bayoumi.models;
 
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.file.FileUtils;
 import javafx.util.StringConverter;
 
@@ -13,9 +13,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class Muezzin {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(Muezzin.class);
+
     private final String fileName;
     private final String englishName;
     private final String arabicName;
@@ -54,7 +59,7 @@ public class Muezzin {
             try {
                 Muezzin.copyAdhanFilesToAssetsPath();
             } catch (IOException e) {
-                Logger.error(e.getLocalizedMessage(), e, Muezzin.class.getName() + ".copyAdhanFilesToAssetsPath()");
+                LOGGER.log(Level.SEVERE, "Failed to copy adhan files to assets path", e);
             }
         }
     }
@@ -65,10 +70,10 @@ public class Muezzin {
             final Path from = Paths.get("jarFiles/audio/adhan/" + muezzin.getFileName()).toAbsolutePath();
             final Path to = Paths.get(Constants.assetsPath + "/audio/adhan/" + muezzin.getFileName()).toAbsolutePath();
             if (from.equals(to)) {
-                Logger.debug("[Muezzin] Skipping from: " + from + " to: " + to);
+                LOGGER.info(() -> "Skipping copying adhan file: " + muezzin.getFileName());
                 break;
             }
-            Logger.debug("[Muezzin] Copying from: " + from + " to: " + to);
+            LOGGER.info(() -> "Copying adhan file: " + muezzin.getFileName());
             FileUtils.copyIfNotExist(from, to);
         }
     }

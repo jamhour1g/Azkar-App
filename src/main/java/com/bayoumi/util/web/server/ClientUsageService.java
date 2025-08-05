@@ -2,7 +2,7 @@ package com.bayoumi.util.web.server;
 
 import com.bayoumi.services.statistics.WeeklyStats;
 import com.bayoumi.storage.DatabaseManager;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.web.RetryTask;
 import kong.unirest.core.HttpResponse;
 import kong.unirest.core.JsonNode;
@@ -13,9 +13,13 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ClientUsageService {
     private final String baseUrl;
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(ClientUsageService.class);
+
 
     /**
      * Fetches remote config (with retries) or falls back to local.
@@ -36,7 +40,7 @@ public class ClientUsageService {
         try {
             payload = ServerUtil.preparePayload(id, stats, config);
         } catch (Exception e) {
-            Logger.error("Payload prep failed", e, getClass().getName() + ".createUsage()");
+            LOGGER.log(Level.SEVERE, "Payload prep failed", e);
             return false;
         }
 
@@ -68,7 +72,7 @@ public class ClientUsageService {
         try {
             payload = ServerUtil.preparePayload(id, stats, config);
         } catch (Exception e) {
-            Logger.error("Payload prep failed", e, getClass().getName() + ".updateUsage()");
+            LOGGER.log(Level.SEVERE, "Payload prep failed", e);
             return false;
         }
 
@@ -109,10 +113,10 @@ public class ClientUsageService {
                     return server;
                 }
             } catch (Exception e) {
-                Logger.error("Malformed remote config, using local.", e, ClientUsageService.class.getName() + ".getBaseUrl()");
+                LOGGER.log(Level.SEVERE, "Malformed remote config, using local.", e);
             }
         } else {
-            Logger.debug("[ClientUsageService] Remote config fetch failed, falling back to local.");
+            LOGGER.warning(() ->"Failed to fetch remote config, using local.");
         }
 
         return fallbackConfig.getProperty("collectorServer.baseUrl");

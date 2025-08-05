@@ -1,6 +1,6 @@
 package com.bayoumi.util.file;
 
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 
 import java.io.File;
@@ -12,8 +12,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class FileUtils {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(FileUtils.class);
 
     /**
      * Add files names From the given folder to the given list
@@ -46,7 +50,7 @@ public class FileUtils {
         try {
             Files.createDirectories(Paths.get(path));
         } catch (Exception e) {
-            Logger.error(null, e, Utility.class.getName() + ".createDirectory()");
+            LOGGER.log(Level.SEVERE, "Failed to create directory", e);
         }
     }
 

@@ -1,7 +1,7 @@
 package com.bayoumi.util.web;
 
 import com.bayoumi.models.location.City;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.file.FileUtils;
 import kong.unirest.core.UnirestException;
 import kong.unirest.core.json.JSONObject;
@@ -9,8 +9,13 @@ import kong.unirest.core.json.JSONObject;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.TimeZone;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class LocationService {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(LocationService.class);
+
 
     private static String getIp2locationAPIKEY() throws Exception {
         return FileUtils.getConfig().getProperty("ip2location.apiKey");
@@ -35,7 +40,8 @@ public class LocationService {
 
     public static City getCityWithIp2location(final String IP) throws Exception {
         JSONObject jsonRoot = WebUtilities.getJsonResponse("https://api.ip2location.io/?key=" + getIp2locationAPIKEY() + "&ip=" + IP);
-        Logger.debug("jsonRoot: " + jsonRoot);
+
+        LOGGER.info(() -> "jsonRoot: " + jsonRoot);
         if (!jsonRoot.isEmpty()) {
             TimeZone tz = TimeZone.getTimeZone(ZoneOffset.of(jsonRoot.getString("time_zone")));
             return new City(jsonRoot.getString("country_code"),
@@ -55,11 +61,11 @@ public class LocationService {
         try {
             return getCityWithIP_API(IP);
         } catch (Exception e1) {
-            Logger.error("IP-API failed: " + e1.getMessage(), e1, LocationService.class.getName() + ".getCity()");
+            LOGGER.log(Level.SEVERE,"IP-API failed: " + e1.getMessage(), e1);
             try {
                 return getCityWithIp2location(IP);
             } catch (Exception e2) {
-                Logger.error("IP2Location failed: " + e2.getMessage(), e2, LocationService.class.getName() + ".getCity()");
+                LOGGER.log(Level.SEVERE, "IP2Location failed: " + e2.getMessage(), e2);
 
                 // Now categorize the final error:
                 String finalMsg;

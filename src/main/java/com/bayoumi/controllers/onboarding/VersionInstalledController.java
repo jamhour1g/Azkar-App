@@ -8,7 +8,7 @@ import com.bayoumi.models.settings.NotificationColor;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.statistics.StatisticsType;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.load.Loader;
 import com.bayoumi.util.gui.load.LoaderComponent;
@@ -27,8 +27,12 @@ import org.w3c.dom.Element;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class VersionInstalledController implements Initializable {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(VersionInstalledController.class);
 
     @FXML
     private VBox root;
@@ -64,7 +68,7 @@ public class VersionInstalledController implements Initializable {
 
             darkTheme.setSelected(Settings.getInstance().getNightMode());
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".initialize()");
+            LOGGER.log(Level.SEVERE, "initialize failed", ex);
         }
     }
 
@@ -76,7 +80,7 @@ public class VersionInstalledController implements Initializable {
             ((ChooseNotificationColorController) popUp.getController()).setData();
             popUp.showAndWait();
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".goToNotificationColor()");
+            LOGGER.log(Level.SEVERE, "Go to notification color failed", e);
         }
     }
 
@@ -105,7 +109,7 @@ public class VersionInstalledController implements Initializable {
                 body.setAttribute("class", isDark ? "dark" : "light");
             }
         } catch (Exception e) {
-            Logger.error(null, e, getClass().getName() + ".updateWebViewCSS()");
+            LOGGER.log(Level.SEVERE, "updateWebViewCSS failed", e);
         }
     }
 

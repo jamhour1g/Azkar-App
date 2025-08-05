@@ -3,18 +3,23 @@ package com.bayoumi.models.location;
 import com.bayoumi.models.settings.Language;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.storage.LocationsDBManager;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Country {
     private String code;
     private String englishName;
     private String arabicName;
     private boolean summerTiming;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(Country.class);
+
 
     public Country(String code, String englishName, String arabicName, boolean summerTiming) {
         this.code = code;
@@ -38,7 +43,7 @@ public class Country {
                         res.getInt("dls") == 1));
             }
         } catch (Exception ex) {
-            Logger.error(null, ex, Country.class.getName() + ".getAllData()");
+            LOGGER.log(Level.SEVERE, "getAll", ex);
         }
         return countries;
     }
@@ -68,7 +73,7 @@ public class Country {
                         res.getInt("dls") == 1);
             }
         } catch (Exception ex) {
-            Logger.error(null, ex, Country.class.getName() + ".getCountryFromCodeOrName()");
+            LOGGER.log(Level.SEVERE, "getCountryFromCodeOrName", ex);
         }
         return null;
     }
@@ -84,7 +89,7 @@ public class Country {
                 return res.getString("Ar_Name");
             }
         } catch (Exception ex) {
-            Logger.error(null, ex, Country.class.getName() + ".getCountryNameFormCode()");
+            LOGGER.log(Level.SEVERE, "getCountryNameFormCode", ex);
         }
         return null;
     }

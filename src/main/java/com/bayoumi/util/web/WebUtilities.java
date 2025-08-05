@@ -1,15 +1,19 @@
 package com.bayoumi.util.web;
 
 import com.bayoumi.models.Query;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import kong.unirest.core.*;
 import kong.unirest.core.json.JSONArray;
 import kong.unirest.core.json.JSONObject;
 
 import java.io.File;
 import java.nio.file.StandardCopyOption;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class WebUtilities {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(WebUtilities.class);
 
     public static JSONObject getJsonResponse(final String END_POINT, Query... query) throws Exception {
         try {
@@ -17,7 +21,7 @@ public class WebUtilities {
             for (Query q : query) {
                 getRequest = getRequest.queryString(q.getKey(), q.getValue());
             }
-            Logger.debug("URL: " + getRequest.getUrl());
+            LOGGER.info("Getting JSON response from: " + getRequest.getUrl());
             return new JSONObject(getRequest.asJson().getBody().toString());
         } catch (UnirestException ue) {
             throw new Exception("Network error or host unreachable: " + END_POINT, ue);
@@ -44,11 +48,11 @@ public class WebUtilities {
         try {
             final JSONArray releases = new JSONArray(response.getBody());
             if (!releases.isEmpty()) {
-                Logger.debug("[WebUtilities] getLatestVersion: " + releases.getJSONObject(0).getString("tag_name"));
+                LOGGER.info(() -> "[WebUtilities] getLatestVersion: " + releases.getJSONObject(0).getString("tag_name"));
                 return releases.getJSONObject(0).getString("tag_name");
             }
         } catch (Exception e) {
-            Logger.error("Failed to parse releases res.body:" + response.getBody(), e, WebUtilities.class.getName() + ".getLatestVersion()");
+            LOGGER.log(Level.SEVERE, "Failed to parse releases res.body:" + response.getBody(), e);
         }
         throw new UnirestException("No releases found for the repository.");
     }

@@ -12,7 +12,7 @@ import com.bayoumi.storage.LocationsDBManager;
 import com.bayoumi.storage.preferences.Preferences;
 import com.bayoumi.storage.preferences.PreferencesType;
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.SentryUtil;
 import com.bayoumi.util.Utility;
 import com.bayoumi.util.file.FileUtils;
@@ -34,6 +34,8 @@ import javafx.stage.Stage;
 import kong.unirest.core.Unirest;
 
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 public class Launcher extends Application {
@@ -41,12 +43,15 @@ public class Launcher extends Application {
     public static final SimpleBooleanProperty workFine = new SimpleBooleanProperty(true);
     public static double preloaderProgress = 0;
     private boolean locationsDBError = false;
-    // for logging purpose
+    // for logaging purpose
     public static Long startTime;
     // GUI Object
     public static HomeController homeController;
     // GUI Object
     private Scene scene = null;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(Launcher.class);
+
 
     public static void main(String[] args) {
         ArabicTextSupport.fix();
@@ -55,7 +60,7 @@ public class Launcher extends Application {
 
     @Override
     public void stop() {
-        Logger.debug("stop()...");
+        LOGGER.info("stop()...");
         Utility.exitProgramAction();
     }
 
@@ -82,8 +87,7 @@ public class Launcher extends Application {
             incrementPreloader();
 
             // --- initialize Logger ---
-            Logger.init();
-            Logger.info("App Launched");
+            LOGGER.info("App Starting...");
             incrementPreloader();
 
             // --- initialize Unirest ---
@@ -121,7 +125,7 @@ public class Launcher extends Application {
             try {
                 SentryUtil.init();
             } catch (Exception ex) {
-                Logger.debug(ex.getLocalizedMessage());
+                LOGGER.warning(() -> "Error initializing Sentry: " + ex.getLocalizedMessage());
             }
             incrementPreloader();
             if (Constants.RUNNING_MODE.equals(Constants.Mode.PRODUCTION)) ServerService.init();
@@ -130,7 +134,7 @@ public class Launcher extends Application {
             TimedAzkarService.init();
             incrementPreloader();
         } catch (Exception ex) {
-            Logger.error(ex.getLocalizedMessage(), ex, getClass().getName() + ".init()");
+            LOGGER.log(Level.SEVERE, "init failed", ex);
             workFine.setValue(false);
         }
     }
@@ -152,7 +156,7 @@ public class Launcher extends Application {
                     .setData(Constants.LOCATIONS_DB_URL, "jarFiles/db/locations.db", "locationsDBErrorInDownload", popUp.getStage(), Utility::exitProgramAction);
             popUp.showAndWait();
         } catch (Exception ex) {
-            Logger.error(ex.getLocalizedMessage(), ex, getClass().getName() + ".start() => show locationsDB download");
+            LOGGER.log(Level.SEVERE, "Show locationsDB download failed", ex);
         }
     }
 
@@ -167,7 +171,7 @@ public class Launcher extends Application {
             onboardingStage.setOnCloseRequest(event -> ChooseAudioController.stopIfPlaying());
             Preferences.getInstance().set(PreferencesType.APP_VERSION, Constants.VERSION);
         } catch (Exception ex) {
-            Logger.error(ex.getLocalizedMessage(), ex, getClass().getName() + "start() => show Onboarding stage");
+            LOGGER.log(Level.SEVERE, "Show onboarding failed", ex);
         }
     }
 
@@ -183,7 +187,7 @@ public class Launcher extends Application {
             stage.show();
             Preferences.getInstance().set(PreferencesType.APP_VERSION, Constants.VERSION);
         } catch (Exception ex) {
-            Logger.error(ex.getLocalizedMessage(), ex, getClass().getName() + "start() => show VersionInstalled stage");
+            LOGGER.log(Level.SEVERE, "Show versionInstalled failed", ex);
         }
     }
 
@@ -193,7 +197,7 @@ public class Launcher extends Application {
         try {
             new TrayUtil(primaryStage);
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + "new TrayUtil()");
+            LOGGER.log(Level.SEVERE, "Show tray failed", ex);
         }
         // add loaded scene to primaryStage
         primaryStage.setScene(scene);

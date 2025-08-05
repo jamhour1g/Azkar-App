@@ -4,12 +4,14 @@ import com.bayoumi.models.Muezzin;
 import com.bayoumi.storage.DatabaseManager;
 import com.bayoumi.storage.preferences.Preferences;
 import com.bayoumi.storage.preferences.PreferencesType;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import javafx.util.StringConverter;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Observable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class PrayerTimeSettings extends Observable {
 
@@ -29,7 +31,6 @@ public class PrayerTimeSettings extends Observable {
     private int maghribAdjustment;
     private int ishaAdjustment;
     private boolean isPrayersReminderStopped;
-
 
     protected PrayerTimeSettings() {
         loadSettings();
@@ -261,6 +262,9 @@ public class PrayerTimeSettings extends Observable {
         private String englishName;
         private String value;
 
+        private static final Logger LOGGER = LoggerWrapper.loggerFactory(Method.class);
+
+
         public Method(int id, String arabicName, String englishName, String value) {
             this.id = id;
             this.arabicName = arabicName;
@@ -292,7 +296,7 @@ public class PrayerTimeSettings extends Observable {
                     return new Method(res.getInt(1), res.getString(2), res.getString(3), res.getString(4));
                 }
             } catch (Exception ex) {
-                Logger.error(null, ex, Method.class.getName() + ".getMethodByValue()");
+                LOGGER.log(Level.SEVERE, "getMethodByValue", ex);
             }
             return null;
         }
@@ -304,7 +308,7 @@ public class PrayerTimeSettings extends Observable {
                     return new Method(res.getInt(1), res.getString(2), res.getString(3), res.getString(4));
                 }
             } catch (Exception ex) {
-                Logger.error(null, ex, Method.class.getName() + ".getMethodByID()");
+                LOGGER.log(Level.SEVERE, "getMethodByID", ex);
             }
             return null;
         }
@@ -317,7 +321,7 @@ public class PrayerTimeSettings extends Observable {
                     methods.add(new Method(res.getInt(1), res.getString(2), res.getString(3), res.getString(4)));
                 }
             } catch (Exception ex) {
-                Logger.error(null, ex, Method.class.getName() + ".getListOfMethods()");
+                LOGGER.log(Level.SEVERE, "getListOfMethods", ex);
             }
             return methods;
         }

@@ -3,12 +3,14 @@ package com.bayoumi.models.location;
 import com.bayoumi.models.settings.Language;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.storage.LocationsDBManager;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class City {
     private String countryCode;
@@ -18,6 +20,9 @@ public class City {
     private double latitude;
     private double longitude;
     private double timezone;
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(City.class);
+
 
     public City(String countryCode, String englishName, String arabicName, double latitude, double longitude, double timezone) {
         this.countryCode = countryCode;
@@ -62,7 +67,7 @@ public class City {
                 ));
             }
         } catch (Exception ex) {
-            Logger.error(null, ex, City.class.getName() + ".getCitiesInCountry()");
+            LOGGER.log(Level.SEVERE, "getCitiesInCountry", ex);
         }
         return cities;
     }
@@ -81,7 +86,7 @@ public class City {
                 );
             }
         } catch (Exception ex) {
-            Logger.error(null, ex, City.class.getName() + ".getCityFromEngName()");
+            LOGGER.log(Level.SEVERE, "getCityFromEngName", ex);
         }
         return null;
     }

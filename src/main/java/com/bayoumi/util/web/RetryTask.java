@@ -1,9 +1,12 @@
 package com.bayoumi.util.web;
 
-import com.bayoumi.util.Logger;
+
+import com.bayoumi.util.LoggerWrapper;
 
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A configurable retry task using exponential backoff and optional jitter.
@@ -14,6 +17,8 @@ public class RetryTask {
     private final long initialBackoffMs;
     private final boolean jitter;
     private final String threadName;
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(RetryTask.class);
+
 
     private RetryTask(Builder builder) {
         this.action = builder.action;
@@ -31,13 +36,13 @@ public class RetryTask {
     public boolean execute() {
         long backoff = initialBackoffMs;
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
-            Logger.debug(String.format("[RetryTask-%s] Attempt %d/%d...", threadName, attempt, maxRetries));
+            LOGGER.info(String.format("[RetryTask-%s] Attempt %d/%d...", threadName, attempt, maxRetries));
             try {
                 if (action.get()) {
                     return true;
                 }
             } catch (Exception e) {
-                Logger.error(String.format("[RetryTask-%s] Exception on attempt %d", threadName, attempt), e, getClass().getName() + ".execute()");
+                LOGGER.log(Level.SEVERE, String.format("[RetryTask-%s] Exception on attempt %d", threadName, attempt), e);
             }
 
             if (attempt == maxRetries) {
@@ -60,7 +65,7 @@ public class RetryTask {
             backoff *= 2;
         }
 
-        Logger.error(null, new Exception("[RetryTask] All retry attempts failed: " + threadName), getClass().getName() + ".execute()");
+        LOGGER.log(Level.SEVERE, String.format("[RetryTask-%s] All retry attempts failed: %s", threadName, action.get()));
         return false;
     }
 
@@ -71,7 +76,7 @@ public class RetryTask {
         Thread t = new Thread(this::execute, threadName);
         t.setDaemon(true);
         t.setUncaughtExceptionHandler((thread, ex) ->
-                Logger.error("Uncaught in " + threadName, ex, getClass().getName() + ".executeAsync()")
+                LOGGER.log(Level.SEVERE, "Uncaught in " + threadName, ex)
         );
         t.start();
     }

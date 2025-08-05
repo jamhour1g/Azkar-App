@@ -1,11 +1,15 @@
 package com.bayoumi.repositry;
 
 import com.bayoumi.storage.DatabaseManager;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 
 import java.sql.ResultSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class OnboardingRepository {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(OnboardingRepository.class);
 
     public static boolean isFirstTimeOpened() {
         try {
@@ -14,7 +18,7 @@ public class OnboardingRepository {
                 return res.getInt("isFirstTimeOpened") == 1;
             }
         } catch (Exception ex) {
-            Logger.error(ex.getLocalizedMessage(), ex, OnboardingRepository.class.getName() + ".isFirstTimeOpened()");
+            LOGGER.log(Level.SEVERE, "isFirstTimeOpened", ex);
         }
         return false;
     }
@@ -26,7 +30,7 @@ public class OnboardingRepository {
                     .prepareStatement("UPDATE onboarding set isFirstTimeOpened = " + isFirstTimeOpened)
                     .executeUpdate();
         } catch (Exception ex) {
-            Logger.error(ex.getLocalizedMessage(), ex, OnboardingRepository.class.getName() + ".setFirstTimeOpened()");
+            LOGGER.log(Level.SEVERE, "setFirstTimeOpened", ex);
         }
     }
 }

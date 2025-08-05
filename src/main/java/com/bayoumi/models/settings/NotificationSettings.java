@@ -2,15 +2,19 @@ package com.bayoumi.models.settings;
 
 import com.bayoumi.storage.preferences.Preferences;
 import com.bayoumi.storage.preferences.PreferencesType;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import javafx.geometry.Pos;
 import javafx.util.StringConverter;
 
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class NotificationSettings {
     private Pos position;
     private final NotificationColor notificationColor;
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(NotificationSettings.class);
+
 
     protected NotificationSettings() {
         this.position = Pos.BOTTOM_RIGHT;
@@ -80,7 +84,7 @@ public class NotificationSettings {
         try {
             this.position = Pos.valueOf(Preferences.getInstance().get(PreferencesType.NOTIFICATION_POS, PreferencesType.NOTIFICATION_POS.getDefaultValue()));
         } catch (Exception ex) {
-            Logger.error(null, ex, getClass().getName() + ".loadSettings()");
+            LOGGER.log(Level.SEVERE, "loadSettings failed", ex);
         }
     }
 

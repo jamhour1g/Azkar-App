@@ -5,15 +5,18 @@ import com.bayoumi.storage.preferences.PreferencesType;
 import com.bayoumi.storage.statistics.StatisticsStore;
 import com.bayoumi.util.AppPropertiesUtil;
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Logger;
+import com.bayoumi.util.LoggerWrapper;
 import kong.unirest.core.json.JSONObject;
 
 import java.time.*;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
+import java.util.logging.Logger;
 
 public class WeeklyStatsManager {
+
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(WeeklyStatsManager.class);
 
     /**
      * If we've moved into a fresh week, return the old week's start & stats, and then rollover.
@@ -29,8 +32,9 @@ public class WeeklyStatsManager {
         );
 
         if (weeksBetween >= 1) {
-            Logger.debug("[WeeklyStatsManager] Rolling over stats. Old week start: " + storedWeekStart);
-            Logger.debug("[WeeklyStatsManager] New week start set to: " + computedWeekStart);
+
+            LOGGER.info("[WeeklyStatsManager] Rolling over stats. Old week start: " + storedWeekStart);
+            LOGGER.info("[WeeklyStatsManager] New week start set to: " + computedWeekStart);
             // snapshot old week
             final JSONObject oldStats = getStatsJSON(sendUsageData);
 

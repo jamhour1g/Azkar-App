@@ -1,14 +1,18 @@
 package com.bayoumi.services.reminders;
 
-import com.bayoumi.util.Logger;
+
+import com.bayoumi.util.LoggerWrapper;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class ReminderUtil {
     private static ReminderUtil instance = null;
     private final List<Reminder> reminderList;
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(ReminderUtil.class);
+
 
     private ReminderUtil() {
         reminderList = new ArrayList<>();
@@ -33,7 +37,7 @@ public class ReminderUtil {
     public void validate(Date date) {
         reminderList.forEach(reminder -> {
             if (isEqualIgnoreMillis(date, reminder.getDate())) {
-                Logger.debug("reminder: " + reminder);
+                LOGGER.info("reminder: " + reminder);
                 reminder.getCallback().run();
             }
         });
