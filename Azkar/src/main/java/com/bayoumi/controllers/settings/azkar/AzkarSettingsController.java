@@ -12,7 +12,6 @@ import com.bayoumi.util.gui.*;
 import com.bayoumi.util.gui.load.Loader;
 import com.bayoumi.util.gui.load.LoaderComponent;
 import com.bayoumi.util.gui.load.Locations;
-import com.bayoumi.util.gui.notfication.Notification;
 import com.bayoumi.util.gui.notfication.NotificationAudio;
 import com.bayoumi.util.gui.notfication.NotificationContent;
 import com.bayoumi.util.time.ArabicNumeralDiscrimination;
@@ -31,12 +30,15 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+import org.controlsfx.control.Notifications;
 
 import java.io.File;
 import java.net.URL;
@@ -364,13 +366,17 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
                 image = new Image("/com/bayoumi/images/Kaaba.png");
             }
             try {
-                Notification.create(new NotificationContent(AbsoluteZekr.absoluteZekrObservableList.get(
-                                new Random().nextInt(AbsoluteZekr.absoluteZekrObservableList.size())).getText(),
-                                image),
-                        azkarSettings.getAzkarDuration(),
-                        notificationSettings.getPosition(),
-                        null,
-                        new NotificationAudio(Settings.getInstance().getAzkarSettings().getAudioName(), Settings.getInstance().getAzkarSettings().getVolume()));
+                // TODO: Fix add the notification sounds back
+                int index = new Random().nextInt(AbsoluteZekr.absoluteZekrObservableList.size());
+                String text = AbsoluteZekr.absoluteZekrObservableList.get(index).getText();
+                Notifications.create()
+                        .title(text)
+                        .text(text)
+                        .graphic(new ImageView(new Image("/com/bayoumi/images/Kaaba.png")))
+                        // TODO: Fix maybe the duration type here is incorrect
+                        .hideAfter(Duration.millis(azkarSettings.getAzkarDuration()))
+                        .position(notificationSettings.getPosition())
+                        .show();
             } catch (Exception ex) {
                 Logger.error("createControlsFX", ex, getClass().getName() + "showZekr().runLater => createControlsFX()");
             }

@@ -9,8 +9,8 @@ import com.bayoumi.util.file.FileUtils;
 import com.bayoumi.util.web.RetryTask;
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
-import kong.unirest.HttpResponse;
-import kong.unirest.JsonNode;
+import kong.unirest.core.HttpResponse;
+import kong.unirest.core.JsonNode;
 
 import java.util.Properties;
 import java.util.function.Consumer;

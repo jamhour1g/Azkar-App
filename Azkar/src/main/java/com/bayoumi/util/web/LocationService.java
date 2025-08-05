@@ -3,8 +3,8 @@ package com.bayoumi.util.web;
 import com.bayoumi.models.location.City;
 import com.bayoumi.util.Logger;
 import com.bayoumi.util.file.FileUtils;
-import kong.unirest.UnirestException;
-import kong.unirest.json.JSONObject;
+import kong.unirest.core.UnirestException;
+import kong.unirest.core.json.JSONObject;
 
 import java.time.Instant;
 import java.time.ZoneOffset;

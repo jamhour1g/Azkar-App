@@ -1,8 +1,8 @@
 package com.bayoumi.util.web;
 
 import com.bayoumi.util.Logger;
-import kong.unirest.HttpResponse;
-import kong.unirest.Unirest;
+import kong.unirest.core.HttpResponse;
+import kong.unirest.core.Unirest;
 
 import java.io.File;
 

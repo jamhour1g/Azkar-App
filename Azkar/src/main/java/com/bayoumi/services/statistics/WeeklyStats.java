@@ -1,6 +1,6 @@
 package com.bayoumi.services.statistics;
 
-import kong.unirest.json.JSONObject;
+import kong.unirest.core.json.JSONObject;
 
 import java.time.Instant;
 

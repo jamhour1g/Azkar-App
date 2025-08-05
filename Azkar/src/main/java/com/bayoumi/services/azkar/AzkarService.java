@@ -6,12 +6,13 @@ import com.bayoumi.models.settings.Settings;
 import com.bayoumi.services.EditablePeriodTimerTask;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.statistics.StatisticsType;
-import com.bayoumi.util.gui.notfication.Notification;
-import com.bayoumi.util.gui.notfication.NotificationAudio;
-import com.bayoumi.util.gui.notfication.NotificationContent;
 import javafx.application.Platform;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.util.Duration;
+import org.controlsfx.control.Notifications;
 
 public class AzkarService {
 
@@ -57,11 +58,17 @@ public class AzkarService {
             StatisticsService.getInstance().increment(StatisticsType.AZKAR_NOTIFICATION_SHOWN);
 
             Platform.runLater(()
-                    -> Notification.create(new NotificationContent(currentZekr.getText(), null),
-                    Settings.getInstance().getAzkarSettings().getAzkarDuration(),
-                    Settings.getInstance().getNotificationSettings().getPosition(),
-                    () -> StatisticsService.getInstance().increment(StatisticsType.AZKAR_NOTIFICATION_CLICKED),
-                    new NotificationAudio(Settings.getInstance().getAzkarSettings().getAudioName(), Settings.getInstance().getAzkarSettings().getVolume())));
+                    -> {
+                // TODO: Fix add the notification sounds back
+                Notifications.create()
+                        .title(currentZekr.getText())
+                        .text(currentZekr.getText())
+                        .graphic(new ImageView(new Image("/com/bayoumi/images/Kaaba.png")))
+                        .hideAfter(Duration.seconds(Settings.getInstance().getAzkarSettings().getAzkarDuration()))
+                        .position(Settings.getInstance().getNotificationSettings().getPosition())
+                        .onAction(_ -> StatisticsService.getInstance().increment(StatisticsType.AZKAR_NOTIFICATION_CLICKED))
+                        .show();
+            });
             currentZekrIndex = (currentZekrIndex + 1) % AbsoluteZekr.absoluteZekrObservableList.size();
         },
                 azkarPeriodsController::getPeriod);

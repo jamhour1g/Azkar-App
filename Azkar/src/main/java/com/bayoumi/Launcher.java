@@ -4,7 +4,6 @@ import com.bayoumi.controllers.components.audio.ChooseAudioController;
 import com.bayoumi.controllers.dialog.DownloadResourcesController;
 import com.bayoumi.controllers.home.HomeController;
 import com.bayoumi.models.settings.Settings;
-import com.bayoumi.preloader.CustomPreloaderMain;
 import com.bayoumi.repositry.OnboardingRepository;
 import com.bayoumi.services.TimedAzkarService;
 import com.bayoumi.services.update.UpdateService;
@@ -27,14 +26,12 @@ import com.bayoumi.util.gui.tray.TrayUtil;
 import com.bayoumi.util.validation.SingleInstance;
 import com.bayoumi.util.web.server.ServerService;
 import com.install4j.api.launcher.StartupNotification;
-import com.sun.javafx.application.LauncherImpl;
 import javafx.application.Application;
-import javafx.application.Preloader;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import kong.unirest.Unirest;
+import kong.unirest.core.Unirest;
 
 import java.util.Objects;
 
@@ -53,7 +50,7 @@ public class Launcher extends Application {
 
     public static void main(String[] args) {
         ArabicTextSupport.fix();
-        LauncherImpl.launchApplication(Launcher.class, CustomPreloaderMain.class, args);
+        Application.launch();
     }
 
     @Override
@@ -90,7 +87,7 @@ public class Launcher extends Application {
             incrementPreloader();
 
             // --- initialize Unirest ---
-            Unirest.config().connectTimeout(30_000).socketTimeout(120_000);
+            Unirest.config().connectTimeout(30_000);
 
             // --- initialize database connection ---
             DatabaseManager databaseManager = DatabaseManager.getInstance();
@@ -144,7 +141,6 @@ public class Launcher extends Application {
      */
     private void incrementPreloader() {
         preloaderProgress += 0.1;
-        LauncherImpl.notifyPreloader(this, new Preloader.ProgressNotification(preloaderProgress));
     }
 
     private void handleLocationDBError() {

@@ -4,10 +4,10 @@ import com.bayoumi.services.statistics.WeeklyStats;
 import com.bayoumi.storage.DatabaseManager;
 import com.bayoumi.util.Logger;
 import com.bayoumi.util.web.RetryTask;
-import kong.unirest.HttpResponse;
-import kong.unirest.JsonNode;
-import kong.unirest.Unirest;
-import kong.unirest.json.JSONObject;
+import kong.unirest.core.HttpResponse;
+import kong.unirest.core.JsonNode;
+import kong.unirest.core.Unirest;
+import kong.unirest.core.json.JSONObject;
 
 import java.util.Properties;
 import java.util.UUID;

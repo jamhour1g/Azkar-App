@@ -6,7 +6,7 @@ import com.bayoumi.storage.statistics.StatisticsStore;
 import com.bayoumi.util.AppPropertiesUtil;
 import com.bayoumi.util.Constants;
 import com.bayoumi.util.Logger;
-import kong.unirest.json.JSONObject;
+import kong.unirest.core.json.JSONObject;
 
 import java.time.*;
 import java.time.format.DateTimeParseException;

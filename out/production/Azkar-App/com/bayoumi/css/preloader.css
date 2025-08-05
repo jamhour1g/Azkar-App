@@ -1,0 +1,6 @@
+.splash-screen-progress-bar > .track {
+    -fx-background-color: #1e2b3c;
+}
+.splash-screen-progress-bar > .bar {
+    -fx-background-color: #95ccff;
+}

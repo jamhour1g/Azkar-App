@@ -4,7 +4,7 @@ import com.bayoumi.Launcher;
 import com.bayoumi.storage.DatabaseManager;
 import com.bayoumi.storage.preferences.Preferences;
 import com.bayoumi.storage.statistics.StatisticsStore;
-import kong.unirest.json.JSONObject;
+import kong.unirest.core.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Locale;

@@ -24,7 +24,6 @@ import com.bayoumi.util.gui.HelperMethods;
 import com.bayoumi.util.gui.load.Loader;
 import com.bayoumi.util.gui.load.LoaderComponent;
 import com.bayoumi.util.gui.load.Locations;
-import com.bayoumi.util.gui.notfication.Notification;
 import com.bayoumi.util.gui.notfication.NotificationAudio;
 import com.bayoumi.util.gui.notfication.NotificationContent;
 import com.bayoumi.util.prayertimes.PrayerTimesUtil;
@@ -42,11 +41,13 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import org.controlsfx.control.Notifications;
 
 import java.net.URL;
 import java.util.ArrayList;
@@ -180,7 +181,7 @@ public class HomeController implements Initializable {
 
             // is new day? => change Dates and the prayer times
             if (timeNow.equals("12:00:00 AM") || timeNow.equals("12:00:00 ص") || timeNow.equals("00:00:00")
-                    || !Utilities.getDay(locale, date).equals(day.getText())) {
+                || !Utilities.getDay(locale, date).equals(day.getText())) {
                 // update week day name
                 day.setText(Utilities.getDay(locale, date));
                 // update Gregorian date
@@ -297,15 +298,27 @@ public class HomeController implements Initializable {
             ReminderUtil.getInstance().add(new Reminder(morningAzkarDate, () -> Platform.runLater(() ->
             {
                 StatisticsService.getInstance().increment(StatisticsType.MORNING_AZKAR_NOTIFICATION_SHOWN);
-                Notification.create(new NotificationContent("أذكار الصباح",
-                                new Image("/com/bayoumi/images/sun_50px.png")),
-                        30,
-                        settings.getNotificationSettings().getPosition(),
-                        () -> {
+                Notifications.create()
+                        .title("اذكار الصباح")
+                        .text("اذكار الصباح")
+                        .graphic(new ImageView(new Image("/com/bayoumi/images/sun_50px.png")))
+                        .hideAfter(Duration.seconds(3))
+                        .position(settings.getNotificationSettings().getPosition())
+                        .onAction(_ -> {
                             StatisticsService.getInstance().increment(StatisticsType.MORNING_AZKAR_NOTIFICATION_CLICKED);
                             Launcher.homeController.goToMorningAzkar();
-                        },
-                        new NotificationAudio(settings.getAzkarSettings().getAudioName(), settings.getAzkarSettings().getVolume()));
+                        })
+                        .show();
+//TODO: Add the notification sounds in this file for all notifications
+//                Notification.create(new NotificationContent("أذكار الصباح",
+//                                new Image("/com/bayoumi/images/sun_50px.png")),
+//                        30,
+//                        settings.getNotificationSettings().getPosition(),
+//                        () -> {
+//                            StatisticsService.getInstance().increment(StatisticsType.MORNING_AZKAR_NOTIFICATION_CLICKED);
+//                            Launcher.homeController.goToMorningAzkar();
+//                        },
+//                        new NotificationAudio(settings.getAzkarSettings().getAudioName(), settings.getAzkarSettings().getVolume()));
             })));
         }
         if (settings.getAzkarSettings().getNightAzkarOffset() != 0) {
@@ -313,15 +326,18 @@ public class HomeController implements Initializable {
             nightAzkarDate.setTime(prayerTimesToday.asr.getTime() + (settings.getAzkarSettings().getNightAzkarOffset() * 60000L));
             ReminderUtil.getInstance().add(new Reminder(nightAzkarDate, () -> Platform.runLater(() -> {
                 StatisticsService.getInstance().increment(StatisticsType.NIGHT_AZKAR_NOTIFICATION_SHOWN);
-                Notification.create(new NotificationContent("أذكار المساء",
-                                new Image("/com/bayoumi/images/night_50px.png")),
-                        30,
-                        settings.getNotificationSettings().getPosition(),
-                        () -> {
+
+                Notifications.create()
+                        .title("اذكار المساء")
+                        .text("اذكار المساء")
+                        .graphic(new ImageView(new Image("/com/bayoumi/images/night_50px.png")))
+                        .hideAfter(Duration.seconds(3))
+                        .position(settings.getNotificationSettings().getPosition())
+                        .onAction(_ -> {
                             StatisticsService.getInstance().increment(StatisticsType.NIGHT_AZKAR_NOTIFICATION_CLICKED);
                             Launcher.homeController.goToNightAzkar();
-                        },
-                        new NotificationAudio(settings.getAzkarSettings().getAudioName(), settings.getAzkarSettings().getVolume()));
+                        })
+                        .show();
             })));
         }
     }
@@ -349,12 +365,16 @@ public class HomeController implements Initializable {
             adhanFileName = "adhan/" + adhanFileName;
         }
         String finalAdhanFileName = adhanFileName;
-        Platform.runLater(() -> Notification.create(new NotificationContent(prayerName,
-                        new Image("/com/bayoumi/images/Kaaba.png")),
-                240,
-                settings.getNotificationSettings().getPosition(),
-                null,
-                new NotificationAudio(finalAdhanFileName, settings.getAzkarSettings().getPrayerVolume())));
+        Platform.runLater(
+                () -> {
+                    Notifications.create()
+                            .title(prayerName)
+                            .text(prayerName)
+                            .graphic(new ImageView(new Image("/com/bayoumi/images/Kaaba.png")))
+                            .hideAfter(Duration.seconds(3))
+                            .position(settings.getNotificationSettings().getPosition())
+                            .show();
+                });
     }
 
     public void changeTheme() {

@@ -1,7 +1,7 @@
 package com.bayoumi.util.web.server;
 
 import com.bayoumi.services.statistics.WeeklyStats;
-import kong.unirest.json.JSONObject;
+import kong.unirest.core.json.JSONObject;
 
 import java.util.Properties;
 

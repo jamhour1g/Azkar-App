@@ -2,9 +2,9 @@ package com.bayoumi.util.web;
 
 import com.bayoumi.models.Query;
 import com.bayoumi.util.Logger;
-import kong.unirest.*;
-import kong.unirest.json.JSONArray;
-import kong.unirest.json.JSONObject;
+import kong.unirest.core.*;
+import kong.unirest.core.json.JSONArray;
+import kong.unirest.core.json.JSONObject;
 
 import java.io.File;
 import java.nio.file.StandardCopyOption;
