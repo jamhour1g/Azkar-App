@@ -1,1 +1,0 @@
-UPDATE "program_characteristics" SET "version"="0.9.1";
