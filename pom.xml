@@ -47,7 +47,7 @@
             <version>12.3.1</version>
         </dependency>
 
-        <!-- FontAwesome 5 icons -->
+        <!-- FontAwesome 6 icons -->
         <dependency>
             <groupId>org.kordamp.ikonli</groupId>
             <artifactId>ikonli-fontawesome6-pack</artifactId>
