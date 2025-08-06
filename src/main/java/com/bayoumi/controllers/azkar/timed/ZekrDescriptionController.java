@@ -1,7 +1,6 @@
 package com.bayoumi.controllers.azkar.timed;
 
 import com.bayoumi.models.settings.LanguageBundle;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.ScrollHandler;
 import com.jfoenix.controls.JFXDialog;
 import javafx.fxml.FXML;
@@ -30,12 +29,12 @@ public class ZekrDescriptionController {
         this.dialog = dialog;
         updateBundle(LanguageBundle.getInstance().getResourceBundle());
         if (hadithText == null || hadithText.isEmpty()) {
-            this.hadithText.setText(Utility.toUTF(bundle.getString("noData")));
+            this.hadithText.setText(bundle.getString("noData"));
         } else {
             this.hadithText.setText(hadithText);
         }
         if (explanationOfHadithVocabulary == null || explanationOfHadithVocabulary.isEmpty()) {
-            this.explanationOfHadithVocabulary.setText(Utility.toUTF(bundle.getString("noData")));
+            this.explanationOfHadithVocabulary.setText(bundle.getString("noData"));
         } else {
             this.explanationOfHadithVocabulary.setText(explanationOfHadithVocabulary);
         }
@@ -44,8 +43,8 @@ public class ZekrDescriptionController {
 
     private void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        hadithTextTitle.setText(Utility.toUTF(bundle.getString("hadithText")));
-        explanationOfHadithVocabularyTitle.setText(Utility.toUTF(bundle.getString("explanationOfHadithVocabulary")));
+        hadithTextTitle.setText(bundle.getString("hadithText"));
+        explanationOfHadithVocabularyTitle.setText(bundle.getString("explanationOfHadithVocabulary"));
     }
 
     @FXML

@@ -8,7 +8,6 @@ import com.bayoumi.controllers.settings.SettingsInterface;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.HelperMethods;
 import com.bayoumi.util.gui.ScrollHandler;
@@ -49,9 +48,9 @@ public class PrayerTimeSettingsController implements Initializable, SettingsInte
 
     public void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        adhanLabel.setText(Utility.toUTF(bundle.getString("adhan")));
-        forProblemsAndSuggestionsButton.setText(Utility.toUTF(bundle.getString("forProblemsAndSuggestions")));
-        stopPrayersReminder.setText(Utility.toUTF(bundle.getString("stopPrayersReminder")));
+        adhanLabel.setText(bundle.getString("adhan"));
+        forProblemsAndSuggestionsButton.setText(bundle.getString("forProblemsAndSuggestions"));
+        stopPrayersReminder.setText(bundle.getString("stopPrayersReminder"));
     }
 
     @Override

@@ -24,7 +24,7 @@ public class DownloadResourcesController {
     private boolean isFinished;
 
     public void updateBundle(ResourceBundle bundle) {
-        title.setText(Utility.toUTF(bundle.getString("downloadingProgramResources")));
+        title.setText(bundle.getString("downloadingProgramResources"));
     }
 
     public void setData(String url, String downloadedFilePath, String errorMsgKey, Stage stage, Runnable onClosedAndNotFinished) {
@@ -52,7 +52,7 @@ public class DownloadResourcesController {
                         }));
                 Platform.runLater(stage::close);
             } catch (Exception e) {
-                Platform.runLater(() -> BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(bundle.getString(errorMsgKey)), bundle));
+                Platform.runLater(() -> BuilderUI.showOkAlert(Alert.AlertType.ERROR, bundle.getString(errorMsgKey), bundle));
                 Platform.runLater(stage::close);
             }
         }).start();

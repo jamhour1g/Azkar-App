@@ -9,7 +9,6 @@ import com.bayoumi.models.settings.Settings;
 import com.bayoumi.services.update.UpdateHandler;
 import com.bayoumi.util.Constants;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.HelperMethods;
 import com.bayoumi.util.gui.ScrollHandler;
@@ -64,22 +63,22 @@ public class OtherSettingsController implements Initializable, SettingsInterface
 
     public void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        languageText.setText(Utility.toUTF(bundle.getString("language")));
-        format24.setText(Utility.toUTF(bundle.getString("hour24System")));
-        darkTheme.setText(Utility.toUTF(bundle.getString("darkTheme")));
-        minimizeAtStart.setText(Utility.toUTF(bundle.getString("minimizeAtStart")));
-        adjustingTheHijriDateText.setText(Utility.toUTF(bundle.getString("adjustingTheHijriDateText")));
-        adjustingTheHijriDateNote.setText(Utility.toUTF(bundle.getString("adjustingTheHijriDateNote")));
-        checkForUpdateButton.setText(Utility.toUTF(bundle.getString("checkForUpdate")));
-        forProblemsAndSuggestionsButton.setText(Utility.toUTF(bundle.getString("forProblemsAndSuggestions")));
-        autoUpdateCheckBox.setText(Utility.toUTF(bundle.getString("checkForUpdatesAutomatically")));
-        usageDataCheckBox.setText(Utility.toUTF(bundle.getString("usageDataCheckBox")));
-        usageStatsLabel.setText(Utility.toUTF(bundle.getString("usageStats")));
-        versionNumberLabel.setText(Utility.toUTF(bundle.getString("versionNumber")));
-        website.setText(Utility.toUTF(bundle.getString("website")));
-        termsOfUse.setText(Utility.toUTF(bundle.getString("termsOfUse")));
-        privacyPolicy.setText(Utility.toUTF(bundle.getString("privacyPolicy")));
-        shareLabel.setText(Utility.toUTF(bundle.getString("shareLabel")));
+        languageText.setText(bundle.getString("language"));
+        format24.setText(bundle.getString("hour24System"));
+        darkTheme.setText(bundle.getString("darkTheme"));
+        minimizeAtStart.setText(bundle.getString("minimizeAtStart"));
+        adjustingTheHijriDateText.setText(bundle.getString("adjustingTheHijriDateText"));
+        adjustingTheHijriDateNote.setText(bundle.getString("adjustingTheHijriDateNote"));
+        checkForUpdateButton.setText(bundle.getString("checkForUpdate"));
+        forProblemsAndSuggestionsButton.setText(bundle.getString("forProblemsAndSuggestions"));
+        autoUpdateCheckBox.setText(bundle.getString("checkForUpdatesAutomatically"));
+        usageDataCheckBox.setText(bundle.getString("usageDataCheckBox"));
+        usageStatsLabel.setText(bundle.getString("usageStats"));
+        versionNumberLabel.setText(bundle.getString("versionNumber"));
+        website.setText(bundle.getString("website"));
+        termsOfUse.setText(bundle.getString("termsOfUse"));
+        privacyPolicy.setText(bundle.getString("privacyPolicy"));
+        shareLabel.setText(bundle.getString("shareLabel"));
 
         if (hijriDateOffset.getValue() != null) {
             hijriDateLabel.setText(new HijriDate(hijriDateOffset.getValue()).getString(this.bundle.getLocale().toString()));
@@ -201,14 +200,14 @@ public class OtherSettingsController implements Initializable, SettingsInterface
             switch (UpdateHandler.getInstance().checkUpdate()) {
                 case 0:
                     LOGGER.info(() -> "No Update Found");
-                    Platform.runLater(() -> BuilderUI.showOkAlert(Alert.AlertType.INFORMATION, Utility.toUTF(this.bundle.getString("thereAreNoNewUpdates")), bundle));
+                    Platform.runLater(() -> BuilderUI.showOkAlert(Alert.AlertType.INFORMATION, this.bundle.getString("thereAreNoNewUpdates"), bundle));
                     break;
                 case 1:
                     UpdateHandler.getInstance().showInstallPrompt();
                     break;
                 case -1:
                     LOGGER.info(() -> "Only installers and single bundle archives on macOS are supported for background updates");
-                    Platform.runLater(() -> BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(this.bundle.getString("problemInSearchingForUpdates")), bundle));
+                    Platform.runLater(() -> BuilderUI.showOkAlert(Alert.AlertType.ERROR, this.bundle.getString("problemInSearchingForUpdates"), bundle));
                     break;
             }
             Platform.runLater(() -> loadingBox.setVisible(false));
@@ -262,9 +261,9 @@ public class OtherSettingsController implements Initializable, SettingsInterface
 
     private void toggleAction(JFXToggleButton toggleButton) {
         if (toggleButton.isSelected()) {
-            toggleButton.setText(Utility.toUTF(bundle.getString("enabled")));
+            toggleButton.setText(bundle.getString("enabled"));
         } else {
-            toggleButton.setText(Utility.toUTF(bundle.getString("disabled")));
+            toggleButton.setText(bundle.getString("disabled"));
         }
     }
 }

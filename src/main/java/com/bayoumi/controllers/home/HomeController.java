@@ -3,14 +3,11 @@ package com.bayoumi.controllers.home;
 import com.batoulapps.adhan.Prayer;
 import com.batoulapps.adhan.PrayerTimes;
 import com.bayoumi.Launcher;
-import com.bayoumi.controllers.azkar.timed.TimedAzkarController;
 import com.bayoumi.controllers.home.periods.AzkarPeriodsController;
 import com.bayoumi.controllers.home.prayertimes.PrayerTimesController;
 import com.bayoumi.models.azkar.AbsoluteZekr;
-import com.bayoumi.models.azkar.TimedZekrDTO;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.Settings;
-import com.bayoumi.services.TimedAzkarService;
 import com.bayoumi.services.azkar.AzkarService;
 import com.bayoumi.services.reminders.Reminder;
 import com.bayoumi.services.reminders.ReminderUtil;
@@ -18,14 +15,10 @@ import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.preferences.PreferencesType;
 import com.bayoumi.storage.statistics.StatisticsType;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
-import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.HelperMethods;
 import com.bayoumi.util.gui.load.Loader;
 import com.bayoumi.util.gui.load.LoaderComponent;
 import com.bayoumi.util.gui.load.Locations;
-import com.bayoumi.util.gui.notfication.NotificationAudio;
-import com.bayoumi.util.gui.notfication.NotificationContent;
 import com.bayoumi.util.prayertimes.PrayerTimesUtil;
 import com.bayoumi.util.time.HijriDate;
 import com.bayoumi.util.time.Utilities;
@@ -37,7 +30,6 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.NodeOrientation;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
@@ -45,7 +37,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.controlsfx.control.Notifications;
 
@@ -103,12 +94,10 @@ public class HomeController implements Initializable {
             prayerTimesController.setData(prayerTimesToday);
         } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "Initialize failed", ex);
-            Launcher.workFine.setValue(false);
         }
 
         // if no azkar for notification terminate the program
         if (!AbsoluteZekr.fetchData()) {
-            Launcher.workFine.setValue(false);
             return;
         }
 
@@ -127,7 +116,6 @@ public class HomeController implements Initializable {
             container.getChildren().add(2, periodBox);
         } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "Loading AzkarPeriods", ex);
-            Launcher.workFine.setValue(false);
         }
 
         settings.addObserver(PreferencesType.HIJRI_OFFSET, (key, value) ->
@@ -137,7 +125,6 @@ public class HomeController implements Initializable {
                 prayerTimesController.setPrayerTimesValuesToGUI());
 
         // if time periods of Azkar and settings has changed
-        settings.getAzkarSettings().addObserver((o, arg) -> {
             if (settings.getAzkarSettings().isStopped()) {
                 AzkarService.stopService();
                 periodBox.setDisable(true);
@@ -148,7 +135,6 @@ public class HomeController implements Initializable {
             }
             // reinitialize Reminders
             initReminders();
-        });
 
         settings.getPrayerTimeSettings().addObserver((o, arg) -> {
             prayerTimesToday = PrayerTimesUtil.getPrayerTimesToday(settings.getPrayerTimeSettings(), date);
@@ -159,13 +145,13 @@ public class HomeController implements Initializable {
 
     public void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        final String dir = Utility.toUTF(bundle.getString("dir"));
+        final String dir = bundle.getString("dir");
         remainingTimeBox.setNodeOrientation(NodeOrientation.valueOf(dir));
         clockBox.setNodeOrientation(NodeOrientation.valueOf(dir));
-        timeNow.setText(Utility.toUTF(bundle.getString("time.now")));
-        morningAzkarButton.setText(Utility.toUTF(bundle.getString("morningAzkar")));
-        nightAzkarButton.setText(Utility.toUTF(bundle.getString("nightAzkar")));
-        settingsButton.setText(Utility.toUTF(bundle.getString("settings")));
+        timeNow.setText(bundle.getString("time.now"));
+        morningAzkarButton.setText(bundle.getString("morningAzkar"));
+        nightAzkarButton.setText(bundle.getString("nightAzkar"));
+        settingsButton.setText(bundle.getString("settings"));
     }
 
 
@@ -214,39 +200,11 @@ public class HomeController implements Initializable {
     @FXML
     public void goToMorningAzkar() {
         StatisticsService.getInstance().increment(StatisticsType.MORNING_AZKAR_OPENED);
-        showTimedAzkar("morning");
     }
 
     @FXML
     public void goToNightAzkar() {
         StatisticsService.getInstance().increment(StatisticsType.NIGHT_AZKAR_OPENED);
-        showTimedAzkar("night");
-    }
-
-    private void showTimedAzkar(String type) {
-        try {
-            List<TimedZekrDTO> timedZekrDTOList;
-            try {
-                timedZekrDTOList = TimedAzkarService.getTimedAzkar(settings.getLanguage().getLocale(), type.equals("morning") ? 1 : 2);
-            } catch (Exception ex) {
-                try {
-                    TimedAzkarService.downloadLatestReleaseFiles();
-                    timedZekrDTOList = TimedAzkarService.getTimedAzkar(settings.getLanguage().getLocale(), type.equals("morning") ? 1 : 2);
-                } catch (Exception e) {
-                    return;
-                }
-            }
-
-            final FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource(Locations.TimedAzkar.toString()));
-            final Scene scene = new Scene(fxmlLoader.load());
-            scene.getStylesheets().setAll(Settings.getInstance().getThemeFilesCSS());
-            final Stage stage = BuilderUI.initStageDecorated(scene, Utility.toUTF(bundle.getString(type + "Azkar")));
-            ((TimedAzkarController) fxmlLoader.getController()).setData(timedZekrDTOList, type, stage);
-            HelperMethods.ExitKeyCodeCombination(stage.getScene(), stage);
-            stage.showAndWait();
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "showTimedAzkar", e);
-        }
     }
 
     @FXML
@@ -269,11 +227,11 @@ public class HomeController implements Initializable {
         if (bundle != null) {
             // take current Prayer ( when Isha is finished, and it's before 12pm )
             if (prayerTimesToday.nextPrayer(dateNow).equals(Prayer.NONE)) {
-                currentPrayerText.setText(Utility.toUTF(bundle.getString("havePassedSince")) + " " + prayerTimesController.getCurrentPrayerValue());
+                currentPrayerText.setText(bundle.getString("havePassedSince") + " " + prayerTimesController.getCurrentPrayerValue());
             } else if (prayerTimesToday.nextPrayer(dateNow).equals(prayerTimesController.getCurrentPrayer())) {
-                currentPrayerText.setText(Utility.toUTF(bundle.getString("leftFor")) + " " + prayerTimesController.getCurrentPrayerValue());
+                currentPrayerText.setText(bundle.getString("leftFor") + " " + prayerTimesController.getCurrentPrayerValue());
             } else {
-                currentPrayerText.setText(Utility.toUTF(bundle.getString("havePassedSince")) + " " + prayerTimesController.getCurrentPrayerValue());
+                currentPrayerText.setText(bundle.getString("havePassedSince") + " " + prayerTimesController.getCurrentPrayerValue());
             }
             final Date nextPrayerTime = prayerTimesToday.timeForPrayer(prayerTimesController.getCurrentPrayer());
 

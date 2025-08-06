@@ -3,15 +3,12 @@ package com.bayoumi.controllers.feedback;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.util.AppPropertiesUtil;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.web.forms.Feedback;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXTextArea;
 import com.jfoenix.controls.JFXTextField;
 import com.jfoenix.validation.RegexValidator;
 import com.jfoenix.validation.RequiredFieldValidator;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -24,6 +21,8 @@ import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.controlsfx.control.Notifications;
+import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -65,15 +64,15 @@ public class FeedbackController implements Initializable {
 
     public void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        title.setText(Utility.toUTF(bundle.getString("notes")));
-        suggestion.setText(Utility.toUTF(bundle.getString("suggestion")));
-        problem.setText(Utility.toUTF(bundle.getString("reportProblem")));
-        other.setText(Utility.toUTF(bundle.getString("otherFeedback")));
-        email.setPromptText(Utility.toUTF(bundle.getString("email")));
-        subject.setPromptText(Utility.toUTF(bundle.getString("theNote")));
-        details.setPromptText(Utility.toUTF(bundle.getString("moreDetails")));
-        sendBtn.setText(Utility.toUTF(bundle.getString("send")));
-        root.setNodeOrientation(NodeOrientation.valueOf(Utility.toUTF(bundle.getString("dir"))));
+        title.setText(bundle.getString("notes"));
+        suggestion.setText(bundle.getString("suggestion"));
+        problem.setText(bundle.getString("reportProblem"));
+        other.setText(bundle.getString("otherFeedback"));
+        email.setPromptText(bundle.getString("email"));
+        subject.setPromptText(bundle.getString("theNote"));
+        details.setPromptText(bundle.getString("moreDetails"));
+        sendBtn.setText(bundle.getString("send"));
+        root.setNodeOrientation(NodeOrientation.valueOf(bundle.getString("dir")));
     }
 
     @Override
@@ -87,15 +86,15 @@ public class FeedbackController implements Initializable {
         initValidation();
     }
 
-    private FontAwesomeIconView getErrorIcon() {
-        FontAwesomeIconView errorIcon = new FontAwesomeIconView(FontAwesomeIcon.EXCLAMATION_TRIANGLE);
+    private FontIcon getErrorIcon() {
+        FontIcon errorIcon = new FontIcon(FontAwesomeSolid.EXCLAMATION_TRIANGLE);
         errorIcon.setStyle("-fx-fill: red;-fx-font-size: 20;-fx-font-family: \"FontAwesome\"");
         return errorIcon;
     }
 
     private RequiredFieldValidator generateRequiredFieldValidator() {
         RequiredFieldValidator requiredFieldValidator = new RequiredFieldValidator();
-        requiredFieldValidator.setMessage(Utility.toUTF(bundle.getString("requiredField")));
+        requiredFieldValidator.setMessage(bundle.getString("requiredField"));
         requiredFieldValidator.setIcon(getErrorIcon());
         return requiredFieldValidator;
     }
@@ -115,7 +114,7 @@ public class FeedbackController implements Initializable {
             }
         });
         RegexValidator emailValidator = new RegexValidator();
-        emailValidator.setMessage(Utility.toUTF(bundle.getString("emailIsNotCorrect")) + "!");
+        emailValidator.setMessage(bundle.getString("emailIsNotCorrect") + "!");
         emailValidator.setRegexPattern("^[_A-Za-z0-9-+]+(\\.[_A-Za-z0-9-]+)*@"
                 + "[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$");
         emailValidator.setIcon(getErrorIcon());
@@ -159,9 +158,9 @@ public class FeedbackController implements Initializable {
                     VBox vBox = new VBox(10);
                     vBox.setAlignment(Pos.CENTER);
                     vBox.setPadding(new Insets(10));
-                    Label label = new Label(Utility.toUTF(bundle.getString("sentSuccess")));
+                    Label label = new Label(bundle.getString("sentSuccess"));
                     label.setStyle("-fx-font-size: 25px");
-                    FontAwesomeIconView checkIcon = new FontAwesomeIconView(FontAwesomeIcon.CHECK_CIRCLE);
+                    FontIcon checkIcon = new FontIcon(FontAwesomeSolid.CHECK_CIRCLE);
                     checkIcon.setStyle("-fx-fill: green;-fx-font-size: 50;-fx-font-family: \"FontAwesome\"");
                     vBox.getChildren().addAll(checkIcon, label);
                     Notifications.create().graphic(vBox).show();
@@ -172,9 +171,9 @@ public class FeedbackController implements Initializable {
                     VBox vBox = new VBox(10);
                     vBox.setAlignment(Pos.CENTER);
                     vBox.setPadding(new Insets(10));
-                    Label label = new Label(Utility.toUTF(bundle.getString("sendFailedTryAgain")));
+                    Label label = new Label(bundle.getString("sendFailedTryAgain"));
                     label.setStyle("-fx-font-size: 25px");
-                    FontAwesomeIconView checkIcon = new FontAwesomeIconView(FontAwesomeIcon.WARNING);
+                    FontIcon checkIcon = new FontIcon(FontAwesomeSolid.EXCLAMATION_TRIANGLE);
                     checkIcon.setStyle("-fx-fill: orange;-fx-font-size: 50;-fx-font-family: \"FontAwesome\"");
                     vBox.getChildren().addAll(checkIcon, label);
                     Notifications.create().graphic(vBox).show();

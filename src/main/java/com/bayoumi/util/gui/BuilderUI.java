@@ -6,7 +6,6 @@ import com.bayoumi.controllers.dialog.UpdateConfirmController;
 import com.bayoumi.models.UpdateInfo;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.load.Locations;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.NodeOrientation;
@@ -55,12 +54,12 @@ public class BuilderUI {
         alert.setContentText(text);
         DialogPane dialogPane = alert.getDialogPane();
         dialogPane.getStylesheets().addAll(Settings.getInstance().getThemeFilesCSS());
-        if (Utility.toUTF(resourceBundle.getString("dir")).equals("rtl")) {
+        if (resourceBundle.getString("dir").equals("rtl")) {
             (dialogPane.getChildren().get(1)).setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
         }
         Button okButton = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
         if (okButton != null) {
-            okButton.setText(Utility.toUTF(resourceBundle.getString("Ok")));
+            okButton.setText(resourceBundle.getString("Ok"));
         }
         HelperMethods.SetIcon((Stage) alert.getDialogPane().getScene().getWindow());
         alert.showAndWait();

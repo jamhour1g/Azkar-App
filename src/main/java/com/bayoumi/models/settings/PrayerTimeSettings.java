@@ -139,7 +139,7 @@ public class PrayerTimeSettings extends Observable {
     }
 
     public String getAdhanAudio() {
-        if (Muezzin.getAdhanFilesNames().contains(adhanAudio)) {
+        if (Muezzin.getMuezzinFilesNames().contains(adhanAudio)) {
             return adhanAudio;
         }
         return "";

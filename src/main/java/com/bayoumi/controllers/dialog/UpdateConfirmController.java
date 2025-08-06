@@ -2,7 +2,6 @@ package com.bayoumi.controllers.dialog;
 
 import com.bayoumi.models.UpdateInfo;
 import com.bayoumi.models.settings.LanguageBundle;
-import com.bayoumi.util.Utility;
 import com.jfoenix.controls.JFXButton;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -57,15 +56,15 @@ public class UpdateConfirmController implements Initializable {
         }
 
         final ResourceBundle bundle = LanguageBundle.getInstance().getResourceBundle();
-        confirmBTN.setText(Utility.toUTF(bundle.getString("confirm")));
-        discardButton.setText(Utility.toUTF(bundle.getString("discard")));
-        thereIsANewUpdate.setText(Utility.toUTF(bundle.getString("thereIsANewUpdate")));
-        oldVersionText.setText(Utility.toUTF(bundle.getString("oldVersionText")));
-        newVersionText.setText(Utility.toUTF(bundle.getString("newVersionText")));
-        notesText.setText(Utility.toUTF(bundle.getString("notes")) + ":");
-        doYouWantToUpdateTheSoftware.setText(Utility.toUTF(bundle.getString("doYouWantToUpdateTheSoftware")));
+        confirmBTN.setText(bundle.getString("confirm"));
+        discardButton.setText(bundle.getString("discard"));
+        thereIsANewUpdate.setText(bundle.getString("thereIsANewUpdate"));
+        oldVersionText.setText(bundle.getString("oldVersionText"));
+        newVersionText.setText(bundle.getString("newVersionText"));
+        notesText.setText(bundle.getString("notes") + ":");
+        doYouWantToUpdateTheSoftware.setText(bundle.getString("doYouWantToUpdateTheSoftware"));
 
-        root.setNodeOrientation(NodeOrientation.valueOf(Utility.toUTF(bundle.getString("dir"))));
+        root.setNodeOrientation(NodeOrientation.valueOf(bundle.getString("dir")));
     }
 
     @FXML

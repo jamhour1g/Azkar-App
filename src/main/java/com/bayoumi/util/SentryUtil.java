@@ -10,7 +10,7 @@ import io.sentry.protocol.User;
 public class SentryUtil {
 
 
-    public static void init() throws Exception {
+    public static void init() {
         if (!Constants.RUNNING_MODE.equals(Constants.Mode.PRODUCTION)) return;
 
         Sentry.init(options -> {
@@ -21,7 +21,6 @@ public class SentryUtil {
             AppPropertiesUtil.getProps().forEach(options::setTag);
 
             options.setBeforeSend((event, hint) -> {
-                event.setExtra("upTime", AppPropertiesUtil.getUptime());
                 Preferences.getInstance().getAllWithPrefix().forEach(event::setTag);
                 StatisticsStore.getInstance().getAllWithPrefix().forEach(event::setTag);
                 if (event.getUser() == null || event.getUser().getId() == null || event.getUser().getId().isEmpty()) {

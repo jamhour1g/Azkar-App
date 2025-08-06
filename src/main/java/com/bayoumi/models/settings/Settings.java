@@ -4,6 +4,7 @@ import com.bayoumi.storage.preferences.Preferences;
 import com.bayoumi.storage.preferences.PreferencesObservable;
 import com.bayoumi.storage.preferences.PreferencesType;
 
+import java.net.URL;
 import java.util.AbstractMap.SimpleEntry;
 
 // TODO: remove notifyObservers() values that doesn't need observers
@@ -136,9 +137,12 @@ public class Settings extends PreferencesObservable {
     }
 
     public String[] getThemeFilesCSS() {
+        URL baseCSSURL = Settings.class.getResource("/com/bayoumi/css/base.css");
+        URL darkThemeCssUrl = Settings.class.getResource("/com/bayoumi/css/dark-theme.css");
+        URL lightThemeCssUrl = Settings.class.getResource("/com/bayoumi/css/light-theme.css");
         return new String[]{
-                "/com/bayoumi/css/base.css",
-                getNightMode() ? "/com/bayoumi/css/dark-theme.css" : "/com/bayoumi/css/light-theme.css"
+                baseCSSURL.toString(),
+                getNightMode() ? darkThemeCssUrl.toString() : lightThemeCssUrl.toString()
         };
     }
 

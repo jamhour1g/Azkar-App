@@ -2,7 +2,6 @@ package com.bayoumi.models.settings;
 
 import com.bayoumi.storage.preferences.PreferencesType;
 
-import java.util.Locale;
 import java.util.Observable;
 import java.util.ResourceBundle;
 
@@ -19,9 +18,9 @@ public class LanguageBundle extends Observable {
     }
 
     private LanguageBundle() {
-        this.resourceBundle = ResourceBundle.getBundle("bundles.language", new Locale(Settings.getInstance().getLanguage().getLocale()));
+        this.resourceBundle = ResourceBundle.getBundle("bundles.language");
         Settings.getInstance().addObserver(PreferencesType.LANGUAGE, (key, value) ->
-                setResourceBundle(ResourceBundle.getBundle("bundles.language", new Locale(Settings.getInstance().getLanguage().getLocale()))));
+                setResourceBundle(ResourceBundle.getBundle("bundles.language")));
     }
 
     public ResourceBundle getResourceBundle() {

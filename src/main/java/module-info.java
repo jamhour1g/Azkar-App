@@ -11,7 +11,6 @@ module Azkar {
     requires adhan;
     requires javafx.controls;
     requires com.jfoenix;
-    requires fontawesomefx;
     requires javafx.media;
     requires com.fasterxml.jackson.annotation;
     requires com.fasterxml.jackson.core;
@@ -22,7 +21,24 @@ module Azkar {
     requires sentry;
     requires ummalqura.calendar;
     requires jgforms;
+    requires org.xerial.sqlitejdbc;
+    requires org.kordamp.ikonli.core;
+    requires org.kordamp.ikonli.javafx;
+    requires org.kordamp.ikonli.fontawesome6;
 
     exports com.bayoumi to javafx.graphics;
+    exports com.bayoumi.controllers.onboarding to javafx.fxml;
+    exports com.bayoumi.controllers.home to javafx.fxml;
+    exports com.bayoumi.controllers.home.prayertimes to javafx.fxml;
+    exports com.bayoumi.controllers.components.audio to javafx.fxml;
+    exports com.bayoumi.controllers.components to javafx.fxml;
+
+    opens com.bayoumi.controllers.home to javafx.fxml;
+    opens com.bayoumi.controllers.onboarding to javafx.fxml;
+    opens com.bayoumi.controllers.home.prayertimes to javafx.fxml;
+    opens com.bayoumi.controllers.components.audio to javafx.fxml;
+    opens com.bayoumi.controllers.components to javafx.fxml;
+    opens db.migration;
+
 
 }

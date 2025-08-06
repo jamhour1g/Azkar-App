@@ -3,7 +3,6 @@ package com.bayoumi.controllers.components;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.PrayerTimeSettings;
 import com.bayoumi.models.settings.Settings;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.PopOverUtil;
 import com.bayoumi.util.time.ArabicNumeralDiscrimination;
 import com.bayoumi.util.time.Utilities;
@@ -41,12 +40,12 @@ public class PrayerCalculationsController implements Initializable {
 
     private void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        calculationMethodText.setText(Utility.toUTF(bundle.getString("calculationMethod")));
-        asrMadhabText.setText(Utility.toUTF(bundle.getString("asrMadhab")));
-        daylightSavingNote.setText(Utility.toUTF(bundle.getString("daylightSavingNote")));
-        summerTiming.setText(Utility.toUTF(bundle.getString("extraOneHourDayLightSaving")));
-        standardJuristic.setText(Utility.toUTF(bundle.getString("asrMadhabJumhoor")));
-        hanafiRadioButton.setText(Utility.toUTF(bundle.getString("hanafi")));
+        calculationMethodText.setText(bundle.getString("calculationMethod"));
+        asrMadhabText.setText(bundle.getString("asrMadhab"));
+        daylightSavingNote.setText(bundle.getString("daylightSavingNote"));
+        summerTiming.setText(bundle.getString("extraOneHourDayLightSaving"));
+        standardJuristic.setText(bundle.getString("asrMadhabJumhoor"));
+        hanafiRadioButton.setText(bundle.getString("hanafi"));
 
         minPluralityFajr.setText(ArabicNumeralDiscrimination.minutesArabicPlurality(bundle, prayerTimeSettings.getFajrAdjustment()));
         minPluralitySunrise.setText(ArabicNumeralDiscrimination.minutesArabicPlurality(bundle, prayerTimeSettings.getSunriseAdjustment()));
@@ -55,23 +54,23 @@ public class PrayerCalculationsController implements Initializable {
         minPluralityMaghrib.setText(ArabicNumeralDiscrimination.minutesArabicPlurality(bundle, prayerTimeSettings.getMaghribAdjustment()));
         minPluralityIsha.setText(ArabicNumeralDiscrimination.minutesArabicPlurality(bundle, prayerTimeSettings.getIshaAdjustment()));
 
-        prayerAdjustment.setText(Utility.toUTF(bundle.getString("prayerAdjustment")));
-        fajrText.setText(Utility.toUTF(bundle.getString("fajr")));
-        sunriseText.setText(Utility.toUTF(bundle.getString("sunrise")));
+        prayerAdjustment.setText(bundle.getString("prayerAdjustment"));
+        fajrText.setText(bundle.getString("fajr"));
+        sunriseText.setText(bundle.getString("sunrise"));
         if (Utilities.isFriday()) {
-            dhuhrText.setText(Utility.toUTF(bundle.getString("jummah")));
+            dhuhrText.setText(bundle.getString("jummah"));
         } else {
-            dhuhrText.setText(Utility.toUTF(bundle.getString("dhuhr")));
+            dhuhrText.setText(bundle.getString("dhuhr"));
         }
-        asrText.setText(Utility.toUTF(bundle.getString("asr")));
-        maghribText.setText(Utility.toUTF(bundle.getString("maghrib")));
-        ishaText.setText(Utility.toUTF(bundle.getString("isha")));
+        asrText.setText(bundle.getString("asr"));
+        maghribText.setText(bundle.getString("maghrib"));
+        ishaText.setText(bundle.getString("isha"));
 
         methodComboBox.getItems().setAll(PrayerTimeSettings.Method.getListOfMethods());
         methodComboBox.setValue(prayerTimeSettings.getMethod());
 
-        prayerTimeDiffNoteHeader.setText(Utility.toUTF(bundle.getString("prayerTimeDiffNoteHeader")));
-        prayerTimeDiffNoteText.setText(Utility.toUTF(bundle.getString("prayerTimeDiffNoteText")));
+        prayerTimeDiffNoteHeader.setText(bundle.getString("prayerTimeDiffNoteHeader"));
+        prayerTimeDiffNoteText.setText(bundle.getString("prayerTimeDiffNoteText"));
     }
 
     public void setData() {
@@ -94,7 +93,7 @@ public class PrayerCalculationsController implements Initializable {
         maghribAdjustment.getValueFactory().setValue(prayerTimeSettings.getMaghribAdjustment());
         ishaAdjustment.getValueFactory().setValue(prayerTimeSettings.getIshaAdjustment());
 
-        PopOverUtil.init(asrMadhabText, Utility.toUTF(bundle.getString("asrMadhabInfo")));
+        PopOverUtil.init(asrMadhabText, bundle.getString("asrMadhabInfo"));
     }
 
     @Override

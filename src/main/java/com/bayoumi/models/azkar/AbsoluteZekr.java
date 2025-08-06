@@ -3,15 +3,14 @@ package com.bayoumi.models.azkar;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.storage.DatabaseManager;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.button.TableViewButton;
 import com.jfoenix.controls.datamodels.treetable.RecursiveTreeObject;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.Event;
+import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -32,8 +31,8 @@ public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
     public AbsoluteZekr(int id, String text) {
         this.id = id;
         this.text = text;
-        edit = new TableViewButton("", new FontAwesomeIconView(FontAwesomeIcon.EDIT));
-        delete = new TableViewButton("", new FontAwesomeIconView(FontAwesomeIcon.TRASH));
+        edit = new TableViewButton("", new FontIcon(FontAwesomeSolid.EDIT));
+        delete = new TableViewButton("", new FontIcon(FontAwesomeSolid.TRASH_ALT));
         edit.setOnAction(this::update);
         delete.setOnAction(this::delete);
     }
@@ -41,7 +40,7 @@ public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
     public static void returnDefault() {
         try {
             final ResourceBundle bundle = LanguageBundle.getInstance().getResourceBundle();
-            if (BuilderUI.showConfirmAlert(true, Utility.toUTF(bundle.getString("retrieveDefaultAzkarWarning")))) {
+            if (BuilderUI.showConfirmAlert(true, bundle.getString("retrieveDefaultAzkarWarning"))) {
                 DatabaseManager databaseManager = DatabaseManager.getInstance();
                 // delete all current values
                 databaseManager.con.prepareStatement("DELETE FROM absolute_zekr;").executeUpdate();
@@ -71,7 +70,7 @@ public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
     public void update(Event event) {
         try {
             final ResourceBundle bundle = LanguageBundle.getInstance().getResourceBundle();
-            String newValue = BuilderUI.showEditTextField(Utility.toUTF(bundle.getString("zekr")), this.text);
+            String newValue = BuilderUI.showEditTextField(bundle.getString("zekr"), this.text);
             if (!newValue.isEmpty()) {
                 DatabaseManager databaseManager = DatabaseManager.getInstance();
                 databaseManager.stat = databaseManager.con.prepareStatement("UPDATE absolute_zekr set text = ? WHERE id =" + this.id);
@@ -87,8 +86,8 @@ public class AbsoluteZekr extends RecursiveTreeObject<AbsoluteZekr> {
     private void delete(Event event) {
         try {
             final ResourceBundle bundle = LanguageBundle.getInstance().getResourceBundle();
-            if (BuilderUI.showConfirmAlert(true, Utility.toUTF(bundle.getString("delete")) + " " +
-                    Utility.toUTF(bundle.getString("zekr")) + " " + Utility.toUTF(bundle.getString("questionMark")))) {
+            if (BuilderUI.showConfirmAlert(true, bundle.getString("delete") + " " +
+                                                 bundle.getString("zekr") + " " + bundle.getString("questionMark"))) {
                 DatabaseManager.getInstance().con
                         .prepareStatement("DELETE FROM absolute_zekr WHERE id =" + this.id)
                         .executeUpdate();

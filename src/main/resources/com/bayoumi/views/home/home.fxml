@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import com.jfoenix.controls.JFXButton?>
-<?import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView?>
-<?import de.jensd.fx.glyphs.materialdesignicons.MaterialDesignIconView?>
-<?import java.lang.String?>
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Label?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.StackPane?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
-
-<StackPane fx:id="stackPane" nodeOrientation="RIGHT_TO_LEFT" prefHeight="540.0" prefWidth="900.0" styleClass="root" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.bayoumi.controllers.home.HomeController">
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+<?import java.lang.*?>
+<StackPane xmlns:fx="http://javafx.com/fxml/1" fx:id="stackPane" nodeOrientation="RIGHT_TO_LEFT" prefHeight="540.0"
+           prefWidth="900.0"
+           styleClass="root" xmlns="http://javafx.com/javafx/23.0.1"
+           fx:controller="com.bayoumi.controllers.home.HomeController">
    <VBox prefHeight="200.0" prefWidth="100.0">
       <VBox prefHeight="85.0" style="-fx-background-color: -fx-secondary-bg;" VBox.vgrow="ALWAYS" />
       <VBox prefHeight="160.0" VBox.vgrow="ALWAYS" />
@@ -68,7 +67,7 @@
                                     <String fx:value="_18" />
                                  </styleClass>
                               </Label>
-                              <MaterialDesignIconView glyphName="CLOCK" size="28" />
+                               <FontIcon iconLiteral="far-clock" iconSize="32"/>
                            </children>
                         </HBox>
                         <Label fx:id="timeLabel" lineSpacing="1.0" text="00:00">
@@ -151,9 +150,6 @@
                            <font>
                               <Font name="System Bold" size="15.0" />
                            </font>
-                           <graphic>
-                              <FontAwesomeIconView glyphName="GEAR" size="45" />
-                           </graphic>
                            <styleClass>
                               <String fx:value="box-normal" />
                               <String fx:value="font-text-medium" />
@@ -162,6 +158,9 @@
                            <padding>
                               <Insets bottom="3.0" left="3.0" right="3.0" top="3.0" />
                            </padding>
+                            <graphic>
+                                <FontIcon iconLiteral="fas-cog" iconSize="50"/>
+                            </graphic>
                         </JFXButton>
                      </children>
                   </HBox>

@@ -1,11 +1,9 @@
 package com.bayoumi;
 
 import com.bayoumi.controllers.components.audio.ChooseAudioController;
-import com.bayoumi.controllers.dialog.DownloadResourcesController;
 import com.bayoumi.controllers.home.HomeController;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.repositry.OnboardingRepository;
-import com.bayoumi.services.TimedAzkarService;
 import com.bayoumi.services.update.UpdateService;
 import com.bayoumi.storage.DatabaseManager;
 import com.bayoumi.storage.LocationsDBManager;
@@ -14,20 +12,15 @@ import com.bayoumi.storage.preferences.PreferencesType;
 import com.bayoumi.util.Constants;
 import com.bayoumi.util.LoggerWrapper;
 import com.bayoumi.util.SentryUtil;
-import com.bayoumi.util.Utility;
-import com.bayoumi.util.file.FileUtils;
 import com.bayoumi.util.gui.ArabicTextSupport;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.HelperMethods;
-import com.bayoumi.util.gui.load.Loader;
-import com.bayoumi.util.gui.load.LoaderComponent;
 import com.bayoumi.util.gui.load.Locations;
 import com.bayoumi.util.gui.tray.TrayUtil;
 import com.bayoumi.util.validation.SingleInstance;
 import com.bayoumi.util.web.server.ServerService;
 import com.install4j.api.launcher.StartupNotification;
 import javafx.application.Application;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -39,14 +32,9 @@ import java.util.logging.Logger;
 
 
 public class Launcher extends Application {
-    // preloader flags
-    public static final SimpleBooleanProperty workFine = new SimpleBooleanProperty(true);
-    public static double preloaderProgress = 0;
-    private boolean locationsDBError = false;
-    // for logaging purpose
-    public static Long startTime;
     // GUI Object
     public static HomeController homeController;
+
     // GUI Object
     private Scene scene = null;
 
@@ -59,36 +47,18 @@ public class Launcher extends Application {
     }
 
     @Override
-    public void stop() {
+    public void stop() throws Exception {
         LOGGER.info("stop()...");
-        Utility.exitProgramAction();
+        super.stop();
     }
 
     @Override
     public void init() {
-        startTime = System.currentTimeMillis();
-        // if anything in loading goes wrong => terminate the program
-        workFine.addListener((observable, oldValue, newValue) -> {
-            if (!newValue) {
-                Utility.exitProgramAction();
-            }
-        });
-        incrementPreloader();
 
         try {
-            // --- Create Needed Folder if not exist ---
-            FileUtils.createDirectory(Constants.assetsPath + "/logs");
-            FileUtils.createDirectory(Constants.assetsPath + "/db");
-            FileUtils.createDirectory(Constants.assetsPath + "/audio/adhan");
-            FileUtils.createDirectory(Constants.assetsPath + "/azkar");
-
-            // To save the audio file in the temp directory to be able to play it
-            FileUtils.createDirectory(System.getProperty("java.io.tmpdir") + "/" + Constants.APP_NAME);
-            incrementPreloader();
 
             // --- initialize Logger ---
             LOGGER.info("App Starting...");
-            incrementPreloader();
 
             // --- initialize Unirest ---
             Unirest.config().connectTimeout(30_000);
@@ -96,13 +66,11 @@ public class Launcher extends Application {
             // --- initialize database connection ---
             DatabaseManager databaseManager = DatabaseManager.getInstance();
             if (!databaseManager.init()) {
-                workFine.setValue(false);
+                stop();
             }
-            incrementPreloader();
 
             // --- initialize Preferences ---
             Preferences.init();
-            incrementPreloader();
 
             // --- initialize Auto Update Check ---
             UpdateService.checkForUpdate();
@@ -111,52 +79,26 @@ public class Launcher extends Application {
             try {
                 LocationsDBManager.getInstance();
             } catch (Exception ex) {
-                locationsDBError = true;
+                LOGGER.log(Level.SEVERE, "Initialize locationsDB failed", ex);
             }
-            incrementPreloader();
 
             // --- load Homepage FXML ---
             FXMLLoader loader = new FXMLLoader(getClass().getResource(Locations.Home.toString()));
             scene = new Scene(loader.load());
             scene.getStylesheets().setAll(Settings.getInstance().getThemeFilesCSS());
             homeController = loader.getController();
-            incrementPreloader();
+
             // --- initialize Sentry for error tracking ---
             try {
                 SentryUtil.init();
             } catch (Exception ex) {
                 LOGGER.warning(() -> "Error initializing Sentry: " + ex.getLocalizedMessage());
             }
-            incrementPreloader();
-            if (Constants.RUNNING_MODE.equals(Constants.Mode.PRODUCTION)) ServerService.init();
-            incrementPreloader();
 
-            TimedAzkarService.init();
-            incrementPreloader();
+            if (Constants.RUNNING_MODE.equals(Constants.Mode.PRODUCTION)) ServerService.init();
+
         } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "init failed", ex);
-            workFine.setValue(false);
-        }
-    }
-
-    /**
-     * notify the Preloader to increment
-     * the ProgressBar by 10%
-     */
-    private void incrementPreloader() {
-        preloaderProgress += 0.1;
-    }
-
-    private void handleLocationDBError() {
-        if (!locationsDBError) return;
-
-        try {
-            final LoaderComponent popUp = Loader.getInstance().getPopUp(Locations.DownloadResources);
-            ((DownloadResourcesController) popUp.getController())
-                    .setData(Constants.LOCATIONS_DB_URL, "jarFiles/db/locations.db", "locationsDBErrorInDownload", popUp.getStage(), Utility::exitProgramAction);
-            popUp.showAndWait();
-        } catch (Exception ex) {
-            LOGGER.log(Level.SEVERE, "Show locationsDB download failed", ex);
         }
     }
 
@@ -192,13 +134,13 @@ public class Launcher extends Application {
     }
 
     public void start(Stage primaryStage) throws Exception {
-        handleLocationDBError();
-        // initialize tray icon
+
         try {
             new TrayUtil(primaryStage);
         } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "Show tray failed", ex);
         }
+
         // add loaded scene to primaryStage
         primaryStage.setScene(scene);
 

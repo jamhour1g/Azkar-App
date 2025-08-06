@@ -1,7 +1,6 @@
 package com.bayoumi.controllers.alert.edit.textfield;
 
 import com.bayoumi.models.settings.LanguageBundle;
-import com.bayoumi.util.Utility;
 import com.jfoenix.controls.JFXTextField;
 import javafx.event.Event;
 import javafx.fxml.FXML;
@@ -24,9 +23,9 @@ public class EditTextFieldController implements Initializable {
 
     public void setData(String prompt, String value) {
         final ResourceBundle bundle = LanguageBundle.getInstance().getResourceBundle();
-        confirmBTN.setText(Utility.toUTF(bundle.getString("confirm")));
-        discardButton.setText(Utility.toUTF(bundle.getString("discard")));
-        textfield.setNodeOrientation(NodeOrientation.valueOf(Utility.toUTF(bundle.getString("dir"))));
+        confirmBTN.setText(bundle.getString("confirm"));
+        discardButton.setText(bundle.getString("discard"));
+        textfield.setNodeOrientation(NodeOrientation.valueOf(bundle.getString("dir")));
 
         textfield.setPromptText(prompt);
         textfield.setText(value);

@@ -7,7 +7,6 @@ import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.PrayerTimeSettings;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.ComboBoxAutoComplete;
 import com.bayoumi.util.web.IpChecker;
 import com.bayoumi.util.web.LocationService;
@@ -72,18 +71,18 @@ public class SelectLocationController implements Initializable {
 
     private void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        countries.setPromptText(Utility.toUTF(bundle.getString("country")));
-        cities.setPromptText(Utility.toUTF(bundle.getString("city")));
-        manualLongitude.setPromptText(Utility.toUTF(bundle.getString("longitude")));
-        manualLatitude.setPromptText(Utility.toUTF(bundle.getString("latitude")));
-        autoCountry.setPromptText(Utility.toUTF(bundle.getString("country")));
-        autoCity.setPromptText(Utility.toUTF(bundle.getString("city")));
-        autoLongitude.setPromptText(Utility.toUTF(bundle.getString("longitude")));
-        autoLatitude.setPromptText(Utility.toUTF(bundle.getString("latitude")));
-        autoLocationButton.setText(Utility.toUTF(bundle.getString("autoLocate")));
-        enterCountryAndCity.setText(Utility.toUTF(bundle.getString("enterCountryAndCity")));
-        autoSelectButton.setText(Utility.toUTF(bundle.getString("autoLocate")));
-        manualSelectButton.setText(Utility.toUTF(bundle.getString("manualLocate")));
+        countries.setPromptText(bundle.getString("country"));
+        cities.setPromptText(bundle.getString("city"));
+        manualLongitude.setPromptText(bundle.getString("longitude"));
+        manualLatitude.setPromptText(bundle.getString("latitude"));
+        autoCountry.setPromptText(bundle.getString("country"));
+        autoCity.setPromptText(bundle.getString("city"));
+        autoLongitude.setPromptText(bundle.getString("longitude"));
+        autoLatitude.setPromptText(bundle.getString("latitude"));
+        autoLocationButton.setText(bundle.getString("autoLocate"));
+        enterCountryAndCity.setText(bundle.getString("enterCountryAndCity"));
+        autoSelectButton.setText(bundle.getString("autoLocate"));
+        manualSelectButton.setText(bundle.getString("manualLocate"));
     }
 
 
@@ -201,7 +200,7 @@ public class SelectLocationController implements Initializable {
         manualLongitude.setDisable(true);
         autoLocationButton.setDisable(true);
         statusLabel.setVisible(true);
-        statusLabel.setText(Utility.toUTF(bundle.getString("loading")) + "...");
+        statusLabel.setText(bundle.getString("loading") + "...");
         statusLabel.setStyle("-fx-text-fill: green");
         new Thread(() -> {
             try {
@@ -219,7 +218,7 @@ public class SelectLocationController implements Initializable {
                 LOGGER.log(Level.SEVERE, "getAutoLocation failed", ex);
                 Platform.runLater(() -> {
                     statusLabel.setVisible(true);
-                    statusLabel.setText(Utility.toUTF(bundle.getString("autoSelectionError")));
+                    statusLabel.setText(bundle.getString("autoSelectionError"));
                     statusLabel.setStyle("-fx-text-fill: red");
                 });
             }

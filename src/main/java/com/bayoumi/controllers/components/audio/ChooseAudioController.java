@@ -5,18 +5,12 @@ import com.bayoumi.models.settings.AzkarSettings;
 import com.bayoumi.models.settings.Language;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.Settings;
-import com.bayoumi.util.Constants;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.BuilderUI;
 import com.bayoumi.util.gui.PopOverUtil;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXSlider;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
-import de.jensd.fx.glyphs.octicons.OctIcon;
-import de.jensd.fx.glyphs.octicons.OctIconView;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -26,6 +20,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.stage.FileChooser;
+import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -42,8 +39,8 @@ import java.util.logging.Logger;
 public class ChooseAudioController implements Initializable {
     public static MediaPlayer MEDIA_PLAYER;
     private AzkarSettings azkarSettings;
-    private FontAwesomeIconView pauseIcon;
-    private FontAwesomeIconView playIcon;
+    private FontIcon pauseIcon;
+    private FontIcon playIcon;
     private double previousValue = 50;
     private boolean isMuted = false;
 
@@ -56,7 +53,7 @@ public class ChooseAudioController implements Initializable {
     @FXML
     private JFXSlider prayerVolumeSlider;
     @FXML
-    private OctIconView volume;
+    private FontIcon volume;
     @FXML
     public JFXComboBox<Muezzin> audioBox;
     @FXML
@@ -86,7 +83,7 @@ public class ChooseAudioController implements Initializable {
     }
 
     private void setMuezzins() {
-        audioBox.setItems(FXCollections.observableArrayList(Muezzin.getAdhanList()));
+        audioBox.setItems(FXCollections.observableArrayList(Muezzin.getMuezzinList()));
         audioBox.getItems().add(Muezzin.NO_SOUND);
     }
 
@@ -105,9 +102,9 @@ public class ChooseAudioController implements Initializable {
         prayerVolumeSlider.setValue(azkarSettings.getPrayerVolume());
         prayerVolumeBox.setDisable(audioBox.getValue().equals(Muezzin.NO_SOUND));
         if (azkarSettings.getPrayerVolume() == 0) {
-            volume.setIcon(OctIcon.MUTE);
+            volume.setIconCode(FontAwesomeSolid.VOLUME_UP);
         } else {
-            volume.setIcon(OctIcon.UNMUTE);
+            volume.setIconCode(FontAwesomeSolid.VOLUME_MUTE);
         }
     }
 
@@ -124,12 +121,14 @@ public class ChooseAudioController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         azkarSettings = Settings.getInstance().getAzkarSettings();
-        playIcon = new FontAwesomeIconView(FontAwesomeIcon.PLAY);
+        playIcon = new FontIcon(FontAwesomeSolid.PLAY);
         playIcon.setStyle("-fx-fill: -fx-reverse-secondary;");
-        playIcon.setGlyphSize(30);
-        pauseIcon = new FontAwesomeIconView(FontAwesomeIcon.PAUSE);
-        pauseIcon.setGlyphSize(30);
+        playIcon.setIconSize(30);
+
+        pauseIcon = new FontIcon(FontAwesomeSolid.PAUSE);
+        pauseIcon.setIconSize(30);
         pauseIcon.setStyle("-fx-fill: -fx-reverse-secondary;");
+
         audioBox.setOnAction(event -> {
             playButton.setDisable(Muezzin.NO_SOUND.equals(audioBox.getValue()));
             prayerVolumeBox.setDisable(Muezzin.NO_SOUND.equals(audioBox.getValue()));
@@ -139,7 +138,7 @@ public class ChooseAudioController implements Initializable {
             Settings.getInstance().getPrayerTimeSettings().setAdhanAudio(getValue().getFileName());
         });
 
-        PopOverUtil.init(uploadButton, Utility.toUTF(LanguageBundle.getInstance().getResourceBundle().getString("uploadNewAudioTooltip")));
+        PopOverUtil.init(uploadButton, LanguageBundle.getInstance().getResourceBundle().getString("uploadNewAudioTooltip"));
 
         prayerVolumeSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
             azkarSettings.setPrayerVolume((int) prayerVolumeSlider.getValue());
@@ -148,9 +147,9 @@ public class ChooseAudioController implements Initializable {
             // multiply duration by percentage calculated by
             // slider position
             if (prayerVolumeSlider.getValue() > 0) {
-                volume.setIcon(OctIcon.UNMUTE);
+                volume.setIconCode(FontAwesomeSolid.VOLUME_UP);
             } else if (prayerVolumeSlider.getValue() == 0) {
-                volume.setIcon(OctIcon.MUTE);
+                volume.setIconCode(FontAwesomeSolid.VOLUME_MUTE);
             }
             if (null != MEDIA_PLAYER) {
                 MEDIA_PLAYER.setVolume(azkarSettings.getPrayerVolume() / 100.0);
@@ -173,7 +172,12 @@ public class ChooseAudioController implements Initializable {
         final File selectedFile = fileChooser.showOpenDialog(uploadButton.getScene().getWindow());
         if (selectedFile != null && selectedFile.isFile()) {
             Path audioSourcePath = selectedFile.toPath();
-            String audioTargetPath = Constants.assetsPath + "/audio/adhan/" + selectedFile.getName();
+            URL resource = Objects.requireNonNull(
+                    ChooseAudioController.class.getResource("/audio/adhan/custom"),
+                    "Custom audio directory not found"
+            );
+
+            String audioTargetPath = resource + selectedFile.getName();
             Path path = Paths.get(audioTargetPath);
 
             try {
@@ -186,7 +190,7 @@ public class ChooseAudioController implements Initializable {
             } catch (IOException e) {
                 LOGGER.log(Level.SEVERE, "Upload audio failed", e);
                 final ResourceBundle bundle = LanguageBundle.getInstance().getResourceBundle();
-                BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(bundle.getString("errorUploadAudio")), bundle);
+                BuilderUI.showOkAlert(Alert.AlertType.ERROR, bundle.getString("errorUploadAudio"), bundle);
             }
         }
     }
@@ -198,21 +202,26 @@ public class ChooseAudioController implements Initializable {
         } else {
             final Muezzin muezzin = audioBox.getValue();
             LOGGER.info(() -> "Playing audio: " + muezzin);
-            if (!muezzin.equals(Muezzin.NO_SOUND)) {
-                try {
-                    MEDIA_PLAYER = new MediaPlayer(new Media(new File(muezzin.getPath()).toURI().toString()));
-                } catch (Exception e) {
-                    LOGGER.log(Level.SEVERE, "Error playing audio", e);
-                    final ResourceBundle bundle = LanguageBundle.getInstance().getResourceBundle();
-                    BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(bundle.getString("errorPlayingAudio")), bundle);
-                    return;
-                }
-                MEDIA_PLAYER.setVolume(prayerVolumeSlider.getValue() / 100.0);
-                MEDIA_PLAYER.setOnEndOfMedia(() -> playButton.setGraphic(playIcon));
-                MEDIA_PLAYER.setOnStopped(() -> playButton.setGraphic(playIcon));
-                MEDIA_PLAYER.play();
-                setPauseIcon();
+
+            if (muezzin.equals(Muezzin.NO_SOUND)) {
+                return;
             }
+
+            try {
+                muezzin.getAudioFileURL().ifPresent(
+                        url -> MEDIA_PLAYER = new MediaPlayer(new Media(url.toString()))
+                );
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Error playing audio", e);
+                final ResourceBundle bundle = LanguageBundle.getInstance().getResourceBundle();
+                BuilderUI.showOkAlert(Alert.AlertType.ERROR, bundle.getString("errorPlayingAudio"), bundle);
+                return;
+            }
+            MEDIA_PLAYER.setVolume(prayerVolumeSlider.getValue() / 100.0);
+            MEDIA_PLAYER.setOnEndOfMedia(() -> playButton.setGraphic(playIcon));
+            MEDIA_PLAYER.setOnStopped(() -> playButton.setGraphic(playIcon));
+            MEDIA_PLAYER.play();
+            setPauseIcon();
         }
     }
 

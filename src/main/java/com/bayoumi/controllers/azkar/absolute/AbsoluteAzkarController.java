@@ -2,7 +2,6 @@ package com.bayoumi.controllers.azkar.absolute;
 
 import com.bayoumi.models.azkar.AbsoluteZekr;
 import com.bayoumi.models.settings.LanguageBundle;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.button.TableViewButton;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXTextField;
@@ -40,14 +39,14 @@ public class AbsoluteAzkarController implements Initializable {
     private TreeTableColumn<AbsoluteZekr, TableViewButton> deleteCol;
 
     public void updateBundle(ResourceBundle bundle) {
-        returnToDefaultBTN.setText(Utility.toUTF(bundle.getString("retrieveDefaultAzkar")));
-        addButton.setText(Utility.toUTF(bundle.getString("add")));
-        absoluteAzkar.setText(Utility.toUTF(bundle.getString("absoluteAzkar")));
-        newZekr.setPromptText(Utility.toUTF(bundle.getString("zekr")));
-        zekrCol.setText(Utility.toUTF(bundle.getString("zekr")));
-        editCol.setText(Utility.toUTF(bundle.getString("edit")));
-        deleteCol.setText(Utility.toUTF(bundle.getString("delete")));
-        root.setNodeOrientation(NodeOrientation.valueOf(Utility.toUTF(bundle.getString("dir"))));
+        returnToDefaultBTN.setText(bundle.getString("retrieveDefaultAzkar"));
+        addButton.setText(bundle.getString("add"));
+        absoluteAzkar.setText(bundle.getString("absoluteAzkar"));
+        newZekr.setPromptText(bundle.getString("zekr"));
+        zekrCol.setText(bundle.getString("zekr"));
+        editCol.setText(bundle.getString("edit"));
+        deleteCol.setText(bundle.getString("delete"));
+        root.setNodeOrientation(NodeOrientation.valueOf(bundle.getString("dir")));
     }
 
 

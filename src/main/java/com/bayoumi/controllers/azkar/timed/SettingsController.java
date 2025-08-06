@@ -3,7 +3,6 @@ package com.bayoumi.controllers.azkar.timed;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.util.Constants;
-import com.bayoumi.util.Utility;
 import com.jfoenix.controls.JFXDialog;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -30,7 +29,7 @@ public class SettingsController {
     private boolean isChanged = false;
 
     private void updateBundle(ResourceBundle bundle) {
-        changeFontSizeLabel.setText(Utility.toUTF(bundle.getString("settings.azkar.changeFontSize")));
+        changeFontSizeLabel.setText(bundle.getString("settings.azkar.changeFontSize"));
     }
 
     public void setData(JFXDialog dialog, Runnable onCloseAction) {
@@ -43,7 +42,7 @@ public class SettingsController {
         dialog.setOnDialogClosed(event -> {
             if (isChanged) {
                 if (onCloseAction != null) onCloseAction.run();
-                Settings.getInstance().getAzkarSettings().notifyObservers();
+                Settings.getInstance().getAzkarSettings();
             }
         });
         updateBundle(LanguageBundle.getInstance().getResourceBundle());

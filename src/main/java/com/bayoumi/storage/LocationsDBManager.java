@@ -3,9 +3,6 @@ package com.bayoumi.storage;
 
 import com.bayoumi.util.LoggerWrapper;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -14,6 +11,7 @@ import java.util.logging.Logger;
 
 public class LocationsDBManager {
 
+    private static final String DATA_SOURCE_URL = "jdbc:sqlite:" + DatabaseManager.class.getResource("/db/locations.db");
     private static LocationsDBManager databaseManager = null;  // static
     public Connection con = null;
 
@@ -22,24 +20,17 @@ public class LocationsDBManager {
 
     private LocationsDBManager() throws Exception {
         try {
-            if (!Files.exists(Paths.get("jarFiles/db/locations.db"))) {
-                // Throw error to download the DB again
-                throw new Exception("LocationsDB does not exist");
-            } else {
-                if (!connectToDatabase()) {
-                    throw new Exception("Cannot connect to LocationsDB");
-                }
-                if (!DatabaseHelper.checkIfTablesExist(con, "Countries")
-                        || !DatabaseHelper.checkIfTablesExist(con, "cityd")) {
-                    // close connection
-                    con.close();
-                    con = null;
-                    // Delete created locations.db file
-                    new File("jarFiles/db/locations.db").delete();
-                    // Throw error to download the DB again
-                    throw new Exception("LocationsDB does not exist");
-                }
+            if (!connectToDatabase()) {
+                throw new Exception("Cannot connect to LocationsDB");
             }
+
+            if (!DatabaseHelper.checkIfTablesExist(con, "Countries")
+                || !DatabaseHelper.checkIfTablesExist(con, "cityd")) {
+                // close connection
+                con.close();
+                con = null;
+            }
+
         } catch (Exception ex) {
             // close connection
             if (con != null) {
@@ -59,18 +50,13 @@ public class LocationsDBManager {
 
     private boolean connectToDatabase() {
         try {
-            final String url = "jdbc:sqlite:jarFiles/db/locations.db";
-            if (con != null && con.getMetaData().getURL().equals(url)) {
-                return true;
-            }
             if (con == null) {
                 // .... Connect to SQlLite ....
-                Class.forName("org.sqlite.JDBC");
-                con = DriverManager.getConnection(url);
+                con = DriverManager.getConnection(DATA_SOURCE_URL);
                 con.prepareStatement("PRAGMA foreign_keys=ON").execute();
                 return true;
             }
-        } catch (ClassNotFoundException | SQLException ex) {
+        } catch (SQLException ex) {
             con = null;
             LOGGER.log(Level.SEVERE, "Cannot connect to database", ex);
         }

@@ -4,7 +4,6 @@ import com.bayoumi.models.settings.Language;
 import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.services.azkar.AzkarService;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.PopOverUtil;
 import com.bayoumi.util.time.ArabicNumeralDiscrimination;
 import com.jfoenix.controls.JFXButton;
@@ -52,12 +51,12 @@ public class AzkarPeriodsController implements Initializable {
 
     public void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        PopOverUtil.init(frequencyLabel, Utility.toUTF(bundle.getString("azkar.period.tooltip")));
-        title.setText(Utility.toUTF(bundle.getString("azkar.period.title")));
-        highFrequency.setText(Utility.toUTF(bundle.getString("azkar.period.high")));
-        midFrequency.setText(Utility.toUTF(bundle.getString("azkar.period.mid")));
-        lowFrequency.setText(Utility.toUTF(bundle.getString("azkar.period.low")));
-        rearFrequency.setText(Utility.toUTF(bundle.getString("azkar.period.rare")));
+        PopOverUtil.init(frequencyLabel, bundle.getString("azkar.period.tooltip"));
+        title.setText(bundle.getString("azkar.period.title"));
+        highFrequency.setText(bundle.getString("azkar.period.high"));
+        midFrequency.setText(bundle.getString("azkar.period.mid"));
+        lowFrequency.setText(bundle.getString("azkar.period.low"));
+        rearFrequency.setText(bundle.getString("azkar.period.rare"));
     }
 
     @FXML
@@ -104,7 +103,7 @@ public class AzkarPeriodsController implements Initializable {
     }
 
     public void setFrequencyLabel() {
-        String msg = Utility.toUTF(bundle.getString("azkar.period.showEvery")) + " ";
+        String msg = bundle.getString("azkar.period.showEvery") + " ";
         if (currentFrequency.equals(highFrequency)) {
             if (Settings.getInstance().getLanguage().equals(Language.Arabic)) {
                 msg += ArabicNumeralDiscrimination.getTimeArabicPlurality(bundle, settings.getAzkarSettings().getHighPeriod());

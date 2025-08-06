@@ -1,16 +1,20 @@
 package com.bayoumi.storage;
 
 
-import com.bayoumi.util.Constants;
 import com.bayoumi.util.LoggerWrapper;
 import org.flywaydb.core.Flyway;
+import org.sqlite.SQLiteDataSource;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class DatabaseManager {
 
+    private static final String DATA_SOURCE_URL = "jdbc:sqlite:" + DatabaseManager.class.getResource("/db/data.db");
     private static DatabaseManager databaseManager = null;
     public PreparedStatement stat = null;
     public Connection con = null;
@@ -30,7 +34,7 @@ public class DatabaseManager {
     public boolean init() {
         try {
             Flyway.configure()
-                    .dataSource("jdbc:sqlite:" + Constants.assetsPath + "/db/data.db", "", "")
+                    .dataSource(DATA_SOURCE_URL, "", "")
                     .baselineOnMigrate(true)
                     .load()
                     .migrate();
@@ -46,18 +50,17 @@ public class DatabaseManager {
 
     private boolean connectToDatabase() {
         try {
-            if (con == null) {
-                // .... Connect to SQlLite ....
-                Class.forName("org.sqlite.JDBC");
-                con = DriverManager.getConnection("jdbc:sqlite:" + Constants.assetsPath + "/db/data.db");
-                con.prepareStatement("PRAGMA foreign_keys=ON").execute();
-                return true;
-            }
-        } catch (ClassNotFoundException | SQLException ex) {
-            con = null;
+            SQLiteDataSource dataSource = new SQLiteDataSource();
+            dataSource.setUrl(DATA_SOURCE_URL);
+
+            con = dataSource.getConnection();
+            con.prepareStatement("PRAGMA foreign_keys=ON").execute();
+            return true;
+        } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Cannot connect to database", ex);
+            return false;
         }
-        return false;
+
     }
 
 

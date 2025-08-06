@@ -13,6 +13,7 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 
 import java.util.HashMap;
+import java.util.Objects;
 
 public class HelperMethods {
 
@@ -36,7 +37,14 @@ public class HelperMethods {
 
     public static void SetIcon(Stage stage) {
         stage.getIcons().clear();
-        stage.getIcons().add(new Image("/com/bayoumi/images/logo_50x50.png"));
+        stage.getIcons().add(
+                new Image(
+                        Objects.requireNonNull(
+                                HelperMethods.class.getResourceAsStream("/com/bayoumi/images/logo_50x50.png"),
+                                "Could not load icon"
+                        )
+                )
+        );
     }
 
     public static void setStageListener(Node node, Callback<Stage, Void> callback) {

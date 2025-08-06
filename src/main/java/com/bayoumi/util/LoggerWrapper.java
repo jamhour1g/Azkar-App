@@ -46,6 +46,10 @@ public final class LoggerWrapper {
     }
 
     private static void createLogFiles(Class<?> loggerForClass, Logger logger) {
+        if (!IS_FILE_LOGGING_ENABLED) {
+            return;
+        }
+
         String timeFormat = LocalDateTime.now().format(FILE_NAME_TIME_FORMAT);
         String directoryFormat = "logs/%s/%s".formatted(loggerForClass.getPackageName(), loggerForClass.getSimpleName());
         Path filePath = Path.of(directoryFormat);
@@ -62,9 +66,7 @@ public final class LoggerWrapper {
             FileHandler fileHandler = new FileHandler(filePath.resolve("%s.log".formatted(timeFormat)).toString(), true);
             fileHandler.setFormatter(new LogFormatter());
 
-            if (IS_FILE_LOGGING_ENABLED) {
-                logger.addHandler(fileHandler);
-            }
+            logger.addHandler(fileHandler);
         } catch (IOException e) {
             ROOT_LOGGER.log(Level.SEVERE, "Failed to create log file", e);
         }

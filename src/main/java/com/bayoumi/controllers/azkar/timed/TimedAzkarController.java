@@ -16,8 +16,6 @@ import com.bayoumi.util.gui.load.Locations;
 import com.bayoumi.util.web.FileDownloader;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXDialog;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -37,6 +35,8 @@ import javafx.scene.media.MediaPlayer;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
+import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.io.File;
 import java.net.URL;
@@ -50,7 +50,7 @@ public class TimedAzkarController implements Initializable {
     private ResourceBundle bundle;
     private List<TimedZekrDTO> timedAzkarList;
     private Image morningImage, nightImage;
-    private FontAwesomeIconView pauseIcon, playIcon;
+    private FontIcon pauseIcon, playIcon;
     private int currentIndex = 0;
 
     private static final Logger LOGGER = LoggerWrapper.loggerFactory(TimedAzkarController.class);
@@ -84,10 +84,13 @@ public class TimedAzkarController implements Initializable {
         morningImage = new Image("/com/bayoumi/images/sun_50px.png");
         nightImage = new Image("/com/bayoumi/images/night_50px.png");
 
-        playIcon = new FontAwesomeIconView(FontAwesomeIcon.PLAY);
-        playIcon.setGlyphSize(30);
-        pauseIcon = new FontAwesomeIconView(FontAwesomeIcon.PAUSE);
-        pauseIcon.setGlyphSize(30);
+        playIcon = new FontIcon(FontAwesomeSolid.PLAY);
+        playIcon.setStyle("-fx-fill: -fx-reverse-secondary;");
+        playIcon.setIconSize(30);
+
+        pauseIcon = new FontIcon(FontAwesomeSolid.PAUSE);
+        pauseIcon.setIconSize(30);
+        pauseIcon.setStyle("-fx-fill: -fx-reverse-secondary;");
 
         settingsButton.setOnMouseEntered(event -> settingsButton.setContentDisplay(ContentDisplay.LEFT));
         settingsButton.setOnMouseExited(event -> settingsButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY));
@@ -96,26 +99,26 @@ public class TimedAzkarController implements Initializable {
 
         scrollPaneChild.setOnMouseClicked(event -> onIncreaseCountClicked());
 
-        PopOverUtil.init(copyButton, Utility.toUTF(bundle.getString("timedAzkarCopyTooltip")));
+        PopOverUtil.init(copyButton, bundle.getString("timedAzkarCopyTooltip"));
     }
 
     private void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        settingsButton.setText(Utility.toUTF(bundle.getString("settings")));
-        copyButton.setText(Utility.toUTF(bundle.getString("copy")));
-        playButton.setText(Utility.toUTF(bundle.getString("playAudio")));
-        toggleZekrDescriptionButton.setText(Utility.toUTF(bundle.getString("toggleZekrDescription")));
+        settingsButton.setText(bundle.getString("settings"));
+        copyButton.setText(bundle.getString("copy"));
+        playButton.setText(bundle.getString("playAudio"));
+        toggleZekrDescriptionButton.setText(bundle.getString("toggleZekrDescription"));
     }
 
 
     public void setData(List<TimedZekrDTO> timedZekrDTOList, String type, Stage stage) {
         currentIndex = 0;
         if (type.toLowerCase().contains("morning")) {
-            title.setText(Utility.toUTF(bundle.getString("morningAzkar")));
+            title.setText(bundle.getString("morningAzkar"));
             image.setImage(morningImage);
             initAzkarContainer(timedZekrDTOList);
         } else {
-            title.setText(Utility.toUTF(bundle.getString("nightAzkar")));
+            title.setText(bundle.getString("nightAzkar"));
             image.setImage(nightImage);
             initAzkarContainer(timedZekrDTOList);
         }
@@ -126,7 +129,7 @@ public class TimedAzkarController implements Initializable {
 
     @FXML
     private void onPreviousClicked() {
-        final boolean isLTR = Utility.toUTF(bundle.getString("dir")).equals("LEFT_TO_RIGHT");
+        final boolean isLTR = bundle.getString("dir").equals("LEFT_TO_RIGHT");
         if (isLTR) {
             goToNext();
         } else {
@@ -143,7 +146,7 @@ public class TimedAzkarController implements Initializable {
 
     @FXML
     private void onNextClicked() {
-        final boolean isLTR = Utility.toUTF(bundle.getString("dir")).equals("LEFT_TO_RIGHT");
+        final boolean isLTR = bundle.getString("dir").equals("LEFT_TO_RIGHT");
         if (isLTR) {
             goToPrevious();
         } else {
@@ -181,8 +184,8 @@ public class TimedAzkarController implements Initializable {
         count.setText("0");
         progress.setProgress(0);
         countDescription.setText(zekrDTO.getCountDescription());
-        paginationText.setText((currentIndex + 1) + " " + Utility.toUTF(bundle.getString("of")) + " " + timedAzkarList.size());
-        final boolean isLTR = Utility.toUTF(bundle.getString("dir")).equals("LEFT_TO_RIGHT");
+        paginationText.setText((currentIndex + 1) + " " + bundle.getString("of") + " " + timedAzkarList.size());
+        final boolean isLTR = bundle.getString("dir").equals("LEFT_TO_RIGHT");
         if (isLTR) {
             previousButton.setDisable(currentIndex == timedAzkarList.size() - 1);
             countDescription.setCursor(previousButton.isDisable() ? Cursor.DEFAULT : Cursor.HAND);
@@ -294,7 +297,7 @@ public class TimedAzkarController implements Initializable {
     @FXML
     private void keyEventAction(KeyEvent keyEvent) {
         final KeyCode key = keyEvent.getCode();
-        final boolean isLTR = Utility.toUTF(bundle.getString("dir")).equals("LEFT_TO_RIGHT");
+        final boolean isLTR = bundle.getString("dir").equals("LEFT_TO_RIGHT");
         final boolean isNextKey = isLTR ? key.equals(KeyCode.RIGHT) : key.equals(KeyCode.LEFT);
         final boolean isPreviousKey = isLTR ? key.equals(KeyCode.LEFT) : key.equals(KeyCode.RIGHT);
         final boolean isIncreaseCountKey = key.equals(KeyCode.UP) || key.equals(KeyCode.SPACE);
@@ -324,7 +327,7 @@ public class TimedAzkarController implements Initializable {
                 if (FileDownloader.downloadFile(audioPath, audioFile)) {
                     Platform.runLater(() -> playMedia(audioFile));
                 } else {
-                    Platform.runLater(() -> BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(bundle.getString("errorDownloadingAudio")), bundle));
+                    Platform.runLater(() -> BuilderUI.showOkAlert(Alert.AlertType.ERROR, bundle.getString("errorDownloadingAudio"), bundle));
                 }
                 Platform.runLater(() -> progressBox.setVisible(false));
             }).start();
@@ -342,7 +345,7 @@ public class TimedAzkarController implements Initializable {
         }
         playButton.setGraphic(playIcon);
         playButton.setPadding(new Insets(5, 11, 5, 11));
-        playButton.setText(Utility.toUTF(bundle.getString("playAudio")));
+        playButton.setText(bundle.getString("playAudio"));
     }
 
     private void playMedia(File audioFile) {
@@ -350,7 +353,7 @@ public class TimedAzkarController implements Initializable {
             mediaPlayer = new MediaPlayer(new Media(audioFile.toURI().toString()));
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error playing audio", e);
-            BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(bundle.getString("errorPlayingAudio")), bundle);
+            BuilderUI.showOkAlert(Alert.AlertType.ERROR, bundle.getString("errorPlayingAudio"), bundle);
             return;
         }
         mediaPlayer.setVolume(100);
@@ -368,7 +371,7 @@ public class TimedAzkarController implements Initializable {
 
         playButton.setGraphic(pauseIcon);
         playButton.setPadding(new Insets(5, 11, 5, 11));
-        playButton.setText(Utility.toUTF(bundle.getString("stopAudio")));
+        playButton.setText(bundle.getString("stopAudio"));
     }
 
     private void stopIfPlaying() {

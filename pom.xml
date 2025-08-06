@@ -40,11 +40,18 @@
             <version>9.0.10</version>
         </dependency>
 
-        <!-- FontawesomeFX for font Icons -->
+        <!-- Ikonli base -->
         <dependency>
-            <groupId>de.jensd</groupId>
-            <artifactId>fontawesomefx</artifactId>
-            <version>8.9</version>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-javafx</artifactId>
+            <version>12.3.1</version>
+        </dependency>
+
+        <!-- FontAwesome 5 icons -->
+        <dependency>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-fontawesome6-pack</artifactId>
+            <version>12.4.0</version>
         </dependency>
 
         <!-- ControlsFX High quality UI controls -->
@@ -73,6 +80,13 @@
             <groupId>com.konghq</groupId>
             <artifactId>unirest-java-core</artifactId>
             <version>4.4.7</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.konghq/unirest-modules-jackson -->
+        <dependency>
+            <groupId>com.konghq</groupId>
+            <artifactId>unirest-modules-jackson</artifactId>
+            <version>4.5.0</version>
         </dependency>
 
         <!-- jgforms for submitting Google Forms -->
@@ -177,6 +191,13 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
                     <mainClass>${app.mainClass}</mainClass>
                 </configuration>

@@ -9,7 +9,6 @@ import com.bayoumi.models.settings.Settings;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.statistics.StatisticsType;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.load.Loader;
 import com.bayoumi.util.gui.load.LoaderComponent;
 import com.bayoumi.util.gui.load.Locations;
@@ -46,11 +45,11 @@ public class VersionInstalledController implements Initializable {
     private JFXCheckBox darkTheme;
 
     public void updateBundle(ResourceBundle bundle) {
-        mainTitleLabel.setText(Utility.toUTF(bundle.getString("changesInNewVersion")));
-        darkTheme.setText(Utility.toUTF(bundle.getString("enableDarkTheme")));
-        notificationColorButton.setText(Utility.toUTF(bundle.getString("settings.azkar.notificationColor")));
-        closeButton.setText(Utility.toUTF(bundle.getString("close")));
-        root.setNodeOrientation(NodeOrientation.valueOf(Utility.toUTF(bundle.getString("dir"))));
+        mainTitleLabel.setText(bundle.getString("changesInNewVersion"));
+        darkTheme.setText(bundle.getString("enableDarkTheme"));
+        notificationColorButton.setText(bundle.getString("settings.azkar.notificationColor"));
+        closeButton.setText(bundle.getString("close"));
+        root.setNodeOrientation(NodeOrientation.valueOf(bundle.getString("dir")));
     }
 
     @Override

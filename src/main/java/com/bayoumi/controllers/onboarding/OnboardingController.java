@@ -8,7 +8,6 @@ import com.bayoumi.controllers.components.audio.ChooseAudioUtil;
 import com.bayoumi.models.settings.*;
 import com.bayoumi.repositry.OnboardingRepository;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.ScrollHandler;
 import com.bayoumi.util.gui.load.Loader;
 import com.bayoumi.util.gui.load.Locations;
@@ -47,14 +46,14 @@ public class OnboardingController implements Initializable {
 
     public void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        adhanLabel.setText(Utility.toUTF(bundle.getString("adhan")));
-        format24.setText(Utility.toUTF(bundle.getString("hour24System")));
-        darkTheme.setText(Utility.toUTF(bundle.getString("darkTheme")));
-        minimizeAtStart.setText(Utility.toUTF(bundle.getString("minimizeAtStart")));
-        saveAndFinish.setText(Utility.toUTF(bundle.getString("saveAndFinish")));
-        configureTheProgramSettings.setText(Utility.toUTF(bundle.getString("configureTheProgramSettings")));
-        settingsCanBeChangedFromWithinTheProgramAsWell.setText(Utility.toUTF(bundle.getString("settingsCanBeChangedFromWithinTheProgramAsWell")));
-        scrollPane.setNodeOrientation(NodeOrientation.valueOf(Utility.toUTF(bundle.getString("dir"))));
+        adhanLabel.setText(bundle.getString("adhan"));
+        format24.setText(bundle.getString("hour24System"));
+        darkTheme.setText(bundle.getString("darkTheme"));
+        minimizeAtStart.setText(bundle.getString("minimizeAtStart"));
+        saveAndFinish.setText(bundle.getString("saveAndFinish"));
+        configureTheProgramSettings.setText(bundle.getString("configureTheProgramSettings"));
+        settingsCanBeChangedFromWithinTheProgramAsWell.setText(bundle.getString("settingsCanBeChangedFromWithinTheProgramAsWell"));
+        scrollPane.setNodeOrientation(NodeOrientation.valueOf(bundle.getString("dir")));
     }
 
     @Override

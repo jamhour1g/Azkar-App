@@ -1,7 +1,5 @@
 package com.bayoumi.util.time;
 
-import com.bayoumi.util.Utility;
-
 import java.util.ResourceBundle;
 
 /**
@@ -10,12 +8,12 @@ import java.util.ResourceBundle;
 public class ArabicNumeralDiscrimination {
 
     /**
-     * @param seconds value
+     * @param bundle value
      * @return Arabic String for the numerical discrimination
      * for seconds
      */
     public static String secondsArabicPlurality(ResourceBundle bundle) {
-        return Utility.toUTF(bundle.getString("seconds"));
+        return bundle.getString("seconds");
     }
 
 
@@ -26,13 +24,13 @@ public class ArabicNumeralDiscrimination {
      */
     public static String minutesArabicPlurality(ResourceBundle bundle, int minute) {
         if (minute == 1) {
-            return Utility.toUTF(bundle.getString("oneMinute"));
+            return bundle.getString("oneMinute");
         } else if (minute == 2) {
-            return Utility.toUTF(bundle.getString("twoMinutes"));
+            return bundle.getString("twoMinutes");
         } else if (minute < 11) {
-            return Utility.toUTF(bundle.getString("minutes"));
+            return bundle.getString("minutes");
         } else {
-            return Utility.toUTF(bundle.getString("oneMinute"));
+            return bundle.getString("oneMinute");
         }
     }
 
@@ -43,13 +41,13 @@ public class ArabicNumeralDiscrimination {
      */
     public static String hoursArabicPlurality(ResourceBundle bundle, int hour) {
         if (hour == 1) {
-            return Utility.toUTF(bundle.getString("oneHour"));
+            return bundle.getString("oneHour");
         } else if (hour == 2) {
-            return Utility.toUTF(bundle.getString("twoHours"));
+            return bundle.getString("twoHours");
         } else if (hour < 11) {
-            return Utility.toUTF(bundle.getString("hours"));
+            return bundle.getString("hours");
         } else {
-            return Utility.toUTF(bundle.getString("oneHour"));
+            return bundle.getString("oneHour");
         }
     }
 
@@ -60,7 +58,7 @@ public class ArabicNumeralDiscrimination {
         }
         if (time / 60 != 0) {
             if (time % 60 != 0) {
-                res += " " + Utility.toUTF(bundle.getString("and"));
+                res += " " + bundle.getString("and");
             }
             res += (isOneOrTwo(time / 60) ? "" : time / 60 + " ") + ArabicNumeralDiscrimination.hoursArabicPlurality(bundle, time / 60);
         }
@@ -75,7 +73,7 @@ public class ArabicNumeralDiscrimination {
         }
         if (time / 60 != 0) {
             if (time % 60 != 0) {
-                res += " " + Utility.toUTF(bundle.getString("and")) + " ";
+                res += " " + bundle.getString("and") + " ";
             }
             res += (isOneOrTwo(time / 60) ? "" : time / 60 + " ") + ArabicNumeralDiscrimination.hoursArabicPlurality(bundle, time / 60);
         }

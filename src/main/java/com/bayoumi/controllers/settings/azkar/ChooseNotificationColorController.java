@@ -5,7 +5,6 @@ import com.bayoumi.models.settings.NotificationColor;
 import com.bayoumi.models.settings.NotificationSettings;
 import com.bayoumi.models.settings.Settings;
 import com.bayoumi.storage.preferences.PreferencesType;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.ColorUtil;
 import com.jfoenix.controls.JFXColorPicker;
 import javafx.fxml.FXML;
@@ -61,15 +60,15 @@ public class ChooseNotificationColorController implements Initializable {
     }
 
     public void updateBundle(ResourceBundle bundle) {
-        saveButton.setText(Utility.toUTF(bundle.getString("save")));
-        title.setText(Utility.toUTF(bundle.getString("settings.azkar.notificationColor")));
-        backgroundColorLabel.setText(Utility.toUTF(bundle.getString("backgroundColor")));
-        borderColorLabel.setText(Utility.toUTF(bundle.getString("borderColor")));
-        textColorLabel.setText(Utility.toUTF(bundle.getString("textColor")));
-        restoreDefaultColorBox.setNodeOrientation(NodeOrientation.valueOf(Utility.toUTF(bundle.getString("dir"))));
-        defaultThemeLabel.setText(Utility.toUTF(bundle.getString("restoreDefaultColor")));
-        defaultLightThemeButton.setText(Utility.toUTF(bundle.getString("lightTheme")));
-        defaultDarkThemeButton.setText(Utility.toUTF(bundle.getString("darkTheme")));
+        saveButton.setText(bundle.getString("save"));
+        title.setText(bundle.getString("settings.azkar.notificationColor"));
+        backgroundColorLabel.setText(bundle.getString("backgroundColor"));
+        borderColorLabel.setText(bundle.getString("borderColor"));
+        textColorLabel.setText(bundle.getString("textColor"));
+        restoreDefaultColorBox.setNodeOrientation(NodeOrientation.valueOf(bundle.getString("dir")));
+        defaultThemeLabel.setText(bundle.getString("restoreDefaultColor"));
+        defaultLightThemeButton.setText(bundle.getString("lightTheme"));
+        defaultDarkThemeButton.setText(bundle.getString("darkTheme"));
     }
 
 

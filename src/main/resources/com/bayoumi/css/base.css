@@ -464,19 +464,16 @@ Text {
 
 /* Styling the slider thumb */
 .jfx-slider > .thumb {
-    -fx-background-color: -fx-secondary;
     -fx-background-color: -fx-primary;
 }
 
 /* Styling the filled track */
 .jfx-slider > .colored-track {
-    -fx-background-color: -fx-secondary;
     -fx-background-color: -fx-primary;
 }
 
 /* Styling the animated thumb */
 .jfx-slider > .animated-thumb {
-    -fx-background-color: -fx-secondary;
     -fx-background-color: -fx-primary;
 }
 

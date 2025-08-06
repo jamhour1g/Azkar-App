@@ -5,21 +5,14 @@ import com.bayoumi.models.azkar.AbsoluteZekr;
 import com.bayoumi.models.settings.*;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.statistics.StatisticsType;
-import com.bayoumi.util.Constants;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.*;
 import com.bayoumi.util.gui.load.Loader;
 import com.bayoumi.util.gui.load.LoaderComponent;
 import com.bayoumi.util.gui.load.Locations;
 import com.bayoumi.util.gui.notfication.NotificationAudio;
-import com.bayoumi.util.gui.notfication.NotificationContent;
 import com.bayoumi.util.time.ArabicNumeralDiscrimination;
 import com.jfoenix.controls.*;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
-import de.jensd.fx.glyphs.octicons.OctIcon;
-import de.jensd.fx.glyphs.octicons.OctIconView;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -39,9 +32,11 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.controlsfx.control.Notifications;
+import org.kordamp.ikonli.fontawesome6.FontAwesomeSolid;
+import org.kordamp.ikonli.javafx.FontIcon;
 
-import java.io.File;
 import java.net.URL;
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.ResourceBundle;
@@ -51,8 +46,8 @@ import java.util.logging.Logger;
 public class AzkarSettingsController implements Initializable, SettingsInterface {
 
     private ResourceBundle bundle;
-    private FontAwesomeIconView pauseIcon;
-    private FontAwesomeIconView playIcon;
+    private FontIcon pauseIcon;
+    private FontIcon playIcon;
     private AzkarSettings azkarSettings;
     private NotificationSettings notificationSettings;
     private JFXButton currentFrequency;
@@ -80,7 +75,7 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
     @FXML
     private JFXButton playButton, showZekrButton, goToAzkarDBButton, notificationColorButton;
     @FXML
-    private OctIconView volume;
+    private FontIcon volume;
     @FXML
     private JFXSlider volumeSlider;
     @FXML
@@ -95,32 +90,32 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
 
     public void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        hourPlurality.setText(Utility.toUTF(bundle.getString("oneHour")));
-        minPlurality.setText(Utility.toUTF(bundle.getString("oneMinute")));
-        secondPlurality.setText(Utility.toUTF(bundle.getString("seconds")));
-        choosePeriod.setText(Utility.toUTF(bundle.getString("settings.azkar.choosePeriod")));
-        highFrequency.setText(Utility.toUTF(bundle.getString("azkar.period.high")));
-        midFrequency.setText(Utility.toUTF(bundle.getString("azkar.period.mid")));
-        lowFrequency.setText(Utility.toUTF(bundle.getString("azkar.period.low")));
-        rearFrequency.setText(Utility.toUTF(bundle.getString("azkar.period.rare")));
-        zakrAppearEvery.setText(Utility.toUTF(bundle.getString("settings.azkar.zakrAppearEvery")) + ":");
-        zekrDurationEvery.setText(Utility.toUTF(bundle.getString("settings.azkar.zekrDurationEvery")) + ":");
-        stopAzkar.setText(Utility.toUTF(bundle.getString("settings.azkar.stopTheAutomaticAppearanceOfAzkar")));
-        goToAzkarDBButton.setText(Utility.toUTF(bundle.getString("settings.azkar.azkarDatabase")));
-        showZekrButton.setText(Utility.toUTF(bundle.getString("settings.azkar.showZekr")));
-        notificationColorButton.setText(Utility.toUTF(bundle.getString("settings.azkar.notificationColor")));
-        posComboBox.setPromptText(Utility.toUTF(bundle.getString("settings.azkar.notificationLocation")));
-        azkarAlarmComboBox.setPromptText(Utility.toUTF(bundle.getString("settings.azkar.alarmSound")));
-        theSoundAndLocationOfTheAlertForAzkar.setText(Utility.toUTF(bundle.getString("settings.azkar.theSoundAndLocationOfTheAlertForAzkar")));
-        morningAndNightAzkarTitle.setText(Utility.toUTF(bundle.getString("settings.azkar.morningAndNightAzkar")));
-        reminderOfMorningAzkarLabel.setText(Utility.toUTF(bundle.getString("settings.azkar.reminderOfMorningAzkar")));
-        reminderOfNightAzkarLabel.setText(Utility.toUTF(bundle.getString("settings.azkar.reminderOfNightAzkar")));
-        afterFajrPrayerLabel.setText(Utility.toUTF(bundle.getString("settings.azkar.afterFajrPrayer")));
-        afterAsrPrayerLabel.setText(Utility.toUTF(bundle.getString("settings.azkar.afterAsrPrayer")));
-        minuteLabelForMorningAzkar.setText(Utility.toUTF(bundle.getString("oneMinute")));
-        minuteLabelForNightAzkar.setText(Utility.toUTF(bundle.getString("oneMinute")));
+        hourPlurality.setText(bundle.getString("oneHour"));
+        minPlurality.setText(bundle.getString("oneMinute"));
+        secondPlurality.setText(bundle.getString("seconds"));
+        choosePeriod.setText(bundle.getString("settings.azkar.choosePeriod"));
+        highFrequency.setText(bundle.getString("azkar.period.high"));
+        midFrequency.setText(bundle.getString("azkar.period.mid"));
+        lowFrequency.setText(bundle.getString("azkar.period.low"));
+        rearFrequency.setText(bundle.getString("azkar.period.rare"));
+        zakrAppearEvery.setText(bundle.getString("settings.azkar.zakrAppearEvery") + ":");
+        zekrDurationEvery.setText(bundle.getString("settings.azkar.zekrDurationEvery") + ":");
+        stopAzkar.setText(bundle.getString("settings.azkar.stopTheAutomaticAppearanceOfAzkar"));
+        goToAzkarDBButton.setText(bundle.getString("settings.azkar.azkarDatabase"));
+        showZekrButton.setText(bundle.getString("settings.azkar.showZekr"));
+        notificationColorButton.setText(bundle.getString("settings.azkar.notificationColor"));
+        posComboBox.setPromptText(bundle.getString("settings.azkar.notificationLocation"));
+        azkarAlarmComboBox.setPromptText(bundle.getString("settings.azkar.alarmSound"));
+        theSoundAndLocationOfTheAlertForAzkar.setText(bundle.getString("settings.azkar.theSoundAndLocationOfTheAlertForAzkar"));
+        morningAndNightAzkarTitle.setText(bundle.getString("settings.azkar.morningAndNightAzkar"));
+        reminderOfMorningAzkarLabel.setText(bundle.getString("settings.azkar.reminderOfMorningAzkar"));
+        reminderOfNightAzkarLabel.setText(bundle.getString("settings.azkar.reminderOfNightAzkar"));
+        afterFajrPrayerLabel.setText(bundle.getString("settings.azkar.afterFajrPrayer"));
+        afterAsrPrayerLabel.setText(bundle.getString("settings.azkar.afterAsrPrayer"));
+        minuteLabelForMorningAzkar.setText(bundle.getString("oneMinute"));
+        minuteLabelForNightAzkar.setText(bundle.getString("oneMinute"));
 
-        PopOverUtil.init(goToAzkarDBButton, (Utility.toUTF(bundle.getString("settings.azkar.azkarDatabaseButtonNote"))));
+        PopOverUtil.init(goToAzkarDBButton, (bundle.getString("settings.azkar.azkarDatabaseButtonNote")));
     }
 
 
@@ -128,11 +123,12 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
     public void initialize(URL location, ResourceBundle resources) {
         updateBundle(LanguageBundle.getInstance().getResourceBundle());
 
-        playIcon = new FontAwesomeIconView(FontAwesomeIcon.PLAY);
+        playIcon = new FontIcon(FontAwesomeSolid.PLAY);
         playIcon.setStyle("-fx-fill: -fx-reverse-secondary;");
-        playIcon.setGlyphSize(30);
-        pauseIcon = new FontAwesomeIconView(FontAwesomeIcon.PAUSE);
-        pauseIcon.setGlyphSize(30);
+        playIcon.setIconSize(30);
+
+        pauseIcon = new FontIcon(FontAwesomeSolid.PAUSE);
+        pauseIcon.setIconSize(30);
         pauseIcon.setStyle("-fx-fill: -fx-reverse-secondary;");
 
         periodBox.disableProperty().bind(stopAzkar.selectedProperty());
@@ -154,7 +150,11 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
         // init Saved data form DB
         azkarSettings = Settings.getInstance().getAzkarSettings();
         azkarAlarmComboBox.setValue(azkarSettings.getAudioName());
-        azkarAlarmComboBox.setItems(NotificationAudio.getAudioList());
+        List<String> notificationAudioFileNames = NotificationAudio.getAudios()
+                .stream()
+                .map(NotificationAudio::getFileName)
+                .toList();
+        azkarAlarmComboBox.setItems(FXCollections.observableList(notificationAudioFileNames));
         playButton.setDisable(azkarAlarmComboBox.getValue().equals("بدون صوت"));
         azkarAlarmComboBox.setOnAction(event -> {
             playButton.setDisable(azkarAlarmComboBox.getValue().equals("بدون صوت"));
@@ -179,9 +179,9 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
             // multiply duration by percentage calculated by
             // slider position
             if (volumeSlider.getValue() > 0) {
-                volume.setIcon(OctIcon.UNMUTE);
+                volume.setIconCode(FontAwesomeSolid.VOLUME_UP);
             } else if (volumeSlider.getValue() == 0) {
-                volume.setIcon(OctIcon.MUTE);
+                volume.setIconCode(FontAwesomeSolid.VOLUME_MUTE);
             }
             if (null != MEDIA_PLAYER) {
                 MEDIA_PLAYER.setVolume(azkarSettings.getVolume() / 100.0);
@@ -231,10 +231,12 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
             LOGGER.info(() -> fileName);
             if (!fileName.equals("بدون صوت")) {
                 try {
-                    MEDIA_PLAYER = new MediaPlayer(new Media(new File(Constants.assetsPath + "/audio/" + fileName).toURI().toString()));
+                    // TODO: There's a bug here where the file name is not what is expected
+                    //  but and it should be replaced with the path to the audio
+                    MEDIA_PLAYER = new MediaPlayer(new Media(fileName));
                 } catch (Exception e) {
                     LOGGER.log(Level.SEVERE, "Play failed", e);
-                    BuilderUI.showOkAlert(Alert.AlertType.ERROR, Utility.toUTF(bundle.getString("errorPlayingAudio")), bundle);
+                    BuilderUI.showOkAlert(Alert.AlertType.ERROR, bundle.getString("errorPlayingAudio"), bundle);
                     return;
                 }
                 MEDIA_PLAYER.setVolume(azkarSettings.getVolume() / 100.0);
@@ -339,7 +341,6 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
     public void saveToDB() {
         try {
             highFrequency.fire();
-            azkarSettings.notifyObservers();
         } catch (Exception ex) {
             LOGGER.log(Level.SEVERE, "Save to DB failed", ex);
         }
@@ -454,9 +455,9 @@ public class AzkarSettingsController implements Initializable, SettingsInterface
 
     private void toggleAction(JFXToggleButton toggleButton) {
         if (toggleButton.isSelected()) {
-            toggleButton.setText(Utility.toUTF(bundle.getString("enabled")));
+            toggleButton.setText(bundle.getString("enabled"));
         } else {
-            toggleButton.setText(Utility.toUTF(bundle.getString("settings.azkar.noReminder")));
+            toggleButton.setText(bundle.getString("settings.azkar.noReminder"));
         }
     }
 

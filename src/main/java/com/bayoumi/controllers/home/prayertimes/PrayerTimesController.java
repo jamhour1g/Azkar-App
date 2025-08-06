@@ -9,7 +9,6 @@ import com.bayoumi.models.settings.Settings;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.statistics.StatisticsType;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.prayertimes.PrayerTimesUtil;
 import com.bayoumi.util.time.Utilities;
 import javafx.application.Platform;
@@ -99,7 +98,7 @@ public class PrayerTimesController implements Initializable {
 
     public void updateBundle(ResourceBundle bundle) {
         this.bundle = bundle;
-        final String dir = Utility.toUTF(bundle.getString("dir"));
+        final String dir = bundle.getString("dir");
         if (dir.equals("LEFT_TO_RIGHT")) {
             middleOfTheNightTimeText.setStyle("-fx-font-size: 22");
             middleOfTheNightTime.setStyle("-fx-font-size: 22");
@@ -110,15 +109,15 @@ public class PrayerTimesController implements Initializable {
             prayerTimesBox.setMinWidth(Region.USE_COMPUTED_SIZE);
         }
         prayerTimesBox.setNodeOrientation(NodeOrientation.valueOf(dir));
-        fajrText.setText(Utility.toUTF(bundle.getString("fajr")));
-        sunriseText.setText(Utility.toUTF(bundle.getString("sunrise")));
-        dhuhrText.setText(Utility.toUTF(bundle.getString("dhuhr")));
-        asrText.setText(Utility.toUTF(bundle.getString("asr")));
-        maghribText.setText(Utility.toUTF(bundle.getString("maghrib")));
-        ishaText.setText(Utility.toUTF(bundle.getString("isha")));
-        nightTimings.setText(Utility.toUTF(bundle.getString("nightTimings")));
-        lastThirdOfTheNightTimeText.setText(Utility.toUTF(bundle.getString("lastThirdOfTheNightTime")));
-        middleOfTheNightTimeText.setText(Utility.toUTF(bundle.getString("middleOfTheNightTime")));
+        fajrText.setText(bundle.getString("fajr"));
+        sunriseText.setText(bundle.getString("sunrise"));
+        dhuhrText.setText(bundle.getString("dhuhr"));
+        asrText.setText(bundle.getString("asr"));
+        maghribText.setText(bundle.getString("maghrib"));
+        ishaText.setText(bundle.getString("isha"));
+        nightTimings.setText(bundle.getString("nightTimings"));
+        lastThirdOfTheNightTimeText.setText(bundle.getString("lastThirdOfTheNightTime"));
+        middleOfTheNightTimeText.setText(bundle.getString("middleOfTheNightTime"));
     }
 
     public void setData(PrayerTimes prayerTimesToday) {
@@ -153,22 +152,22 @@ public class PrayerTimesController implements Initializable {
 
         switch (currentPrayer) {
             case FAJR:
-                changeCurrentPrayerBox(fajrBox, Utility.toUTF(bundle.getString("fajrPrayer")));
+                changeCurrentPrayerBox(fajrBox, bundle.getString("fajrPrayer"));
                 break;
             case SUNRISE:
-                changeCurrentPrayerBox(sunriseBox, Utility.toUTF(bundle.getString("sunriseTime")));
+                changeCurrentPrayerBox(sunriseBox, bundle.getString("sunriseTime"));
                 break;
             case DHUHR:
-                changeCurrentPrayerBox(dhuhrBox, Utility.toUTF(bundle.getString("dhuhrPrayer")));
+                changeCurrentPrayerBox(dhuhrBox, bundle.getString("dhuhrPrayer"));
                 break;
             case ASR:
-                changeCurrentPrayerBox(asrBox, Utility.toUTF(bundle.getString("asrPrayer")));
+                changeCurrentPrayerBox(asrBox, bundle.getString("asrPrayer"));
                 break;
             case MAGHRIB:
-                changeCurrentPrayerBox(maghribBox, Utility.toUTF(bundle.getString("maghribPrayer")));
+                changeCurrentPrayerBox(maghribBox, bundle.getString("maghribPrayer"));
                 break;
             case ISHA:
-                changeCurrentPrayerBox(ishaBox, Utility.toUTF(bundle.getString("ishaPrayer")));
+                changeCurrentPrayerBox(ishaBox, bundle.getString("ishaPrayer"));
                 break;
         }
         if (currentPrayerBox != null && !currentPrayerBox.getStyleClass().contains("box-prayer-selected")) {
@@ -228,9 +227,9 @@ public class PrayerTimesController implements Initializable {
             setPrayerTimeWithFormat(lastThirdOfTheNightTime, sunnahTimes.lastThirdOfTheNight, formatter);
 
             if (Utilities.isFriday(prayerTimesToday.dhuhr)) {
-                dhuhrText.setText(Utility.toUTF(bundle.getString("jummah")));
+                dhuhrText.setText(bundle.getString("jummah"));
             } else {
-                dhuhrText.setText(Utility.toUTF(bundle.getString("dhuhr")));
+                dhuhrText.setText(bundle.getString("dhuhr"));
             }
         });
     }

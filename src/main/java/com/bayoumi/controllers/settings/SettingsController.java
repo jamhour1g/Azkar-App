@@ -4,7 +4,6 @@ import com.bayoumi.models.settings.LanguageBundle;
 import com.bayoumi.services.statistics.StatisticsService;
 import com.bayoumi.storage.statistics.StatisticsType;
 import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.Utility;
 import com.bayoumi.util.gui.load.Locations;
 import com.jfoenix.controls.JFXButton;
 import javafx.fxml.FXML;
@@ -37,10 +36,10 @@ public class SettingsController implements Initializable {
 
 
     public void updateBundle(ResourceBundle bundle) {
-        cityButton.setText(Utility.toUTF(bundle.getString("city")));
-        azkarButton.setText(Utility.toUTF(bundle.getString("azkar")));
-        otherButton.setText(Utility.toUTF(bundle.getString("other")));
-        borderPane.setNodeOrientation(NodeOrientation.valueOf(Utility.toUTF(bundle.getString("dir"))));
+        cityButton.setText(bundle.getString("city"));
+        azkarButton.setText(bundle.getString("azkar"));
+        otherButton.setText(bundle.getString("other"));
+        borderPane.setNodeOrientation(NodeOrientation.valueOf(bundle.getString("dir")));
     }
 
     @Override

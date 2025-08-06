@@ -1,97 +1,70 @@
 package com.bayoumi.util.gui.notfication;
 
-import com.bayoumi.util.Constants;
-import com.bayoumi.util.LoggerWrapper;
-import com.bayoumi.util.file.FileUtils;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.net.URL;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Optional;
 
-public class NotificationAudio {
+public class NotificationAudio implements AutoCloseable {
 
-    private static final Logger LOGGER = LoggerWrapper.loggerFactory(NotificationAudio.class);
-
-    public static String PARENT_PATH = "jarFiles/audio/";
-
-    static {
-        if (Constants.isAssetsPathChanged) {
-            PARENT_PATH = Constants.assetsPath + "/audio/";
-            try {
-                copyAudioFilesToAssetsPath();
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Failed to copy audio files to assets path", e);
-            }
-        }
-    }
-
-    private static void copyAudioFilesToAssetsPath() throws IOException {
-        final List<String> audioFiles = new ArrayList<>();
-        FileUtils.addFilesNameToList(new File("jarFiles/audio"), audioFiles);
-        for (String audioFile : audioFiles) {
-            final Path from = Paths.get("jarFiles/audio/" + audioFile).toAbsolutePath();
-            final Path to = Paths.get(Constants.assetsPath + "/audio/" + audioFile).toAbsolutePath();
-            if (from.equals(to)) {
-                LOGGER.info("[NotificationAudio] Skipping from: " + from + " to: " + to);
-                break;
-            }
-            LOGGER.info("[NotificationAudio] Copying from: " + from + " to: " + to);
-            FileUtils.copyIfNotExist(from, to);
-        }
-    }
-
-
+    public static final NotificationAudio SILENT_NOTIFICATION = new NotificationAudio("بدون صوت", 0);
     private final String fileName;
-    private final int volume;
-    private MediaPlayer mediaPlayer = null;
+    private static final List<NotificationAudio> NOTIFICATION_AUDIOS = List.of(
+            new NotificationAudio("notification01.mp3", 50),
+            new NotificationAudio("notification02.mp3", 50),
+            new NotificationAudio("juntos.mp3", 50),
+            new NotificationAudio("swiftly.mp3", 50),
+            SILENT_NOTIFICATION // TODO: change it to english later just to avoid changing all the code
+    );
+    private final String filePath;
+    private MediaPlayer mediaPlayer;
 
-    public NotificationAudio(String fileName, int volume) {
+
+    private NotificationAudio(String fileName, int volume) {
+
+        if (volume < 0 || volume > 100) {
+            throw new IllegalArgumentException("Volume must be between 0 and 100");
+        }
+
         this.fileName = fileName;
-        this.volume = volume;
+        if (fileName.equals("بدون صوت")) {
+            filePath = null;
+            return;
+        }
+
+        URL audioResource = NotificationAudio.class.getResource("/audio/" + fileName);
+        if (audioResource == null) {
+            throw new IllegalArgumentException("Audio file not found: " + fileName);
+        }
+
+        filePath = audioResource.toString();
+
+        mediaPlayer = new MediaPlayer(new Media(filePath));
+        mediaPlayer.setVolume(volume);
+        mediaPlayer.play();
     }
 
-    public static ObservableList<String> getAudioList() {
-        ObservableList<String> audioFiles = FXCollections.observableArrayList("بدون صوت");
-        FileUtils.addFilesNameToList(new File(Constants.assetsPath + "/audio"), audioFiles);
-        return audioFiles;
+    public static List<NotificationAudio> getAudios() {
+        return NOTIFICATION_AUDIOS;
+    }
+
+    @Override
+    public void close() {
+        if (this.mediaPlayer == null) return;
+
+        this.mediaPlayer.stop();
+        this.mediaPlayer.dispose();
+        this.mediaPlayer = null;
     }
 
     public String getFileName() {
         return fileName;
     }
 
-    public int getVolume() {
-        return volume;
+    public Optional<String> getFilePath() {
+        return Optional.ofNullable(filePath);
     }
 
-    public void play() {
-        try {
-            if (!fileName.contains("بدون صوت") && !fileName.isEmpty()) {
-                mediaPlayer = new MediaPlayer(new Media(new File(Constants.assetsPath + "/audio/" + fileName).toURI().toString()));
-                mediaPlayer.setVolume(this.volume / 100.0);
-                mediaPlayer.play();
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Failed to play audio", e);
-        }
-    }
-
-    public MediaPlayer getMediaPlayer() {
-        return mediaPlayer;
-    }
-
-    public void stop() {
-        this.mediaPlayer.stop();
-        this.mediaPlayer.dispose();
-        this.mediaPlayer = null;
-    }
 }

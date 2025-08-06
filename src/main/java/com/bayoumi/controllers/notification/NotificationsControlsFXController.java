@@ -33,9 +33,11 @@ public class NotificationsControlsFXController implements Initializable {
 
         notificationBox.sceneProperty().addListener((observableScene, oldScene, newScene) -> {
             if (oldScene == null && newScene != null) {
-                notificationBox.getScene().getStylesheets().remove("/com/bayoumi/css/base.css");
+                URL baseCssStyle = NotificationsControlsFXController.class.getResource("/com/bayoumi/css/base.css");
+                notificationBox.getScene().getStylesheets().remove(baseCssStyle);
                 if (notificationBox.getScene().getStylesheets().isEmpty()) {
-                    notificationBox.getScene().getStylesheets().add(0, "/com/bayoumi/css/controlsfx-notification.css");
+                    URL controlsfxNotificationStyle = NotificationsControlsFXController.class.getResource("/com/bayoumi/css/controlsfx-notification.css");
+                    notificationBox.getScene().getStylesheets().add(0, controlsfxNotificationStyle.toString());
                 }
             }
         });
