@@ -6,6 +6,7 @@ import com.bayoumi.models.settings.Settings;
 import com.bayoumi.repositry.OnboardingRepository;
 import com.bayoumi.services.update.UpdateService;
 import com.bayoumi.storage.DatabaseManager;
+import com.bayoumi.storage.JpaManager;
 import com.bayoumi.storage.LocationsDBManager;
 import com.bayoumi.storage.preferences.Preferences;
 import com.bayoumi.storage.preferences.PreferencesType;
@@ -65,6 +66,8 @@ public class Launcher extends Application {
 
             // --- initialize database connection ---
             DatabaseManager databaseManager = DatabaseManager.getInstance();
+            LOGGER.info(() -> "JpaManager: " + JpaManager.getInstance().toString());
+
             if (!databaseManager.init()) {
                 stop();
             }

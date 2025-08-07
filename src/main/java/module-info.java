@@ -25,6 +25,7 @@ module Azkar {
     requires org.kordamp.ikonli.core;
     requires org.kordamp.ikonli.javafx;
     requires org.kordamp.ikonli.fontawesome6;
+    requires jakarta.persistence;
 
     exports com.bayoumi to javafx.graphics;
     exports com.bayoumi.controllers.onboarding to javafx.fxml;
