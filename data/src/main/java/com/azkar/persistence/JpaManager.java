@@ -55,7 +55,7 @@ public final class JpaManager implements AutoCloseable {
         return emf;
     }
 
-    /** Convenience helper. Callers can just use try-with-resources on the EM. */
+    /// Convenience helper. Callers can just use try-with-resources on the EM.
     public EntityManager getEntityManager() {
         return getDataEntityManagerFactory().createEntityManager();
     }
