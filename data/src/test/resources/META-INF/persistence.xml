@@ -1,0 +1,25 @@
+<persistence xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns="https://jakarta.ee/xml/ns/persistence"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_1.xsd"
+             version="3.1">
+
+    <persistence-unit name="com.azkar.data.persistence">
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <!-- List entities explicitly -->
+        <class>com.azkar.data.entity.Remembrance</class>
+        <class>com.azkar.data.entity.RemembranceTranslation</class>
+        <class>com.azkar.data.entity.ExplanationTranslation</class>
+        <class>com.azkar.data.entity.Tag</class>
+        <class>com.azkar.data.entity.Favorite</class>
+
+        <!-- Let our test helper control JDBC URL; don't let JPA touch schema -->
+        <properties>
+            <property name="hibernate.dialect" value="org.hibernate.community.dialect.SQLiteDialect"/>
+            <property name="jakarta.persistence.schema-generation.database.action" value="none"/>
+            <property name="hibernate.archive.autodetection" value="none"/>
+            <property name="hibernate.show_sql" value="false"/>
+            <property name="hibernate.format_sql" value="true"/>
+        </properties>
+    </persistence-unit>
+</persistence>

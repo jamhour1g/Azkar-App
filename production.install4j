@@ -9,7 +9,7 @@
       <variable name="APP_VERSION" value="1.3.0" />
       <variable name="Publisher" value="Abdelrahman Bayoumi" />
       <variable name="Publisher_URL" value="https://github.com/AbdelrahmanBayoumi/Azkar-App" />
-      <variable name="MAIN_CLASS_PATH" value="com.bayoumi.Launcher" />
+      <variable name="MAIN_CLASS_PATH" value="com.azkar.Launcher" />
       <variable name="ICON_PNG" value="${compiler:PARENT_DIR}\installer\icon.png" />
       <variable name="ICON_ICO" value="${compiler:PARENT_DIR}\installer\icon.ico" />
       <variable name="LICENSE_AGREEMENT" value="${compiler:PARENT_DIR}\installer\EULA_" />

@@ -3,6 +3,10 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+### Gradle ###
+.gradle/
+build
+
 ### IntelliJ IDEA ###
 .idea
 *.iws
@@ -42,7 +46,3 @@ build/
 
 ## development ##
 logs/
-
-### Temp ignores until i fix the code ###
-out/
-jarFiles/

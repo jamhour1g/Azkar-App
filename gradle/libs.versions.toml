@@ -1,0 +1,51 @@
+[versions]
+org-openjfx-javafx = "24.0.1"
+org-junit-jupiter-junit-jupiter = "5.13.4"
+org-kordamp-ikonli-ikonli-javafx = "12.4.0"
+org-hibernate = "7.1.0.Final"
+
+[libraries]
+# Nullability
+org-jspecify-jspecify = { module = "org.jspecify:jspecify", version = "1.0.0" }
+com-google-errorprone-error-prone-core = { module = "com.google.errorprone:error_prone_core", version = "2.41.0" }
+com-uber-nullaway-nullaway = { module = "com.uber.nullaway:nullaway", version = "0.12.8" }
+
+# Installer Dependency
+com-install4j-install4j-runtime = { module = "com.install4j:install4j-runtime", version = "11.0.5" }
+
+# JPA Dependencies
+jakarta-enterprise-jakarta-enterprise-cdi-api = { module = "jakarta.enterprise:jakarta.enterprise.cdi-api", version = "4.0.1" }
+jakarta-inject-jakarta-inject-api = { module = "jakarta.inject:jakarta.inject-api", version = "2.0.1" }
+jakarta-persistence-jakarta-persistence-api = { module = "jakarta.persistence:jakarta.persistence-api", version = "3.2.0" }
+jakarta-transaction-jakarta-transaction-api = { module = "jakarta.transaction:jakarta.transaction-api", version = "2.0.1" }
+
+# Database Dependencies
+org-xerial-sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version = "3.50.3.0" }
+org-hibernate-orm-hibernate-community-dialects = { module = "org.hibernate.orm:hibernate-community-dialects", version.ref = "org-hibernate" }
+org-hibernate-orm-hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "org-hibernate" }
+org-flywaydb-flyway-core = { module = "org.flywaydb:flyway-core", version = "11.11.0" }
+
+# JavaFX
+org-openjfx-javafx-controls = { module = "org.openjfx:javafx-controls", version.ref = "org-openjfx-javafx" }
+org-openjfx-javafx-fxml = { module = "org.openjfx:javafx-fxml", version.ref = "org-openjfx-javafx" }
+org-openjfx-javafx-media = { module = "org.openjfx:javafx-media", version.ref = "org-openjfx-javafx" }
+org-openjfx-javafx-web = { module = "org.openjfx:javafx-web", version.ref = "org-openjfx-javafx" }
+
+# UI Libs
+org-kordamp-ikonli-ikonli-javafx = { module = "org.kordamp.ikonli:ikonli-javafx", version.ref = "org-kordamp-ikonli-ikonli-javafx" }
+org-kordamp-ikonli-ikonli-fontawesome6-pack = { module = "org.kordamp.ikonli:ikonli-fontawesome6-pack", version.ref = "org-kordamp-ikonli-ikonli-javafx" }
+org-controlsfx-controlsfx = { module = "org.controlsfx:controlsfx", version = "11.2.2" }
+
+# Testing
+org-junit-jupiter-junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "org-junit-jupiter-junit-jupiter" }
+org-junit-junit-bom = { module = "org.junit:junit-bom", version.ref = "org-junit-jupiter-junit-jupiter" }
+org-junit-platform-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.13.4" }
+org-assertj-assertj-core = { module = "org.assertj:assertj-core", version = "3.27.3" }
+
+[plugins]
+org-openjfx-javafxplugin = { id = "org.openjfx.javafxplugin", version = "0.1.0" }
+org-beryx-jlink = { id = "org.beryx.jlink", version = "2.25.0" }
+io-freefair-lombok = { id = "io.freefair.lombok", version = "8.14" }
+com-diffplug-spotless = { id = "com.diffplug.spotless", version = "7.2.1" }
+com-github-spotbugs = { id = "com.github.spotbugs", version = "6.2.4" }
+net-ltgt-errorprone = { id = "net.ltgt.errorprone", version = "4.3.0" }
