@@ -1,4 +1,4 @@
-module Azkar {
+module com.azkar.utils {
     requires java.logging;
     requires org.jspecify;
 

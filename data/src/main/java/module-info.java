@@ -12,8 +12,8 @@ module com.azkar.data {
     requires jakarta.cdi;
     requires static lombok;
     requires java.rmi;
-    requires Azkar;
-    requires flyway.core;
+    requires com.azkar.utils;
+    requires org.flywaydb.core;
 
     opens com.azkar.data.entity to
             org.hibernate.orm.core;

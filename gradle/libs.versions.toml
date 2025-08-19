@@ -23,7 +23,7 @@ jakarta-transaction-jakarta-transaction-api = { module = "jakarta.transaction:ja
 org-xerial-sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version = "3.50.3.0" }
 org-hibernate-orm-hibernate-community-dialects = { module = "org.hibernate.orm:hibernate-community-dialects", version.ref = "org-hibernate" }
 org-hibernate-orm-hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "org-hibernate" }
-org-flywaydb-flyway-core = { module = "org.flywaydb:flyway-core", version = "11.11.0" }
+org-flywaydb-flyway-core = { module = "org.flywaydb:flyway-core", version = "9.22.3" }
 
 # JavaFX
 org-openjfx-javafx-controls = { module = "org.openjfx:javafx-controls", version.ref = "org-openjfx-javafx" }
