@@ -15,4 +15,6 @@ dependencies {
     compileOnly(libs.jakarta.enterprise.jakarta.enterprise.cdi.api)
     compileOnly(libs.jakarta.transaction.jakarta.transaction.api)
 
+    implementation(project(":utils"))
+
 }
