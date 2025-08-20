@@ -5,7 +5,7 @@ import java.time.Instant;
 import lombok.*;
 import org.jspecify.annotations.Nullable;
 
-/// Represents a user-level "favorite" marker applied to a [Remembrance].
+/// Represents a user-level "favorite" marker applied to a [com.azkar.data.entity.Remembrance].
 ///
 /// This entity models a boolean flag: a remembrance is either favorited or not.
 /// It uses the remembrance's ID as both the primary key and foreign key, ensuring:
@@ -18,8 +18,7 @@ import org.jspecify.annotations.Nullable;
 /// - **Table:** `favorite`
 /// - **Primary Key:** `remembrance_id` — also a foreign key to [remembrance(id)][Remembrance#id]
 /// - **Constraint:** `ON DELETE CASCADE` — if a [remembrance][#remembrance] is deleted, its favorite is automatically
-// removed
-
+/// removed
 /// - **Implied Semantics:** Presence of a row = favorited; absence = not favorited
 ///
 /// ### Timestamps

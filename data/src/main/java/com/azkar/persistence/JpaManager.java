@@ -4,10 +4,9 @@ import com.azkar.utils.LoggerWrapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
+import java.util.logging.Logger;
 import org.flywaydb.core.Flyway;
 import org.jspecify.annotations.Nullable;
-
-import java.util.logging.Logger;
 
 public final class JpaManager implements AutoCloseable {
     public static final String DATA_PERSISTENCE_UNIT = "com.azkar.data.persistence";
