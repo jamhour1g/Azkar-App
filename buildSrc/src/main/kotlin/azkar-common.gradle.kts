@@ -75,7 +75,7 @@ tasks.withType<JavaCompile>().configureEach {
             option("NullAway:OnlyNullMarked", "true")
         }
 
-        // Example: make tests less strict (disable NullAway for test sources only)
+        // Make tests less strict (disable NullAway for test sources only)
         if (name.contains("test", ignoreCase = true)) {
             errorprone.disable("NullAway")
         }
