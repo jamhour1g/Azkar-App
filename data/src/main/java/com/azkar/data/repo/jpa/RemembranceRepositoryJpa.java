@@ -58,6 +58,7 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
     }
 
     @Transactional
+    @Override
     public void markFavorite(long remembranceId) {
         Remembrance r = em.getReference(Remembrance.class, remembranceId);
         Favorite f = r.markFavorite();
@@ -68,6 +69,7 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
     }
 
     @Transactional
+    @Override
     public void unmarkFavorite(long remembranceId) {
         Favorite f = em.<@Nullable Favorite>find(Favorite.class, remembranceId);
         if (f != null) em.remove(f); // authoritative
