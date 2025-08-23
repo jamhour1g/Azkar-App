@@ -1,8 +1,6 @@
+@org.jspecify.annotations.NullMarked
 module com.azkar.data {
     requires java.sql;
-    requires java.logging;
-    requires java.prefs;
-    requires java.desktop;
     requires org.xerial.sqlitejdbc;
     requires jakarta.persistence;
     requires org.jspecify;
@@ -11,14 +9,15 @@ module com.azkar.data {
     requires jakarta.inject;
     requires jakarta.cdi;
     requires static lombok;
-    requires java.rmi;
     requires com.azkar.utils;
     requires org.flywaydb.core;
 
     opens com.azkar.data.entity to
             org.hibernate.orm.core;
-
-    exports com.azkar.data.converter to
+    opens com.azkar.data.converter to
             org.hibernate.orm.core;
+
     exports com.azkar.data.model;
+    exports com.azkar.data.entity;
+    exports com.azkar.data.repo;
 }
