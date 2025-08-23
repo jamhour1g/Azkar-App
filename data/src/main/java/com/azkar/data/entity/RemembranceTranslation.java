@@ -1,10 +1,11 @@
 package com.azkar.data.entity;
 
 import jakarta.persistence.*;
-import java.time.Instant;
-import java.util.Locale;
 import lombok.*;
 import org.jspecify.annotations.Nullable;
+
+import java.time.Instant;
+import java.util.Locale;
 
 /// Represents a translated text of a [Remembrance] (zikr) in a specific language.
 ///
@@ -40,7 +41,7 @@ import org.jspecify.annotations.Nullable;
 /// .locale(Locale.forLanguageTag("ar"))
 /// .text("سبحان الله")
 /// .build();
-/// ```
+///```
 ///
 /// @see Remembrance
 /// @see Locale
@@ -49,13 +50,13 @@ import org.jspecify.annotations.Nullable;
 @Table(
         name = "remembrance_translation",
         uniqueConstraints =
-                @UniqueConstraint(
-                        name = "uq_rt_rem_loc",
-                        columnNames = {"remembrance_id", "locale_code"}),
+        @UniqueConstraint(
+                name = "uq_rt_rem_loc",
+                columnNames = {"remembrance_id", "locale_code"}),
         check = @CheckConstraint(name = "chk_et_text_not_empty", constraint = "length(text) > 0"),
         indexes = {
-            @Index(name = "idx_rt__by_remembrance", columnList = "remembrance_id"),
-            @Index(name = "idx_rt__by_locale", columnList = "locale_code")
+                @Index(name = "idx_rt__by_remembrance", columnList = "remembrance_id"),
+                @Index(name = "idx_rt__by_locale", columnList = "locale_code")
         })
 @SuppressWarnings("NullAway.Init")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -166,7 +167,7 @@ public class RemembranceTranslation {
     /// @throws IllegalArgumentException if `newText` is blank
     public RemembranceTranslation withText(String newText) {
 
-        if (text.isBlank()) {
+        if (newText.isBlank()) {
             throw new IllegalArgumentException("Explanation text must not be blank");
         }
 
