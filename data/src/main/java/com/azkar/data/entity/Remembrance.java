@@ -2,13 +2,13 @@ package com.azkar.data.entity;
 
 import com.azkar.data.converter.HadithGradeConverter;
 import com.azkar.data.model.HadithGrade;
-import com.azkar.data.repo.RemembranceRepository;
 import jakarta.persistence.*;
+import lombok.*;
+import org.jspecify.annotations.Nullable;
+
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
-import lombok.*;
-import org.jspecify.annotations.Nullable;
 
 /// Represents a remembrance (ذِكْر / "zikr") — a spiritual phrase or supplication,
 /// used for reflection, worship, or mindfulness.
@@ -55,7 +55,7 @@ import org.jspecify.annotations.Nullable;
 /// .addTag("Morning")
 /// .favorite(true)
 /// .build();
-/// ````
+///````
 ///
 /// @see RemembranceTranslation
 /// @see ExplanationTranslation
@@ -65,9 +65,9 @@ import org.jspecify.annotations.Nullable;
 @Table(
         name = "remembrance",
         check =
-                @CheckConstraint(
-                        name = "remembrance_grade_check",
-                        constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"))
+        @CheckConstraint(
+                name = "remembrance_grade_check",
+                constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"))
 @SuppressWarnings("NullAway.Init")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
@@ -88,7 +88,6 @@ public class Remembrance {
     /// Optional source reference for the remembrance (e.g., "Sahih Muslim").
     ///
     /// Free-text field for attribution. May be `null` if unknown.
-    @EqualsAndHashCode.Include
     @ToString.Include
     @Getter
     @Setter
@@ -102,10 +101,9 @@ public class Remembrance {
     @Column(
             nullable = false,
             check =
-                    @CheckConstraint(
-                            name = "remembrance_grade_check",
-                            constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"))
-    @EqualsAndHashCode.Include
+            @CheckConstraint(
+                    name = "remembrance_grade_check",
+                    constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"))
     @ToString.Include
     @Getter
     @Setter
@@ -551,16 +549,6 @@ public class Remembrance {
             return remembrance;
         }
 
-        /// Builds the [Remembrance] and persists it using the provided repository.
-        ///
-        /// Equivalent to: `repo.save(builder.build())`.
-        ///
-        /// @param repo the repository to use for persistence; must not be `null`
-        /// @return the persisted `Remembrance` instance (with assigned ID)
-        public Remembrance buildAndPersist(RemembranceRepository repo) {
-            return repo.save(build());
-        }
-
         /// Internal container for holding locale-text pairs during construction.
         ///
         /// Used to collect translations and explanations before building the final entity.
@@ -568,6 +556,7 @@ public class Remembrance {
         ///
         /// @param locale the target locale
         /// @param text   the associated text (non-blank)
-        private record Translation(Locale locale, String text) {}
+        private record Translation(Locale locale, String text) {
+        }
     }
 }
