@@ -1,13 +1,12 @@
 package com.azkar.data.entity;
 
 import jakarta.persistence.*;
+import java.time.Instant;
+import java.util.Locale;
 import lombok.*;
 import org.jspecify.annotations.Nullable;
 
-import java.time.Instant;
-import java.util.Locale;
-
-/// Represents a translated text of a [Remembrance] (zikr) in a specific language.
+/// Represents a translated text of a [RemembranceEntity] (zikr) in a specific language.
 ///
 /// This entity stores the localized version of the core remembrance phrase,
 /// enabling multilingual display of zikr content. Each translation is scoped to one
@@ -16,7 +15,7 @@ import java.util.Locale;
 /// ### Persistence & Database Mapping
 /// - **Table:** `remembrance_translation`
 /// - **Primary Key:** [id][#id] (auto-incremented by SQLite)
-/// - **Foreign Key:** `remembrance_id` → [remembrance.id][Remembrance#id] with `ON DELETE CASCADE`
+/// - **Foreign Key:** `remembrance_id` → [remembrance.id][RemembranceEntity#id] with `ON DELETE CASCADE`
 /// - **Uniqueness:** Enforced via unique constraint `uq_rt_rem_loc` on (`remembrance_id`, `locale_code`)
 /// - **Text Validity:** Non-empty enforced via `CHECK (length(text) > 0)`
 ///
@@ -36,33 +35,33 @@ import java.util.Locale;
 ///
 /// ### Usage Example
 /// ```java
-/// RemembranceTranslation translation = RemembranceTranslation.builder()
+/// RemembranceTranslationEntity translation = RemembranceTranslationEntity.builder()
 /// .remembrance(remembrance)
 /// .locale(Locale.forLanguageTag("ar"))
 /// .text("سبحان الله")
 /// .build();
-///```
+/// ```
 ///
-/// @see Remembrance
+/// @see RemembranceEntity
 /// @see Locale
-/// @see ExplanationTranslation
+/// @see ExplanationTranslationEntity
 @Entity
 @Table(
         name = "remembrance_translation",
         uniqueConstraints =
-        @UniqueConstraint(
-                name = "uq_rt_rem_loc",
-                columnNames = {"remembrance_id", "locale_code"}),
+                @UniqueConstraint(
+                        name = "uq_rt_rem_loc",
+                        columnNames = {"remembrance_id", "locale_code"}),
         check = @CheckConstraint(name = "chk_et_text_not_empty", constraint = "length(text) > 0"),
         indexes = {
-                @Index(name = "idx_rt__by_remembrance", columnList = "remembrance_id"),
-                @Index(name = "idx_rt__by_locale", columnList = "locale_code")
+            @Index(name = "idx_rt__by_remembrance", columnList = "remembrance_id"),
+            @Index(name = "idx_rt__by_locale", columnList = "locale_code")
         })
 @SuppressWarnings("NullAway.Init")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString(onlyExplicitlyIncluded = true)
-public class RemembranceTranslation {
+public class RemembranceTranslationEntity {
 
     /// Unique identifier assigned by the database.
     ///
@@ -75,7 +74,7 @@ public class RemembranceTranslation {
     @ToString.Include
     private @Nullable Long id;
 
-    /// The parent [Remembrance] this translation belongs to.
+    /// The parent [RemembranceEntity] this translation belongs to.
     ///
     /// Establishes ownership and cascading delete behavior:
     /// if the [remembrance][#remembrance] is deleted, this translation is automatically removed
@@ -86,7 +85,7 @@ public class RemembranceTranslation {
     @JoinColumn(name = "remembrance_id", nullable = false)
     @Getter
     @Setter
-    private Remembrance remembrance;
+    private RemembranceEntity remembrance;
 
     /// The language and regional variant (locale) of this translation.
     ///
@@ -146,7 +145,7 @@ public class RemembranceTranslation {
     /// @param text        the translation content; must not be `null` or blank
     /// @throws IllegalArgumentException if `text` is blank
     @Builder
-    private RemembranceTranslation(Remembrance remembrance, Locale locale, String text) {
+    private RemembranceTranslationEntity(RemembranceEntity remembrance, Locale locale, String text) {
         this.remembrance = remembrance;
         this.locale = locale;
 
@@ -163,15 +162,15 @@ public class RemembranceTranslation {
     /// The returned instance isn't persisted and has no `id`.
     ///
     /// @param newText the new translation text; must not be `null` or blank
-    /// @return a new `RemembranceTranslation` with updated text
+    /// @return a new `RemembranceTranslationEntity` with updated text
     /// @throws IllegalArgumentException if `newText` is blank
-    public RemembranceTranslation withText(String newText) {
+    public RemembranceTranslationEntity withText(String newText) {
 
         if (newText.isBlank()) {
             throw new IllegalArgumentException("Explanation text must not be blank");
         }
 
-        return RemembranceTranslation.builder()
+        return RemembranceTranslationEntity.builder()
                 .remembrance(this.remembrance)
                 .locale(this.locale)
                 .text(newText)

@@ -1,4 +1,4 @@
-package com.azkar.data.model;
+package com.azkar.domain.model;
 
 public enum HadithGrade {
     SAHIH(),

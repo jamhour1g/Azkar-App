@@ -2,12 +2,13 @@ package com.azkar.data.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import lombok.*;
 import org.jspecify.annotations.Nullable;
 
-/// Represents a tag entity used to categorize or label [Remembrance] instances.
+/// Represents a tag entity used to categorize or label [RemembranceEntity] instances.
 ///
 /// Tags provide a flexible way to group and filter remembrances by theme, time of day,
 /// source, or any custom label. Each tag has a unique name (case-insensitive) and
@@ -21,26 +22,26 @@ import org.jspecify.annotations.Nullable;
 /// - **`created_at`:** Set automatically using SQLite's `unixepoch()`
 ///
 /// ### Relationships
-/// - **Many-to-Many:** With [Remembrance] via join table `remembrance_tag`
-/// - **Inverse Side:** Managed by [tags][Remembrance#tags]
+/// - **Many-to-Many:** With [RemembranceEntity] via join table `remembrance_tag`
+/// - **Inverse Side:** Managed by [tags][RemembranceEntity#tags]
 ///
 /// ### Usage Example
 /// ```java
-/// Tag tag = Tag.builder()
+/// TagEntity tag = TagEntity.builder()
 /// .name("Spiritual")
 /// .addRemembrance(remembrance1)
 /// .addRemembrance(remembrance2)
 /// .build();
 /// ```
 ///
-/// @see Remembrance
+/// @see RemembranceEntity
 @Entity
 @Table(name = "tag", uniqueConstraints = @UniqueConstraint(name = "uq_tag__name_nocase", columnNames = "name"))
 @SuppressWarnings("NullAway.Init")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString(onlyExplicitlyIncluded = true)
-public class Tag {
+public class TagEntity {
 
     /// Unique identifier assigned by the database.
     ///
@@ -78,15 +79,15 @@ public class Tag {
 
     /// The set of remembrances associated with this tag.
     ///
-    /// This is the inverse side of a many-to-many relationship with [Remembrance].
+    /// This is the inverse side of a many-to-many relationship with [RemembranceEntity].
     /// The relationship is managed through the `remembrance_tag` join table.
     ///
     /// Uses a [LinkedHashSet] to preserve insertion order and avoid duplicates.
     @ManyToMany(mappedBy = "tags")
     @Getter
-    private Set<Remembrance> remembrances = new LinkedHashSet<>();
+    private Set<RemembranceEntity> remembrances = new LinkedHashSet<>();
 
-    /// Creates a new instance of the [Builder] to construct a `Tag` object.
+    /// Creates a new instance of the [Builder] to construct a `TagEntity` object.
     ///
     /// @return a new `Builder` instance
     public static Builder builder() {
@@ -104,7 +105,7 @@ public class Tag {
     /// - The remembrance is added to this tag's `remembrances` set
     ///
     /// @param remembrance the remembrance to associate with this tag.
-    public void addRemembrance(Remembrance remembrance) {
+    public void addRemembrance(RemembranceEntity remembrance) {
         remembrance.getTags().add(this);
         remembrances.add(remembrance);
     }
@@ -120,7 +121,7 @@ public class Tag {
     /// - The remembrance is removed from this tag's `remembrances` set
     ///
     /// @param remembrance the remembrance to disassociate from this tag.
-    public void removeRemembrance(Remembrance remembrance) {
+    public void removeRemembrance(RemembranceEntity remembrance) {
         remembrance.getTags().remove(this);
         remembrances.remove(remembrance);
     }
@@ -129,7 +130,7 @@ public class Tag {
     ///
     /// @param remembrance the remembrance to check
     /// @return `true` if associated; `false` otherwise
-    public boolean hasRemembrance(Remembrance remembrance) {
+    public boolean hasRemembrance(RemembranceEntity remembrance) {
         return remembrances.contains(remembrance);
     }
 
@@ -140,14 +141,15 @@ public class Tag {
         return remembrances.size();
     }
 
-    /// Builder pattern implementation for creating [Tag] instances.
+    /// Builder pattern implementation for creating [TagEntity] instances.
     ///
     /// Ensures required fields (like `name`) are set before building.
     /// Allows optional addition of associated remembrances during construction.
     ///
     public static class Builder {
-        private final Set<Remembrance> remembrances = new LinkedHashSet<>();
+        private final Set<RemembranceEntity> remembrances = new LinkedHashSet<>();
         private String name = "";
+        private @Nullable Long id;
 
         /// Sets the name of the tag.
         ///
@@ -155,10 +157,20 @@ public class Tag {
         /// @return this builder instance
         public Builder name(String name) {
             if (name.isBlank()) {
-                throw new IllegalArgumentException("Tag name must not blank");
+                throw new IllegalArgumentException("TagEntity name must not blank");
             }
 
             this.name = name;
+            return this;
+        }
+
+        public Builder id(@Nullable Long id) {
+            this.id = id;
+            return this;
+        }
+
+        public Builder addRemembrances(Collection<RemembranceEntity> remembrances) {
+            this.remembrances.addAll(Set.copyOf(remembrances));
             return this;
         }
 
@@ -166,19 +178,20 @@ public class Tag {
         ///
         /// @param remembrance the remembrance to associate; must not be `null`
         /// @return this builder instance
-        public Builder addRemembrance(Remembrance remembrance) {
+        public Builder addRemembrance(RemembranceEntity remembrance) {
             remembrances.add(remembrance);
             return this;
         }
 
-        /// Constructs and returns a fully initialized [Tag] instance.
+        /// Constructs and returns a fully initialized [TagEntity] instance.
         ///
         /// The returned tag will have the specified name and all added remembrances.
-        /// The actual persistence of relationships depends on the owning side ([Remembrance]).
+        /// The actual persistence of relationships depends on the owning side ([RemembranceEntity]).
         ///
-        /// @return a new `Tag` instance
-        public Tag build() {
-            Tag tag = new Tag();
+        /// @return a new `TagEntity` instance
+        public TagEntity build() {
+            TagEntity tag = new TagEntity();
+            tag.id = id;
             tag.name = name;
             remembrances.forEach(tag::addRemembrance);
             return tag;

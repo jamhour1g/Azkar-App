@@ -5,7 +5,7 @@ import java.time.Instant;
 import lombok.*;
 import org.jspecify.annotations.Nullable;
 
-/// Represents a user-level "favorite" marker applied to a [com.azkar.data.entity.Remembrance].
+/// Represents a user-level "favorite" marker applied to a [RemembranceEntity].
 ///
 /// This entity models a boolean flag: a remembrance is either favorited or not.
 /// It uses the remembrance's ID as both the primary key and foreign key, ensuring:
@@ -16,7 +16,7 @@ import org.jspecify.annotations.Nullable;
 ///
 /// ### Database Mapping
 /// - **Table:** `favorite`
-/// - **Primary Key:** `remembrance_id` — also a foreign key to [remembrance(id)][Remembrance#id]
+/// - **Primary Key:** `remembrance_id` — also a foreign key to [remembrance(id)][RemembranceEntity#id]
 /// - **Constraint:** `ON DELETE CASCADE` — if a [remembrance][#remembrance] is deleted, its favorite is automatically
 /// removed
 /// - **Implied Semantics:** Presence of a row = favorited; absence = not favorited
@@ -27,25 +27,25 @@ import org.jspecify.annotations.Nullable;
 ///
 /// ### Usage Example
 /// ```java
-/// Favorite favorite = Favorite.builder()
+/// FavoriteEntity favorite = FavoriteEntity.builder()
 /// .remembrance(remembrance)
 /// .build();
 /// ```
 ///
-/// @see Remembrance
+/// @see RemembranceEntity
 @Entity
 @Table(name = "favorite")
 @SuppressWarnings("NullAway.Init")
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // Required by JPA
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString(onlyExplicitlyIncluded = true)
-public class Favorite {
+public class FavoriteEntity {
 
     /// The ID of the [remembrance][#remembrance] that is marked as favorite.
     ///
     /// This field serves as both:
     /// - Primary key of the `favorite` table
-    /// - Foreign key to [remembrance(id)][Remembrance#id]
+    /// - Foreign key to [remembrance(id)][RemembranceEntity#id]
     ///
     /// Automatically populated via [remembrance][#remembrance] using `@MapsId`.
     @Id
@@ -55,22 +55,22 @@ public class Favorite {
     @Getter
     private @Nullable Long remembranceId;
 
-    /// The [remembrance][Remembrance] instance that this favorite refers to.
+    /// The [remembrance][RemembranceEntity] instance that this favorite refers to.
     ///
     /// This is the owning side of the one-to-one relationship.
     /// The [MapsId][MapsId] annotation ensures that:
     ///
-    /// - The favorite's ID is taken from [remembrance.id][Remembrance#id]
+    /// - The favorite's ID is taken from [remembrance.id][RemembranceEntity#id]
     /// - No separate `favorite.id` column is needed
     ///
     /// Setting this to `null` breaks the association and, when combined with
-    /// orphan removal in [favorite][Remembrance#favorite], it will delete the row.
+    /// orphan removal in [favorite][RemembranceEntity#favorite], it will delete the row.
     @OneToOne
     @MapsId
     @JoinColumn(name = "remembrance_id", nullable = false)
     @Getter
     @Setter
-    private Remembrance remembrance;
+    private RemembranceEntity remembrance;
 
     /// Timestamp when the [remembrance][#remembrance] was favorited.
     ///
@@ -94,7 +94,7 @@ public class Favorite {
     ///
     /// @param remembrance the remembrance to mark as favorite; must not be `null`
     @Builder
-    private Favorite(Remembrance remembrance) {
+    private FavoriteEntity(RemembranceEntity remembrance) {
         this.remembrance = remembrance;
     }
 
@@ -102,7 +102,7 @@ public class Favorite {
     ///
     /// @param remembrance the remembrance to compare against
     /// @return `true` if this favorite is for the provided remembrance
-    public boolean isFor(Remembrance remembrance) {
+    public boolean isFor(RemembranceEntity remembrance) {
         return this.remembrance.equals(remembrance);
     }
 }

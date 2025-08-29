@@ -4,10 +4,9 @@ import com.azkar.utils.LoggerWrapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
+import java.util.logging.Logger;
 import org.flywaydb.core.Flyway;
 import org.jspecify.annotations.Nullable;
-
-import java.util.logging.Logger;
 
 public final class JpaManager implements AutoCloseable {
     public static final String DATA_PERSISTENCE_UNIT = "com.azkar.data.persistence";
@@ -44,9 +43,7 @@ public final class JpaManager implements AutoCloseable {
                     .dataSource("jdbc:sqlite:./db/remembrance.db", null, null)
                     .locations("classpath:db/migration")
                     .initSql("PRAGMA foreign_keys=ON")
-                    .cleanDisabled(true) // safety
-                    // in
-                    // prod
+                    .cleanDisabled(true) // safety in prod
                     .load()
                     .migrate();
 

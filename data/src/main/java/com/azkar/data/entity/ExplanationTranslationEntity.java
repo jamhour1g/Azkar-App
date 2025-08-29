@@ -6,7 +6,7 @@ import java.util.Locale;
 import lombok.*;
 import org.jspecify.annotations.Nullable;
 
-/// Represents a translated explanation for a [Remembrance] in a specific language.
+/// Represents a translated explanation for a [RemembranceEntity] in a specific language.
 ///
 /// This entity stores localized explanatory text associated with a remembrance (zikr),
 /// supporting multilingual applications. Each explanation is scoped to one
@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
 /// ### Persistence & Database Mapping
 /// - **Table:** `explanation_translation`
 /// - **Primary Key:** `id` (auto-incremented by SQLite)
-/// - **Foreign Key:** `remembrance_id` → [Remembrance#id] with `ON DELETE CASCADE`
+/// - **Foreign Key:** `remembrance_id` → [RemembranceEntity#id] with `ON DELETE CASCADE`
 /// - **Uniqueness:** Enforced via unique constraint on (`remembrance_id`, `locale_code`)
 /// - **Text Validity:** Non-empty enforced via `CHECK (length(text) > 0)`
 ///
@@ -36,16 +36,16 @@ import org.jspecify.annotations.Nullable;
 ///
 /// ### Usage Example
 /// ```java
-/// ExplanationTranslation explanation = ExplanationTranslation.builder()
+/// ExplanationTranslationEntity explanation = ExplanationTranslationEntity.builder()
 /// .remembrance(remembrance)
 /// .locale(Locale.forLanguageTag("ar"))
 /// .text("هذا الذكر ورد في سنن أبي داود...")
 /// .build();
 /// ```
 ///
-/// @see Remembrance
+/// @see RemembranceEntity
 /// @see Locale
-/// @see RemembranceTranslation
+/// @see RemembranceTranslationEntity
 @Entity
 @Table(
         name = "explanation_translation",
@@ -62,7 +62,7 @@ import org.jspecify.annotations.Nullable;
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // Required by JPA
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString(onlyExplicitlyIncluded = true)
-public class ExplanationTranslation {
+public class ExplanationTranslationEntity {
 
     /// Unique identifier assigned by the database.
     ///
@@ -75,7 +75,7 @@ public class ExplanationTranslation {
     @EqualsAndHashCode.Include
     private @Nullable Long id;
 
-    /// The parent [Remembrance] this explanation belongs to.
+    /// The parent [RemembranceEntity] this explanation belongs to.
     ///
     /// Establishes ownership and cascading delete behavior:
     /// if the remembrance is deleted, this explanation is automatically removed
@@ -86,7 +86,7 @@ public class ExplanationTranslation {
     @JoinColumn(name = "remembrance_id", nullable = false)
     @Getter
     @Setter
-    private Remembrance remembrance;
+    private RemembranceEntity remembrance;
 
     /// The language and regional variant (locale) of this explanation.
     ///
@@ -147,7 +147,7 @@ public class ExplanationTranslation {
     /// @param locale      the locale of the explanation; must not be `null`
     /// @param text        the explanation content; must not be `null` or blank
     @Builder
-    private ExplanationTranslation(Remembrance remembrance, Locale locale, String text) {
+    private ExplanationTranslationEntity(RemembranceEntity remembrance, Locale locale, String text) {
         this.remembrance = remembrance;
         this.locale = locale;
 
@@ -164,15 +164,15 @@ public class ExplanationTranslation {
     /// The returned instance isn't persisted and has no `id`.
     ///
     /// @param newText the new explanation text; must not be `null` or blank
-    /// @return a new `ExplanationTranslation` with updated text
+    /// @return a new `ExplanationTranslationEntity` with updated text
     /// @throws IllegalArgumentException if `newText` is blank
-    public ExplanationTranslation withText(String newText) {
+    public ExplanationTranslationEntity withText(String newText) {
 
         if (newText.isBlank()) {
             throw new IllegalArgumentException("New text must not be blank");
         }
 
-        return ExplanationTranslation.builder()
+        return ExplanationTranslationEntity.builder()
                 .remembrance(this.remembrance)
                 .locale(this.locale)
                 .text(newText)

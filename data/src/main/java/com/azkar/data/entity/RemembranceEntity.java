@@ -1,14 +1,12 @@
 package com.azkar.data.entity;
 
 import com.azkar.data.converter.HadithGradeConverter;
-import com.azkar.data.model.HadithGrade;
 import jakarta.persistence.*;
-import lombok.*;
-import org.jspecify.annotations.Nullable;
-
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.*;
+import org.jspecify.annotations.Nullable;
 
 /// Represents a remembrance (ذِكْر / "zikr") — a spiritual phrase or supplication,
 /// used for reflection, worship, or mindfulness.
@@ -17,7 +15,7 @@ import java.util.stream.Collectors;
 /// - **Internationalization:** Translations and explanations per locale
 /// - **Metadata:** Source reference and authenticity grade
 /// - **Organization:** Tagging via many-to-many relationships
-/// - **User interaction:** Favorite marking
+/// - **User interaction:** FavoriteEntity marking
 ///
 /// ### Database Mapping
 /// - **Table:** `remembrance`
@@ -47,32 +45,32 @@ import java.util.stream.Collectors;
 /// ### Usage Example
 /// <pre>
 /// ```java
-/// Remembrance remembrance = Remembrance.builder()
+/// RemembranceEntity remembrance = RemembranceEntity.builder()
 /// .source("Sahih al-Bukhari")
-/// .grade(HadithGrade.SAHIH)
+/// .grade(DatabaseHadithGrade.SAHIH)
 /// .addTranslation(Locale.ENGLISH, "SubhanAllah")
 /// .addExplanation(Locale.ENGLISH, "Glory be to God")
 /// .addTag("Morning")
 /// .favorite(true)
 /// .build();
-///````
+/// ````
 ///
-/// @see RemembranceTranslation
-/// @see ExplanationTranslation
-/// @see Tag
-/// @see Favorite
+/// @see RemembranceTranslationEntity
+/// @see ExplanationTranslationEntity
+/// @see TagEntity
+/// @see FavoriteEntity
 @Entity
 @Table(
         name = "remembrance",
         check =
-        @CheckConstraint(
-                name = "remembrance_grade_check",
-                constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"))
+                @CheckConstraint(
+                        name = "remembrance_grade_check",
+                        constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"))
 @SuppressWarnings("NullAway.Init")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString(onlyExplicitlyIncluded = true)
-public class Remembrance {
+public class RemembranceEntity {
 
     /// Unique identifier assigned by the database.
     ///
@@ -83,6 +81,7 @@ public class Remembrance {
     @EqualsAndHashCode.Include
     @ToString.Include
     @Getter
+    @Setter(value = AccessLevel.PROTECTED)
     private @Nullable Long id;
 
     /// Optional source reference for the remembrance (e.g., "Sahih Muslim").
@@ -101,13 +100,13 @@ public class Remembrance {
     @Column(
             nullable = false,
             check =
-            @CheckConstraint(
-                    name = "remembrance_grade_check",
-                    constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"))
+                    @CheckConstraint(
+                            name = "remembrance_grade_check",
+                            constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"))
     @ToString.Include
     @Getter
     @Setter
-    private HadithGrade grade = HadithGrade.UNSPECIFIED;
+    private DatabaseHadithGrade grade = DatabaseHadithGrade.UNSPECIFIED;
 
     /// Timestamp when this remembrance was created.
     ///
@@ -127,12 +126,12 @@ public class Remembrance {
 
     /// Optional favorite marker for this remembrance.
     ///
-    /// Managed via a one-to-one relationship with [favorite.remembrance][Favorite#remembrance].
+    /// Managed via a one-to-one relationship with [favorite.remembrance][FavoriteEntity#remembrance].
     /// Uses `cascade = CascadeType.ALL, orphanRemoval = true`
     /// setting this to `null` will delete the associated `favorite` row.
     @OneToOne(mappedBy = "remembrance", cascade = CascadeType.ALL, orphanRemoval = true)
     @Getter
-    private @Nullable Favorite favorite;
+    private @Nullable FavoriteEntity favorite;
 
     /// Map of translations for this remembrance, keyed by locale.
     ///
@@ -144,7 +143,7 @@ public class Remembrance {
     @OneToMany(mappedBy = "remembrance", cascade = CascadeType.ALL, orphanRemoval = true)
     @MapKey(name = "locale")
     @Getter
-    private Map<Locale, RemembranceTranslation> translations = new HashMap<>();
+    private Map<Locale, RemembranceTranslationEntity> translations = new HashMap<>();
 
     /// Map of explanations (commentary) for this remembrance, keyed by locale.
     ///
@@ -154,12 +153,12 @@ public class Remembrance {
     @OneToMany(mappedBy = "remembrance", cascade = CascadeType.ALL, orphanRemoval = true)
     @MapKey(name = "locale")
     @Getter
-    private Map<Locale, ExplanationTranslation> explanations = new HashMap<>();
+    private Map<Locale, ExplanationTranslationEntity> explanations = new HashMap<>();
 
     /// Set of tags associated with this remembrance.
     ///
     /// Many-to-many relationship via join table `remembrance_tag`.
-    /// Bidirectional — use [#addTag(Tag)] and [#removeTag(Tag)] to maintain consistency.
+    /// Bidirectional — use [#addTag(TagEntity)] and [#removeTag(TagEntity)] to maintain consistency.
     ///
     /// Uses [LinkedHashSet] to preserve insertion order.
     @ManyToMany
@@ -168,9 +167,9 @@ public class Remembrance {
             joinColumns = @JoinColumn(name = "remembrance_id"),
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
     @Getter
-    private Set<Tag> tags = new LinkedHashSet<>();
+    private Set<TagEntity> tags = new LinkedHashSet<>();
 
-    /// Creates a new builder for constructing [Remembrance] instances.
+    /// Creates a new builder for constructing [RemembranceEntity] instances.
     ///
     /// @return a new [Builder] instance
     public static Builder builder() {
@@ -188,7 +187,7 @@ public class Remembrance {
             throw new IllegalArgumentException("Translation text must not be blank");
         }
 
-        addTranslation(RemembranceTranslation.builder()
+        addTranslation(RemembranceTranslationEntity.builder()
                 .remembrance(this)
                 .locale(locale)
                 .text(text)
@@ -206,7 +205,7 @@ public class Remembrance {
             throw new IllegalArgumentException("Explanation text must not be blank");
         }
 
-        addExplanation(ExplanationTranslation.builder()
+        addExplanation(ExplanationTranslationEntity.builder()
                 .remembrance(this)
                 .locale(locale)
                 .text(text)
@@ -298,7 +297,7 @@ public class Remembrance {
     /// @param locale the target locale; must not be `null`
     /// @return the translated text, or `null` if no translation exists
     public @Nullable String getTranslationText(Locale locale) {
-        RemembranceTranslation t = translations.get(locale);
+        RemembranceTranslationEntity t = translations.get(locale);
         return t != null ? t.getText() : null;
     }
 
@@ -307,7 +306,7 @@ public class Remembrance {
     /// @param locale the target locale; must not be `null`
     /// @return the explanation text, or `null` if no explanation exists
     public @Nullable String getExplanationText(Locale locale) {
-        ExplanationTranslation e = explanations.get(locale);
+        ExplanationTranslationEntity e = explanations.get(locale);
         return e != null ? e.getText() : null;
     }
 
@@ -322,7 +321,7 @@ public class Remembrance {
     ///
     /// @return an unmodifiable set of tag names
     public Set<String> getTagNames() {
-        return tags.stream().map(Tag::getName).collect(Collectors.toUnmodifiableSet());
+        return tags.stream().map(TagEntity::getName).collect(Collectors.toUnmodifiableSet());
     }
 
     /// Adds a tag to this remembrance.
@@ -330,7 +329,7 @@ public class Remembrance {
     /// Maintains bidirectional consistency by also adding this remembrance to the tag's remembrance set.
     ///
     /// @param tag the tag to add; must not be `null`
-    public void addTag(Tag tag) {
+    public void addTag(TagEntity tag) {
         tag.addRemembrance(this);
     }
 
@@ -339,18 +338,18 @@ public class Remembrance {
     /// Maintains bidirectional consistency by also removing this remembrance from the tag's remembrance set.
     ///
     /// @param tag the tag to remove; must not be `null`
-    public void removeTag(Tag tag) {
+    public void removeTag(TagEntity tag) {
         tag.removeRemembrance(this);
     }
 
     /// Marks this remembrance as a favorite.
     ///
-    /// If not already favorited, creates a new [Favorite] instance and associates it with this remembrance.
+    /// If not already favorited, creates a new [FavoriteEntity] instance and associates it with this remembrance.
     ///
-    /// @return the associated `Favorite` instance
-    public Favorite markFavorite() {
+    /// @return the associated `FavoriteEntity` instance
+    public FavoriteEntity markFavorite() {
         if (favorite == null) {
-            this.favorite = Favorite.builder().remembrance(this).build();
+            this.favorite = FavoriteEntity.builder().remembrance(this).build();
         }
         return favorite;
     }
@@ -377,7 +376,7 @@ public class Remembrance {
     /// Direct external use is not intended.
     ///
     /// @param translation the translation to add; must not be `null`
-    private void addTranslation(RemembranceTranslation translation) {
+    private void addTranslation(RemembranceTranslationEntity translation) {
         translation.setRemembrance(this);
         translations.put(translation.getLocale(), translation);
     }
@@ -393,23 +392,23 @@ public class Remembrance {
     /// **Note:** This method does not validate text content — that is handled at the public API layer.
     ///
     /// @param translation the explanation to add; must not be `null`
-    private void addExplanation(ExplanationTranslation translation) {
+    private void addExplanation(ExplanationTranslationEntity translation) {
         translation.setRemembrance(this);
         explanations.put(translation.getLocale(), translation);
     }
 
-    /// Fluent builder for constructing [Remembrance] instances with support for:
+    /// Fluent builder for constructing [RemembranceEntity] instances with support for:
     ///
     /// - Multi-locale translations and explanations
     /// - Tagging
-    /// - Favorite marking
+    /// - FavoriteEntity marking
     /// - Source and authenticity grade
     ///
     /// ### Usage Example
     /// ```java
-    /// Remembrance remembrance = Remembrance.builder()
+    /// RemembranceEntity remembrance = RemembranceEntity.builder()
     /// .source("Sahih Muslim")
-    /// .grade(HadithGrade.SAHIH)
+    /// .grade(DatabaseHadithGrade.SAHIH)
     /// .addTranslation(Locale.ENGLISH, "SubhanAllah")
     /// .addTranslation(Locale.forLanguageTag("ar"), "سبحان الله")
     /// .addExplanation(Locale.ENGLISH, "Glory be to God")
@@ -419,14 +418,21 @@ public class Remembrance {
     /// .build();
     ///```
     ///
-    /// @see Remembrance
+    /// @see RemembranceEntity
     public static final class Builder {
-        private final Set<Translation> translations = new HashSet<>();
+
         private final Set<Translation> explanations = new HashSet<>();
-        private final Set<Tag> tags = new LinkedHashSet<>();
+        private final Set<TagEntity> tags = new LinkedHashSet<>();
+        private final Set<Translation> translations = new HashSet<>();
         private boolean isFavorite;
+        private @Nullable Long id;
         private @Nullable String source;
-        private HadithGrade grade = HadithGrade.UNSPECIFIED;
+        private DatabaseHadithGrade grade = DatabaseHadithGrade.UNSPECIFIED;
+
+        public Builder id(@Nullable Long id) {
+            this.id = id;
+            return this;
+        }
 
         /// Sets the source reference for the remembrance (e.g., "Sahih al-Bukhari").
         ///
@@ -438,11 +444,11 @@ public class Remembrance {
         }
 
         /// Sets the authenticity grade of the hadith.
-        /// If not provided, defaults to [HadithGrade#UNSPECIFIED].
+        /// If not provided, defaults to [DatabaseHadithGrade#UNSPECIFIED].
         ///
         /// @param grade the hadith grade; must not be `null`
         /// @return this builder instance
-        public Builder grade(HadithGrade grade) {
+        public Builder grade(DatabaseHadithGrade grade) {
             this.grade = grade;
             return this;
         }
@@ -516,14 +522,19 @@ public class Remembrance {
         public Builder addTag(String tagName) {
 
             if (tagName.isBlank()) {
-                throw new IllegalArgumentException("Tag name must not be blank");
+                throw new IllegalArgumentException("TagEntity name must not be blank");
             }
 
-            tags.add(Tag.builder().name(tagName).build());
+            tags.add(TagEntity.builder().name(tagName).build());
             return this;
         }
 
-        /// Constructs and returns a fully initialized [Remembrance] instance.
+        public Builder addTags(Collection<TagEntity> tags) {
+            this.tags.addAll(Set.copyOf(tags));
+            return this;
+        }
+
+        /// Constructs and returns a fully initialized [RemembranceEntity] instance.
         ///
         /// This method:
         /// - Sets source and grade
@@ -532,9 +543,10 @@ public class Remembrance {
         ///
         /// The returned instance is transient (not yet persisted) and ready for use.
         ///
-        /// @return a new `Remembrance` instance with all configured data
-        public Remembrance build() {
-            Remembrance remembrance = new Remembrance();
+        /// @return a new `RemembranceEntity` instance with all configured data
+        public RemembranceEntity build() {
+            RemembranceEntity remembrance = new RemembranceEntity();
+            remembrance.setId(id);
             remembrance.setSource(source);
             remembrance.setGrade(grade);
 
@@ -556,7 +568,6 @@ public class Remembrance {
         ///
         /// @param locale the target locale
         /// @param text   the associated text (non-blank)
-        private record Translation(Locale locale, String text) {
-        }
+        private record Translation(Locale locale, String text) {}
     }
 }

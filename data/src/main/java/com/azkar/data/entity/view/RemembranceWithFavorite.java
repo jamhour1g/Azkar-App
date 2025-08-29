@@ -1,6 +1,6 @@
-package com.azkar.data.view;
+package com.azkar.data.entity.view;
 
-import com.azkar.data.model.HadithGrade;
+import com.azkar.data.entity.DatabaseHadithGrade;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -28,7 +28,7 @@ public class RemembranceWithFavorite {
     String source; // DB allows nulls; keep non-null default semantics at the app layer if desired
 
     @Nullable
-    HadithGrade grade; // nullable in DB
+    DatabaseHadithGrade grade; // nullable in DB
 
     @Column(name = "created_at")
     @Nullable

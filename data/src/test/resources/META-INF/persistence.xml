@@ -7,11 +7,11 @@
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
 
         <!-- List entities explicitly -->
-        <class>com.azkar.data.entity.Remembrance</class>
-        <class>com.azkar.data.entity.RemembranceTranslation</class>
-        <class>com.azkar.data.entity.ExplanationTranslation</class>
-        <class>com.azkar.data.entity.Tag</class>
-        <class>com.azkar.data.entity.Favorite</class>
+        <class>com.azkar.data.entity.RemembranceEntity</class>
+        <class>com.azkar.data.entity.RemembranceTranslationEntity</class>
+        <class>com.azkar.data.entity.ExplanationTranslationEntity</class>
+        <class>com.azkar.data.entity.TagEntity</class>
+        <class>com.azkar.data.entity.FavoriteEntity</class>
 
         <!-- Let our test helper control JDBC URL; don't let JPA touch schema -->
         <properties>

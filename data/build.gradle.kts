@@ -17,5 +17,6 @@ dependencies {
     compileOnly(libs.jakarta.transaction.jakarta.transaction.api)
 
     implementation(project(":utils"))
+    implementation(project(":domain"))
 
 }

@@ -9,3 +9,4 @@ rootProject.name = "Azkar"
 include("data")
 include("app")
 include("utils")
+include("domain")

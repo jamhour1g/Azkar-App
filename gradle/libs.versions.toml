@@ -5,7 +5,7 @@ org-kordamp-ikonli-ikonli-javafx = "12.4.0"
 org-hibernate = "7.1.0.Final"
 
 [libraries]
-# Nullability
+# Nullability (they are used in the BuildSrc just not by the plugin called by name don't remove)
 org-jspecify-jspecify = { module = "org.jspecify:jspecify", version = "1.0.0" }
 com-google-errorprone-error-prone-core = { module = "com.google.errorprone:error_prone_core", version = "2.41.0" }
 com-uber-nullaway-nullaway = { module = "com.uber.nullaway:nullaway", version = "0.12.8" }
@@ -36,7 +36,7 @@ org-kordamp-ikonli-ikonli-javafx = { module = "org.kordamp.ikonli:ikonli-javafx"
 org-kordamp-ikonli-ikonli-fontawesome6-pack = { module = "org.kordamp.ikonli:ikonli-fontawesome6-pack", version.ref = "org-kordamp-ikonli-ikonli-javafx" }
 org-controlsfx-controlsfx = { module = "org.controlsfx:controlsfx", version = "11.2.2" }
 
-# Testing
+# Testing (they are used in the BuildSrc just not by the plugin called by name don't remove)
 org-junit-jupiter-junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "org-junit-jupiter-junit-jupiter" }
 org-junit-junit-bom = { module = "org.junit:junit-bom", version.ref = "org-junit-jupiter-junit-jupiter" }
 org-junit-platform-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.13.4" }
