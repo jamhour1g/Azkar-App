@@ -47,20 +47,21 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
 
     @Override
     public List<Remembrance> findAll() {
-        List<RemembranceEntity> resultList = em.createQuery(
+        return em.createQuery(
                         """
                         SELECT r FROM RemembranceEntity r
                         ORDER BY r.id
                         """,
                         RemembranceEntity.class)
-                .getResultList();
-
-        return resultList.stream().map(RemembranceMapper::toRemembrance).toList();
+                .setHint("org.hibernate.readOnly", true)
+                .getResultStream()
+                .map(RemembranceMapper::toRemembrance)
+                .toList();
     }
 
     @Override
     public List<Remembrance> findByTagNameIgnoreCase(String tagName) {
-        TypedQuery<RemembranceEntity> remembranceQuery = em.createQuery(
+        return em.createQuery(
                         """
                         SELECT r FROM RemembranceEntity r
                         JOIN r.tags t
@@ -68,24 +69,25 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
                         ORDER BY r.id
                         """,
                         RemembranceEntity.class)
-                .setParameter("name", tagName);
-
-        return remembranceQuery.getResultList().stream()
+                .setParameter("name", tagName)
+                .setHint("org.hibernate.readOnly", true)
+                .getResultStream()
                 .map(RemembranceMapper::toRemembrance)
                 .toList();
     }
 
     @Override
     public List<Remembrance> findFavorites() {
-        List<RemembranceEntity> resultList = em.createQuery(
+        return em.createQuery(
                         """
                         SELECT f.remembrance FROM FavoriteEntity f
                         ORDER BY f.remembranceId
                         """,
                         RemembranceEntity.class)
-                .getResultList();
-
-        return resultList.stream().map(RemembranceMapper::toRemembrance).toList();
+                .setHint("org.hibernate.readOnly", true)
+                .getResultStream()
+                .map(RemembranceMapper::toRemembrance)
+                .toList();
     }
 
     @Override
@@ -136,18 +138,17 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
                 """
                         + orderBy;
 
-        TypedQuery<RemembranceEntity> q =
-                em.createQuery(jpql, RemembranceEntity.class).setParameter("ids", ids);
+        TypedQuery<RemembranceEntity> q = em.createQuery(jpql, RemembranceEntity.class)
+                .setParameter("ids", ids)
+                .setHint("org.hibernate.readOnly", true);
 
         for (int i = 0; i < ids.size(); i++) {
             q.setParameter("id" + i, ids.get(i));
         }
 
-        List<RemembranceEntity> entities = q.getResultList();
-
         // 3) Map to domain (this will enforce that both translation and explanation
         // exist for the requested locale, per your RemembranceMapper logic).
-        return entities.stream().map(RemembranceMapper::toRemembrance).toList();
+        return q.getResultStream().map(RemembranceMapper::toRemembrance).toList();
     }
 
     @Override
