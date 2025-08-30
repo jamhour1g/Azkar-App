@@ -1,5 +1,4 @@
-@org.jspecify.annotations.NullMarked
-module com.azkar.data {
+@org.jspecify.annotations.NullMarked module com.azkar.data {
     requires java.sql;
     requires org.xerial.sqlitejdbc;
     requires jakarta.persistence;
@@ -13,12 +12,9 @@ module com.azkar.data {
     requires static lombok;
     requires static org.jspecify;
 
-    opens com.azkar.data.converter to
-            org.hibernate.orm.core;
-    opens com.azkar.data.entity to
-            org.hibernate.orm.core;
-    opens com.azkar.data.entity.view to
-            org.hibernate.orm.core;
+    opens com.azkar.data.converter to org.hibernate.orm.core;
+    opens com.azkar.data.entity to org.hibernate.orm.core;
+    opens com.azkar.data.entity.view to org.hibernate.orm.core;
 
     exports com.azkar.data.repo.jpa;
 }

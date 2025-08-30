@@ -9,14 +9,16 @@ import org.flywaydb.core.Flyway;
 import org.jspecify.annotations.Nullable;
 
 public final class JpaManager implements AutoCloseable {
-    public static final String DATA_PERSISTENCE_UNIT = "com.azkar.data.persistence";
-    private static final Logger LOGGER = LoggerWrapper.loggerFactory(JpaManager.class);
 
-    @Nullable
-    private static volatile JpaManager instance;
+    public static final String DATA_PERSISTENCE_UNIT =
+        "com.azkar.data.persistence";
+    private static final Logger LOGGER = LoggerWrapper.loggerFactory(
+        JpaManager.class
+    );
 
-    @Nullable
-    private EntityManagerFactory emf;
+    @Nullable private static volatile JpaManager instance;
+
+    @Nullable private EntityManagerFactory emf;
 
     private JpaManager() {
         System.setProperty("org.jboss.logging.provider", "jdk");
@@ -40,12 +42,12 @@ public final class JpaManager implements AutoCloseable {
         if (emf == null || !emf.isOpen()) {
             // run migrations first
             Flyway.configure()
-                    .dataSource("jdbc:sqlite:./db/remembrance.db", null, null)
-                    .locations("classpath:db/migration")
-                    .initSql("PRAGMA foreign_keys=ON")
-                    .cleanDisabled(true) // safety in prod
-                    .load()
-                    .migrate();
+                .dataSource("jdbc:sqlite:./db/remembrance.db", null, null)
+                .locations("classpath:db/migration")
+                .initSql("PRAGMA foreign_keys=ON")
+                .cleanDisabled(true) // safety in prod
+                .load()
+                .migrate();
 
             emf = Persistence.createEntityManagerFactory(DATA_PERSISTENCE_UNIT);
         }

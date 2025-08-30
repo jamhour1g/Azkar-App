@@ -20,10 +20,14 @@ class LocaleStringConverterTest {
 
         assertEquals("en-US", dbValue, "Expected DB value to be 'en-US'");
         assertEquals(
-                original.toLanguageTag(),
-                roundTripped.toLanguageTag(),
-                () -> "Expected round-trip to preserve language tag '%s' but got '%s'"
-                        .formatted(original.toLanguageTag(), roundTripped.toLanguageTag()));
+            original.toLanguageTag(),
+            roundTripped.toLanguageTag(),
+            () ->
+                "Expected round-trip to preserve language tag '%s' but got '%s'".formatted(
+                    original.toLanguageTag(),
+                    roundTripped.toLanguageTag()
+                )
+        );
     }
 
     @Test
@@ -44,7 +48,10 @@ class LocaleStringConverterTest {
     @DisplayName("Should handle empty string gracefully")
     void convertToEntityAttribute_emptyString_returnsRootLocale() {
         Locale result = converter.convertToEntityAttribute("");
-        assertEquals(Locale.ROOT, result, () -> "Expected empty string to convert to ROOT locale but got '%s'"
-                .formatted(result.toLanguageTag()));
+        assertEquals(Locale.ROOT, result, () ->
+            "Expected empty string to convert to ROOT locale but got '%s'".formatted(
+                result.toLanguageTag()
+            )
+        );
     }
 }

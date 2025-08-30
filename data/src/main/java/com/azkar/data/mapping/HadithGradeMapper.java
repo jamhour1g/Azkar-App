@@ -6,7 +6,9 @@ import com.azkar.domain.model.HadithGrade;
 public final class HadithGradeMapper {
 
     private HadithGradeMapper() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        throw new UnsupportedOperationException(
+            "This is a utility class and cannot be instantiated"
+        );
     }
 
     public static HadithGrade toHadithGrade(DatabaseHadithGrade hadithGrade) {

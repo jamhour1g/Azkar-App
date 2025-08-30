@@ -81,7 +81,12 @@ public class FavoriteEntity {
     /// - Displaying "favorited on" dates
     /// - Sorting favorites by recency
     /// - Audit and sync logic
-    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    @Column(
+        name = "created_at",
+        nullable = false,
+        insertable = false,
+        updatable = false
+    )
     @Getter
     private @Nullable Instant createdAt;
 

@@ -16,7 +16,9 @@ public final class TestJpaManager {
 
     public static EntityManagerFactory bootstrapWithTempSqlite() {
         try {
-            return bootstrapWithTempSqlite(Files.createTempDirectory("azkar-sqlite-tests"));
+            return bootstrapWithTempSqlite(
+                Files.createTempDirectory("azkar-sqlite-tests")
+            );
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -32,17 +34,20 @@ public final class TestJpaManager {
 
             // 1) Migrate schema using the SAME migrations as prod
             Flyway.configure()
-                    .dataSource(url, null, null)
-                    .locations("classpath:db/migration")
-                    .initSql("PRAGMA foreign_keys=ON")
-                    .cleanDisabled(false) // ok in test
-                    .load()
-                    .migrate();
+                .dataSource(url, null, null)
+                .locations("classpath:db/migration")
+                .initSql("PRAGMA foreign_keys=ON")
+                .cleanDisabled(false) // ok in test
+                .load()
+                .migrate();
 
             // 2) Build EMF with schema-generation disabled
             Map<String, String> props = createDatabaseProperties(url);
 
-            return Persistence.createEntityManagerFactory("com.azkar.data.persistence", props);
+            return Persistence.createEntityManagerFactory(
+                "com.azkar.data.persistence",
+                props
+            );
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -55,12 +60,22 @@ public final class TestJpaManager {
 
     private static Map<String, String> createDatabaseProperties(String url) {
         return Map.ofEntries(
-                Map.entry("jakarta.persistence.jdbc.driver", "org.sqlite.JDBC"),
-                Map.entry("jakarta.persistence.jdbc.url", url),
-                Map.entry("hibernate.dialect", "org.hibernate.community.dialect.SQLiteDialect"),
-                Map.entry("jakarta.persistence.schema-generation.database.action", "none"),
-                Map.entry("hibernate.connection.init_sql", "PRAGMA foreign_keys=ON"),
-                Map.entry("hibernate.show_sql", "false"),
-                Map.entry("hibernate.format_sql", "true"));
+            Map.entry("jakarta.persistence.jdbc.driver", "org.sqlite.JDBC"),
+            Map.entry("jakarta.persistence.jdbc.url", url),
+            Map.entry(
+                "hibernate.dialect",
+                "org.hibernate.community.dialect.SQLiteDialect"
+            ),
+            Map.entry(
+                "jakarta.persistence.schema-generation.database.action",
+                "none"
+            ),
+            Map.entry(
+                "hibernate.connection.init_sql",
+                "PRAGMA foreign_keys=ON"
+            ),
+            Map.entry("hibernate.show_sql", "false"),
+            Map.entry("hibernate.format_sql", "true")
+        );
     }
 }

@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TagRepository {
-
     void delete(Tag tag);
 
     void deleteById(Long id);

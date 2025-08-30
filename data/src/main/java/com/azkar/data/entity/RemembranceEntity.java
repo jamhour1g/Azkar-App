@@ -61,11 +61,12 @@ import org.jspecify.annotations.Nullable;
 /// @see FavoriteEntity
 @Entity
 @Table(
-        name = "remembrance",
-        check =
-                @CheckConstraint(
-                        name = "remembrance_grade_check",
-                        constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"))
+    name = "remembrance",
+    check = @CheckConstraint(
+        name = "remembrance_grade_check",
+        constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"
+    )
+)
 @SuppressWarnings("NullAway.Init")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
@@ -98,11 +99,12 @@ public class RemembranceEntity {
     /// Enforced by the database `CHECK` constraint.
     @Convert(converter = HadithGradeConverter.class)
     @Column(
-            nullable = false,
-            check =
-                    @CheckConstraint(
-                            name = "remembrance_grade_check",
-                            constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"))
+        nullable = false,
+        check = @CheckConstraint(
+            name = "remembrance_grade_check",
+            constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"
+        )
+    )
     @ToString.Include
     @Getter
     @Setter
@@ -112,7 +114,12 @@ public class RemembranceEntity {
     ///
     /// Set automatically by the database using `DEFAULT (unixepoch())`.
     /// Not modifiable by application code.
-    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    @Column(
+        name = "created_at",
+        nullable = false,
+        insertable = false,
+        updatable = false
+    )
     @Getter
     private @Nullable Instant createdAt;
 
@@ -120,7 +127,12 @@ public class RemembranceEntity {
     ///
     /// Maintained automatically by the `trg_remembrance__set_updated_at` trigger.
     /// Updated to the current Unix epoch on any `UPDATE` operation.
-    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
+    @Column(
+        name = "updated_at",
+        nullable = false,
+        insertable = false,
+        updatable = false
+    )
     @Getter
     private @Nullable Instant updatedAt;
 
@@ -129,7 +141,11 @@ public class RemembranceEntity {
     /// Managed via a one-to-one relationship with [favorite.remembrance][FavoriteEntity#remembrance].
     /// Uses `cascade = CascadeType.ALL, orphanRemoval = true`
     /// setting this to `null` will delete the associated `favorite` row.
-    @OneToOne(mappedBy = "remembrance", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(
+        mappedBy = "remembrance",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
     @Getter
     private @Nullable FavoriteEntity favorite;
 
@@ -140,20 +156,30 @@ public class RemembranceEntity {
     ///
     /// Uses `orphanRemoval = true` — removing a translation from this map will delete it from the database on
     /// flushes.
-    @OneToMany(mappedBy = "remembrance", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(
+        mappedBy = "remembrance",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
     @MapKey(name = "locale")
     @Getter
-    private Map<Locale, RemembranceTranslationEntity> translations = new HashMap<>();
+    private Map<Locale, RemembranceTranslationEntity> translations =
+        new HashMap<>();
 
     /// Map of explanations (commentary) for this remembrance, keyed by locale.
     ///
     /// Like translations, one explanation per locale is allowed.
     ///
     /// Also uses `orphanRemoval = true` for automatic cleanup.
-    @OneToMany(mappedBy = "remembrance", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(
+        mappedBy = "remembrance",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+    )
     @MapKey(name = "locale")
     @Getter
-    private Map<Locale, ExplanationTranslationEntity> explanations = new HashMap<>();
+    private Map<Locale, ExplanationTranslationEntity> explanations =
+        new HashMap<>();
 
     /// Set of tags associated with this remembrance.
     ///
@@ -163,9 +189,10 @@ public class RemembranceEntity {
     /// Uses [LinkedHashSet] to preserve insertion order.
     @ManyToMany
     @JoinTable(
-            name = "remembrance_tag",
-            joinColumns = @JoinColumn(name = "remembrance_id"),
-            inverseJoinColumns = @JoinColumn(name = "tag_id"))
+        name = "remembrance_tag",
+        joinColumns = @JoinColumn(name = "remembrance_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
     @Getter
     private Set<TagEntity> tags = new LinkedHashSet<>();
 
@@ -182,16 +209,19 @@ public class RemembranceEntity {
     /// @param text   the translated text; must not be `null` or blank
     /// @throws IllegalArgumentException if `text` is blank
     public void addTranslation(Locale locale, String text) {
-
         if (text.isBlank()) {
-            throw new IllegalArgumentException("Translation text must not be blank");
+            throw new IllegalArgumentException(
+                "Translation text must not be blank"
+            );
         }
 
-        addTranslation(RemembranceTranslationEntity.builder()
+        addTranslation(
+            RemembranceTranslationEntity.builder()
                 .remembrance(this)
                 .locale(locale)
                 .text(text)
-                .build());
+                .build()
+        );
     }
 
     /// Adds an explanation for the given locale.
@@ -200,16 +230,19 @@ public class RemembranceEntity {
     /// @param text   the explanation text; must not be `null` or blank
     /// @throws IllegalArgumentException if `text` is blank
     public void addExplanation(Locale locale, String text) {
-
         if (text.isBlank()) {
-            throw new IllegalArgumentException("Explanation text must not be blank");
+            throw new IllegalArgumentException(
+                "Explanation text must not be blank"
+            );
         }
 
-        addExplanation(ExplanationTranslationEntity.builder()
+        addExplanation(
+            ExplanationTranslationEntity.builder()
                 .remembrance(this)
                 .locale(locale)
                 .text(text)
-                .build());
+                .build()
+        );
     }
 
     /// Replaces or creates a translation for the given locale.
@@ -321,7 +354,10 @@ public class RemembranceEntity {
     ///
     /// @return an unmodifiable set of tag names
     public Set<String> getTagNames() {
-        return tags.stream().map(TagEntity::getName).collect(Collectors.toUnmodifiableSet());
+        return tags
+            .stream()
+            .map(TagEntity::getName)
+            .collect(Collectors.toUnmodifiableSet());
     }
 
     /// Adds a tag to this remembrance.
@@ -477,9 +513,10 @@ public class RemembranceEntity {
         /// @return this builder instance
         /// @throws IllegalArgumentException if `text` is blank
         public Builder addTranslation(Locale locale, String text) {
-
             if (text.isBlank()) {
-                throw new IllegalArgumentException("Translation text must not be blank");
+                throw new IllegalArgumentException(
+                    "Translation text must not be blank"
+                );
             }
 
             translations.add(new Translation(locale, text));
@@ -498,9 +535,10 @@ public class RemembranceEntity {
         /// @return this builder instance
         /// @throws IllegalArgumentException if `text` is blank
         public Builder addExplanation(Locale locale, String text) {
-
             if (text.isBlank()) {
-                throw new IllegalArgumentException("Explanation text must not be blank");
+                throw new IllegalArgumentException(
+                    "Explanation text must not be blank"
+                );
             }
 
             explanations.add(new Translation(locale, text));
@@ -520,9 +558,10 @@ public class RemembranceEntity {
         /// @return this builder instance
         /// @throws IllegalArgumentException if `tagName` is blank
         public Builder addTag(String tagName) {
-
             if (tagName.isBlank()) {
-                throw new IllegalArgumentException("TagEntity name must not be blank");
+                throw new IllegalArgumentException(
+                    "TagEntity name must not be blank"
+                );
             }
 
             tags.add(TagEntity.builder().name(tagName).build());
@@ -554,8 +593,12 @@ public class RemembranceEntity {
                 remembrance.markFavorite();
             }
 
-            translations.forEach(t -> remembrance.addTranslation(t.locale, t.text));
-            explanations.forEach(e -> remembrance.addExplanation(e.locale, e.text));
+            translations.forEach(t ->
+                remembrance.addTranslation(t.locale, t.text)
+            );
+            explanations.forEach(e ->
+                remembrance.addExplanation(e.locale, e.text)
+            );
             tags.forEach(remembrance::addTag);
 
             return remembrance;

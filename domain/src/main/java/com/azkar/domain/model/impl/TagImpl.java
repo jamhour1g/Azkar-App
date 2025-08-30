@@ -8,11 +8,10 @@ import org.jspecify.annotations.Nullable;
 
 @Builder(toBuilder = true)
 public record TagImpl(
-        @Nullable Long id, // is null when tag is not saved in the database
-        String name,
-        @Nullable Instant createdAt)
-        implements Tag {
-
+    @Nullable Long id, // is null when tag is not saved in the database
+    String name,
+    @Nullable Instant createdAt
+) implements Tag {
     public TagImpl {
         if (name.isBlank()) {
             throw new IllegalArgumentException("Tag name must not blank");

@@ -40,12 +40,30 @@ java {
 // https://github.com/diffplug/spotless/tree/main/plugin-gradle#palantir-java-format
 spotless {
     java {
+        cleanthat()
+
         importOrder()
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
+        // https://github.com/prettier/prettier
+        // Needs npm to be installed on the system
+        prettier(
+            mapOf(
+                "prettier" to "3.6.2",
+                // https://github.com/jhipster/prettier-java
+                "prettier-plugin-java" to "2.7.3"
+            )
+        ).config(
+            mapOf(
+                "parser" to "java",
+                "tabWidth" to 4,
+                "plugins" to listOf(
+                    "prettier-plugin-java"
+                )
+            )
+        )
         formatAnnotations()
-        palantirJavaFormat().formatJavadoc(true)
     }
 }
 

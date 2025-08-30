@@ -32,11 +32,17 @@ import org.jspecify.annotations.Nullable;
 /// .addRemembrance(remembrance1)
 /// .addRemembrance(remembrance2)
 /// .build();
-/// ```
+///```
 ///
 /// @see RemembranceEntity
 @Entity
-@Table(name = "tag", uniqueConstraints = @UniqueConstraint(name = "uq_tag__name_nocase", columnNames = "name"))
+@Table(
+    name = "tag",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uq_tag__name_nocase",
+        columnNames = "name"
+    )
+)
 @SuppressWarnings("NullAway.Init")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
@@ -73,7 +79,12 @@ public class TagEntity {
     ///
     /// Set automatically by the database using `DEFAULT (unixepoch())`.
     /// Cannot be modified by application code (`insertable = false, updatable = false`).
-    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    @Column(
+        name = "created_at",
+        nullable = false,
+        insertable = false,
+        updatable = false
+    )
     @Getter
     private @Nullable Instant createdAt;
 
@@ -147,7 +158,9 @@ public class TagEntity {
     /// Allows optional addition of associated remembrances during construction.
     ///
     public static class Builder {
-        private final Set<RemembranceEntity> remembrances = new LinkedHashSet<>();
+
+        private final Set<RemembranceEntity> remembrances =
+            new LinkedHashSet<>();
         private String name = "";
         private @Nullable Long id;
 
@@ -157,7 +170,9 @@ public class TagEntity {
         /// @return this builder instance
         public Builder name(String name) {
             if (name.isBlank()) {
-                throw new IllegalArgumentException("TagEntity name must not blank");
+                throw new IllegalArgumentException(
+                    "TagEntity name must not blank"
+                );
             }
 
             this.name = name;
@@ -169,7 +184,9 @@ public class TagEntity {
             return this;
         }
 
-        public Builder addRemembrances(Collection<RemembranceEntity> remembrances) {
+        public Builder addRemembrances(
+            Collection<RemembranceEntity> remembrances
+        ) {
             this.remembrances.addAll(Set.copyOf(remembrances));
             return this;
         }

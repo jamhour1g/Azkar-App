@@ -28,14 +28,18 @@ import org.jspecify.annotations.Nullable;
 /// @see DatabaseHadithGrade
 ///
 @Converter(autoApply = true)
-public class HadithGradeConverter implements AttributeConverter<@Nullable DatabaseHadithGrade, @Nullable String> {
+public class HadithGradeConverter
+    implements
+        AttributeConverter<@Nullable DatabaseHadithGrade, @Nullable String> {
 
     /// Converts a [DatabaseHadithGrade] enum to its [name()][DatabaseHadithGrade#name] for persistence.
     ///
     /// @param attribute the enum value; may be `null` when JPA writes a nullable column
     /// @return the enum name, or `null` if the input is `null`
     @Override
-    public @Nullable String convertToDatabaseColumn(@Nullable DatabaseHadithGrade attribute) {
+    public @Nullable String convertToDatabaseColumn(
+        @Nullable DatabaseHadithGrade attribute
+    ) {
         return attribute != null ? attribute.name() : null;
     }
 
@@ -45,7 +49,9 @@ public class HadithGradeConverter implements AttributeConverter<@Nullable Databa
     /// @return the corresponding enum, or `null` if the input is `null`
     /// @throws IllegalArgumentException if `dbData` is non-null and not a valid enum constant
     @Override
-    public @Nullable DatabaseHadithGrade convertToEntityAttribute(@Nullable String dbData) {
+    public @Nullable DatabaseHadithGrade convertToEntityAttribute(
+        @Nullable String dbData
+    ) {
         return dbData != null ? DatabaseHadithGrade.valueOf(dbData) : null;
     }
 }

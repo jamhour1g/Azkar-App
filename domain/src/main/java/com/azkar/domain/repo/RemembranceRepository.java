@@ -6,7 +6,6 @@ import java.util.Locale;
 import java.util.Optional;
 
 public interface RemembranceRepository {
-
     Remembrance save(Remembrance r);
 
     void delete(Remembrance r);

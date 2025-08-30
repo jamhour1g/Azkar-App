@@ -29,14 +29,17 @@ import org.jspecify.annotations.Nullable;
 /// @see Locale#toLanguageTag()
 /// @see Locale#forLanguageTag(String)
 @Converter(autoApply = true)
-public final class LocaleStringConverter implements AttributeConverter<@Nullable Locale, @Nullable String> {
+public final class LocaleStringConverter
+    implements AttributeConverter<@Nullable Locale, @Nullable String> {
 
     /// Converts a [Locale] to a BCP 47 language tag [String] for persistence.
     ///
     /// @param attribute the [Locale] to convert; may be `null` when JPA writes a nullable column
     /// @return the BCP 47 tag as a [String], or `null` if input was `null`
     @Override
-    public @Nullable String convertToDatabaseColumn(@Nullable Locale attribute) {
+    public @Nullable String convertToDatabaseColumn(
+        @Nullable Locale attribute
+    ) {
         return attribute != null ? attribute.toLanguageTag() : null;
     }
 

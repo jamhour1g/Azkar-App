@@ -7,9 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface Remembrance {
-
-    Optional<Long>
-            getId(); // null when remembrance is not saved in the database or when one wants to create a new remembrance
+    Optional<Long> getId(); // null when remembrance is not saved in the database or when one wants to create a new remembrance
 
     HadithGrade getGrade();
 
@@ -17,12 +15,10 @@ public interface Remembrance {
 
     Optional<String> getSource();
 
-    Optional<Instant>
-            getCreatedAt(); // null when remembrance is not saved in the database or when one wants to create a new
+    Optional<Instant> getCreatedAt(); // null when remembrance is not saved in the database or when one wants to create a new
     // remembrance
 
-    Optional<Instant>
-            getUpdatedAt(); // null when remembrance is not saved in the database or when one wants to create a new
+    Optional<Instant> getUpdatedAt(); // null when remembrance is not saved in the database or when one wants to create a new
     // remembrance
 
     Map<Locale, Translations> getTranslations();

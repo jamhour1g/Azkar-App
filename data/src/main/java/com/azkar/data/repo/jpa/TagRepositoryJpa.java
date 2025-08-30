@@ -7,13 +7,11 @@ import com.azkar.domain.repo.TagRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
-import org.jspecify.annotations.Nullable;
-
 import java.util.List;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 public record TagRepositoryJpa(EntityManager em) implements TagRepository {
-
     @Override
     @Transactional
     public void delete(Tag tag) {
@@ -35,20 +33,23 @@ public record TagRepositoryJpa(EntityManager em) implements TagRepository {
 
     @Override
     public Optional<Tag> findById(Long id) {
-        return Optional.ofNullable(em.<@Nullable TagEntity>find(TagEntity.class, id))
-                .map(TagMapper::toTag);
+        return Optional.ofNullable(
+            em.<@Nullable TagEntity>find(TagEntity.class, id)
+        ).map(TagMapper::toTag);
     }
 
     @Override
     public Optional<Tag> findByNameIgnoreCase(String name) {
-        TypedQuery<@Nullable TagEntity> query = em.createQuery(
-                        """
-                        SELECT t FROM TagEntity t
-                        WHERE lower(t.name) = lower(:name)
-                        """,
-                        TagEntity.class)
-                .setParameter("name", name)
-                .setHint("org.hibernate.readOnly", true);
+        TypedQuery<@Nullable TagEntity> query = em
+            .createQuery(
+                """
+                SELECT t FROM TagEntity t
+                WHERE lower(t.name) = lower(:name)
+                """,
+                TagEntity.class
+            )
+            .setParameter("name", name)
+            .setHint("org.hibernate.readOnly", true);
 
         TagEntity tagEntity = query.getSingleResultOrNull();
 
@@ -57,31 +58,34 @@ public record TagRepositoryJpa(EntityManager em) implements TagRepository {
 
     @Override
     public List<Tag> findAll() {
-
-        return em.createQuery(
-                        """
-                        SELECT t FROM TagEntity t
-                        ORDER BY t.id
-                        """,
-                        TagEntity.class)
-                .setHint("org.hibernate.readOnly", true)
-                .getResultStream()
-                .map(TagMapper::toTag)
-                .toList();
+        return em
+            .createQuery(
+                """
+                SELECT t FROM TagEntity t
+                ORDER BY t.id
+                """,
+                TagEntity.class
+            )
+            .setHint("org.hibernate.readOnly", true)
+            .getResultStream()
+            .map(TagMapper::toTag)
+            .toList();
     }
 
     @Override
     public List<Tag> findByNameContainingIgnoreCase(String name) {
-        return em.createQuery(
-                        """
-                        SELECT t FROM TagEntity t
-                        WHERE lower(t.name) LIKE lower(:name)
-                        """,
-                        TagEntity.class)
-                .setParameter("name", "%" + name + "%")
-                .setHint("org.hibernate.readOnly", true)
-                .getResultStream()
-                .map(TagMapper::toTag)
-                .toList();
+        return em
+            .createQuery(
+                """
+                SELECT t FROM TagEntity t
+                WHERE lower(t.name) LIKE lower(:name)
+                """,
+                TagEntity.class
+            )
+            .setParameter("name", "%" + name + "%")
+            .setHint("org.hibernate.readOnly", true)
+            .getResultStream()
+            .map(TagMapper::toTag)
+            .toList();
     }
 }

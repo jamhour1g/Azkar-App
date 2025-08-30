@@ -28,7 +28,8 @@ import org.jspecify.annotations.Nullable;
 /// @see Instant#getEpochSecond()
 /// @see Instant#ofEpochSecond(long)
 @Converter(autoApply = true)
-public final class InstantEpochConverter implements AttributeConverter<@Nullable Instant, @Nullable Long> {
+public final class InstantEpochConverter
+    implements AttributeConverter<@Nullable Instant, @Nullable Long> {
 
     /// Converts an [Instant] to its epoch seconds [Long] representation.
     ///

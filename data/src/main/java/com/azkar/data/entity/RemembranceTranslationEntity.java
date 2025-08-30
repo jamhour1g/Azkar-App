@@ -47,16 +47,20 @@ import org.jspecify.annotations.Nullable;
 /// @see ExplanationTranslationEntity
 @Entity
 @Table(
-        name = "remembrance_translation",
-        uniqueConstraints =
-                @UniqueConstraint(
-                        name = "uq_rt_rem_loc",
-                        columnNames = {"remembrance_id", "locale_code"}),
-        check = @CheckConstraint(name = "chk_et_text_not_empty", constraint = "length(text) > 0"),
-        indexes = {
-            @Index(name = "idx_rt__by_remembrance", columnList = "remembrance_id"),
-            @Index(name = "idx_rt__by_locale", columnList = "locale_code")
-        })
+    name = "remembrance_translation",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uq_rt_rem_loc",
+        columnNames = { "remembrance_id", "locale_code" }
+    ),
+    check = @CheckConstraint(
+        name = "chk_et_text_not_empty",
+        constraint = "length(text) > 0"
+    ),
+    indexes = {
+        @Index(name = "idx_rt__by_remembrance", columnList = "remembrance_id"),
+        @Index(name = "idx_rt__by_locale", columnList = "locale_code"),
+    }
+)
 @SuppressWarnings("NullAway.Init")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
@@ -107,8 +111,9 @@ public class RemembranceTranslationEntity {
     /// - Database: `NOT NULL` + `CHECK (length(text) > 0)`
     /// - Application: Constructor requires non-blank input
     @Column(
-            nullable = false,
-            check = {@CheckConstraint(constraint = "length(text) > 0")})
+        nullable = false,
+        check = { @CheckConstraint(constraint = "length(text) > 0") }
+    )
     @Getter
     @EqualsAndHashCode.Include
     @ToString.Include
@@ -118,7 +123,12 @@ public class RemembranceTranslationEntity {
     ///
     /// Set automatically by the database using `DEFAULT (unixepoch())`.
     /// Cannot be modified by application code (`insertable = false, updatable = false`).
-    @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+    @Column(
+        name = "created_at",
+        nullable = false,
+        insertable = false,
+        updatable = false
+    )
     @Getter
     private @Nullable Instant createdAt;
 
@@ -128,7 +138,12 @@ public class RemembranceTranslationEntity {
     /// Updated to the current Unix epoch on any `UPDATE` operation.
     ///
     /// Not modifiable by application logic.
-    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
+    @Column(
+        name = "updated_at",
+        nullable = false,
+        insertable = false,
+        updatable = false
+    )
     @Getter
     private @Nullable Instant updatedAt;
 
@@ -145,12 +160,18 @@ public class RemembranceTranslationEntity {
     /// @param text        the translation content; must not be `null` or blank
     /// @throws IllegalArgumentException if `text` is blank
     @Builder
-    private RemembranceTranslationEntity(RemembranceEntity remembrance, Locale locale, String text) {
+    private RemembranceTranslationEntity(
+        RemembranceEntity remembrance,
+        Locale locale,
+        String text
+    ) {
         this.remembrance = remembrance;
         this.locale = locale;
 
         if (text.isBlank()) {
-            throw new IllegalArgumentException("Explanation text must not be blank");
+            throw new IllegalArgumentException(
+                "Explanation text must not be blank"
+            );
         }
 
         this.text = text;
@@ -165,15 +186,16 @@ public class RemembranceTranslationEntity {
     /// @return a new `RemembranceTranslationEntity` with updated text
     /// @throws IllegalArgumentException if `newText` is blank
     public RemembranceTranslationEntity withText(String newText) {
-
         if (newText.isBlank()) {
-            throw new IllegalArgumentException("Explanation text must not be blank");
+            throw new IllegalArgumentException(
+                "Explanation text must not be blank"
+            );
         }
 
         return RemembranceTranslationEntity.builder()
-                .remembrance(this.remembrance)
-                .locale(this.locale)
-                .text(newText)
-                .build();
+            .remembrance(this.remembrance)
+            .locale(this.locale)
+            .text(newText)
+            .build();
     }
 }

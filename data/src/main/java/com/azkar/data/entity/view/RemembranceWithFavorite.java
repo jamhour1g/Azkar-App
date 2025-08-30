@@ -20,23 +20,19 @@ import org.jspecify.annotations.Nullable;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class RemembranceWithFavorite {
+
     @Id
-    @Nullable
-    Long id;
+    @Nullable Long id;
 
-    @Nullable
-    String source; // DB allows nulls; keep non-null default semantics at the app layer if desired
+    @Nullable String source; // DB allows nulls; keep non-null default semantics at the app layer if desired
 
-    @Nullable
-    DatabaseHadithGrade grade; // nullable in DB
+    @Nullable DatabaseHadithGrade grade; // nullable in DB
 
     @Column(name = "created_at")
-    @Nullable
-    Instant createdAt;
+    @Nullable Instant createdAt;
 
     @Column(name = "updated_at")
-    @Nullable
-    Instant updatedAt;
+    @Nullable Instant updatedAt;
 
     @Column(name = "is_favorite")
     boolean favorite;
