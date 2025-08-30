@@ -36,13 +36,8 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
 
     @Override
     public Optional<Remembrance> findById(long id) {
-        RemembranceEntity remembranceEntity = em.<@Nullable RemembranceEntity>find(RemembranceEntity.class, id);
-
-        if (remembranceEntity == null) {
-            return Optional.empty();
-        }
-
-        return Optional.of(RemembranceMapper.toRemembrance(remembranceEntity));
+        return Optional.ofNullable(em.<@Nullable RemembranceEntity>find(RemembranceEntity.class, id))
+                .map(RemembranceMapper::toRemembrance);
     }
 
     @Override

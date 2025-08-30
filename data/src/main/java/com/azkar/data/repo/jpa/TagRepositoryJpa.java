@@ -35,13 +35,8 @@ public record TagRepositoryJpa(EntityManager em) implements TagRepository {
 
     @Override
     public Optional<Tag> findById(Long id) {
-        TagEntity tagEntity = em.<@Nullable TagEntity>find(TagEntity.class, id);
-
-        if (tagEntity == null) {
-            return Optional.empty();
-        }
-
-        return Optional.of(TagMapper.toTag(tagEntity));
+        return Optional.ofNullable(em.<@Nullable TagEntity>find(TagEntity.class, id))
+                .map(TagMapper::toTag);
     }
 
     @Override
