@@ -8,10 +8,11 @@ import com.azkar.domain.repo.RemembranceRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import org.jspecify.annotations.Nullable;
 
 public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceRepository {
 
@@ -44,9 +45,9 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
     public List<Remembrance> findAll() {
         return em.createQuery(
                         """
-                        SELECT r FROM RemembranceEntity r
-                        ORDER BY r.id
-                        """,
+                                SELECT r FROM RemembranceEntity r
+                                ORDER BY r.id
+                                """,
                         RemembranceEntity.class)
                 .setHint("org.hibernate.readOnly", true)
                 .getResultStream()
@@ -58,11 +59,11 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
     public List<Remembrance> findByTagNameIgnoreCase(String tagName) {
         return em.createQuery(
                         """
-                        SELECT r FROM RemembranceEntity r
-                        JOIN r.tags t
-                        WHERE lower(t.name) = lower(:name)
-                        ORDER BY r.id
-                        """,
+                                SELECT r FROM RemembranceEntity r
+                                JOIN r.tags t
+                                WHERE lower(t.name) = lower(:name)
+                                ORDER BY r.id
+                                """,
                         RemembranceEntity.class)
                 .setParameter("name", tagName)
                 .setHint("org.hibernate.readOnly", true)
@@ -75,9 +76,9 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
     public List<Remembrance> findFavorites() {
         return em.createQuery(
                         """
-                        SELECT f.remembrance FROM FavoriteEntity f
-                        ORDER BY f.remembranceId
-                        """,
+                                SELECT f.remembrance FROM FavoriteEntity f
+                                ORDER BY f.remembranceId
+                                """,
                         RemembranceEntity.class)
                 .setHint("org.hibernate.readOnly", true)
                 .getResultStream()
@@ -95,11 +96,11 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
         @SuppressWarnings("unchecked")
         List<Number> idNums = em.createNativeQuery(
                         """
-                        SELECT remembrance_id
-                        FROM remembrance_fts
-                        WHERE text MATCH :expr
-                        AND locale_code = :locale
-                        """)
+                                SELECT remembrance_id
+                                FROM remembrance_fts
+                                WHERE text MATCH :expr
+                                AND locale_code = :locale
+                                """)
                 .setParameter("expr", expressionToSearchFor)
                 .setParameter("locale", locale.toLanguageTag())
                 .getResultList();
@@ -127,10 +128,10 @@ public record RemembranceRepositoryJpa(EntityManager em) implements RemembranceR
 
         String jpql =
                 """
-                SELECT r FROM RemembranceEntity r
-                WHERE r.id IN :ids
-                ORDER BY
-                """
+                        SELECT r FROM RemembranceEntity r
+                        WHERE r.id IN :ids
+                        ORDER BY
+                        """
                         + orderBy;
 
         TypedQuery<RemembranceEntity> q = em.createQuery(jpql, RemembranceEntity.class)
