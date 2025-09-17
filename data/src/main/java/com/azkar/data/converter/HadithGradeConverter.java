@@ -15,7 +15,8 @@ import org.jspecify.annotations.Nullable;
 /// ## Null policy
 /// This converter is not intended to process `null` values in application/business logic.
 /// The `@Nullable` types exist solely, so JPA can read/write nullable columns without throwing.
-/// Call sites should avoid passing `null`; prefer a concrete enum (e.g., [DatabaseHadithGrade#UNSPECIFIED])
+/// Call sites should avoid passing `null`; prefer a concrete enum (e.g.,
+/// [DatabaseHadithGrade#UNSPECIFIED])
 /// to represent “no grade” at the domain level.
 ///
 /// ## Usage
@@ -32,7 +33,8 @@ public class HadithGradeConverter
     implements
         AttributeConverter<@Nullable DatabaseHadithGrade, @Nullable String> {
 
-    /// Converts a [DatabaseHadithGrade] enum to its [name()][DatabaseHadithGrade#name] for persistence.
+    /// Converts a [DatabaseHadithGrade] enum to its [name()][DatabaseHadithGrade#name] for
+    /// persistence.
     ///
     /// @param attribute the enum value; may be `null` when JPA writes a nullable column
     /// @return the enum name, or `null` if the input is `null`
