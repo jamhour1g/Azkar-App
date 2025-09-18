@@ -15,7 +15,10 @@ public record TagRepositoryJpa(EntityManager em) implements TagRepository {
     @Override
     @Transactional
     public void delete(Tag tag) {
-        em.remove(em.getReference(TagEntity.class, tag.getId()));
+        if (tag.getId().isEmpty()) {
+            return;
+        }
+        em.remove(em.getReference(TagEntity.class, tag.getId().get()));
     }
 
     @Override
@@ -40,7 +43,7 @@ public record TagRepositoryJpa(EntityManager em) implements TagRepository {
 
     @Override
     public Optional<Tag> findByNameIgnoreCase(String name) {
-        TypedQuery<@Nullable TagEntity> query = em
+        TypedQuery<TagEntity> query = em
             .createQuery(
                 """
                 SELECT t FROM TagEntity t
@@ -53,6 +56,11 @@ public record TagRepositoryJpa(EntityManager em) implements TagRepository {
 
         TagEntity tagEntity = query.getSingleResultOrNull();
 
+        // for some reason, the query returns null,
+        // but the IDE doesn't recognize it.
+        // if I make the TypedQuery<@Nullable TagEntity>,
+        // then the ide will recognize it as null, but NullAway will fail
+        //noinspection OptionalOfNullableMisuse
         return Optional.ofNullable(tagEntity).map(TagMapper::toTag);
     }
 

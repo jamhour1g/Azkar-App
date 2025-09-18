@@ -1,6 +1,5 @@
 package com.azkar.data.repo.jpa;
 
-import com.azkar.data.entity.FavoriteEntity;
 import com.azkar.data.entity.RemembranceEntity;
 import com.azkar.data.mapping.RemembranceMapper;
 import com.azkar.domain.model.Remembrance;
@@ -18,22 +17,31 @@ public record RemembranceRepositoryJpa(EntityManager em) implements
     @Override
     @Transactional
     public Remembrance save(Remembrance remembrance) {
-        RemembranceEntity remembranceEntity = RemembranceMapper.fromRemembrance(
-            remembrance
-        );
-        return RemembranceMapper.toRemembrance(em.merge(remembranceEntity));
+        RemembranceEntity e = RemembranceMapper.fromRemembrance(remembrance);
+        RemembranceEntity merged = em.merge(e);
+        return RemembranceMapper.toRemembrance(merged);
     }
 
     @Override
     @Transactional
     public void delete(Remembrance r) {
-        em.remove(em.getReference(RemembranceEntity.class, r.getId()));
+        if (r.getId().isEmpty()) {
+            return;
+        }
+
+        em.remove(em.getReference(RemembranceEntity.class, r.getId().get()));
     }
 
     @Override
     @Transactional
     public void deleteById(long id) {
-        em.remove(em.getReference(RemembranceEntity.class, id));
+        RemembranceEntity entity = em.<@Nullable RemembranceEntity>find(
+            RemembranceEntity.class,
+            id
+        );
+        if (entity != null) {
+            em.remove(entity);
+        }
     }
 
     @Override
@@ -54,7 +62,8 @@ public record RemembranceRepositoryJpa(EntityManager em) implements
                 RemembranceEntity.class
             )
             .setHint("org.hibernate.readOnly", true)
-            .getResultStream()
+            .getResultList()
+            .stream()
             .map(RemembranceMapper::toRemembrance)
             .toList();
     }
@@ -73,7 +82,8 @@ public record RemembranceRepositoryJpa(EntityManager em) implements
             )
             .setParameter("name", tagName)
             .setHint("org.hibernate.readOnly", true)
-            .getResultStream()
+            .getResultList()
+            .stream()
             .map(RemembranceMapper::toRemembrance)
             .toList();
     }
@@ -83,13 +93,15 @@ public record RemembranceRepositoryJpa(EntityManager em) implements
         return em
             .createQuery(
                 """
-                SELECT f.remembrance FROM FavoriteEntity f
-                ORDER BY f.remembranceId
+                SELECT r FROM RemembranceEntity r
+                WHERE r.favorite IS NOT NULL
+                ORDER BY r.id
                 """,
                 RemembranceEntity.class
             )
             .setHint("org.hibernate.readOnly", true)
-            .getResultStream()
+            .getResultList()
+            .stream()
             .map(RemembranceMapper::toRemembrance)
             .toList();
     }
@@ -102,6 +114,7 @@ public record RemembranceRepositoryJpa(EntityManager em) implements
         if (expressionToSearchFor.isBlank()) {
             return List.of();
         }
+        String expr = "text:" + expressionToSearchFor;
 
         // 1) Get matching IDs from the FTS table (filter by locale).
         @SuppressWarnings("unchecked")
@@ -110,11 +123,11 @@ public record RemembranceRepositoryJpa(EntityManager em) implements
                 """
                 SELECT remembrance_id
                 FROM remembrance_fts
-                WHERE text MATCH :expr
+                WHERE remembrance_fts MATCH :expr
                 AND locale_code = :locale
                 """
             )
-            .setParameter("expr", expressionToSearchFor)
+            .setParameter("expr", expr)
             .setParameter("locale", locale.toLanguageTag())
             .getResultList();
 
@@ -164,7 +177,8 @@ public record RemembranceRepositoryJpa(EntityManager em) implements
         // 3) Map to domain (this will enforce that both translation and explanation
         // exist for the requested locale, per your RemembranceMapper logic).
         return q
-            .getResultStream()
+            .getResultList()
+            .stream()
             .map(RemembranceMapper::toRemembrance)
             .toList();
     }
@@ -172,24 +186,32 @@ public record RemembranceRepositoryJpa(EntityManager em) implements
     @Override
     @Transactional
     public void markFavorite(long remembranceId) {
-        RemembranceEntity r = em.getReference(
-            RemembranceEntity.class,
-            remembranceId
-        );
-        FavoriteEntity f = r.markFavorite();
-
-        if (!em.contains(f)) {
-            em.persist(f);
-        }
+        em.getReference(RemembranceEntity.class, remembranceId).markFavorite();
     }
 
     @Override
     @Transactional
     public void unmarkFavorite(long remembranceId) {
-        FavoriteEntity f = em.<@Nullable FavoriteEntity>find(
-            FavoriteEntity.class,
-            remembranceId
-        );
-        if (f != null) em.remove(f);
+        em
+            .getReference(RemembranceEntity.class, remembranceId)
+            .unmarkFavorite();
+        em
+            .createQuery(
+                """
+                UPDATE RemembranceEntity r
+                SET r.favorite = NULL
+                WHERE r.id =:id
+                """
+            )
+            .setParameter("id", remembranceId)
+            .executeUpdate();
+        em
+            .createQuery(
+                """
+                DELETE FROM FavoriteEntity f
+                WHERE f.remembrance IS NULL
+                """
+            )
+            .executeUpdate();
     }
 }

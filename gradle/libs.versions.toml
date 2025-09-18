@@ -6,8 +6,11 @@ org-hibernate = "7.1.0.Final"
 
 [libraries]
 # Nullability (they are used in the BuildSrc just not by the plugin called by name don't remove)
+#noinspection UnusedVersionCatalogEntry
 org-jspecify-jspecify = { module = "org.jspecify:jspecify", version = "1.0.0" }
+#noinspection UnusedVersionCatalogEntry
 com-google-errorprone-error-prone-core = { module = "com.google.errorprone:error_prone_core", version = "2.41.0" }
+#noinspection UnusedVersionCatalogEntry
 com-uber-nullaway-nullaway = { module = "com.uber.nullaway:nullaway", version = "0.12.8" }
 
 # Installer Dependency
@@ -23,7 +26,9 @@ jakarta-transaction-jakarta-transaction-api = { module = "jakarta.transaction:ja
 org-xerial-sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version = "3.50.3.0" }
 org-hibernate-orm-hibernate-community-dialects = { module = "org.hibernate.orm:hibernate-community-dialects", version.ref = "org-hibernate" }
 org-hibernate-orm-hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "org-hibernate" }
+org-hibernate-orm-hibernate-hikaricp = { module = "org.hibernate.orm:hibernate-hikaricp", version.ref = "org-hibernate" }
 org-flywaydb-flyway-core = { module = "org.flywaydb:flyway-core", version = "9.22.3" }
+com-zaxxer-hikari = { module = "com.zaxxer:HikariCP", version = "7.0.2" }
 
 # JavaFX
 org-openjfx-javafx-controls = { module = "org.openjfx:javafx-controls", version.ref = "org-openjfx-javafx" }
@@ -37,9 +42,13 @@ org-kordamp-ikonli-ikonli-fontawesome6-pack = { module = "org.kordamp.ikonli:iko
 org-controlsfx-controlsfx = { module = "org.controlsfx:controlsfx", version = "11.2.2" }
 
 # Testing (they are used in the BuildSrc just not by the plugin called by name don't remove)
+#noinspection UnusedVersionCatalogEntry
 org-junit-jupiter-junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "org-junit-jupiter-junit-jupiter" }
+#noinspection UnusedVersionCatalogEntry
 org-junit-junit-bom = { module = "org.junit:junit-bom", version.ref = "org-junit-jupiter-junit-jupiter" }
+#noinspection UnusedVersionCatalogEntry
 org-junit-platform-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.13.4" }
+#noinspection UnusedVersionCatalogEntry
 org-assertj-assertj-core = { module = "org.assertj:assertj-core", version = "3.27.3" }
 
 [plugins]
