@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 import lombok.*;
 import org.jspecify.annotations.Nullable;
 
-/// Represents a remembrance (ذِكْر / "zikr") — a spiritual phrase or supplication,
+/// Represents a remembrance (ذِكْر/ "zikr") — a spiritual phrase or supplication,
 /// used for reflection, worship, or mindfulness.
 ///
 /// This is the core entity in the system. It supports:
@@ -35,15 +35,16 @@ import org.jspecify.annotations.Nullable;
 ///
 /// Use the `remembrance_with_favorite` view to efficiently fetch remembrances
 /// with an `is_favorite` flag (0 or 1), avoiding expensive joins in list displays.
-/// <pre>
+///
 /// SELECT * FROM remembrance_with_favorite WHERE is_favorite = 1;
-/// </pre>
-/// ### Full-Text Search // TODO: Update when you understand ftsSearch
+///
+/// ### Full-Text Search
 ///
 /// Optional FTS5 support via `remembrance_fts`, kept in sync by triggers
 /// on `remembrance_translation` inserts/updates/deletes.
+///
 /// ### Usage Example
-/// <pre>
+///
 /// ```java
 /// RemembranceEntity remembrance = RemembranceEntity.builder()
 /// .source("Sahih al-Bukhari")
@@ -53,7 +54,7 @@ import org.jspecify.annotations.Nullable;
 /// .addTag("Morning")
 /// .favorite(true)
 /// .build();
-/// ````
+///````
 ///
 /// @see RemembranceTranslationEntity
 /// @see ExplanationTranslationEntity
@@ -75,7 +76,8 @@ public class RemembranceEntity {
 
     /// Unique identifier assigned by the database.
     ///
-    /// Auto-incremented primary key (`INTEGER PRIMARY KEY AUTOINCREMENT`). Will be `null` for transient
+    /// Auto-incremented primary key (`INTEGER PRIMARY KEY AUTOINCREMENT`). Will be `null` for
+    /// transient
     /// (unsaved) instances.
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -138,13 +140,20 @@ public class RemembranceEntity {
 
     /// Optional favorite marker for this remembrance.
     ///
-    /// Managed via a one-to-one relationship with [favorite.remembrance][FavoriteEntity#remembrance].
+    /// Managed via a one-to-one relationship with
+    /// [favorite.remembrance][FavoriteEntity#remembrance].
     /// Uses `cascade = CascadeType.ALL, orphanRemoval = true`
     /// setting this to `null` will delete the associated `favorite` row.
     @OneToOne(
-        mappedBy = "remembrance",
+        fetch = FetchType.LAZY,
         cascade = CascadeType.ALL,
         orphanRemoval = true
+    )
+    @JoinColumn(
+        name = "favorite_id",
+        referencedColumnName = "id",
+        foreignKey = @ForeignKey(name = "fk_remembrance_favorite"),
+        unique = true
     )
     @Getter
     private @Nullable FavoriteEntity favorite;
@@ -152,10 +161,11 @@ public class RemembranceEntity {
     /// Map of translations for this remembrance, keyed by locale.
     ///
     /// Each remembrance can have one translation per locale
-    /// (enforced by unique constraint on `(remembrance_id,locale_code)` in `remembrance_translation`).
+    /// (enforced by unique constraint on `(remembrance_id,locale_code)` in
+    /// `remembrance_translation`).
     ///
-    /// Uses `orphanRemoval = true` — removing a translation from this map will delete it from the database on
-    /// flushes.
+    /// Uses `orphanRemoval = true` — removing a translation from this map will delete it from the
+    /// database on flushes.
     @OneToMany(
         mappedBy = "remembrance",
         cascade = CascadeType.ALL,
@@ -184,10 +194,17 @@ public class RemembranceEntity {
     /// Set of tags associated with this remembrance.
     ///
     /// Many-to-many relationship via join table `remembrance_tag`.
-    /// Bidirectional — use [#addTag(TagEntity)] and [#removeTag(TagEntity)] to maintain consistency.
+    /// To maintain bidirectional consistency, use [#addTag(TagEntity)] and [#removeTag(TagEntity)]
     ///
     /// Uses [LinkedHashSet] to preserve insertion order.
-    @ManyToMany
+    @ManyToMany(
+        cascade = {
+            CascadeType.DETACH,
+            CascadeType.MERGE,
+            CascadeType.PERSIST,
+            CascadeType.REFRESH,
+        }
+    )
     @JoinTable(
         name = "remembrance_tag",
         joinColumns = @JoinColumn(name = "remembrance_id"),
@@ -224,6 +241,23 @@ public class RemembranceEntity {
         );
     }
 
+    private void addTranslation(@Nullable Long id, Locale locale, String text) {
+        if (text.isBlank()) {
+            throw new IllegalArgumentException(
+                "Translation text must not be blank"
+            );
+        }
+
+        addTranslation(
+            RemembranceTranslationEntity.builder()
+                .remembrance(this)
+                .locale(locale)
+                .text(text)
+                .id(id)
+                .build()
+        );
+    }
+
     /// Adds an explanation for the given locale.
     ///
     /// @param locale the locale for the explanation; must not be `null`
@@ -241,6 +275,23 @@ public class RemembranceEntity {
                 .remembrance(this)
                 .locale(locale)
                 .text(text)
+                .build()
+        );
+    }
+
+    private void addExplanation(@Nullable Long id, Locale locale, String text) {
+        if (text.isBlank()) {
+            throw new IllegalArgumentException(
+                "Explanation text must not be blank"
+            );
+        }
+
+        addExplanation(
+            ExplanationTranslationEntity.builder()
+                .remembrance(this)
+                .locale(locale)
+                .text(text)
+                .id(id)
                 .build()
         );
     }
@@ -362,7 +413,8 @@ public class RemembranceEntity {
 
     /// Adds a tag to this remembrance.
     ///
-    /// Maintains bidirectional consistency by also adding this remembrance to the tag's remembrance set.
+    /// Maintains bidirectional consistency by also adding this remembrance to the tag's remembrance
+    /// set.
     ///
     /// @param tag the tag to add; must not be `null`
     public void addTag(TagEntity tag) {
@@ -371,7 +423,8 @@ public class RemembranceEntity {
 
     /// Removes a tag from this remembrance.
     ///
-    /// Maintains bidirectional consistency by also removing this remembrance from the tag's remembrance set.
+    /// Maintains bidirectional consistency by also removing this remembrance from the tag's
+    /// remembrance set.
     ///
     /// @param tag the tag to remove; must not be `null`
     public void removeTag(TagEntity tag) {
@@ -380,7 +433,8 @@ public class RemembranceEntity {
 
     /// Marks this remembrance as a favorite.
     ///
-    /// If not already favorited, creates a new [FavoriteEntity] instance and associates it with this remembrance.
+    /// If not already favorited, creates a new [FavoriteEntity] instance and associates it with
+    /// this remembrance.
     ///
     /// @return the associated `FavoriteEntity` instance
     public FavoriteEntity markFavorite() {
@@ -392,11 +446,15 @@ public class RemembranceEntity {
 
     /// Removes the favorite marker from this remembrance.
     ///
-    /// Due to `orphanRemoval = true`, this will delete the associated `favorite` row from the database
-    /// during the next flush.
+    /// Due to `orphanRemoval = true`, this will delete the associated `favorite` row from the
+    /// database during the next flush.
     public void unmarkFavorite() {
-        if (favorite != null) {
-            this.favorite = null;
+        if (this.favorite != null) {
+            FavoriteEntity f = this.favorite;
+            this.favorite = null; // clears FK on the owner (remembrance.favorite_id)
+            if (f.getRemembrance() != null) {
+                f.setRemembrance(null); // keep the in-memory graph consistent
+            }
         }
     }
 
@@ -425,7 +483,8 @@ public class RemembranceEntity {
     ///
     /// Used by public `addExplanation` methods and the builder. Not for external use.
     ///
-    /// **Note:** This method does not validate text content — that is handled at the public API layer.
+    /// **Note:** This method does not validate text content — that is handled at the public API
+    /// layer.
     ///
     /// @param translation the explanation to add; must not be `null`
     private void addExplanation(ExplanationTranslationEntity translation) {
@@ -505,11 +564,13 @@ public class RemembranceEntity {
         ///
         /// If `text` is blank, an [IllegalArgumentException] is thrown.
         ///
-        /// Since translations are stored in a [Set], multiple entries for the same locale will result in only
+        /// Since translations are stored in a [Set], multiple entries for the same locale will
+        /// result in only
         /// the first one added being stored See [Set#add(Object)] for details.
         ///
         /// @param locale the target locale (e.g., `Locale.ENGLISH`); must not be `null`
-        /// @param text   the translated zikr text; [IllegalArgumentException] is thrown if `text` is blank
+        /// @param text   the translated zikr text; [IllegalArgumentException] is thrown if `text`
+        ///                                                                                                                 is blank
         /// @return this builder instance
         /// @throws IllegalArgumentException if `text` is blank
         public Builder addTranslation(Locale locale, String text) {
@@ -519,7 +580,7 @@ public class RemembranceEntity {
                 );
             }
 
-            translations.add(new Translation(locale, text));
+            translations.add(new Translation(null, locale, text));
             return this;
         }
 
@@ -527,11 +588,13 @@ public class RemembranceEntity {
         ///
         /// If `text` is blank, an [IllegalArgumentException] is thrown.
         ///
-        /// Since translations are stored in a [Set], multiple entries for the same locale will result in only
+        /// Since translations are stored in a [Set], multiple entries for the same locale will
+        /// result in only
         /// the first one added being stored See [Set#add(Object)] for details.
         ///
         /// @param locale the target locale; must not be `null`
-        /// @param text   the explanation text; [IllegalArgumentException] is thrown if `text` is blank
+        /// @param text   the explanation text; [IllegalArgumentException] is thrown if `text` is
+        ///                                                                                                                 blank
         /// @return this builder instance
         /// @throws IllegalArgumentException if `text` is blank
         public Builder addExplanation(Locale locale, String text) {
@@ -541,7 +604,69 @@ public class RemembranceEntity {
                 );
             }
 
-            explanations.add(new Translation(locale, text));
+            explanations.add(new Translation(null, locale, text));
+            return this;
+        }
+
+        /// Adds a localized translation of the remembrance text itself.
+        ///
+        /// Each translation maps to a row in [RemembranceTranslationEntity],
+        /// with a unique combination of `remembrance_id` and `locale_code`.
+        ///
+        /// Constraints:
+        /// - `text` must not be blank (enforced here).
+        /// - Database CHECK constraint ensures `length(text) > 0`.
+        /// - Uniqueness enforced per locale at the DB layer.
+        ///
+        /// @param id     optional pre-existing translation ID (nullable for new rows)
+        /// @param locale the locale of this translation (e.g. `"ar"`, `"en-US"`)
+        /// @param text   the translated remembrance text (must be non-blank)
+        /// @return this builder for chaining
+        /// @throws IllegalArgumentException if `text` is blank
+        /// @see RemembranceTranslationEntity
+        public Builder addTranslation(
+            @Nullable Long id,
+            Locale locale,
+            String text
+        ) {
+            if (text.isBlank()) {
+                throw new IllegalArgumentException(
+                    "Translation text must not be blank"
+                );
+            }
+
+            translations.add(new Translation(id, locale, text));
+            return this;
+        }
+
+        /// Adds a localized explanation (commentary) for the remembrance.
+        ///
+        /// Each explanation maps to a row in [ExplanationTranslationEntity],
+        /// with a unique combination of `remembrance_id` and `locale_code`.
+        ///
+        /// Constraints:
+        /// - `text` must not be blank (enforced here).
+        /// - Database CHECK constraint ensures `length(text) > 0`.
+        /// - Uniqueness enforced per locale at the DB layer.
+        ///
+        /// @param id     optional pre-existing explanation ID (nullable for new rows)
+        /// @param locale the locale of this explanation (e.g. `"en-US"`)
+        /// @param text   the explanation text (must be non-blank)
+        /// @return this builder for chaining
+        /// @throws IllegalArgumentException if `text` is blank
+        /// @see ExplanationTranslationEntity
+        public Builder addExplanation(
+            @Nullable Long id,
+            Locale locale,
+            String text
+        ) {
+            if (text.isBlank()) {
+                throw new IllegalArgumentException(
+                    "Explanation text must not be blank"
+                );
+            }
+
+            explanations.add(new Translation(id, locale, text));
             return this;
         }
 
@@ -568,7 +693,19 @@ public class RemembranceEntity {
             return this;
         }
 
-        public Builder addTags(Collection<TagEntity> tags) {
+        /// Adds a set of tags to the remembrance being built.
+        ///
+        /// Each [TagEntity] corresponds to a row in the `tag` table
+        /// and is linked via the `remembrance_tag` join table.
+        ///
+        /// Semantics:
+        /// - Ensures all tags in the set are copied defensively.
+        /// - Used to categorize remembrances (e.g., Morning, Evening, Juma).
+        ///
+        /// @param tags the tags to associate with this remembrance (non-null)
+        /// @return this builder for chaining
+        /// @see TagEntity
+        public Builder addTags(Set<TagEntity> tags) {
             this.tags.addAll(Set.copyOf(tags));
             return this;
         }
@@ -594,23 +731,33 @@ public class RemembranceEntity {
             }
 
             translations.forEach(t ->
-                remembrance.addTranslation(t.locale, t.text)
+                remembrance.addTranslation(t.id, t.locale, t.text)
             );
             explanations.forEach(e ->
-                remembrance.addExplanation(e.locale, e.text)
+                remembrance.addExplanation(e.id, e.locale, e.text)
             );
-            tags.forEach(remembrance::addTag);
+            tags.forEach(tag -> tag.addRemembrance(remembrance));
 
             return remembrance;
         }
 
-        /// Internal container for holding locale-text pairs during construction.
+        /// Internal container for locale–text pairs collected during construction.
         ///
-        /// Used to collect translations and explanations before building the final entity.
-        /// Ensures immutability and avoids premature entity creation.
+        /// Used by [Builder#addTranslation] and [Builder#addExplanation]
+        /// to hold data before persisting to [RemembranceTranslationEntity] or
+        /// [ExplanationTranslationEntity].
         ///
-        /// @param locale the target locale
-        /// @param text   the associated text (non-blank)
-        private record Translation(Locale locale, String text) {}
+        /// Immutable and lightweight:
+        /// - `id` links back to an existing row (nullable if new).
+        /// - `locale` identifies the language/region.
+        /// - `text` guaranteed non-blank by validation.
+        ///
+        /// @see RemembranceTranslationEntity
+        /// @see ExplanationTranslationEntity
+        private record Translation(
+            @Nullable Long id,
+            Locale locale,
+            String text
+        ) {}
     }
 }

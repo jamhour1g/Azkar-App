@@ -29,10 +29,10 @@ import org.jspecify.annotations.Nullable;
 /// - `idx_et__by_locale`: Optimizes queries filtering by language/locale.
 ///
 /// ### Behavioral Notes
-/// - Deleting [remembrance][#remembrance] automatically removes all associated explanation translations
-///     due to `ON DELETE CASCADE`.
+/// - Deleting [remembrance][#remembrance] automatically removes all associated explanation
+/// translations due to `ON DELETE CASCADE`.
 /// - This table is **not** currently indexed for full-text search. If needed, extend
-///     the `remembrance_fts` virtual table and add triggers.
+///  the `remembrance_fts` virtual table and add triggers.
 ///
 /// ### Usage Example
 /// ```java
@@ -41,7 +41,7 @@ import org.jspecify.annotations.Nullable;
 /// .locale(Locale.forLanguageTag("ar"))
 /// .text("هذا الذكر ورد في سنن أبي داود...")
 /// .build();
-/// ```
+///```
 ///
 /// @see RemembranceEntity
 /// @see Locale
@@ -158,11 +158,13 @@ public class ExplanationTranslationEntity {
     ///
     /// **Note:** Prefer using [builder()][#builder()] over direct constructor invocation.
     ///
+    /// @param id          the unique identifier; may be `null` for transient instances
     /// @param remembrance the parent remembrance; must not be `null`
     /// @param locale      the locale of the explanation; must not be `null`
     /// @param text        the explanation content; must not be `null` or blank
     @Builder
     private ExplanationTranslationEntity(
+        @Nullable Long id,
         RemembranceEntity remembrance,
         Locale locale,
         String text
@@ -177,6 +179,7 @@ public class ExplanationTranslationEntity {
         }
 
         this.text = text;
+        this.id = id;
     }
 
     /// Creates a new instance of this explanation with updated text, preserving all other fields.

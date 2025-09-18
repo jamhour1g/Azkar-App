@@ -17,13 +17,17 @@
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS remembrance
 (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT, -- zikr identifier
-    source     TEXT,                              -- nullable hadith source description
-    grade      TEXT                               -- reliability grade (nullable)
-        CHECK (grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')),
-    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    id          INTEGER PRIMARY KEY AUTOINCREMENT, -- zikr identifier
+    source      TEXT,                              -- nullable hadith source description
+    grade       TEXT,                              -- reliability grade (nullable) CHECK (grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')),
+    favorite_id INTEGER UNIQUE                     -- nullable: not favorited when NULL
+                        REFERENCES favorite (id) ON DELETE SET NULL,
+    created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
 );
+
+CREATE INDEX IF NOT EXISTS idx_remembrance__favorite_id
+    ON remembrance (favorite_id);
 
 -- ============================================================================
 -- Trigger: trg_remembrance__set_updated_at
@@ -44,7 +48,16 @@ BEGIN
     WHERE id = OLD.id;
 END;
 
-
+-- Optional safety: if someone deletes a remembrance by raw SQL,
+-- clean up its favorite row to avoid orphans.
+CREATE TRIGGER IF NOT EXISTS trg_remembrance__after_delete_cleanup_favorite
+    AFTER DELETE
+    ON remembrance
+    FOR EACH ROW
+    WHEN OLD.favorite_id IS NOT NULL
+BEGIN
+    DELETE FROM favorite WHERE id = OLD.favorite_id;
+END;
 -- ============================================================================
 -- Table: remembrance_translation
 -- Each row holds a translation of the core zikr text for one locale.
@@ -253,10 +266,8 @@ CREATE INDEX IF NOT EXISTS idx_remembrance_tag__by_tag
 -- =========================================================================
 CREATE TABLE IF NOT EXISTS favorite
 (
-    remembrance_id INTEGER PRIMARY KEY
-        REFERENCES remembrance (id)
-            ON DELETE CASCADE,
-    created_at     INTEGER NOT NULL DEFAULT (unixepoch())
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
 -- =========================================================================
@@ -277,10 +288,8 @@ CREATE TABLE IF NOT EXISTS favorite
 --   SELECT * FROM remembrance_with_favorite WHERE is_favorite = 0;
 -- =========================================================================
 CREATE VIEW IF NOT EXISTS remembrance_with_favorite AS
-SELECT r.*,
-       CASE WHEN f.remembrance_id IS NOT NULL THEN 1 ELSE 0 END AS is_favorite
-FROM remembrance r
-         LEFT JOIN favorite f ON f.remembrance_id = r.id;
+SELECT r.*, CASE WHEN r.favorite_id IS NOT NULL THEN 1 ELSE 0 END AS is_favorite
+FROM remembrance r;
 
 
 -- ============================================================================
@@ -290,26 +299,25 @@ FROM remembrance r
 --   - Contentless FTS table kept in sync via insert/update/delete triggers.
 --   - Extend or duplicate to include explanation_translation if desired.
 -- ============================================================================
-CREATE VIRTUAL TABLE IF NOT EXISTS remembrance_fts
-    USING fts5
+CREATE VIRTUAL TABLE remembrance_fts USING fts5
 (
-    remembrance_id UNINDEXED,
-    locale_code,
-    text,
-    content=''
+    remembrance_id UNINDEXED, -- readable, not tokenized for full-text
+    locale_code,              -- tokenized column (can also filter via SQL)
+    text,                     -- tokenized column
+    content='remembrance_translation',
+    content_rowid='id'
 );
 
 -- ============================================================================
 -- Trigger: trg_fts__rt_after_insert
 -- Purpose: On new translation, index it in FTS.
 -- ============================================================================
-CREATE TRIGGER IF NOT EXISTS trg_fts__rt_after_insert
+CREATE TRIGGER trg_rt_after_insert
     AFTER INSERT
     ON remembrance_translation
-    FOR EACH ROW
 BEGIN
-    INSERT INTO remembrance_fts(remembrance_id, locale_code, text)
-    VALUES (NEW.remembrance_id, NEW.locale_code, NEW.text);
+    INSERT INTO remembrance_fts(rowid, remembrance_id, locale_code, text)
+    VALUES (NEW.id, NEW.remembrance_id, NEW.locale_code, NEW.text);
 END;
 
 -- ============================================================================
@@ -318,29 +326,26 @@ END;
 -- Strategy:
 --   Update-in-place by matching (remembrance_id, locale_code).
 -- ============================================================================
-CREATE TRIGGER IF NOT EXISTS trg_fts__rt_after_update
+CREATE TRIGGER trg_rt_after_update
     AFTER UPDATE
     ON remembrance_translation
-    FOR EACH ROW
 BEGIN
-    UPDATE remembrance_fts
-    SET locale_code = NEW.locale_code,
-        text        = NEW.text
-    WHERE remembrance_id = OLD.remembrance_id
-      AND locale_code = OLD.locale_code;
+    INSERT INTO remembrance_fts(remembrance_fts, rowid, remembrance_id, locale_code, text)
+    VALUES ('delete', OLD.id, OLD.remembrance_id, OLD.locale_code, OLD.text);
+    INSERT INTO remembrance_fts(rowid, remembrance_id, locale_code, text)
+    VALUES (NEW.id, NEW.remembrance_id, NEW.locale_code, NEW.text);
 END;
+
+
 
 -- ============================================================================
 -- Trigger: trg_fts__rt_after_delete
 -- Purpose: Remove translation from the FTS index when deleted.
 -- ============================================================================
-CREATE TRIGGER IF NOT EXISTS trg_fts__rt_after_delete
+CREATE TRIGGER trg_rt_after_delete
     AFTER DELETE
     ON remembrance_translation
-    FOR EACH ROW
 BEGIN
-    DELETE
-    FROM remembrance_fts
-    WHERE remembrance_id = OLD.remembrance_id
-      AND locale_code = OLD.locale_code;
+    INSERT INTO remembrance_fts(remembrance_fts, rowid, remembrance_id, locale_code, text)
+    VALUES ('delete', OLD.id, OLD.remembrance_id, OLD.locale_code, OLD.text);
 END;

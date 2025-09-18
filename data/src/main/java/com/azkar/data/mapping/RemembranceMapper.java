@@ -7,8 +7,28 @@ import com.azkar.domain.model.Tag;
 import com.azkar.domain.model.impl.RemembranceImpl;
 import java.util.*;
 import java.util.stream.Collectors;
-import org.jspecify.annotations.Nullable;
 
+/// Utility class responsible for mapping between persistence entities
+/// ([RemembranceEntity], [TagEntity]) and domain models
+/// ([Remembrance], [Tag]).
+///
+/// Responsibilities:
+/// - Convert a JPA [RemembranceEntity] into a domain-level
+/// [Remembrance] with immutable collections and value objects.
+/// - Convert a domain [Remembrance] back into a [RemembranceEntity]
+/// for persistence, including nested tags, translations, and explanations.
+/// - Enforce data consistency: only locales with both a translation and an explanation
+/// are preserved during mapping. If no such locale exists, mapping fails fast.
+///
+/// This class is `final` and has a private constructor: it cannot be instantiated
+/// or extended. All functionality is provided through static methods.
+///
+/// @see RemembranceEntity
+/// @see TagEntity
+/// @see Remembrance
+/// @see Tag
+/// @see HadithGradeMapper
+/// @see TagMapper
 public final class RemembranceMapper {
 
     private RemembranceMapper() {
@@ -17,6 +37,11 @@ public final class RemembranceMapper {
         );
     }
 
+    /// Converts persistence [RemembranceEntity] into a domain [Remembrance].
+    ///
+    /// @param remembranceEntity the JPA entity to convert
+    /// @return an immutable domain [Remembrance]
+    /// @throws IllegalArgumentException if no locale has both a translation and an explanation
     public static Remembrance toRemembrance(
         RemembranceEntity remembranceEntity
     ) {
@@ -40,12 +65,16 @@ public final class RemembranceMapper {
             .build();
     }
 
+    /// Converts a domain [Remembrance] into persistence [RemembranceEntity].
+    ///
+    /// @param remembrance the domain model to convert
+    /// @return a new [RemembranceEntity] ready for persistence
     public static RemembranceEntity fromRemembrance(Remembrance remembrance) {
-        List<TagEntity> tags = remembrance
+        Set<TagEntity> tags = remembrance
             .getTags()
             .stream()
             .map(TagMapper::fromTag)
-            .toList();
+            .collect(Collectors.toUnmodifiableSet());
 
         RemembranceEntity.Builder builder = RemembranceEntity.builder()
             .id(remembrance.getId().orElse(null))
@@ -57,95 +86,92 @@ public final class RemembranceMapper {
         remembrance
             .getTranslations()
             .forEach((loc, trEntity) -> {
-                builder.addTranslation(loc, trEntity.translationText());
-                builder.addExplanation(loc, trEntity.explanationText());
+                Remembrance.Translations.Pair translationPair =
+                    trEntity.translationPair();
+                Remembrance.Translations.Pair explanationPair =
+                    trEntity.explanationPair();
+
+                builder
+                    .addTranslation(
+                        translationPair.id(),
+                        loc,
+                        translationPair.text()
+                    )
+                    .addExplanation(
+                        explanationPair.id(),
+                        loc,
+                        explanationPair.text()
+                    );
             });
 
         return builder.build();
     }
 
+    /// Groups translations and explanations by locale, ensuring consistency.
+    ///
+    /// For each locale:
+    /// - Collects a translation pair (id + text) from `remembrance_translation`.
+    /// - Collects an explanation pair (id + text) from `explanation_translation`.
+    /// - Keeps only locales that have _both_ present.
+    ///
+    /// If no locale has both a translation and an explanation,
+    /// throws [IllegalArgumentException] to prevent constructing
+    /// an incomplete [Remembrance].
+    ///
+    /// @param remembranceEntity the entity whose child rows are grouped
+    /// @return an immutable map from [Locale] to [Remembrance.Translations]
+    /// @throws IllegalArgumentException if no locale has both translation and explanation
     private static Map<Locale, Remembrance.Translations> groupByLocale(
         RemembranceEntity remembranceEntity
     ) {
-        int expectedSize = Math.max(
-            remembranceEntity.getTranslations().size(),
-            remembranceEntity.getExplanations().size()
-        );
-
-        Map<Locale, TranslationsData> dataByLocale = HashMap.newHashMap(
-            expectedSize
-        );
-
-        remembranceEntity
+        Map<Locale, Remembrance.Translations.Pair> tr = remembranceEntity
             .getTranslations()
-            .forEach((loc, trEntity) ->
-                dataByLocale
-                    .computeIfAbsent(loc, ignored -> new TranslationsData())
-                    .setTranslation(trEntity.getText())
-            );
-
-        remembranceEntity
-            .getExplanations()
-            .forEach((loc, exEntity) ->
-                dataByLocale
-                    .computeIfAbsent(loc, ignored -> new TranslationsData())
-                    .setExplanation(exEntity.getText())
-            );
-
-        // Fail fast if any side is missing
-        for (Map.Entry<
-            Locale,
-            TranslationsData
-        > entry : dataByLocale.entrySet()) {
-            TranslationsData translations = entry.getValue();
-
-            if (translations.getTranslation() == null) {
-                throw new IllegalArgumentException(
-                    "Missing translation for locale: " + entry.getKey()
-                );
-            }
-
-            if (translations.getExplanation() == null) {
-                throw new IllegalArgumentException(
-                    "Missing explanation for locale: " + entry.getKey()
-                );
-            }
-        }
-
-        return dataByLocale
             .entrySet()
             .stream()
             .collect(
-                Collectors.toUnmodifiableMap(Map.Entry::getKey, dataEntry -> {
-                    String explanation = dataEntry.getValue().getExplanation();
-                    String translation = dataEntry.getValue().getTranslation();
-                    return new Remembrance.Translations(
-                        Objects.requireNonNull(explanation),
-                        Objects.requireNonNull(translation)
-                    );
-                })
+                Collectors.toMap(Map.Entry::getKey, x ->
+                    new Remembrance.Translations.Pair(
+                        x.getValue().getId(),
+                        x.getValue().getText()
+                    )
+                )
             );
-    }
+        Map<Locale, Remembrance.Translations.Pair> ex = remembranceEntity
+            .getExplanations()
+            .entrySet()
+            .stream()
+            .collect(
+                Collectors.toMap(Map.Entry::getKey, x ->
+                    new Remembrance.Translations.Pair(
+                        x.getValue().getId(),
+                        x.getValue().getText()
+                    )
+                )
+            );
 
-    private static final class TranslationsData {
+        // keep only intersection of locales
+        Set<Locale> locales = new HashSet<>(tr.keySet());
+        locales.retainAll(ex.keySet());
 
-        private @Nullable String translation;
-        private @Nullable String explanation;
-
-        private void setTranslation(@Nullable String translation) {
-            this.translation = translation;
+        // require at least one complete locale
+        if (locales.isEmpty()) {
+            throw new IllegalArgumentException(
+                "No locale has both translation and explanation for id=" +
+                remembranceEntity.getId()
+            );
         }
 
-        private void setExplanation(@Nullable String explanation) {
-            this.explanation = explanation;
-        }
-
-        @Nullable private String getTranslation() {
-            return translation;
-        }
-
-        @Nullable private String getExplanation() {
-            return explanation;
-        }
+        return locales
+            .stream()
+            .collect(
+                Collectors.toUnmodifiableMap(
+                    loc -> loc,
+                    loc ->
+                        new Remembrance.Translations(
+                            Objects.requireNonNull(ex.get(loc)),
+                            Objects.requireNonNull(tr.get(loc))
+                        )
+                )
+            );
     }
 }

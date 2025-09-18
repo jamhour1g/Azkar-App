@@ -203,7 +203,8 @@ public class TagEntity {
         /// Constructs and returns a fully initialized [TagEntity] instance.
         ///
         /// The returned tag will have the specified name and all added remembrances.
-        /// The actual persistence of relationships depends on the owning side ([RemembranceEntity]).
+        /// The actual persistence of relationships depends on the owning side
+        /// ([RemembranceEntity]).
         ///
         /// @return a new `TagEntity` instance
         public TagEntity build() {

@@ -15,8 +15,10 @@ import org.jspecify.annotations.Nullable;
 /// ### Persistence & Database Mapping
 /// - **Table:** `remembrance_translation`
 /// - **Primary Key:** [id][#id] (auto-incremented by SQLite)
-/// - **Foreign Key:** `remembrance_id` → [remembrance.id][RemembranceEntity#id] with `ON DELETE CASCADE`
-/// - **Uniqueness:** Enforced via unique constraint `uq_rt_rem_loc` on (`remembrance_id`, `locale_code`)
+/// - **Foreign Key:** `remembrance_id` → [remembrance.id][RemembranceEntity#id] with `ON DELETE
+/// CASCADE`
+/// - **Uniqueness:** Enforced via unique constraint `uq_rt_rem_loc` on (`remembrance_id`,
+/// `locale_code`)
 /// - **Text Validity:** Non-empty enforced via `CHECK (length(text) > 0)`
 ///
 /// ### Timestamps
@@ -26,7 +28,8 @@ import org.jspecify.annotations.Nullable;
 ///
 /// ### Indexing
 /// - `idx_rt__by_remembrance`: Speeds up fetching translations by remembrance.
-/// - `idx_rt__by_locale`: Optimizes queries filtering by language/locale (e.g., preload all English).
+/// - `idx_rt__by_locale`: Optimizes queries filtering by language/locale (e.g., preload all
+/// English).
 ///
 /// ### Behavioral Notes
 /// - Deleting [remembrance][#remembrance] automatically removes all associated translations
@@ -40,7 +43,7 @@ import org.jspecify.annotations.Nullable;
 /// .locale(Locale.forLanguageTag("ar"))
 /// .text("سبحان الله")
 /// .build();
-/// ```
+///```
 ///
 /// @see RemembranceEntity
 /// @see Locale
@@ -155,12 +158,14 @@ public class RemembranceTranslationEntity {
     ///
     /// **Note:** Prefer using [#builder()] over direct constructor invocation.
     ///
+    /// @param id          the unique identifier; may be `null` for transient instances
     /// @param remembrance the parent remembrance; must not be `null`
     /// @param locale      the locale of the translation; must not be `null`
     /// @param text        the translation content; must not be `null` or blank
     /// @throws IllegalArgumentException if `text` is blank
     @Builder
     private RemembranceTranslationEntity(
+        @Nullable Long id,
         RemembranceEntity remembrance,
         Locale locale,
         String text
@@ -175,6 +180,7 @@ public class RemembranceTranslationEntity {
         }
 
         this.text = text;
+        this.id = id;
     }
 
     /// Creates a new instance of this translation with updated text, preserving all other fields.

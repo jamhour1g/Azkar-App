@@ -45,7 +45,8 @@ class InstantEpochConverterTest {
 
     @Test
     @DisplayName(
-        "Should convert Instant with nanos to DB seconds and back, truncating sub-second precision"
+        "Should convert Instant with nanos to DB seconds and back, truncating sub-second" +
+        " precision"
     )
     void roundTrip_fromInstant_withNanos_truncatesToSeconds() {
         Instant original = Instant.ofEpochSecond(1_700_000_000L, 987_654_321);
