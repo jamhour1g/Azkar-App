@@ -1,0 +1,14 @@
+/* ---------- Section Titles ---------- */
+.section-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-fill: -color-text-primary;
+    -fx-padding: 0 0 8px 0;
+}
+
+/* Text colors */
+@media (prefers-color-scheme: dark) {
+    .section-title {
+        -fx-fill: -color-text-primary;
+    }
+}

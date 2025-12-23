@@ -1,0 +1,102 @@
+@import url("../global.css");
+
+.settings-card {
+    -fx-background-color: white;
+    -fx-background-radius: 16px;
+    -fx-padding: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 4, 0.1, 0, 2);
+    -fx-spacing: 12;
+    -fx-alignment: center-left;
+}
+
+.settings-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: 600;
+    -fx-fill: -color-text-primary;
+}
+
+
+.toggle-switch {
+    -thumb-move-animation-time: 200;
+}
+
+.toggle-switch:disabled {
+    -fx-opacity: 0.5;
+}
+
+.toggle-switch .label {
+    -fx-font-size: 14px;
+    -fx-text-fill: -color-text-primary;
+}
+
+.toggle-switch .thumb-area {
+    -fx-background-radius: 999;
+    -fx-background-color: #e5e7eb;
+    -fx-background-insets: 0;
+    -fx-padding: 2;
+    -fx-pref-width: 44px;
+    -fx-pref-height: 24px;
+}
+
+.toggle-switch:selected .thumb-area {
+    -fx-background-color: -color-primary;
+}
+
+.toggle-switch .thumb {
+    -fx-background-color: -color-primary, white;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 0px;
+    -fx-background-radius: 50%;
+    -fx-pref-width: 20px;
+    -fx-pref-height: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 2, 0.2, 0, 1);
+}
+
+.toggle-switch:hover .thumb-area {
+    -fx-background-color: #d1d5db;
+}
+
+.toggle-switch:selected:hover .thumb-area {
+    -fx-background-color: derive(-color-primary, -10%);
+}
+
+/* Cards */
+@media (prefers-color-scheme: dark) {
+    .settings-card {
+        -fx-background-color: #1e1e1e;
+        -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 12, 0.2, 0, 4);
+    }
+
+    .settings-label {
+        -fx-fill: -color-text-primary;
+    }
+
+    .toggle-switch .thumb-area {
+        -fx-background-color: #2c2c2c;
+    }
+
+    .toggle-switch:selected .thumb-area {
+        -fx-background-color: -color-primary;
+    }
+
+    .toggle-switch .thumb {
+        -fx-background-color: -color-primary, #1e1e1e;
+        -fx-border-color: #444;
+    }
+
+    .toggle-switch:hover .thumb-area {
+        -fx-background-color: derive(-color-primary, -40%); /* subtle tint */
+        -fx-effect: dropshadow(gaussian, rgba(138, 180, 248, 0.2), 8, 0.2, 0, 0);
+        -fx-transition: all 0.2s ease-in-out;
+    }
+
+    .toggle-switch:selected:hover .thumb-area {
+        -fx-background-color: derive(-color-primary, 20%);
+        -fx-effect: dropshadow(gaussian, rgba(138, 180, 248, 0.4), 10, 0.3, 0, 0);
+    }
+
+    .toggle-switch:hover .thumb {
+        -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.3), 4, 0.3, 0, 1);
+        -fx-transition: all 0.15s ease-in-out;
+    }
+}

@@ -1,0 +1,21 @@
+@import url("../global.css");
+@import url("../home/daily_hadith_card.css");
+@import url(../home/home_commons.css);
+
+.icon-btn {
+    -fx-background-color: transparent;
+    -fx-padding: 6;
+    -fx-background-radius: 50%;
+    -fx-cursor: hand;
+}
+
+.icon-btn:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Icons */
+@media (prefers-color-scheme: dark) {
+    .icon-btn:hover {
+        -fx-background-color: rgba(255, 255, 255, 0.08);
+    }
+}

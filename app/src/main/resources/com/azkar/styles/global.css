@@ -1,0 +1,66 @@
+@font-face {
+    font-family: 'Inter';
+    src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfMZhrib2Bg-4.woff2');
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuG2fMZhrib2Bg-4.woff2');
+    font-weight: 600;
+}
+
+@font-face {
+    font-family: 'Inter';
+    src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFufMZhrib2Bg-4.woff2');
+    font-weight: 700;
+}
+
+@font-face {
+    font-family: 'Amiri';
+    src: url('https://fonts.gstatic.com/s/amiri/v28/定.woff2');
+}
+
+@font-face {
+    font-family: 'Amiri';
+    src: url('https://fonts.gstatic.com/s/amiri/v28/定.woff2');
+    font-weight: 700;
+}
+
+.root {
+    -color-primary: #8ab4f8;
+    -color-secondary: #f0e6d2;
+    -color-background: #f8f9fa;
+    -color-text-primary: #333333;
+    -color-text-secondary: #5f6368;
+    -color-highlight: #d1e3ff;
+
+    -fx-background-color: -color-background;
+    -fx-font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    -fx-font-smoothing-type: lcd;
+}
+
+/* ---------- Cards & Containers ---------- */
+.card {
+    -fx-background-color: white;
+    -fx-background-radius: 16px;
+    -fx-padding: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 12, 0.2, 0, 4);
+    -fx-alignment: top-left;
+}
+
+/* Root colors */
+@media (prefers-color-scheme: dark) {
+    .root {
+        -color-primary: #8ab4f8;
+        -color-background: #121212;
+        -color-text-primary: #e0e0e0;
+        -color-text-secondary: #a0a0a0;
+        -color-highlight: #2c2c2c;
+        -fx-background-color: -color-background;
+    }
+
+    .card {
+        -fx-background-color: #1e1e1e;
+        -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 12, 0.2, 0, 4);
+    }
+}

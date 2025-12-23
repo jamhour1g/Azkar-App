@@ -1,0 +1,27 @@
+@import url("../global.css");
+@import url("../home/home_commons.css");
+
+.next-prayer-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: 600;
+    -fx-fill: -color-primary;
+    -fx-padding: 0 0 4px 0;
+}
+
+.next-prayer-time {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-fill: -color-text-primary;
+}
+
+.subtitle {
+    -fx-font-size: 14px;
+    -fx-fill: -color-text-secondary;
+    -fx-padding: 0 0 12px 0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .subtitle {
+        -fx-fill: -color-text-secondary;
+    }
+}

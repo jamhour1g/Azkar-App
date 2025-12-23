@@ -1,0 +1,58 @@
+@import url("../global.css");
+
+.prayer-row {
+    -fx-padding: 12 16;
+    -fx-spacing: 12;
+    -fx-alignment: center;
+}
+
+.prayer-row .ikonli-font-icon {
+    -fx-icon-color: -color-primary;
+    -fx-icon-size: 22px;
+}
+
+.prayer-name {
+    -fx-font-size: 16px;
+    -fx-font-weight: 600;
+    -fx-fill: -color-text-primary;
+}
+
+.prayer-time {
+    -fx-font-size: 13px;
+    -fx-font-weight: 400;
+    -fx-fill: -color-text-secondary;
+}
+
+.prayer-value {
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-fill: -color-text-primary;
+}
+
+.icon-circle-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 999;
+    -fx-padding: 6;
+    -fx-cursor: hand;
+}
+
+.icon-circle-btn:hover {
+    -fx-background-color: #f3f4f6;
+}
+
+/* Text colors */
+@media (prefers-color-scheme: dark) {
+    .prayer-name,
+    .prayer-value {
+        -fx-fill: -color-text-primary;
+    }
+
+    .prayer-time {
+        -fx-fill: -color-text-secondary;
+    }
+
+    .icon-circle-btn:hover {
+        -fx-background-color: #2c2c2c;
+    }
+
+}

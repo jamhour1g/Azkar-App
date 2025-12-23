@@ -1,0 +1,43 @@
+@import url("../global.css");
+@import url("home_commons.css");
+
+/* ---------- Hadith Styles ---------- */
+.hadith-vertical-line {
+    -fx-background-color: -color-primary;
+    -fx-pref-width: 4px;
+    -fx-max-width: 4px;
+    -fx-min-width: 4px;
+    -fx-padding: 0;
+}
+
+.hadith-ar {
+    -fx-font-family: "Amiri", "Times New Roman", serif;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-fill: -color-text-primary;
+    -fx-padding: 0 0 8px 0;
+}
+
+.hadith-en {
+    -fx-font-size: 16px;
+    -fx-fill: -color-text-secondary;
+    -fx-font-style: italic;
+    -fx-padding: 0 0 8px 0;
+}
+
+.hadith-source {
+    -fx-font-size: 13px;
+    -fx-fill: #6b7280;
+    -fx-font-style: normal;
+    -fx-padding: 5px 0 0 0;
+}
+
+
+@media (prefers-color-scheme: dark) {
+    .hadith-en,
+    .hadith-ar,
+    .hadith-source {
+        -fx-fill: -color-text-secondary;
+    }
+}
+

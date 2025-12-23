@@ -1,0 +1,77 @@
+@import url("./global.css");
+
+/* =========================================================
+   HEADER & NAVIGATION
+   ========================================================= */
+
+.header {
+    -fx-background-color: white;
+    -fx-padding: 20 40;
+    -fx-alignment: center;
+    -fx-spacing: 20;
+    -fx-border-color: #e5e7eb;
+    -fx-border-width: 0 0 1 0;
+}
+
+.header-greeting-sub {
+    -fx-font-size: 13px;
+    -fx-fill: -color-text-secondary;
+    -fx-font-weight: 400;
+}
+
+.logo-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-fill: -color-text-primary;
+}
+
+/* ---------- Navigation Buttons ---------- */
+.nav-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text-primary;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-padding: 6 8;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+}
+
+.nav-btn:hover {
+    -fx-text-fill: -color-primary;
+    -fx-background-radius: 6;
+    -fx-transition: 0.2s ease-in-out;
+}
+
+
+/* =========================================================
+   ICON HELPERS
+   ========================================================= */
+
+.icon-primary {
+    /* Ikonli FontIcon supports -fx-icon-color */
+    -fx-icon-color: -color-primary;
+    -fx-fill: -color-primary;
+    -fx-icon-size: 32px;
+}
+
+
+/* =========================================================
+   DARK MODE THEME FIX
+   ========================================================= */
+
+/* ---------- Header ---------- */
+@media (prefers-color-scheme: dark) {
+    .header {
+        -fx-background-color: #1e1e1e;
+        -fx-border-color: #2c2c2c;
+    }
+
+    .nav-btn {
+        -fx-text-fill: -color-text-primary;
+    }
+
+    .nav-btn:hover {
+        -fx-text-fill: -color-primary;
+    }
+}

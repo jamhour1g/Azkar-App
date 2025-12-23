@@ -1,0 +1,46 @@
+@import url("../global.css");
+@import url("home_commons.css");
+
+/* =========================================================
+   BASE THEME (LIGHT)
+   ========================================================= */
+
+/* ---------- Layout ---------- */
+.main {
+    -fx-padding: 20 28 28 28;
+}
+
+.main-content {
+    -fx-background-color: -color-background;
+}
+
+/* ---------- Settings & Toggles ---------- */
+
+
+.toggle-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 10;
+}
+
+/* ---------- Icon Buttons ---------- */
+.icon-primary {
+    -fx-icon-color: -color-primary;
+    -fx-fill: -color-primary;
+    -fx-icon-size: 32px;
+}
+
+/* =========================================================
+   DARK MODE (SYSTEM PREFERENCE)
+   ========================================================= */
+
+/* Layouts */
+@media (prefers-color-scheme: dark) {
+    .main, .main-content {
+        -fx-background-color: -color-background;
+    }
+}
+
+
+
+
+

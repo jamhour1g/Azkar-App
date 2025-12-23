@@ -1,0 +1,33 @@
+@import url("../global.css");
+
+/* ---------- Greeting Section ---------- */
+.greeting-container {
+    -fx-padding: 32px 16px 16px 16px;
+    -fx-alignment: center;
+    -fx-spacing: 5;
+    -fx-text-alignment: center;
+}
+
+.greeting-title {
+    -fx-font-size: 40px;
+    -fx-font-weight: bold;
+    -fx-fill: -color-text-primary;
+    -fx-padding: 0 0 8px 0;
+}
+
+.greeting-sub {
+    -fx-font-size: 16px;
+    -fx-fill: -color-text-secondary;
+    -fx-padding: 4px 0 0 0;
+}
+
+/* Text colors */
+@media (prefers-color-scheme: dark) {
+    .greeting-title {
+        -fx-fill: -color-text-primary;
+    }
+
+    .greeting-sub {
+        -fx-fill: -color-text-secondary;
+    }
+}
