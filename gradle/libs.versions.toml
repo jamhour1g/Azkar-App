@@ -1,5 +1,5 @@
 [versions]
-org-openjfx-javafx = "24.0.1"
+org-openjfx-javafx = "26-ea+19"
 org-junit-jupiter-junit-jupiter = "5.13.4"
 org-kordamp-ikonli-ikonli-javafx = "12.4.0"
 org-hibernate = "7.1.0.Final"
@@ -54,7 +54,7 @@ org-assertj-assertj-core = { module = "org.assertj:assertj-core", version = "3.2
 [plugins]
 org-openjfx-javafxplugin = { id = "org.openjfx.javafxplugin", version = "0.1.0" }
 org-beryx-jlink = { id = "org.beryx.jlink", version = "2.25.0" }
-io-freefair-lombok = { id = "io.freefair.lombok", version = "8.14" }
+io-freefair-lombok = { id = "io.freefair.lombok", version = "9.1.0" }
 com-diffplug-spotless = { id = "com.diffplug.spotless", version = "7.2.1" }
 com-github-spotbugs = { id = "com.github.spotbugs", version = "6.2.4" }
 net-ltgt-errorprone = { id = "net.ltgt.errorprone", version = "4.3.0" }

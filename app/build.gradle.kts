@@ -35,11 +35,12 @@ javafx {
         .toTypedArray()
 
     modules(*moduleNames)
+
 }
 
 application {
-    mainModule = "com.azkar"
-    mainClass = "com.azkar.Main"
+    mainModule = "com.azkar.app"
+    mainClass = "com.azkar.Launcher"
 }
 
 jlink {
@@ -53,4 +54,28 @@ jlink {
     launcher {
         name = "app"
     }
+}
+
+tasks.jar {
+    archiveFileName.set("azkar-app.jar")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // Include resources (FXML, CSS, etc.)
+    from(sourceSets.main.get().output)
+}
+
+tasks.register<Jar>("fatJar") {
+    archiveFileName.set("azkar-components-fat.jar")
+    group = "build"
+    description = "Builds a JAR including dependencies for Scene Builder"
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from({
+        configurations.runtimeClasspath.get()
+            .filter { it.name.endsWith(".jar") }
+            .map { zipTree(it) }
+    })
+
+    with(tasks.jar.get())
 }
