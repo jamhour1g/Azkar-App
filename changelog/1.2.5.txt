@@ -1,5 +1,0 @@
-- Display close button in notification
-- Close Notification onClick only not onDrag
-- Show elapsed time for each Prayer
-- Ability to change notification's border color
-- Ability to Download LocationsDB if not exist

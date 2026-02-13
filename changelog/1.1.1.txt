@@ -1,3 +1,0 @@
-- Change font for the user interface
-- Enable changing Language between [Arabic - English]
-- Code enhancements
