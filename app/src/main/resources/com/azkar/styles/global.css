@@ -1,29 +1,31 @@
 @font-face {
     font-family: 'Inter';
-    src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfMZhrib2Bg-4.woff2');
+    src: url('../fonts/Inter/Inter-VariableFont_opsz,wght.ttf');
 }
 
 @font-face {
     font-family: 'Inter';
-    src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuG2fMZhrib2Bg-4.woff2');
-    font-weight: 600;
-}
-
-@font-face {
-    font-family: 'Inter';
-    src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFufMZhrib2Bg-4.woff2');
-    font-weight: 700;
+    src: url('../fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf');
 }
 
 @font-face {
     font-family: 'Amiri';
-    src: url('https://fonts.gstatic.com/s/amiri/v28/定.woff2');
+    src: url('../fonts/Amiri/Amiri-Regular.ttf');
 }
 
 @font-face {
     font-family: 'Amiri';
-    src: url('https://fonts.gstatic.com/s/amiri/v28/定.woff2');
-    font-weight: 700;
+    src: url('../fonts/Amiri/Amiri-Bold.ttf');
+}
+
+@font-face {
+    font-family: 'Amiri';
+    src: url('../fonts/Amiri/Amiri-Italic.ttf');
+}
+
+@font-face {
+    font-family: 'Amiri';
+    src: url('../fonts/Amiri/Amiri-BoldItalic.ttf');
 }
 
 .root {
