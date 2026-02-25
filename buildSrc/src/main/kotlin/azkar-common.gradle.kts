@@ -91,6 +91,9 @@ tasks.withType<JavaCompile>().configureEach {
             check("NullAway", net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
             option("NullAway:JSpecifyMode", "true")
             option("NullAway:OnlyNullMarked", "true")
+            // Skip NullAway analysis on annotation-processor-generated classes
+            // (e.g. Hibernate metamodel *_.java and Jakarta Data repository impls)
+            option("NullAway:ExcludedClassAnnotations", "jakarta.annotation.Generated")
         }
 
         // Make tests less strict (disable NullAway for test sources only)
