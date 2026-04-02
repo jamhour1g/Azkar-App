@@ -4,9 +4,15 @@
  * This project uses @Incubating APIs which are subject to change.
  */
 
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven("https://maven.hq.hydraulic.software") // Hydraulic Conveyor plugin (used by :app)
+    }
+}
+
 rootProject.name = "Azkar"
 
 include("data")
 include("app")
-include("utils")
 include("domain")
