@@ -5,4 +5,6 @@
     exports com.azkar.domain.model;
     exports com.azkar.domain.model.impl;
     exports com.azkar.domain.repo;
+    exports com.azkar.domain.exception;
+    exports com.azkar.domain.service;
 }
