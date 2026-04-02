@@ -13,38 +13,32 @@
         <class>com.azkar.data.entity.ExplanationTranslationEntity</class>
         <class>com.azkar.data.entity.TagEntity</class>
         <class>com.azkar.data.entity.FavoriteEntity</class>
-        <class>com.azkar.data.entity.view.RemembranceWithFavorite</class>
 
-        <exclude-unlisted-classes>false</exclude-unlisted-classes>
+        <exclude-unlisted-classes>true</exclude-unlisted-classes>
 
         <properties>
-            <!-- JDBC (URL has WAL + busy_timeout just like your map) -->
-            <property name="jakarta.persistence.jdbc.driver" value="org.sqlite.JDBC"/>
-            <property name="jakarta.persistence.jdbc.url"
-                      value="jdbc:sqlite:./db/remembrance.db?journal_mode=WAL&amp;busy_timeout=2000"/>
+            <!-- JDBC driver; the URL is supplied programmatically via DataSourceConfig -->
+            <property name="jakarta.persistence.jdbc.driver" value="org.h2.Driver"/>
 
             <!-- Dialect -->
-            <property name="hibernate.dialect" value="org.hibernate.community.dialect.SQLiteDialect"/>
+            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
 
             <!-- Schema managed outside Hibernate (Flyway) -->
             <property name="jakarta.persistence.schema-generation.database.action" value="none"/>
-
-            <!-- Enforce FKs per-connection -->
-            <property name="hibernate.connection.init_sql" value="PRAGMA foreign_keys=ON"/>
 
             <!-- Disable 2nd-level & query caches -->
             <property name="hibernate.cache.use_second_level_cache" value="false"/>
             <property name="hibernate.cache.use_query_cache" value="false"/>
 
             <!-- SQL logging -->
-            <property name="hibernate.show_sql" value="true"/>
+            <property name="hibernate.show_sql" value="false"/>
             <property name="hibernate.format_sql" value="false"/>
 
-            <!-- HikariCP pool via Hibernate’s provider -->
+            <!-- HikariCP pool via Hibernate's provider -->
             <property name="hibernate.connection.provider_class"
                       value="org.hibernate.hikaricp.internal.HikariCPConnectionProvider"/>
             <property name="hibernate.hikari.minimumIdle" value="1"/>
-            <property name="hibernate.hikari.maximumPoolSize" value="8"/>
+            <property name="hibernate.hikari.maximumPoolSize" value="4"/>
             <property name="hibernate.hikari.idleTimeout" value="10000"/>
             <property name="hibernate.hikari.connectionTimeout" value="20000"/>
         </properties>
