@@ -22,6 +22,9 @@ build
 .settings
 .springBeans
 .sts4-cache
+.metadata/
+bin/
+*/bin/
 
 ### NetBeans ###
 /nbproject/private/
