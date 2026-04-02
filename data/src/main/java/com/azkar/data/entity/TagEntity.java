@@ -65,12 +65,11 @@ public class TagEntity {
     /// This field cannot be `null` or blank. It is:
     /// - Enforced as `NOT NULL` at the database level
     /// - Unique (case-insensitive) via index `uq_tag__name_nocase` with `COLLATE NOCASE`
-    /// - Included in `equals` and `toString` calculations
+    /// - Included in `toString` (but **not** in `equals`/`hashCode`, which use only `id`)
     ///
     /// **Note:** Attempting to persist a duplicate name (case-insensitive) will
     /// cause a database constraint violation.
     @ToString.Include
-    @EqualsAndHashCode.Include
     @Column(nullable = false)
     @Getter
     private String name;
@@ -171,7 +170,7 @@ public class TagEntity {
         public Builder name(String name) {
             if (name.isBlank()) {
                 throw new IllegalArgumentException(
-                    "TagEntity name must not blank"
+                    "Tag name must not be blank"
                 );
             }
 

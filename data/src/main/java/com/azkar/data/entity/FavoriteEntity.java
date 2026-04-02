@@ -3,6 +3,7 @@ package com.azkar.data.entity;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 import org.jspecify.annotations.Nullable;
 
 /// Entity representing a “favorite” remembrance (zikr) in the system.
@@ -42,19 +43,9 @@ public class FavoriteEntity {
 
     /// Timestamp when the remembrance was favorited.
     ///
-    /// Set automatically by the database with `DEFAULT (unixepoch())`.
-    /// Not insertable or updatable from application code.
-    ///
-    /// Intended for:
-    /// - Displaying “favorited on” dates
-    /// - Sorting favorites by recency
-    ///
-    @Column(
-        name = "created_at",
-        nullable = false,
-        insertable = false,
-        updatable = false
-    )
+    /// Managed by Hibernate's `@CreationTimestamp` — set once on initial persist.
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
     @Getter
     private @Nullable Instant createdAt;
 
