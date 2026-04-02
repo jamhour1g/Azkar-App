@@ -47,3 +47,7 @@ build/
 
 ## development ##
 logs/
+
+### Conveyor ###
+output/
+generated.conveyor.conf

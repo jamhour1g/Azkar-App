@@ -1,0 +1,33 @@
+<configuration>
+
+    <!-- ── Console Appender ─────────────────────────────────────────── -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%logger] [%method] [%thread] [%date{yyyy-MM-dd@HH:mm:ss}] [%level] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ── File Appender (uncomment to enable file logging) ─────────
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/azkar.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/azkar-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>[%logger] [%method] [%thread] [%date{yyyy-MM-dd@HH:mm:ss}] [%level] - %msg%n</pattern>
+        </encoder>
+    </appender>
+    -->
+
+    <!-- Quieten noisy libraries -->
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="org.flywaydb" level="WARN"/>
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <!-- <appender-ref ref="FILE"/> -->
+    </root>
+
+</configuration>
