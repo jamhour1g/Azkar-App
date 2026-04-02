@@ -1,18 +1,23 @@
-package com.azkar.config;
+package com.azkar.data.config;
 
-import com.azkar.utils.LoggerWrapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
-import java.util.logging.Logger;
-import org.flywaydb.core.Flyway;
+import java.util.Map;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/// Singleton that manages the JPA [EntityManagerFactory] lifecycle.
+///
+/// On first access the manager runs [FlywayMigrator] migrations, then
+/// creates the EMF with the JDBC URL from [DataSourceConfig] (overriding
+/// whatever may be in `persistence.xml`).
 public final class JpaManager implements AutoCloseable {
 
     public static final String DATA_PERSISTENCE_UNIT =
         "com.azkar.data.persistence";
-    private static final Logger LOGGER = LoggerWrapper.loggerFactory(
+    private static final Logger LOGGER = LoggerFactory.getLogger(
         JpaManager.class
     );
 
@@ -21,14 +26,14 @@ public final class JpaManager implements AutoCloseable {
     @Nullable private EntityManagerFactory emf;
 
     private JpaManager() {
-        System.setProperty("org.jboss.logging.provider", "jdk");
+        System.setProperty("org.jboss.logging.provider", "slf4j");
     }
 
     public static JpaManager getInstance() {
         if (instance == null) {
             synchronized (JpaManager.class) {
                 if (instance == null) {
-                    LOGGER.fine(() -> "Creating JpaManager instance");
+                    LOGGER.atDebug().log("Creating JpaManager instance");
                     instance = new JpaManager();
                 }
             }
@@ -40,16 +45,20 @@ public final class JpaManager implements AutoCloseable {
 
     public synchronized EntityManagerFactory getDataEntityManagerFactory() {
         if (emf == null || !emf.isOpen()) {
-            // run migrations first
-            Flyway.configure()
-                .dataSource("jdbc:sqlite:./db/remembrance.db", null, null)
-                .locations("classpath:db/migration")
-                .initSql("PRAGMA foreign_keys=ON")
-                .cleanDisabled(true) // safety in prod
-                .load()
-                .migrate();
+            String jdbcUrl = DataSourceConfig.JDBC_URL;
 
-            emf = Persistence.createEntityManagerFactory(DATA_PERSISTENCE_UNIT);
+            // Run Flyway migrations before creating the EMF
+            FlywayMigrator.migrate(jdbcUrl);
+
+            // Override the JDBC URL so persistence.xml doesn't need it
+            Map<String, String> props = Map.of(
+                "jakarta.persistence.jdbc.url",
+                jdbcUrl
+            );
+            emf = Persistence.createEntityManagerFactory(
+                DATA_PERSISTENCE_UNIT,
+                props
+            );
         }
         return emf;
     }
@@ -62,7 +71,7 @@ public final class JpaManager implements AutoCloseable {
     @Override
     public synchronized void close() {
         if (emf != null && emf.isOpen()) {
-            LOGGER.fine(() -> "Closing EntityManagerFactory");
+            LOGGER.atDebug().log("Closing EntityManagerFactory");
             emf.close();
         }
     }
