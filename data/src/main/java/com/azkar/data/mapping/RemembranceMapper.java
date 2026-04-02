@@ -1,12 +1,15 @@
 package com.azkar.data.mapping;
 
 import com.azkar.data.entity.RemembranceEntity;
+import com.azkar.data.entity.RemembranceEntityBuilder;
 import com.azkar.data.entity.TagEntity;
 import com.azkar.domain.model.Remembrance;
 import com.azkar.domain.model.Tag;
 import com.azkar.domain.model.impl.RemembranceImpl;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /// Utility class responsible for mapping between persistence entities
 /// ([RemembranceEntity], [TagEntity]) and domain models
@@ -27,9 +30,12 @@ import java.util.stream.Collectors;
 /// @see TagEntity
 /// @see Remembrance
 /// @see Tag
-/// @see HadithGradeMapper
 /// @see TagMapper
 public final class RemembranceMapper {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(
+        RemembranceMapper.class
+    );
 
     private RemembranceMapper() {
         throw new UnsupportedOperationException(
@@ -54,9 +60,7 @@ public final class RemembranceMapper {
         return RemembranceImpl.builder()
             .id(remembranceEntity.getId())
             .source(remembranceEntity.getSource())
-            .grade(
-                HadithGradeMapper.toHadithGrade(remembranceEntity.getGrade())
-            )
+            .grade(remembranceEntity.getGrade())
             .favorite(remembranceEntity.isFavorited())
             .createdAt(remembranceEntity.getCreatedAt())
             .updatedAt(remembranceEntity.getUpdatedAt())
@@ -76,10 +80,10 @@ public final class RemembranceMapper {
             .map(TagMapper::fromTag)
             .collect(Collectors.toUnmodifiableSet());
 
-        RemembranceEntity.Builder builder = RemembranceEntity.builder()
+        RemembranceEntityBuilder builder = RemembranceEntity.builder()
             .id(remembrance.getId().orElse(null))
             .source(remembrance.getSource().orElse(null))
-            .grade(HadithGradeMapper.fromHadithGrade(remembrance.getGrade()))
+            .grade(remembrance.getGrade())
             .favorite(remembrance.isFavorite())
             .addTags(tags);
 
@@ -129,10 +133,10 @@ public final class RemembranceMapper {
             .entrySet()
             .stream()
             .collect(
-                Collectors.toMap(Map.Entry::getKey, x ->
+                Collectors.toMap(Map.Entry::getKey, entry ->
                     new Remembrance.Translations.Pair(
-                        x.getValue().getId(),
-                        x.getValue().getText()
+                        entry.getValue().getId(),
+                        entry.getValue().getText()
                     )
                 )
             );
@@ -141,10 +145,10 @@ public final class RemembranceMapper {
             .entrySet()
             .stream()
             .collect(
-                Collectors.toMap(Map.Entry::getKey, x ->
+                Collectors.toMap(Map.Entry::getKey, entry ->
                     new Remembrance.Translations.Pair(
-                        x.getValue().getId(),
-                        x.getValue().getText()
+                        entry.getValue().getId(),
+                        entry.getValue().getText()
                     )
                 )
             );
@@ -152,6 +156,20 @@ public final class RemembranceMapper {
         // keep only intersection of locales
         Set<Locale> locales = new HashSet<>(tr.keySet());
         locales.retainAll(ex.keySet());
+
+        // warn about locales that were dropped because they lack a counterpart
+        Set<Locale> droppedTranslations = new HashSet<>(tr.keySet());
+        droppedTranslations.removeAll(ex.keySet());
+        Set<Locale> droppedExplanations = new HashSet<>(ex.keySet());
+        droppedExplanations.removeAll(tr.keySet());
+        if (!droppedTranslations.isEmpty() || !droppedExplanations.isEmpty()) {
+            LOGGER.atWarn()
+                .setMessage("Dropped locales missing counterpart")
+                .addKeyValue("remembranceId", remembranceEntity.getId())
+                .addKeyValue("droppedTranslations", droppedTranslations)
+                .addKeyValue("droppedExplanations", droppedExplanations)
+                .log();
+        }
 
         // require at least one complete locale
         if (locales.isEmpty()) {

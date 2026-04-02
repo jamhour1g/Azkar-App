@@ -1,11 +1,13 @@
 package com.azkar.data.entity;
 
-import com.azkar.data.converter.HadithGradeConverter;
+import com.azkar.domain.model.HadithGrade;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.jspecify.annotations.Nullable;
 
 /// Represents a remembrance (ذِكْر/ "zikr") — a spiritual phrase or supplication,
@@ -31,9 +33,9 @@ import org.jspecify.annotations.Nullable;
 /// - **`remembrance_tag`:** Join table for tags
 /// - **`favorite`:** User-level favorite marker
 ///
-/// ### Querying with Favorites // TODO: Update when you create the view
+/// ### Querying with Favorites
 ///
-/// Use the `remembrance_with_favorite` view to efficiently fetch remembrances
+/// The `remembrance_with_favorite` database view provides efficient access to remembrances
 /// with an `is_favorite` flag (0 or 1), avoiding expensive joins in list displays.
 ///
 /// SELECT * FROM remembrance_with_favorite WHERE is_favorite = 1;
@@ -48,7 +50,7 @@ import org.jspecify.annotations.Nullable;
 /// ```java
 /// RemembranceEntity remembrance = RemembranceEntity.builder()
 /// .source("Sahih al-Bukhari")
-/// .grade(DatabaseHadithGrade.SAHIH)
+/// .grade(HadithGrade.SAHIH)
 /// .addTranslation(Locale.ENGLISH, "SubhanAllah")
 /// .addExplanation(Locale.ENGLISH, "Glory be to God")
 /// .addTag("Morning")
@@ -61,13 +63,7 @@ import org.jspecify.annotations.Nullable;
 /// @see TagEntity
 /// @see FavoriteEntity
 @Entity
-@Table(
-    name = "remembrance",
-    check = @CheckConstraint(
-        name = "remembrance_grade_check",
-        constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"
-    )
-)
+@Table(name = "remembrance")
 @SuppressWarnings("NullAway.Init")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
@@ -98,43 +94,27 @@ public class RemembranceEntity {
     /// The authenticity grade of the hadith.
     ///
     /// One of: `SAHIH` (authentic), `HASAN` (good), `DAIF` (weak), or `UNSPECIFIED`.
-    /// Enforced by the database `CHECK` constraint.
-    @Convert(converter = HadithGradeConverter.class)
-    @Column(
-        nullable = false,
-        check = @CheckConstraint(
-            name = "remembrance_grade_check",
-            constraint = "grade IN ('SAHIH', 'HASAN', 'DAIF', 'UNSPECIFIED')"
-        )
-    )
+    /// Enforced by the database `ENUM` type.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     @ToString.Include
     @Getter
     @Setter
-    private DatabaseHadithGrade grade = DatabaseHadithGrade.UNSPECIFIED;
+    private HadithGrade grade = HadithGrade.UNSPECIFIED;
 
     /// Timestamp when this remembrance was created.
     ///
-    /// Set automatically by the database using `DEFAULT (unixepoch())`.
-    /// Not modifiable by application code.
-    @Column(
-        name = "created_at",
-        nullable = false,
-        insertable = false,
-        updatable = false
-    )
+    /// Managed by Hibernate's `@CreationTimestamp` — set once on initial persist.
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
     @Getter
     private @Nullable Instant createdAt;
 
     /// Timestamp when this remembrance was last updated.
     ///
-    /// Maintained automatically by the `trg_remembrance__set_updated_at` trigger.
-    /// Updated to the current Unix epoch on any `UPDATE` operation.
-    @Column(
-        name = "updated_at",
-        nullable = false,
-        insertable = false,
-        updatable = false
-    )
+    /// Managed by Hibernate's `@UpdateTimestamp` — refreshed on every flush/commit.
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
     @Getter
     private @Nullable Instant updatedAt;
 
@@ -215,39 +195,30 @@ public class RemembranceEntity {
 
     /// Creates a new builder for constructing [RemembranceEntity] instances.
     ///
-    /// @return a new [Builder] instance
-    public static Builder builder() {
-        return new Builder();
+    /// @return a new [RemembranceEntityBuilder] instance
+    public static RemembranceEntityBuilder builder() {
+        return new RemembranceEntityBuilder();
+    }
+
+    /// Package-private factory used by [RemembranceEntityBuilder] to create a fresh instance.
+    ///
+    /// This avoids exposing the no-arg constructor beyond the entity and its builder.
+    static RemembranceEntity create() {
+        return new RemembranceEntity();
     }
 
     /// Adds a translation for the given locale.
+    ///
+    /// Delegates to [#addTranslation(Long, Locale, String)] with a `null` id.
     ///
     /// @param locale the locale for the translation; must not be `null`
     /// @param text   the translated text; must not be `null` or blank
     /// @throws IllegalArgumentException if `text` is blank
     public void addTranslation(Locale locale, String text) {
-        if (text.isBlank()) {
-            throw new IllegalArgumentException(
-                "Translation text must not be blank"
-            );
-        }
-
-        addTranslation(
-            RemembranceTranslationEntity.builder()
-                .remembrance(this)
-                .locale(locale)
-                .text(text)
-                .build()
-        );
+        addTranslation(null, locale, text);
     }
 
-    private void addTranslation(@Nullable Long id, Locale locale, String text) {
-        if (text.isBlank()) {
-            throw new IllegalArgumentException(
-                "Translation text must not be blank"
-            );
-        }
-
+    void addTranslation(@Nullable Long id, Locale locale, String text) {
         addTranslation(
             RemembranceTranslationEntity.builder()
                 .remembrance(this)
@@ -260,32 +231,16 @@ public class RemembranceEntity {
 
     /// Adds an explanation for the given locale.
     ///
+    /// Delegates to [#addExplanation(Long, Locale, String)] with a `null` id.
+    ///
     /// @param locale the locale for the explanation; must not be `null`
     /// @param text   the explanation text; must not be `null` or blank
     /// @throws IllegalArgumentException if `text` is blank
     public void addExplanation(Locale locale, String text) {
-        if (text.isBlank()) {
-            throw new IllegalArgumentException(
-                "Explanation text must not be blank"
-            );
-        }
-
-        addExplanation(
-            ExplanationTranslationEntity.builder()
-                .remembrance(this)
-                .locale(locale)
-                .text(text)
-                .build()
-        );
+        addExplanation(null, locale, text);
     }
 
-    private void addExplanation(@Nullable Long id, Locale locale, String text) {
-        if (text.isBlank()) {
-            throw new IllegalArgumentException(
-                "Explanation text must not be blank"
-            );
-        }
-
+    void addExplanation(@Nullable Long id, Locale locale, String text) {
         addExplanation(
             ExplanationTranslationEntity.builder()
                 .remembrance(this)
@@ -490,274 +445,5 @@ public class RemembranceEntity {
     private void addExplanation(ExplanationTranslationEntity translation) {
         translation.setRemembrance(this);
         explanations.put(translation.getLocale(), translation);
-    }
-
-    /// Fluent builder for constructing [RemembranceEntity] instances with support for:
-    ///
-    /// - Multi-locale translations and explanations
-    /// - Tagging
-    /// - FavoriteEntity marking
-    /// - Source and authenticity grade
-    ///
-    /// ### Usage Example
-    /// ```java
-    /// RemembranceEntity remembrance = RemembranceEntity.builder()
-    /// .source("Sahih Muslim")
-    /// .grade(DatabaseHadithGrade.SAHIH)
-    /// .addTranslation(Locale.ENGLISH, "SubhanAllah")
-    /// .addTranslation(Locale.forLanguageTag("ar"), "سبحان الله")
-    /// .addExplanation(Locale.ENGLISH, "Glory be to God")
-    /// .addTag("Morning")
-    /// .addTag("Tasbih")
-    /// .favorite(true)
-    /// .build();
-    ///```
-    ///
-    /// @see RemembranceEntity
-    public static final class Builder {
-
-        private final Set<Translation> explanations = new HashSet<>();
-        private final Set<TagEntity> tags = new LinkedHashSet<>();
-        private final Set<Translation> translations = new HashSet<>();
-        private boolean isFavorite;
-        private @Nullable Long id;
-        private @Nullable String source;
-        private DatabaseHadithGrade grade = DatabaseHadithGrade.UNSPECIFIED;
-
-        public Builder id(@Nullable Long id) {
-            this.id = id;
-            return this;
-        }
-
-        /// Sets the source reference for the remembrance (e.g., "Sahih al-Bukhari").
-        ///
-        /// @param source the source description; may be `null` if unknown
-        /// @return this builder instance
-        public Builder source(@Nullable String source) {
-            this.source = source;
-            return this;
-        }
-
-        /// Sets the authenticity grade of the hadith.
-        /// If not provided, defaults to [DatabaseHadithGrade#UNSPECIFIED].
-        ///
-        /// @param grade the hadith grade; must not be `null`
-        /// @return this builder instance
-        public Builder grade(DatabaseHadithGrade grade) {
-            this.grade = grade;
-            return this;
-        }
-
-        /// Marks the remembrance as favorited upon creation.
-        ///
-        /// If `true`, calling [#build()] will automatically call
-        /// [#markFavorite()] on the constructed instance.
-        ///
-        /// @param isFavorite `true` to mark as favorite; `false` otherwise
-        /// @return this builder instance
-        public Builder favorite(boolean isFavorite) {
-            this.isFavorite = isFavorite;
-            return this;
-        }
-
-        /// Adds a translated zikr text for the given locale.
-        ///
-        /// If `text` is blank, an [IllegalArgumentException] is thrown.
-        ///
-        /// Since translations are stored in a [Set], multiple entries for the same locale will
-        /// result in only
-        /// the first one added being stored See [Set#add(Object)] for details.
-        ///
-        /// @param locale the target locale (e.g., `Locale.ENGLISH`); must not be `null`
-        /// @param text   the translated zikr text; [IllegalArgumentException] is thrown if `text`
-        ///                                                                                                                 is blank
-        /// @return this builder instance
-        /// @throws IllegalArgumentException if `text` is blank
-        public Builder addTranslation(Locale locale, String text) {
-            if (text.isBlank()) {
-                throw new IllegalArgumentException(
-                    "Translation text must not be blank"
-                );
-            }
-
-            translations.add(new Translation(null, locale, text));
-            return this;
-        }
-
-        /// Adds an explanation (commentary) for the given locale.
-        ///
-        /// If `text` is blank, an [IllegalArgumentException] is thrown.
-        ///
-        /// Since translations are stored in a [Set], multiple entries for the same locale will
-        /// result in only
-        /// the first one added being stored See [Set#add(Object)] for details.
-        ///
-        /// @param locale the target locale; must not be `null`
-        /// @param text   the explanation text; [IllegalArgumentException] is thrown if `text` is
-        ///                                                                                                                 blank
-        /// @return this builder instance
-        /// @throws IllegalArgumentException if `text` is blank
-        public Builder addExplanation(Locale locale, String text) {
-            if (text.isBlank()) {
-                throw new IllegalArgumentException(
-                    "Explanation text must not be blank"
-                );
-            }
-
-            explanations.add(new Translation(null, locale, text));
-            return this;
-        }
-
-        /// Adds a localized translation of the remembrance text itself.
-        ///
-        /// Each translation maps to a row in [RemembranceTranslationEntity],
-        /// with a unique combination of `remembrance_id` and `locale_code`.
-        ///
-        /// Constraints:
-        /// - `text` must not be blank (enforced here).
-        /// - Database CHECK constraint ensures `length(text) > 0`.
-        /// - Uniqueness enforced per locale at the DB layer.
-        ///
-        /// @param id     optional pre-existing translation ID (nullable for new rows)
-        /// @param locale the locale of this translation (e.g. `"ar"`, `"en-US"`)
-        /// @param text   the translated remembrance text (must be non-blank)
-        /// @return this builder for chaining
-        /// @throws IllegalArgumentException if `text` is blank
-        /// @see RemembranceTranslationEntity
-        public Builder addTranslation(
-            @Nullable Long id,
-            Locale locale,
-            String text
-        ) {
-            if (text.isBlank()) {
-                throw new IllegalArgumentException(
-                    "Translation text must not be blank"
-                );
-            }
-
-            translations.add(new Translation(id, locale, text));
-            return this;
-        }
-
-        /// Adds a localized explanation (commentary) for the remembrance.
-        ///
-        /// Each explanation maps to a row in [ExplanationTranslationEntity],
-        /// with a unique combination of `remembrance_id` and `locale_code`.
-        ///
-        /// Constraints:
-        /// - `text` must not be blank (enforced here).
-        /// - Database CHECK constraint ensures `length(text) > 0`.
-        /// - Uniqueness enforced per locale at the DB layer.
-        ///
-        /// @param id     optional pre-existing explanation ID (nullable for new rows)
-        /// @param locale the locale of this explanation (e.g. `"en-US"`)
-        /// @param text   the explanation text (must be non-blank)
-        /// @return this builder for chaining
-        /// @throws IllegalArgumentException if `text` is blank
-        /// @see ExplanationTranslationEntity
-        public Builder addExplanation(
-            @Nullable Long id,
-            Locale locale,
-            String text
-        ) {
-            if (text.isBlank()) {
-                throw new IllegalArgumentException(
-                    "Explanation text must not be blank"
-                );
-            }
-
-            explanations.add(new Translation(id, locale, text));
-            return this;
-        }
-
-        /// Adds a tag by name.
-        ///
-        /// If `tagName` is blank, an [IllegalArgumentException] is thrown.
-        ///
-        /// Tags are case-sensitive in storage, but uniqueness is enforced
-        /// case-insensitively via database constraint (`uq_tag__name_nocase`).
-        ///
-        /// Preserves insertion order using [LinkedHashSet].
-        ///
-        /// @param tagName the name of the tag (e.g., "Morning"); ignored if blank
-        /// @return this builder instance
-        /// @throws IllegalArgumentException if `tagName` is blank
-        public Builder addTag(String tagName) {
-            if (tagName.isBlank()) {
-                throw new IllegalArgumentException(
-                    "TagEntity name must not be blank"
-                );
-            }
-
-            tags.add(TagEntity.builder().name(tagName).build());
-            return this;
-        }
-
-        /// Adds a set of tags to the remembrance being built.
-        ///
-        /// Each [TagEntity] corresponds to a row in the `tag` table
-        /// and is linked via the `remembrance_tag` join table.
-        ///
-        /// Semantics:
-        /// - Ensures all tags in the set are copied defensively.
-        /// - Used to categorize remembrances (e.g., Morning, Evening, Juma).
-        ///
-        /// @param tags the tags to associate with this remembrance (non-null)
-        /// @return this builder for chaining
-        /// @see TagEntity
-        public Builder addTags(Set<TagEntity> tags) {
-            this.tags.addAll(Set.copyOf(tags));
-            return this;
-        }
-
-        /// Constructs and returns a fully initialized [RemembranceEntity] instance.
-        ///
-        /// This method:
-        /// - Sets source and grade
-        /// - Applies all translations, explanations, and tags
-        /// - Optionally marks as favorite
-        ///
-        /// The returned instance is transient (not yet persisted) and ready for use.
-        ///
-        /// @return a new `RemembranceEntity` instance with all configured data
-        public RemembranceEntity build() {
-            RemembranceEntity remembrance = new RemembranceEntity();
-            remembrance.setId(id);
-            remembrance.setSource(source);
-            remembrance.setGrade(grade);
-
-            if (isFavorite) {
-                remembrance.markFavorite();
-            }
-
-            translations.forEach(t ->
-                remembrance.addTranslation(t.id, t.locale, t.text)
-            );
-            explanations.forEach(e ->
-                remembrance.addExplanation(e.id, e.locale, e.text)
-            );
-            tags.forEach(tag -> tag.addRemembrance(remembrance));
-
-            return remembrance;
-        }
-
-        /// Internal container for locale–text pairs collected during construction.
-        ///
-        /// Used by [Builder#addTranslation] and [Builder#addExplanation]
-        /// to hold data before persisting to [RemembranceTranslationEntity] or
-        /// [ExplanationTranslationEntity].
-        ///
-        /// Immutable and lightweight:
-        /// - `id` links back to an existing row (nullable if new).
-        /// - `locale` identifies the language/region.
-        /// - `text` guaranteed non-blank by validation.
-        ///
-        /// @see RemembranceTranslationEntity
-        /// @see ExplanationTranslationEntity
-        private record Translation(
-            @Nullable Long id,
-            Locale locale,
-            String text
-        ) {}
     }
 }
