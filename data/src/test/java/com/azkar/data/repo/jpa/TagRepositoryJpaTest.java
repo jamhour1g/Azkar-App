@@ -10,27 +10,35 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.List;
 import java.util.Optional;
+import org.hibernate.SessionFactory;
+import org.hibernate.StatelessSession;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-@DisplayName("TagRepositoryJpa")
+@DisplayName("TagRepositoryAdapter")
 class TagRepositoryJpaTest {
 
     private EntityManagerFactory emf;
     private EntityManager em;
+    private StatelessSession statelessSession;
     private TagRepository repo;
 
     @BeforeEach
     void setUp() {
-        emf = TestJpaManager.bootstrapWithTempSqlite();
+        emf = TestJpaManager.bootstrapWithH2();
         em = emf.createEntityManager();
-        repo = new TagRepositoryJpa(em);
+        statelessSession = emf
+            .unwrap(SessionFactory.class)
+            .openStatelessSession();
+        var dataRepo = new TagDataRepository_(statelessSession);
+        repo = new TagRepositoryAdapter(dataRepo, em);
     }
 
     @AfterEach
     void tearDown() {
+        if (statelessSession != null) statelessSession.close();
         if (em != null && em.isOpen()) em.close();
         if (emf != null) emf.close();
     }

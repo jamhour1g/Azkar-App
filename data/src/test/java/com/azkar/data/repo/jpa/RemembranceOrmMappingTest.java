@@ -20,7 +20,7 @@ class RemembranceOrmMappingTest {
 
     @BeforeEach
     void setUp() {
-        emf = TestJpaManager.bootstrapWithTempSqlite();
+        emf = TestJpaManager.bootstrapWithH2();
         em = emf.createEntityManager();
     }
 
@@ -130,9 +130,7 @@ class RemembranceOrmMappingTest {
         RemembranceEntity managed = em.find(RemembranceEntity.class, id);
 
         // 1) remove the existing entry
-        RemembranceTranslationEntity oldEn = managed
-            .getTranslations()
-            .remove(Locale.ENGLISH);
+        managed.getTranslations().remove(Locale.ENGLISH);
 
         // If orphanRemoval=true on the mapping, the row will be deleted at flush/commit.
         // Flushing here ensures UNIQUE(remembrance_id, locale_code) is freed before we insert a new

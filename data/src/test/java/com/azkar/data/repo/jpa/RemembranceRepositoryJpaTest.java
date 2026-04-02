@@ -9,27 +9,35 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.Locale;
 import java.util.Optional;
+import org.hibernate.SessionFactory;
+import org.hibernate.StatelessSession;
 import org.junit.jupiter.api.*;
 
 @DisplayName(
-    "RemembranceRepositoryJpa – repository behavior against a temp SQLite DB"
+    "RemembranceRepositoryAdapter – repository behavior against an in-memory H2 DB"
 )
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RemembranceRepositoryJpaTest {
 
     private EntityManagerFactory emf;
     private EntityManager em;
+    private StatelessSession statelessSession;
     private RemembranceRepository repo;
 
     @BeforeAll
     void boot() {
-        emf = TestJpaManager.bootstrapWithTempSqlite();
+        emf = TestJpaManager.bootstrapWithH2();
         em = emf.createEntityManager();
-        repo = new RemembranceRepositoryJpa(em);
+        statelessSession = emf
+            .unwrap(SessionFactory.class)
+            .openStatelessSession();
+        var dataRepo = new RemembranceDataRepository_(statelessSession);
+        repo = new RemembranceRepositoryAdapter(dataRepo, em);
     }
 
     @AfterAll
     void shutdown() {
+        if (statelessSession != null) statelessSession.close();
         if (em != null) em.close();
         if (emf != null) emf.close();
     }
@@ -54,6 +62,34 @@ class RemembranceRepositoryJpaTest {
                 .createNativeQuery("DELETE FROM remembrance_translation")
                 .executeUpdate();
             em.createNativeQuery("DELETE FROM remembrance").executeUpdate();
+
+            // Reset H2 identity sequences to 1 before re-seeding so that
+            // explicit and auto-generated IDs are deterministic across tests.
+            em
+                .createNativeQuery(
+                    "ALTER TABLE remembrance ALTER COLUMN id RESTART WITH 1"
+                )
+                .executeUpdate();
+            em
+                .createNativeQuery(
+                    "ALTER TABLE remembrance_translation ALTER COLUMN id RESTART WITH 1"
+                )
+                .executeUpdate();
+            em
+                .createNativeQuery(
+                    "ALTER TABLE explanation_translation ALTER COLUMN id RESTART WITH 1"
+                )
+                .executeUpdate();
+            em
+                .createNativeQuery(
+                    "ALTER TABLE tag ALTER COLUMN id RESTART WITH 1"
+                )
+                .executeUpdate();
+            em
+                .createNativeQuery(
+                    "ALTER TABLE favorite ALTER COLUMN id RESTART WITH 1"
+                )
+                .executeUpdate();
 
             // Seed base remembrances
             em
@@ -112,7 +148,6 @@ class RemembranceRepositoryJpaTest {
                 )
                 .executeUpdate();
 
-            // Favorites
             // Favorites: seed rows, then link them via remembrance.favorite_id
             em
                 .createNativeQuery(
@@ -132,6 +167,34 @@ class RemembranceRepositoryJpaTest {
                     SET favorite_id = id
                     WHERE id IN (1, 3)
                     """
+                )
+                .executeUpdate();
+
+            // Reset H2 identity sequences past the max inserted IDs so that
+            // auto-generated IDs don't collide with explicitly seeded values.
+            em
+                .createNativeQuery(
+                    "ALTER TABLE remembrance ALTER COLUMN id RESTART WITH 100"
+                )
+                .executeUpdate();
+            em
+                .createNativeQuery(
+                    "ALTER TABLE remembrance_translation ALTER COLUMN id RESTART WITH 100"
+                )
+                .executeUpdate();
+            em
+                .createNativeQuery(
+                    "ALTER TABLE explanation_translation ALTER COLUMN id RESTART WITH 100"
+                )
+                .executeUpdate();
+            em
+                .createNativeQuery(
+                    "ALTER TABLE tag ALTER COLUMN id RESTART WITH 100"
+                )
+                .executeUpdate();
+            em
+                .createNativeQuery(
+                    "ALTER TABLE favorite ALTER COLUMN id RESTART WITH 100"
                 )
                 .executeUpdate();
 
@@ -211,7 +274,11 @@ class RemembranceRepositoryJpaTest {
 
         // Load via repo and re-save (merge path)
         var loaded = repo.findById(9L).orElseThrow();
+
+        em.getTransaction().begin();
         var saved = repo.save(loaded);
+        em.getTransaction().commit();
+
         assertThat(saved.getId())
             .as("Saved entity should retain the ID=9 after merge")
             .isEqualTo(Optional.of(9L));
@@ -267,9 +334,9 @@ class RemembranceRepositoryJpaTest {
 
     @Test
     @DisplayName(
-        "search(): preserves FTS ranking and respects the requested Locale"
+        "search(): uses LIKE matching and respects the requested Locale"
     )
-    void search_preservesFtsOrder_andHonorsLocale() {
+    void search_likeBased_andHonorsLocale() {
         var ar = Locale.forLanguageTag("ar");
         var results = repo.search(ar, "سبحان");
 
