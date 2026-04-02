@@ -1,8 +1,10 @@
 [versions]
-org-openjfx-javafx = "26-ea+19"
+org-openjfx-javafx = "26"
 org-junit-jupiter-junit-jupiter = "5.13.4"
 org-kordamp-ikonli-ikonli-javafx = "12.4.0"
 org-hibernate = "7.2.5.Final"
+org-slf4j = "2.0.17"
+ch-qos-logback = "1.5.32"
 
 [libraries]
 # Nullability (they are used in the BuildSrc just not by the plugin called by name don't remove)
@@ -12,9 +14,6 @@ org-jspecify-jspecify = { module = "org.jspecify:jspecify", version = "1.0.0" }
 com-google-errorprone-error-prone-core = { module = "com.google.errorprone:error_prone_core", version = "2.41.0" }
 #noinspection UnusedVersionCatalogEntry
 com-uber-nullaway-nullaway = { module = "com.uber.nullaway:nullaway", version = "0.12.8" }
-
-# Installer Dependency
-com-install4j-install4j-runtime = { module = "com.install4j:install4j-runtime", version = "11.0.5" }
 
 # JPA Dependencies
 jakarta-enterprise-jakarta-enterprise-cdi-api = { module = "jakarta.enterprise:jakarta.enterprise.cdi-api", version = "4.0.1" }
@@ -27,7 +26,7 @@ com-h2database-h2 = { module = "com.h2database:h2", version = "2.4.240" }
 org-hibernate-orm-hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "org-hibernate" }
 org-hibernate-orm-hibernate-hikaricp = { module = "org.hibernate.orm:hibernate-hikaricp", version.ref = "org-hibernate" }
 org-hibernate-orm-hibernate-processor = { module = "org.hibernate.orm:hibernate-processor", version.ref = "org-hibernate" }
-jakarta-data-jakarta-data-api = { module = "jakarta.data:jakarta.data-api", version = "1.1.0" }
+jakarta-data-jakarta-data-api = { module = "jakarta.data:jakarta.data-api", version = "1.1.0-M2" }
 org-flywaydb-flyway-core = { module = "org.flywaydb:flyway-core", version = "9.22.3" }
 com-zaxxer-hikari = { module = "com.zaxxer:HikariCP", version = "7.0.2" }
 
@@ -52,9 +51,13 @@ org-junit-platform-junit-platform-launcher = { module = "org.junit.platform:juni
 #noinspection UnusedVersionCatalogEntry
 org-assertj-assertj-core = { module = "org.assertj:assertj-core", version = "3.27.3" }
 
+# Logging
+#noinspection UnusedVersionCatalogEntry
+org-slf4j-slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "org-slf4j" }
+ch-qos-logback-logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "ch-qos-logback" }
+
 [plugins]
 org-openjfx-javafxplugin = { id = "org.openjfx.javafxplugin", version = "0.1.0" }
-org-beryx-jlink = { id = "org.beryx.jlink", version = "2.25.0" }
 io-freefair-lombok = { id = "io.freefair.lombok", version = "9.1.0" }
 com-diffplug-spotless = { id = "com.diffplug.spotless", version = "7.2.1" }
 com-github-spotbugs = { id = "com.github.spotbugs", version = "6.2.4" }

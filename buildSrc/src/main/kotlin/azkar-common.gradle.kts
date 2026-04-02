@@ -10,11 +10,15 @@ plugins {
     id("com.github.spotbugs")
     id("net.ltgt.errorprone")
     id("java")
+    id("jacoco")
 }
 
 val libs = extensions.getByType(VersionCatalogsExtension::class.java).named("libs")
 
 dependencies {
+
+    // SLF4J API for all modules
+    implementation(libs.findLibrary("org-slf4j-slf4j-api").get())
 
     // JSpecify: annotations only; don't ship them at runtime
     compileOnly(libs.findLibrary("org-jspecify-jspecify").get())
@@ -72,8 +76,8 @@ spotbugs {
     toolVersion = "4.9.4"
     effort = com.github.spotbugs.snom.Effort.MAX
     reportLevel = com.github.spotbugs.snom.Confidence.LOW
-    showProgress = false // TODO: enable before commiting
-    ignoreFailures = true // TODO: disable before commiting
+    showProgress = true
+    ignoreFailures = !System.getenv().containsKey("CI")
     reportsDir = file("${layout.buildDirectory}/reports/spotbugs")
     projectName = name
     release = version.toString()
@@ -87,6 +91,7 @@ tasks.withType<JavaCompile>().configureEach {
         encoding = "UTF-8"
 
         errorprone {
+            disableWarningsInGeneratedCode.set(true)
             // Do NOT disable all checks — keep the defaults and enable NullAway
             check("NullAway", net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
             option("NullAway:JSpecifyMode", "true")
@@ -111,9 +116,29 @@ tasks.withType<Javadoc> {
 
 tasks.test {
     useJUnitPlatform()
+    finalizedBy(tasks.named("jacocoTestReport"))
 }
 
-// Keep code formatted before build
+// JaCoCo — test coverage reporting
+jacoco {
+    toolVersion = "0.8.13"
+}
+
+tasks.named<JacocoReport>("jacocoTestReport") {
+    dependsOn(tasks.test)
+    reports {
+        xml.required = true   // needed for CI integrations
+        html.required = true  // human-readable report
+        csv.required = false
+    }
+}
+
+// In CI: fail on formatting violations; locally: auto-fix before build
 tasks.build {
-    dependsOn(tasks.spotlessApply)
+    val isCI = providers.environmentVariable("CI").isPresent
+    if (isCI) {
+        dependsOn(tasks.named("spotlessCheck"))
+    } else {
+        dependsOn(tasks.spotlessApply)
+    }
 }

@@ -20,7 +20,9 @@ dependencies {
     compileOnly(libs.jakarta.enterprise.jakarta.enterprise.cdi.api)
     compileOnly(libs.jakarta.transaction.jakarta.transaction.api)
 
-    implementation(project(":utils"))
+    // Hibernate-generated Jakarta Data repository impls reference CDI types at runtime
+    testRuntimeOnly(libs.jakarta.enterprise.jakarta.enterprise.cdi.api)
+
     implementation(project(":domain"))
 
     // Hibernate annotation processor — generates Jakarta Data repository implementations
