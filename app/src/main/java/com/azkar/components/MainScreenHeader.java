@@ -26,11 +26,7 @@ public class MainScreenHeader extends HBox {
     private MainScreenHeader(String bundleName) {
         var loadedBundle = ResourceBundle.getBundle(bundleName);
         var fxmlLoader = new FXMLLoader(
-            getClass().getResource(
-                "/com/azkar/components/home/main_screen_header.fxml"
-            ),
-            loadedBundle
-        );
+                getClass().getResource("/com/azkar/components/home/main_screen_header.fxml"), loadedBundle);
         fxmlLoader.setController(this);
         fxmlLoader.setRoot(this);
         fxmlLoader.load();

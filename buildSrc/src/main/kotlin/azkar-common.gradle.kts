@@ -1,3 +1,4 @@
+import com.diffplug.spotless.extra.wtp.EclipseWtpFormatterStep
 import net.ltgt.gradle.errorprone.errorprone
 
 repositories {
@@ -45,29 +46,29 @@ java {
 spotless {
     java {
         cleanthat()
-
         importOrder()
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
-        // https://github.com/prettier/prettier
-        // Needs npm to be installed on the system
-        prettier(
-            mapOf(
-                "prettier" to "3.6.2",
-                // https://github.com/jhipster/prettier-java
-                "prettier-plugin-java" to "2.7.3"
-            )
-        ).config(
-            mapOf(
-                "parser" to "java",
-                "tabWidth" to 4,
-                "plugins" to listOf(
-                    "prettier-plugin-java"
-                )
-            )
-        )
+        palantirJavaFormat("2.90.0")
         formatAnnotations()
+    }
+
+    kotlin {
+        target("src/**/*.kt")
+        ktfmt()
+    }
+
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktfmt()
+    }
+
+    format("fxml") {
+        target("src/*/resources/**/*.fxml")
+        eclipseWtp(EclipseWtpFormatterStep.XML)
+        trimTrailingWhitespace()
+        endWithNewline()
     }
 }
 

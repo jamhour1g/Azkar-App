@@ -56,7 +56,7 @@ import org.jspecify.annotations.Nullable;
 /// .addTag("Morning")
 /// .favorite(true)
 /// .build();
-///````
+/// ````
 ///
 /// @see RemembranceTranslationEntity
 /// @see ExplanationTranslationEntity
@@ -124,17 +124,12 @@ public class RemembranceEntity {
     /// [favorite.remembrance][FavoriteEntity#remembrance].
     /// Uses `cascade = CascadeType.ALL, orphanRemoval = true`
     /// setting this to `null` will delete the associated `favorite` row.
-    @OneToOne(
-        fetch = FetchType.LAZY,
-        cascade = CascadeType.ALL,
-        orphanRemoval = true
-    )
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(
-        name = "favorite_id",
-        referencedColumnName = "id",
-        foreignKey = @ForeignKey(name = "fk_remembrance_favorite"),
-        unique = true
-    )
+            name = "favorite_id",
+            referencedColumnName = "id",
+            foreignKey = @ForeignKey(name = "fk_remembrance_favorite"),
+            unique = true)
     @Getter
     private @Nullable FavoriteEntity favorite;
 
@@ -146,30 +141,20 @@ public class RemembranceEntity {
     ///
     /// Uses `orphanRemoval = true` — removing a translation from this map will delete it from the
     /// database on flushes.
-    @OneToMany(
-        mappedBy = "remembrance",
-        cascade = CascadeType.ALL,
-        orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "remembrance", cascade = CascadeType.ALL, orphanRemoval = true)
     @MapKey(name = "locale")
     @Getter
-    private Map<Locale, RemembranceTranslationEntity> translations =
-        new HashMap<>();
+    private Map<Locale, RemembranceTranslationEntity> translations = new HashMap<>();
 
     /// Map of explanations (commentary) for this remembrance, keyed by locale.
     ///
     /// Like translations, one explanation per locale is allowed.
     ///
     /// Also uses `orphanRemoval = true` for automatic cleanup.
-    @OneToMany(
-        mappedBy = "remembrance",
-        cascade = CascadeType.ALL,
-        orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "remembrance", cascade = CascadeType.ALL, orphanRemoval = true)
     @MapKey(name = "locale")
     @Getter
-    private Map<Locale, ExplanationTranslationEntity> explanations =
-        new HashMap<>();
+    private Map<Locale, ExplanationTranslationEntity> explanations = new HashMap<>();
 
     /// Set of tags associated with this remembrance.
     ///
@@ -178,18 +163,16 @@ public class RemembranceEntity {
     ///
     /// Uses [LinkedHashSet] to preserve insertion order.
     @ManyToMany(
-        cascade = {
-            CascadeType.DETACH,
-            CascadeType.MERGE,
-            CascadeType.PERSIST,
-            CascadeType.REFRESH,
-        }
-    )
+            cascade = {
+                CascadeType.DETACH,
+                CascadeType.MERGE,
+                CascadeType.PERSIST,
+                CascadeType.REFRESH,
+            })
     @JoinTable(
-        name = "remembrance_tag",
-        joinColumns = @JoinColumn(name = "remembrance_id"),
-        inverseJoinColumns = @JoinColumn(name = "tag_id")
-    )
+            name = "remembrance_tag",
+            joinColumns = @JoinColumn(name = "remembrance_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id"))
     @Getter
     private Set<TagEntity> tags = new LinkedHashSet<>();
 
@@ -219,14 +202,12 @@ public class RemembranceEntity {
     }
 
     void addTranslation(@Nullable Long id, Locale locale, String text) {
-        addTranslation(
-            RemembranceTranslationEntity.builder()
+        addTranslation(RemembranceTranslationEntity.builder()
                 .remembrance(this)
                 .locale(locale)
                 .text(text)
                 .id(id)
-                .build()
-        );
+                .build());
     }
 
     /// Adds an explanation for the given locale.
@@ -241,14 +222,12 @@ public class RemembranceEntity {
     }
 
     void addExplanation(@Nullable Long id, Locale locale, String text) {
-        addExplanation(
-            ExplanationTranslationEntity.builder()
+        addExplanation(ExplanationTranslationEntity.builder()
                 .remembrance(this)
                 .locale(locale)
                 .text(text)
                 .id(id)
-                .build()
-        );
+                .build());
     }
 
     /// Replaces or creates a translation for the given locale.
@@ -360,10 +339,7 @@ public class RemembranceEntity {
     ///
     /// @return an unmodifiable set of tag names
     public Set<String> getTagNames() {
-        return tags
-            .stream()
-            .map(TagEntity::getName)
-            .collect(Collectors.toUnmodifiableSet());
+        return tags.stream().map(TagEntity::getName).collect(Collectors.toUnmodifiableSet());
     }
 
     /// Adds a tag to this remembrance.

@@ -29,9 +29,7 @@ class TagRepositoryJpaTest {
     void setUp() {
         emf = TestJpaManager.bootstrapWithH2();
         em = emf.createEntityManager();
-        statelessSession = emf
-            .unwrap(SessionFactory.class)
-            .openStatelessSession();
+        statelessSession = emf.unwrap(SessionFactory.class).openStatelessSession();
         var dataRepo = new TagDataRepository_(statelessSession);
         repo = new TagRepositoryAdapter(dataRepo, em);
     }
@@ -51,17 +49,15 @@ class TagRepositoryJpaTest {
     }
 
     @Test
-    @DisplayName(
-        "save(): persists new TagImpl and returns Tag with generated id"
-    )
+    @DisplayName("save(): persists new TagImpl and returns Tag with generated id")
     void save_persistsAndReturnsWithId() {
         Tag t = TagImpl.builder().name("Morning").build();
 
         Tag saved = saveInTransaction(t);
 
         assertThat(saved.getId())
-            .as("Generated id should be present after save()")
-            .isPresent();
+                .as("Generated id should be present after save()")
+                .isPresent();
         assertThat(saved.getName()).isEqualTo("Morning");
 
         Optional<Tag> found = repo.findById(saved.getId().get());
@@ -79,21 +75,17 @@ class TagRepositoryJpaTest {
         List<Tag> all = repo.findAll();
 
         assertThat(all)
-            .extracting(Tag::getId)
-            .as("IDs in insertion order")
-            .containsExactly(a.getId(), b.getId(), c.getId());
+                .extracting(Tag::getId)
+                .as("IDs in insertion order")
+                .containsExactly(a.getId(), b.getId(), c.getId());
 
-        assertThat(all)
-            .extracting(Tag::getName)
-            .containsExactly("Alpha", "Beta", "Gamma");
+        assertThat(all).extracting(Tag::getName).containsExactly("Alpha", "Beta", "Gamma");
     }
 
     @Test
     @DisplayName("findByNameIgnoreCase(): matches case-insensitively")
     void findByNameIgnoreCase_matchesCaseInsensitively() {
-        Tag saved = saveInTransaction(
-            TagImpl.builder().name("Evening").build()
-        );
+        Tag saved = saveInTransaction(TagImpl.builder().name("Evening").build());
 
         Optional<Tag> lower = repo.findByNameIgnoreCase("evening");
         Optional<Tag> mixed = repo.findByNameIgnoreCase("EvEnInG");
@@ -106,9 +98,7 @@ class TagRepositoryJpaTest {
     }
 
     @Test
-    @DisplayName(
-        "findByNameContainingIgnoreCase(): supports LIKE %term% (case-insensitive)"
-    )
+    @DisplayName("findByNameContainingIgnoreCase(): supports LIKE %term% (case-insensitive)")
     void findByNameContainingIgnoreCase_likeContains() {
         saveInTransaction(TagImpl.builder().name("Morning").build());
         saveInTransaction(TagImpl.builder().name("Noon").build());
@@ -116,9 +106,7 @@ class TagRepositoryJpaTest {
 
         List<Tag> matches = repo.findByNameContainingIgnoreCase("ing");
 
-        assertThat(matches)
-            .extracting(Tag::getName)
-            .containsExactlyInAnyOrder("Morning", "Evening");
+        assertThat(matches).extracting(Tag::getName).containsExactlyInAnyOrder("Morning", "Evening");
     }
 
     @Test
@@ -135,13 +123,9 @@ class TagRepositoryJpaTest {
     }
 
     @Test
-    @DisplayName(
-        "delete(Tag): removes when id is present; no-op if id is empty"
-    )
+    @DisplayName("delete(Tag): removes when id is present; no-op if id is empty")
     void delete_withDomainArg() {
-        Tag saved = saveInTransaction(
-            TagImpl.builder().name("ToRemove").build()
-        );
+        Tag saved = saveInTransaction(TagImpl.builder().name("ToRemove").build());
         Long id = saved.getId().orElseThrow();
 
         // delete existing

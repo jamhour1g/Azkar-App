@@ -22,12 +22,8 @@ public class PrayerRowComponent extends HBox {
     @SneakyThrows
     private PrayerRowComponent(String bundleName) {
         var bundle = ResourceBundle.getBundle(bundleName);
-        var fxmlLoader = new FXMLLoader(
-            getClass().getResource(
-                "/com/azkar/components/home/prayer_row_component.fxml"
-            ),
-            bundle
-        );
+        var fxmlLoader =
+                new FXMLLoader(getClass().getResource("/com/azkar/components/home/prayer_row_component.fxml"), bundle);
         fxmlLoader.setController(this);
         fxmlLoader.setRoot(this);
         fxmlLoader.load();

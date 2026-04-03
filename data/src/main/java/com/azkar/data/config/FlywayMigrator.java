@@ -16,10 +16,10 @@ public final class FlywayMigrator {
     /// @param jdbcUrl the JDBC connection URL to migrate
     public static void migrate(String jdbcUrl) {
         Flyway.configure()
-            .dataSource(jdbcUrl, null, null)
-            .locations("classpath:db/migration")
-            .cleanDisabled(true) // safety in prod
-            .load()
-            .migrate();
+                .dataSource(jdbcUrl, null, null)
+                .locations("classpath:db/migration")
+                .cleanDisabled(true) // safety in prod
+                .load()
+                .migrate();
     }
 }

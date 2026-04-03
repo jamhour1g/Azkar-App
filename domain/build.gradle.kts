@@ -1,4 +1,4 @@
 plugins {
-    `java-library`
-    id("azkar-common")
+  `java-library`
+  id("azkar-common")
 }

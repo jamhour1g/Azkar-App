@@ -13,9 +13,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.StatelessSession;
 import org.junit.jupiter.api.*;
 
-@DisplayName(
-    "RemembranceRepositoryAdapter – repository behavior against an in-memory H2 DB"
-)
+@DisplayName("RemembranceRepositoryAdapter – repository behavior against an in-memory H2 DB")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RemembranceRepositoryJpaTest {
 
@@ -28,9 +26,7 @@ class RemembranceRepositoryJpaTest {
     void boot() {
         emf = TestJpaManager.bootstrapWithH2();
         em = emf.createEntityManager();
-        statelessSession = emf
-            .unwrap(SessionFactory.class)
-            .openStatelessSession();
+        statelessSession = emf.unwrap(SessionFactory.class).openStatelessSession();
         var dataRepo = new RemembranceDataRepository_(statelessSession);
         repo = new RemembranceRepositoryAdapter(dataRepo, em);
     }
@@ -55,148 +51,86 @@ class RemembranceRepositoryJpaTest {
             em.createNativeQuery("DELETE FROM favorite").executeUpdate();
             em.createNativeQuery("DELETE FROM remembrance_tag").executeUpdate();
             em.createNativeQuery("DELETE FROM tag").executeUpdate();
-            em
-                .createNativeQuery("DELETE FROM explanation_translation")
-                .executeUpdate();
-            em
-                .createNativeQuery("DELETE FROM remembrance_translation")
-                .executeUpdate();
+            em.createNativeQuery("DELETE FROM explanation_translation").executeUpdate();
+            em.createNativeQuery("DELETE FROM remembrance_translation").executeUpdate();
             em.createNativeQuery("DELETE FROM remembrance").executeUpdate();
 
             // Reset H2 identity sequences to 1 before re-seeding so that
             // explicit and auto-generated IDs are deterministic across tests.
-            em
-                .createNativeQuery(
-                    "ALTER TABLE remembrance ALTER COLUMN id RESTART WITH 1"
-                )
-                .executeUpdate();
-            em
-                .createNativeQuery(
-                    "ALTER TABLE remembrance_translation ALTER COLUMN id RESTART WITH 1"
-                )
-                .executeUpdate();
-            em
-                .createNativeQuery(
-                    "ALTER TABLE explanation_translation ALTER COLUMN id RESTART WITH 1"
-                )
-                .executeUpdate();
-            em
-                .createNativeQuery(
-                    "ALTER TABLE tag ALTER COLUMN id RESTART WITH 1"
-                )
-                .executeUpdate();
-            em
-                .createNativeQuery(
-                    "ALTER TABLE favorite ALTER COLUMN id RESTART WITH 1"
-                )
-                .executeUpdate();
+            em.createNativeQuery("ALTER TABLE remembrance ALTER COLUMN id RESTART WITH 1")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE remembrance_translation ALTER COLUMN id RESTART WITH 1")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE explanation_translation ALTER COLUMN id RESTART WITH 1")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE tag ALTER COLUMN id RESTART WITH 1")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE favorite ALTER COLUMN id RESTART WITH 1")
+                    .executeUpdate();
 
             // Seed base remembrances
-            em
-                .createNativeQuery(
-                    """
+            em.createNativeQuery("""
                     INSERT INTO remembrance (id, source, grade)
                     VALUES (1,'Bukhari','SAHIH'),
                            (2,'Muslim','HASAN'),
                            (3,'Tirmidhi','DAIF')
-                    """
-                )
-                .executeUpdate();
+                    """).executeUpdate();
 
             // Required by your mapper: both translation and explanation must exist
-            em
-                .createNativeQuery(
-                    """
+            em.createNativeQuery("""
                     INSERT INTO remembrance_translation (remembrance_id, locale_code, text)
                     VALUES (1,'ar','سبحان الله'),
                            (2,'ar','الحمد لله'),
                            (3,'ar','لا إله إلا الله')
-                    """
-                )
-                .executeUpdate();
+                    """).executeUpdate();
 
-            em
-                .createNativeQuery(
-                    """
+            em.createNativeQuery("""
                     INSERT INTO explanation_translation (remembrance_id, locale_code, text)
                     VALUES (1,'ar','شرح 1'),
                            (2,'ar','شرح 2'),
                            (3,'ar','شرح 3')
-                    """
-                )
-                .executeUpdate();
+                    """).executeUpdate();
 
             // Tags + join
-            em
-                .createNativeQuery(
-                    """
+            em.createNativeQuery("""
                     INSERT INTO tag (id, name)
                     VALUES (10,'Morning'),
                            (11,'EVENING')
-                    """
-                )
-                .executeUpdate();
+                    """).executeUpdate();
 
-            em
-                .createNativeQuery(
-                    """
+            em.createNativeQuery("""
                     INSERT INTO remembrance_tag (remembrance_id, tag_id)
                     VALUES (1,10),
                            (2,11),
                            (3,10)
-                    """
-                )
-                .executeUpdate();
+                    """).executeUpdate();
 
             // Favorites: seed rows, then link them via remembrance.favorite_id
-            em
-                .createNativeQuery(
-                    """
+            em.createNativeQuery("""
                     INSERT INTO favorite (id)
                     VALUES (1),
                            (3)
-                    """
-                )
-                .executeUpdate();
+                    """).executeUpdate();
 
             // Link favorites to their remembrances
-            em
-                .createNativeQuery(
-                    """
+            em.createNativeQuery("""
                     UPDATE remembrance
                     SET favorite_id = id
                     WHERE id IN (1, 3)
-                    """
-                )
-                .executeUpdate();
+                    """).executeUpdate();
 
             // Reset H2 identity sequences past the max inserted IDs so that
             // auto-generated IDs don't collide with explicitly seeded values.
-            em
-                .createNativeQuery(
-                    "ALTER TABLE remembrance ALTER COLUMN id RESTART WITH 100"
-                )
-                .executeUpdate();
-            em
-                .createNativeQuery(
-                    "ALTER TABLE remembrance_translation ALTER COLUMN id RESTART WITH 100"
-                )
-                .executeUpdate();
-            em
-                .createNativeQuery(
-                    "ALTER TABLE explanation_translation ALTER COLUMN id RESTART WITH 100"
-                )
-                .executeUpdate();
-            em
-                .createNativeQuery(
-                    "ALTER TABLE tag ALTER COLUMN id RESTART WITH 100"
-                )
-                .executeUpdate();
-            em
-                .createNativeQuery(
-                    "ALTER TABLE favorite ALTER COLUMN id RESTART WITH 100"
-                )
-                .executeUpdate();
+            em.createNativeQuery("ALTER TABLE remembrance ALTER COLUMN id RESTART WITH 100")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE remembrance_translation ALTER COLUMN id RESTART WITH 100")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE explanation_translation ALTER COLUMN id RESTART WITH 100")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE tag ALTER COLUMN id RESTART WITH 100")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE favorite ALTER COLUMN id RESTART WITH 100")
+                    .executeUpdate();
 
             em.getTransaction().commit();
         } catch (RuntimeException ex) {
@@ -218,58 +152,41 @@ class RemembranceRepositoryJpaTest {
     @DisplayName("findAll(): returns all rows ordered by ID ascending")
     void findAll_ordersById() {
         var all = repo.findAll();
+        assertThat(all).as("Expected exactly 3 remembrances in seed data").hasSize(3);
         assertThat(all)
-            .as("Expected exactly 3 remembrances in seed data")
-            .hasSize(3);
-        assertThat(all)
-            .as("Remembrances should be ordered by ID ascending")
-            .extracting(Remembrance::getId)
-            .containsExactly(Optional.of(1L), Optional.of(2L), Optional.of(3L));
+                .as("Remembrances should be ordered by ID ascending")
+                .extracting(Remembrance::getId)
+                .containsExactly(Optional.of(1L), Optional.of(2L), Optional.of(3L));
     }
 
     @Test
     @DisplayName("findById(): present for existing ID, empty for missing ID")
     void findById_foundAndMissing() {
         assertThat(repo.findById(2L))
-            .as("ID 2 exists in seed data and should be found")
-            .isPresent();
+                .as("ID 2 exists in seed data and should be found")
+                .isPresent();
         assertThat(repo.findById(999L))
-            .as("Non-existent ID 999 should not be found")
-            .isEmpty();
+                .as("Non-existent ID 999 should not be found")
+                .isEmpty();
     }
 
     @Test
-    @DisplayName(
-        "save() followed by delete(): can merge an existing row and delete it by entity and by" +
-        " ID"
-    )
+    @DisplayName("save() followed by delete(): can merge an existing row and delete it by entity and by" + " ID")
     void save_thenDelete() {
         // Create a new remembrance row directly, then load and resave to exercise merge+map
         em.getTransaction().begin();
-        em
-            .createNativeQuery(
-                """
+        em.createNativeQuery("""
                 INSERT INTO remembrance (id, source, grade)
                 VALUES (9,'Abu Daud','SAHIH')
-                """
-            )
-            .executeUpdate();
-        em
-            .createNativeQuery(
-                """
+                """).executeUpdate();
+        em.createNativeQuery("""
                 INSERT INTO remembrance_translation (remembrance_id, locale_code, text)
                 VALUES (9,'ar','ذكر 9')
-                """
-            )
-            .executeUpdate();
-        em
-            .createNativeQuery(
-                """
+                """).executeUpdate();
+        em.createNativeQuery("""
                 INSERT INTO explanation_translation (remembrance_id, locale_code, text)
                 VALUES (9,'ar','شرح 9')
-                """
-            )
-            .executeUpdate();
+                """).executeUpdate();
         em.getTransaction().commit();
 
         // Load via repo and re-save (merge path)
@@ -280,17 +197,15 @@ class RemembranceRepositoryJpaTest {
         em.getTransaction().commit();
 
         assertThat(saved.getId())
-            .as("Saved entity should retain the ID=9 after merge")
-            .isEqualTo(Optional.of(9L));
+                .as("Saved entity should retain the ID=9 after merge")
+                .isEqualTo(Optional.of(9L));
 
         // Delete it by entity
         em.getTransaction().begin();
         repo.delete(saved);
         em.getTransaction().commit();
 
-        assertThat(repo.findById(9L))
-            .as("Entity with ID=9 should be deleted")
-            .isEmpty();
+        assertThat(repo.findById(9L)).as("Entity with ID=9 should be deleted").isEmpty();
 
         // Delete by id (idempotent-ish for non-existing should not throw)
         em.getTransaction().begin();
@@ -298,28 +213,24 @@ class RemembranceRepositoryJpaTest {
         em.getTransaction().commit();
 
         assertThat(repo.findById(9L))
-            .as(
-                "deleteById on non-existing ID should have no effect and not recreate row"
-            )
-            .isEmpty();
+                .as("deleteById on non-existing ID should have no effect and not recreate row")
+                .isEmpty();
     }
 
     @Test
-    @DisplayName(
-        "findByTagNameIgnoreCase(): case-insensitive tag lookup returns correct IDs"
-    )
+    @DisplayName("findByTagNameIgnoreCase(): case-insensitive tag lookup returns correct IDs")
     void findByTagNameIgnoreCase_works() {
         var morning = repo.findByTagNameIgnoreCase("morning");
         assertThat(morning)
-            .as("Tag 'morning' should map to remembrances 1 and 3")
-            .extracting(Remembrance::getId)
-            .containsExactlyInAnyOrder(Optional.of(1L), Optional.of(3L));
+                .as("Tag 'morning' should map to remembrances 1 and 3")
+                .extracting(Remembrance::getId)
+                .containsExactlyInAnyOrder(Optional.of(1L), Optional.of(3L));
 
         var evening = repo.findByTagNameIgnoreCase("evening");
         assertThat(evening)
-            .as("Tag 'evening' should map to remembrance 2 only")
-            .extracting(Remembrance::getId)
-            .containsExactly(Optional.of(2L));
+                .as("Tag 'evening' should map to remembrance 2 only")
+                .extracting(Remembrance::getId)
+                .containsExactly(Optional.of(2L));
     }
 
     @Test
@@ -327,55 +238,51 @@ class RemembranceRepositoryJpaTest {
     void findFavorites_ordersByRemembranceId() {
         var favs = repo.findFavorites();
         assertThat(favs)
-            .as("Seed favorites are IDs 1 and 3, ordered by ID")
-            .extracting(Remembrance::getId)
-            .containsExactly(Optional.of(1L), Optional.of(3L));
+                .as("Seed favorites are IDs 1 and 3, ordered by ID")
+                .extracting(Remembrance::getId)
+                .containsExactly(Optional.of(1L), Optional.of(3L));
     }
 
     @Test
-    @DisplayName(
-        "search(): uses LIKE matching and respects the requested Locale"
-    )
+    @DisplayName("search(): uses LIKE matching and respects the requested Locale")
     void search_likeBased_andHonorsLocale() {
         var ar = Locale.forLanguageTag("ar");
         var results = repo.search(ar, "سبحان");
 
         assertThat(results)
-            .as("Arabic query 'سبحان' should return remembrance with ID=1 only")
-            .extracting(Remembrance::getId)
-            .containsExactly(Optional.of(1L));
+                .as("Arabic query 'سبحان' should return remembrance with ID=1 only")
+                .extracting(Remembrance::getId)
+                .containsExactly(Optional.of(1L));
     }
 
     @Test
     @DisplayName("search(): blank or whitespace queries return an empty list")
     void search_blank_returnsEmpty() {
         assertThat(repo.search(Locale.ENGLISH, "  "))
-            .as("Whitespace-only query must return empty results")
-            .isEmpty();
+                .as("Whitespace-only query must return empty results")
+                .isEmpty();
         assertThat(repo.search(Locale.forLanguageTag("ar"), ""))
-            .as("Empty query must return empty results")
-            .isEmpty();
+                .as("Empty query must return empty results")
+                .isEmpty();
     }
 
     @Test
-    @DisplayName(
-        "markFavorite()/unmarkFavorite(): toggles favorites and preserves ordering"
-    )
+    @DisplayName("markFavorite()/unmarkFavorite(): toggles favorites and preserves ordering")
     void markFavorite_and_unmarkFavorite() {
         // Initial: favorites are 1,3
         assertThat(repo.findFavorites())
-            .as("Initial favorites should be [1, 3]")
-            .extracting(Remembrance::getId)
-            .containsExactly(Optional.of(1L), Optional.of(3L));
+                .as("Initial favorites should be [1, 3]")
+                .extracting(Remembrance::getId)
+                .containsExactly(Optional.of(1L), Optional.of(3L));
 
         // Mark 2
         em.getTransaction().begin();
         repo.markFavorite(2L);
         em.getTransaction().commit();
         assertThat(repo.findFavorites())
-            .as("After marking ID=2, favorites should be [1, 2, 3]")
-            .extracting(Remembrance::getId)
-            .containsExactly(Optional.of(1L), Optional.of(2L), Optional.of(3L));
+                .as("After marking ID=2, favorites should be [1, 2, 3]")
+                .extracting(Remembrance::getId)
+                .containsExactly(Optional.of(1L), Optional.of(2L), Optional.of(3L));
 
         // Unmark 1
         em.getTransaction().begin();
@@ -383,8 +290,8 @@ class RemembranceRepositoryJpaTest {
         em.getTransaction().commit();
 
         assertThat(repo.findFavorites())
-            .as("After unmarking ID=1, favorites should be [2, 3]")
-            .extracting(Remembrance::getId)
-            .containsExactly(Optional.of(2L), Optional.of(3L));
+                .as("After unmarking ID=1, favorites should be [2, 3]")
+                .extracting(Remembrance::getId)
+                .containsExactly(Optional.of(2L), Optional.of(3L));
     }
 }

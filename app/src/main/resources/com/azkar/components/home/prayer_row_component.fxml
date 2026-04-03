@@ -5,26 +5,30 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Text?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
-<fx:root stylesheets="@../../styles/home/prayer-row-component.css" alignment="CENTER" spacing="5.0"
-         styleClass="prayer-row" type="HBox" xmlns="http://javafx.com/javafx/25"
-         xmlns:fx="http://javafx.com/fxml/1">
-    <AnchorPane>
-        <FontIcon iconLiteral="far-sun" iconSize="22" layoutY="30.0"/>
-    </AnchorPane>
-    <VBox spacing="5.0">
-        <Text fx:id="prayerName" strokeType="OUTSIDE" strokeWidth="0.0" styleClass="prayer-name"
-              text="PrayerPlaceHolderName"/>
-        <Text fx:id="prayerTime" strokeType="OUTSIDE" strokeWidth="0.0" styleClass="prayer-time" text="-00:00 AM"/>
-    </VBox>
-    <Pane HBox.hgrow="SOMETIMES">
-        <padding>
-            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-        </padding>
-    </Pane>
-    <Text fx:id="prayerValue" strokeType="OUTSIDE" strokeWidth="0.0" styleClass="prayer-value" text="04:50 AM"/>
-    <ToggleButton fx:id="fajrPrayerNotificationToggle" mnemonicParsing="false" styleClass="icon-circle-btn">
-        <graphic>
-            <FontIcon iconLiteral="far-bell" iconSize="22"/>
-        </graphic>
-    </ToggleButton>
+<fx:root
+	stylesheets="@../../styles/home/prayer-row-component.css"
+	alignment="CENTER" spacing="5.0" styleClass="prayer-row" type="HBox"
+	xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+	<AnchorPane>
+		<FontIcon iconLiteral="far-sun" iconSize="22" layoutY="30.0" />
+	</AnchorPane>
+	<VBox spacing="5.0">
+		<Text fx:id="prayerName" strokeType="OUTSIDE" strokeWidth="0.0"
+			styleClass="prayer-name" text="PrayerPlaceHolderName" />
+		<Text fx:id="prayerTime" strokeType="OUTSIDE" strokeWidth="0.0"
+			styleClass="prayer-time" text="-00:00 AM" />
+	</VBox>
+	<Pane HBox.hgrow="SOMETIMES">
+		<padding>
+			<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+		</padding>
+	</Pane>
+	<Text fx:id="prayerValue" strokeType="OUTSIDE" strokeWidth="0.0"
+		styleClass="prayer-value" text="04:50 AM" />
+	<ToggleButton fx:id="fajrPrayerNotificationToggle"
+		mnemonicParsing="false" styleClass="icon-circle-btn">
+		<graphic>
+			<FontIcon iconLiteral="far-bell" iconSize="22" />
+		</graphic>
+	</ToggleButton>
 </fx:root>

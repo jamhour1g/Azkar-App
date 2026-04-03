@@ -17,9 +17,7 @@ import com.azkar.domain.model.impl.TagImpl;
 public final class TagMapper {
 
     private TagMapper() {
-        throw new UnsupportedOperationException(
-            "This is a utility class and cannot be instantiated"
-        );
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
     /// Converts a persistence [TagEntity] into a domain [Tag].
@@ -33,10 +31,10 @@ public final class TagMapper {
     /// @return an immutable domain [Tag]
     public static Tag toTag(TagEntity tagEntity) {
         return TagImpl.builder()
-            .id(tagEntity.getId())
-            .name(tagEntity.getName())
-            .createdAt(tagEntity.getCreatedAt())
-            .build();
+                .id(tagEntity.getId())
+                .name(tagEntity.getName())
+                .createdAt(tagEntity.getCreatedAt())
+                .build();
     }
 
     /// Converts a domain [Tag] into persistence [TagEntity].
@@ -51,8 +49,8 @@ public final class TagMapper {
     /// @return a new [TagEntity] suitable for persistence
     public static TagEntity fromTag(Tag tag) {
         return TagEntity.builder()
-            .id(tag.getId().orElse(null))
-            .name(tag.getName())
-            .build();
+                .id(tag.getId().orElse(null))
+                .name(tag.getName())
+                .build();
     }
 }

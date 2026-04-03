@@ -5,9 +5,13 @@ module com.azkar.app {
     requires org.kordamp.ikonli.javafx;
     requires static lombok;
 
-    opens com.azkar.controllers to javafx.fxml;
-    opens com.azkar.components to javafx.fxml;
-    opens com.azkar.components.home to javafx.fxml;
+    opens com.azkar.controllers to
+            javafx.fxml;
+    opens com.azkar.components to
+            javafx.fxml;
+    opens com.azkar.components.home to
+            javafx.fxml;
 
-    exports com.azkar to javafx.graphics;
+    exports com.azkar to
+            javafx.graphics;
 }

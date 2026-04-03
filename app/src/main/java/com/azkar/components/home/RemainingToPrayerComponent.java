@@ -11,11 +11,7 @@ public class RemainingToPrayerComponent extends VBox {
     private RemainingToPrayerComponent(String bundleName) {
         var loadedBundle = ResourceBundle.getBundle(bundleName);
         var fxmlLoader = new FXMLLoader(
-            getClass().getResource(
-                "/com/azkar/components/home/remaining_to_prayer_component.fxml"
-            ),
-            loadedBundle
-        );
+                getClass().getResource("/com/azkar/components/home/remaining_to_prayer_component.fxml"), loadedBundle);
         fxmlLoader.setController(this);
         fxmlLoader.setRoot(this);
         fxmlLoader.load();

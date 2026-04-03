@@ -42,7 +42,7 @@ import org.jspecify.annotations.Nullable;
 /// .locale(Locale.forLanguageTag("ar"))
 /// .text("سبحان الله")
 /// .build();
-///```
+/// ```
 ///
 /// @see RemembranceEntity
 /// @see Locale
@@ -50,20 +50,16 @@ import org.jspecify.annotations.Nullable;
 /// @see AbstractTranslationEntity
 @Entity
 @Table(
-    name = "remembrance_translation",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uq_rt_rem_loc",
-        columnNames = { "remembrance_id", "locale_code" }
-    ),
-    check = @CheckConstraint(
-        name = "chk_rt_text_not_empty",
-        constraint = "length(text) > 0"
-    ),
-    indexes = {
-        @Index(name = "idx_rt__by_remembrance", columnList = "remembrance_id"),
-        @Index(name = "idx_rt__by_locale", columnList = "locale_code"),
-    }
-)
+        name = "remembrance_translation",
+        uniqueConstraints =
+                @UniqueConstraint(
+                        name = "uq_rt_rem_loc",
+                        columnNames = {"remembrance_id", "locale_code"}),
+        check = @CheckConstraint(name = "chk_rt_text_not_empty", constraint = "length(text) > 0"),
+        indexes = {
+            @Index(name = "idx_rt__by_remembrance", columnList = "remembrance_id"),
+            @Index(name = "idx_rt__by_locale", columnList = "locale_code"),
+        })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RemembranceTranslationEntity extends AbstractTranslationEntity {
 
@@ -84,12 +80,7 @@ public class RemembranceTranslationEntity extends AbstractTranslationEntity {
     /// @param text        the translation content; must not be `null` or blank
     /// @throws IllegalArgumentException if `text` is blank
     @Builder
-    private RemembranceTranslationEntity(
-        @Nullable Long id,
-        RemembranceEntity remembrance,
-        Locale locale,
-        String text
-    ) {
+    private RemembranceTranslationEntity(@Nullable Long id, RemembranceEntity remembrance, Locale locale, String text) {
         super(id, remembrance, locale, text, ENTITY_KIND);
     }
 
@@ -104,9 +95,9 @@ public class RemembranceTranslationEntity extends AbstractTranslationEntity {
     @Override
     public RemembranceTranslationEntity withText(String newText) {
         return RemembranceTranslationEntity.builder()
-            .remembrance(this.getRemembrance())
-            .locale(this.getLocale())
-            .text(newText)
-            .build();
+                .remembrance(this.getRemembrance())
+                .locale(this.getLocale())
+                .text(newText)
+                .build();
     }
 }

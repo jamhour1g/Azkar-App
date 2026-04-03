@@ -15,11 +15,8 @@ import org.slf4j.LoggerFactory;
 /// whatever may be in `persistence.xml`).
 public final class JpaManager implements AutoCloseable {
 
-    public static final String DATA_PERSISTENCE_UNIT =
-        "com.azkar.data.persistence";
-    private static final Logger LOGGER = LoggerFactory.getLogger(
-        JpaManager.class
-    );
+    public static final String DATA_PERSISTENCE_UNIT = "com.azkar.data.persistence";
+    private static final Logger LOGGER = LoggerFactory.getLogger(JpaManager.class);
 
     @Nullable private static volatile JpaManager instance;
 
@@ -51,14 +48,8 @@ public final class JpaManager implements AutoCloseable {
             FlywayMigrator.migrate(jdbcUrl);
 
             // Override the JDBC URL so persistence.xml doesn't need it
-            Map<String, String> props = Map.of(
-                "jakarta.persistence.jdbc.url",
-                jdbcUrl
-            );
-            emf = Persistence.createEntityManagerFactory(
-                DATA_PERSISTENCE_UNIT,
-                props
-            );
+            Map<String, String> props = Map.of("jakarta.persistence.jdbc.url", jdbcUrl);
+            emf = Persistence.createEntityManagerFactory(DATA_PERSISTENCE_UNIT, props);
         }
         return emf;
     }

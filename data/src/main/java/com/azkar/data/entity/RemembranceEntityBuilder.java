@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
 ///     .addTag("Tasbih")
 ///     .favorite(true)
 ///     .build();
-///```
+/// ```
 ///
 /// @see RemembranceEntity
 public final class RemembranceEntityBuilder {
@@ -85,9 +85,7 @@ public final class RemembranceEntityBuilder {
     /// @throws IllegalArgumentException if `text` is blank
     public RemembranceEntityBuilder addTranslation(Locale locale, String text) {
         if (text.isBlank()) {
-            throw new IllegalArgumentException(
-                "Translation text must not be blank"
-            );
+            throw new IllegalArgumentException("Translation text must not be blank");
         }
 
         translations.add(new LocalizedText(null, locale, text));
@@ -107,9 +105,7 @@ public final class RemembranceEntityBuilder {
     /// @throws IllegalArgumentException if `text` is blank
     public RemembranceEntityBuilder addExplanation(Locale locale, String text) {
         if (text.isBlank()) {
-            throw new IllegalArgumentException(
-                "Explanation text must not be blank"
-            );
+            throw new IllegalArgumentException("Explanation text must not be blank");
         }
 
         explanations.add(new LocalizedText(null, locale, text));
@@ -132,15 +128,9 @@ public final class RemembranceEntityBuilder {
     /// @return this builder for chaining
     /// @throws IllegalArgumentException if `text` is blank
     /// @see RemembranceTranslationEntity
-    public RemembranceEntityBuilder addTranslation(
-        @Nullable Long id,
-        Locale locale,
-        String text
-    ) {
+    public RemembranceEntityBuilder addTranslation(@Nullable Long id, Locale locale, String text) {
         if (text.isBlank()) {
-            throw new IllegalArgumentException(
-                "Translation text must not be blank"
-            );
+            throw new IllegalArgumentException("Translation text must not be blank");
         }
 
         translations.add(new LocalizedText(id, locale, text));
@@ -163,15 +153,9 @@ public final class RemembranceEntityBuilder {
     /// @return this builder for chaining
     /// @throws IllegalArgumentException if `text` is blank
     /// @see ExplanationTranslationEntity
-    public RemembranceEntityBuilder addExplanation(
-        @Nullable Long id,
-        Locale locale,
-        String text
-    ) {
+    public RemembranceEntityBuilder addExplanation(@Nullable Long id, Locale locale, String text) {
         if (text.isBlank()) {
-            throw new IllegalArgumentException(
-                "Explanation text must not be blank"
-            );
+            throw new IllegalArgumentException("Explanation text must not be blank");
         }
 
         explanations.add(new LocalizedText(id, locale, text));
@@ -192,9 +176,7 @@ public final class RemembranceEntityBuilder {
     /// @throws IllegalArgumentException if `tagName` is blank
     public RemembranceEntityBuilder addTag(String tagName) {
         if (tagName.isBlank()) {
-            throw new IllegalArgumentException(
-                "TagEntity name must not be blank"
-            );
+            throw new IllegalArgumentException("TagEntity name must not be blank");
         }
 
         tags.add(TagEntity.builder().name(tagName).build());
@@ -238,12 +220,8 @@ public final class RemembranceEntityBuilder {
             remembrance.markFavorite();
         }
 
-        translations.forEach(t ->
-            remembrance.addTranslation(t.id(), t.locale(), t.text())
-        );
-        explanations.forEach(e ->
-            remembrance.addExplanation(e.id(), e.locale(), e.text())
-        );
+        translations.forEach(t -> remembrance.addTranslation(t.id(), t.locale(), t.text()));
+        explanations.forEach(e -> remembrance.addExplanation(e.id(), e.locale(), e.text()));
         tags.forEach(tag -> tag.addRemembrance(remembrance));
 
         return remembrance;

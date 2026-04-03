@@ -11,11 +11,7 @@ public class GreetingComponent extends VBox {
     private GreetingComponent(String bundleName) {
         var loadedBundle = ResourceBundle.getBundle(bundleName);
         var fxmlLoader = new FXMLLoader(
-            getClass().getResource(
-                "/com/azkar/components/home/greeting_component.fxml"
-            ),
-            loadedBundle
-        );
+                getClass().getResource("/com/azkar/components/home/greeting_component.fxml"), loadedBundle);
         fxmlLoader.setController(this);
         fxmlLoader.setRoot(this);
         fxmlLoader.load();

@@ -36,24 +36,18 @@ public final class TagRepositoryAdapter implements TagRepository {
             dataRepo.delete(ref);
         } catch (PersistenceException e) {
             throw new PersistenceFailureException(
-                "Failed to delete tag id=" + tag.getId().get(),
-                e
-            );
+                    "Failed to delete tag id=" + tag.getId().get(), e);
         }
     }
 
     @Override
     public void deleteById(Long id) {
         try {
-            em
-                .createQuery("DELETE FROM TagEntity t WHERE t.id = :id")
-                .setParameter("id", id)
-                .executeUpdate();
+            em.createQuery("DELETE FROM TagEntity t WHERE t.id = :id")
+                    .setParameter("id", id)
+                    .executeUpdate();
         } catch (PersistenceException e) {
-            throw new PersistenceFailureException(
-                "Failed to delete tag id=" + id,
-                e
-            );
+            throw new PersistenceFailureException("Failed to delete tag id=" + id, e);
         }
     }
 
@@ -76,10 +70,7 @@ public final class TagRepositoryAdapter implements TagRepository {
         try {
             return dataRepo.findById(id).map(TagMapper::toTag);
         } catch (PersistenceException e) {
-            throw new PersistenceFailureException(
-                "Failed to find tag id=" + id,
-                e
-            );
+            throw new PersistenceFailureException("Failed to find tag id=" + id, e);
         }
     }
 
@@ -88,10 +79,7 @@ public final class TagRepositoryAdapter implements TagRepository {
         try {
             return dataRepo.findByNameIgnoreCase(name).map(TagMapper::toTag);
         } catch (PersistenceException e) {
-            throw new PersistenceFailureException(
-                "Failed to find tag by name '" + name + "'",
-                e
-            );
+            throw new PersistenceFailureException("Failed to find tag by name '" + name + "'", e);
         }
     }
 
@@ -108,16 +96,11 @@ public final class TagRepositoryAdapter implements TagRepository {
     public List<Tag> findByNameContainingIgnoreCase(String name) {
         try {
             String pattern = "%" + JpqlUtils.escapeLikePattern(name) + "%";
-            return dataRepo
-                .findByNameContainingIgnoreCase(pattern)
-                .stream()
-                .map(TagMapper::toTag)
-                .toList();
+            return dataRepo.findByNameContainingIgnoreCase(pattern).stream()
+                    .map(TagMapper::toTag)
+                    .toList();
         } catch (PersistenceException e) {
-            throw new PersistenceFailureException(
-                "Failed to search tags by name '" + name + "'",
-                e
-            );
+            throw new PersistenceFailureException("Failed to search tags by name '" + name + "'", e);
         }
     }
 }

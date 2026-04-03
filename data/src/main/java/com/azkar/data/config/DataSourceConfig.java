@@ -13,6 +13,5 @@ import lombok.NoArgsConstructor;
 public final class DataSourceConfig {
 
     /// Default JDBC URL pointing to a file-based H2 database.
-    public static final String JDBC_URL =
-        "jdbc:h2:file:./db/remembrance;AUTO_SERVER=TRUE";
+    public static final String JDBC_URL = "jdbc:h2:file:./db/remembrance;AUTO_SERVER=TRUE";
 }

@@ -1,4 +1,5 @@
-@org.jspecify.annotations.NullMarked module com.azkar.domain {
+@org.jspecify.annotations.NullMarked
+module com.azkar.domain {
     requires static org.jspecify;
     requires static lombok;
 

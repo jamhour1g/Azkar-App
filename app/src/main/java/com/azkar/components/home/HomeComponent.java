@@ -31,12 +31,8 @@ public class HomeComponent extends ScrollPane {
     @SneakyThrows
     private HomeComponent(String bundleName) {
         var loadedBundle = ResourceBundle.getBundle(bundleName);
-        var fxmlLoader = new FXMLLoader(
-            getClass().getResource(
-                "/com/azkar/components/home/home_component.fxml"
-            ),
-            loadedBundle
-        );
+        var fxmlLoader =
+                new FXMLLoader(getClass().getResource("/com/azkar/components/home/home_component.fxml"), loadedBundle);
         fxmlLoader.setController(this);
         fxmlLoader.setRoot(this);
         fxmlLoader.load();

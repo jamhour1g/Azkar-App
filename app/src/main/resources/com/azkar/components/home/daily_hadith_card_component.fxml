@@ -4,25 +4,31 @@
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Text?>
-<fx:root spacing="10.0" styleClass="card" stylesheets="@../../styles/home/daily_hadith_card.css" type="VBox"
-         xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
-    <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="section-title" text="%dailyHadith"/>
-    <HBox>
-        <Separator orientation="VERTICAL" styleClass="hadith-vertical-line" HBox.hgrow="NEVER">
-            <padding>
-                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-            </padding>
-            <HBox.margin>
-                <Insets right="10.0"/>
-            </HBox.margin>
-        </Separator>
+<fx:root spacing="10.0" styleClass="card"
+	stylesheets="@../../styles/home/daily_hadith_card.css" type="VBox"
+	xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+	<Text strokeType="OUTSIDE" strokeWidth="0.0"
+		styleClass="section-title" text="%dailyHadith" />
+	<HBox>
+		<Separator orientation="VERTICAL"
+			styleClass="hadith-vertical-line" HBox.hgrow="NEVER">
+			<padding>
+				<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+			</padding>
+			<HBox.margin>
+				<Insets right="10.0" />
+			</HBox.margin>
+		</Separator>
 
-        <!-- Daily Hadith -->
-        <VBox spacing="10">
-            <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="hadith-ar" text="%hadithExample"/>
-            <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="hadith-en" text="%explanationExample"
-                  wrappingWidth="800.0"/>
-            <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="hadith-source" text="%sourceExample"/>
-        </VBox>
-    </HBox>
+		<!-- Daily Hadith -->
+		<VBox spacing="10">
+			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+				styleClass="hadith-ar" text="%hadithExample" />
+			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+				styleClass="hadith-en" text="%explanationExample"
+				wrappingWidth="800.0" />
+			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+				styleClass="hadith-source" text="%sourceExample" />
+		</VBox>
+	</HBox>
 </fx:root>

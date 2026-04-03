@@ -11,11 +11,7 @@ public class DailyHadithCardComponent extends VBox {
     public DailyHadithCardComponent(String bundleName) {
         var loadedBundle = ResourceBundle.getBundle(bundleName);
         var fxmlLoader = new FXMLLoader(
-            getClass().getResource(
-                "/com/azkar/components/home/daily_hadith_card_component.fxml"
-            ),
-            loadedBundle
-        );
+                getClass().getResource("/com/azkar/components/home/daily_hadith_card_component.fxml"), loadedBundle);
         fxmlLoader.setController(this);
         fxmlLoader.setRoot(this);
         fxmlLoader.load();

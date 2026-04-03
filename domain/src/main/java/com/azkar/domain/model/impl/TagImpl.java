@@ -22,10 +22,7 @@ import org.jspecify.annotations.Nullable;
 ///                                                                     or recorded; may be `null`
 @Builder(toBuilder = true)
 public record TagImpl(
-    @Nullable Long id,
-    String name,
-    @Nullable Instant createdAt
-) implements Tag {
+        @Nullable Long id, String name, @Nullable Instant createdAt) implements Tag {
     /// Compact constructor that validates and normalizes the tag name.
     ///
     /// @param id        the optional identifier of the tag may be `null`

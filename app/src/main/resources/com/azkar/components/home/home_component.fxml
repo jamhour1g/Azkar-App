@@ -5,58 +5,66 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.*?>
-<fx:root fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER" styleClass="main"
-         stylesheets="@../../styles/home/home_component.css" type="ScrollPane" vbarPolicy="NEVER"
-         xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+<fx:root fitToHeight="true" fitToWidth="true" hbarPolicy="NEVER"
+	styleClass="main" stylesheets="@../../styles/home/home_component.css"
+	type="ScrollPane" vbarPolicy="NEVER"
+	xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
 
-    <VBox alignment="TOP_CENTER" spacing="20" styleClass="main-content">
+	<VBox alignment="TOP_CENTER" spacing="20"
+		styleClass="main-content">
 
-        <!-- Greeting -->
-        <GreetingComponent/>
+		<!-- Greeting -->
+		<GreetingComponent />
 
-        <!-- Daily Hadith Card -->
-        <DailyHadithCardComponent/>
-        <BorderPane>
-            <center>
+		<!-- Daily Hadith Card -->
+		<DailyHadithCardComponent />
+		<BorderPane>
+			<center>
 
-                <!-- Prayer Times -->
-                <VBox spacing="10">
-                    <RemainingToPrayerComponent/>
-                    <PrayerNotificationsToggleComponent/>
-                    <VBox alignment="CENTER" spacing="5.0" styleClass="card">
-                        <GridPane hgap="10.0" vgap="10.0">
-                            <columnConstraints>
-                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
-                            </columnConstraints>
-                            <rowConstraints>
-                                <RowConstraints/>
-                                <RowConstraints/>
-                                <RowConstraints/>
-                                <RowConstraints/>
-                                <RowConstraints/>
-                            </rowConstraints>
-                            <padding>
-                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                            </padding>
-                            <PrayerRowComponent prayerName="Fajr" prayerTime="04:50 AM" prayerValue="04:50 AM"/>
-                            <PrayerRowComponent prayerName="Dhuhr" prayerTime="01:20 PM" prayerValue="01:20 PM"
-                                                GridPane.rowIndex="1"/>
-                            <PrayerRowComponent prayerName="Asr" prayerTime="05:15 PM" prayerValue="05:15 PM"
-                                                GridPane.rowIndex="2"/>
-                            <PrayerRowComponent prayerName="Maghrib" prayerTime="07:45 PM" prayerValue="07:45 PM"
-                                                GridPane.rowIndex="3"/>
-                            <PrayerRowComponent prayerName="Isha" prayerTime="09:30 PM" prayerValue="09:30 PM"
-                                                GridPane.rowIndex="4"/>
-                        </GridPane>
-                    </VBox>
-                </VBox>
-            </center>
-            <padding>
-                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-            </padding>
-            <right>
-                <FavoritesCardComponent/>
-            </right>
-        </BorderPane>
-    </VBox>
+				<!-- Prayer Times -->
+				<VBox spacing="10">
+					<RemainingToPrayerComponent />
+					<PrayerNotificationsToggleComponent />
+					<VBox alignment="CENTER" spacing="5.0" styleClass="card">
+						<GridPane hgap="10.0" vgap="10.0">
+							<columnConstraints>
+								<ColumnConstraints hgrow="SOMETIMES"
+									minWidth="10.0" prefWidth="100.0" />
+							</columnConstraints>
+							<rowConstraints>
+								<RowConstraints />
+								<RowConstraints />
+								<RowConstraints />
+								<RowConstraints />
+								<RowConstraints />
+							</rowConstraints>
+							<padding>
+								<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+							</padding>
+							<PrayerRowComponent prayerName="Fajr"
+								prayerTime="04:50 AM" prayerValue="04:50 AM" />
+							<PrayerRowComponent prayerName="Dhuhr"
+								prayerTime="01:20 PM" prayerValue="01:20 PM"
+								GridPane.rowIndex="1" />
+							<PrayerRowComponent prayerName="Asr"
+								prayerTime="05:15 PM" prayerValue="05:15 PM"
+								GridPane.rowIndex="2" />
+							<PrayerRowComponent prayerName="Maghrib"
+								prayerTime="07:45 PM" prayerValue="07:45 PM"
+								GridPane.rowIndex="3" />
+							<PrayerRowComponent prayerName="Isha"
+								prayerTime="09:30 PM" prayerValue="09:30 PM"
+								GridPane.rowIndex="4" />
+						</GridPane>
+					</VBox>
+				</VBox>
+			</center>
+			<padding>
+				<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+			</padding>
+			<right>
+				<FavoritesCardComponent />
+			</right>
+		</BorderPane>
+	</VBox>
 </fx:root>

@@ -5,52 +5,59 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
-<fx:root styleClass="card" stylesheets="@../../styles/home/favorites_card.css" type="BorderPane"
-         BorderPane.alignment="CENTER" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
-    <BorderPane.margin>
-        <Insets left="10.0"/>
-    </BorderPane.margin>
-    <top>
-        <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-            <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="section-title" text="Favorite Azkar"/>
-        </HBox>
-    </top>
-    <center>
-        <VBox alignment="CENTER" spacing="10.0">
-            <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="hadith-ar"
-                  text="سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ العَظِيمِ" textAlignment="CENTER"
-                  wrappingWidth="300.0"/>
-            <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="hadith-en"
-                  text="&quot;Glorified is God and praised is He, Glorified is God the Most Great.&quot;"
-                  textAlignment="CENTER" wrappingWidth="300.0"/>
-            <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="hadith-source" text="Sahih al-Bukhari"
-                  textAlignment="CENTER" wrappingWidth="300.0"/>
-        </VBox>
-    </center>
-    <bottom>
-        <HBox BorderPane.alignment="CENTER">
-            <HBox alignment="CENTER" spacing="5.0">
-                <HBox.margin>
-                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                </HBox.margin>
-                <padding>
-                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                </padding>
-                <FontIcon iconLiteral="far-star" iconSize="20"/>
-                <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Favorited"/>
-            </HBox>
-            <Pane HBox.hgrow="SOMETIMES"/>
-            <Button mnemonicParsing="false" styleClass="icon-btn">
-                <HBox.margin>
-                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                </HBox.margin>
-                <padding>
-                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                </padding>
-                <graphic>
-                    <FontIcon iconLiteral="fas-arrow-right" iconSize="20"/>
-                </graphic>
-            </Button>
-        </HBox>
-    </bottom>
+<fx:root styleClass="card"
+	stylesheets="@../../styles/home/favorites_card.css" type="BorderPane"
+	BorderPane.alignment="CENTER" xmlns="http://javafx.com/javafx/25"
+	xmlns:fx="http://javafx.com/fxml/1">
+	<BorderPane.margin>
+		<Insets left="10.0" />
+	</BorderPane.margin>
+	<top>
+		<HBox alignment="CENTER" spacing="5.0"
+			BorderPane.alignment="CENTER">
+			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+				styleClass="section-title" text="Favorite Azkar" />
+		</HBox>
+	</top>
+	<center>
+		<VBox alignment="CENTER" spacing="10.0">
+			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+				styleClass="hadith-ar"
+				text="سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ العَظِيمِ"
+				textAlignment="CENTER" wrappingWidth="300.0" />
+			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+				styleClass="hadith-en"
+				text="&quot;Glorified is God and praised is He, Glorified is God the Most Great.&quot;"
+				textAlignment="CENTER" wrappingWidth="300.0" />
+			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+				styleClass="hadith-source" text="Sahih al-Bukhari"
+				textAlignment="CENTER" wrappingWidth="300.0" />
+		</VBox>
+	</center>
+	<bottom>
+		<HBox BorderPane.alignment="CENTER">
+			<HBox alignment="CENTER" spacing="5.0">
+				<HBox.margin>
+					<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+				</HBox.margin>
+				<padding>
+					<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+				</padding>
+				<FontIcon iconLiteral="far-star" iconSize="20" />
+				<Text strokeType="OUTSIDE" strokeWidth="0.0" text="Favorited" />
+			</HBox>
+			<Pane HBox.hgrow="SOMETIMES" />
+			<Button mnemonicParsing="false" styleClass="icon-btn">
+				<HBox.margin>
+					<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+				</HBox.margin>
+				<padding>
+					<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+				</padding>
+				<graphic>
+					<FontIcon iconLiteral="fas-arrow-right" iconSize="20" />
+				</graphic>
+			</Button>
+		</HBox>
+	</bottom>
 </fx:root>

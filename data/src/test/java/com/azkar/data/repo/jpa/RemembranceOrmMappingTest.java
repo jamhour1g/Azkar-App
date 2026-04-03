@@ -31,9 +31,7 @@ class RemembranceOrmMappingTest {
     }
 
     @Test
-    @DisplayName(
-        "Persist graph: remembrance + EN translation/explanation (Map) + existing tags"
-    )
+    @DisplayName("Persist graph: remembrance + EN translation/explanation (Map) + existing tags")
     void persistAggregate_withMaps_andManagedTags() {
         // Seed tags as MANAGED (avoid transient tag exception for ManyToMany without cascade
         // PERSIST)
@@ -45,22 +43,18 @@ class RemembranceOrmMappingTest {
         em.getTransaction().commit();
 
         // Build the root
-        RemembranceEntity r = RemembranceEntity.builder()
-            .favorite(true)
-            .source("Abu Huraira")
-            .build();
+        RemembranceEntity r =
+                RemembranceEntity.builder().favorite(true).source("Abu Huraira").build();
 
         // Put into the MAPS (text is immutable, so set once on construction)
-        RemembranceTranslationEntity enT =
-            RemembranceTranslationEntity.builder()
+        RemembranceTranslationEntity enT = RemembranceTranslationEntity.builder()
                 .locale(Locale.ENGLISH)
                 .text("Allah is the most merciful of the merciful")
                 .remembrance(r)
                 .build();
         r.getTranslations().put(Locale.ENGLISH, enT);
 
-        ExplanationTranslationEntity enE =
-            ExplanationTranslationEntity.builder()
+        ExplanationTranslationEntity enE = ExplanationTranslationEntity.builder()
                 .locale(Locale.ENGLISH)
                 .text("Allah is the most merciful of the merciful")
                 .remembrance(r)
@@ -86,33 +80,26 @@ class RemembranceOrmMappingTest {
         assertThat(reloaded.getSource()).isEqualTo("Abu Huraira");
 
         assertThat(reloaded.getTranslations()).containsKey(Locale.ENGLISH);
-        assertThat(
-            reloaded.getTranslations().get(Locale.ENGLISH).getText()
-        ).isEqualTo("Allah is the most merciful of the merciful");
+        assertThat(reloaded.getTranslations().get(Locale.ENGLISH).getText())
+                .isEqualTo("Allah is the most merciful of the merciful");
 
         assertThat(reloaded.getExplanations()).containsKey(Locale.ENGLISH);
-        assertThat(
-            reloaded.getExplanations().get(Locale.ENGLISH).getText()
-        ).isEqualTo("Allah is the most merciful of the merciful");
+        assertThat(reloaded.getExplanations().get(Locale.ENGLISH).getText())
+                .isEqualTo("Allah is the most merciful of the merciful");
 
-        assertThat(
-            reloaded.getTags().stream().map(TagEntity::getName)
-        ).containsExactlyInAnyOrder("GOLD", "SILVER");
+        assertThat(reloaded.getTags().stream().map(TagEntity::getName)).containsExactlyInAnyOrder("GOLD", "SILVER");
     }
 
     @Test
-    @DisplayName(
-        "Immutable update: replace EN translation map entry (remove + flush + insert new)"
-    )
+    @DisplayName("Immutable update: replace EN translation map entry (remove + flush + insert new)")
     void updateTranslationByReplacingMapEntry() {
         // Seed a minimal root with EN translation
         RemembranceEntity r = RemembranceEntity.builder()
-            .favorite(false)
-            .source("Seed Source")
-            .build();
+                .favorite(false)
+                .source("Seed Source")
+                .build();
 
-        RemembranceTranslationEntity enT =
-            RemembranceTranslationEntity.builder()
+        RemembranceTranslationEntity enT = RemembranceTranslationEntity.builder()
                 .locale(Locale.ENGLISH)
                 .text("Seed text")
                 .remembrance(r)
@@ -138,8 +125,7 @@ class RemembranceOrmMappingTest {
         em.flush();
 
         // 2) add a brand-new child with updated text
-        RemembranceTranslationEntity newEn =
-            RemembranceTranslationEntity.builder()
+        RemembranceTranslationEntity newEn = RemembranceTranslationEntity.builder()
                 .locale(Locale.ENGLISH)
                 .text("Updated text")
                 .remembrance(managed)
@@ -151,23 +137,18 @@ class RemembranceOrmMappingTest {
         // Verify round-trip
         RemembranceEntity after = em.find(RemembranceEntity.class, id);
         assertThat(after.getTranslations()).containsKey(Locale.ENGLISH);
-        assertThat(
-            after.getTranslations().get(Locale.ENGLISH).getText()
-        ).isEqualTo("Updated text");
+        assertThat(after.getTranslations().get(Locale.ENGLISH).getText()).isEqualTo("Updated text");
     }
 
     @Test
-    @DisplayName(
-        "Immutable update: replace EN explanation map entry (remove + flush + insert new)"
-    )
+    @DisplayName("Immutable update: replace EN explanation map entry (remove + flush + insert new)")
     void updateExplanationByReplacingMapEntry() {
         RemembranceEntity r = RemembranceEntity.builder()
-            .favorite(false)
-            .source("Seed Source")
-            .build();
+                .favorite(false)
+                .source("Seed Source")
+                .build();
 
-        ExplanationTranslationEntity enE =
-            ExplanationTranslationEntity.builder()
+        ExplanationTranslationEntity enE = ExplanationTranslationEntity.builder()
                 .locale(Locale.ENGLISH)
                 .text("Seed explanation")
                 .remembrance(r)
@@ -187,8 +168,7 @@ class RemembranceOrmMappingTest {
         managed.getExplanations().remove(Locale.ENGLISH);
         em.flush();
 
-        ExplanationTranslationEntity newEnE =
-            ExplanationTranslationEntity.builder()
+        ExplanationTranslationEntity newEnE = ExplanationTranslationEntity.builder()
                 .locale(Locale.ENGLISH)
                 .text("Updated explanation")
                 .remembrance(managed)
@@ -199,8 +179,6 @@ class RemembranceOrmMappingTest {
 
         RemembranceEntity after = em.find(RemembranceEntity.class, id);
         assertThat(after.getExplanations()).containsKey(Locale.ENGLISH);
-        assertThat(
-            after.getExplanations().get(Locale.ENGLISH).getText()
-        ).isEqualTo("Updated explanation");
+        assertThat(after.getExplanations().get(Locale.ENGLISH).getText()).isEqualTo("Updated explanation");
     }
 }

@@ -17,9 +17,7 @@ package com.azkar.data.repo.jpa;
 public final class JpqlUtils {
 
     private JpqlUtils() {
-        throw new UnsupportedOperationException(
-            "This is a utility class and cannot be instantiated"
-        );
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
     /// Escapes JPQL LIKE special characters (`\`, `%`, `_`) in the given input
@@ -31,9 +29,6 @@ public final class JpqlUtils {
     /// @param input the raw user input; must not be `null`
     /// @return the escaped string safe for use in a `LIKE` parameter
     public static String escapeLikePattern(String input) {
-        return input
-            .replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_");
+        return input.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }

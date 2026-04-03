@@ -2,19 +2,23 @@
 
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
-<fx:root stylesheets="@../../styles/home/remaining_to_prayer.css" type="VBox" xmlns="http://javafx.com/javafx/25"
-         xmlns:fx="http://javafx.com/fxml/1">
-    <HBox alignment="CENTER_LEFT" spacing="10">
-        <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="section-title" text="%todayPrayerTimes"/>
-        <Pane HBox.hgrow="ALWAYS"/>
-        <VBox alignment="CENTER_RIGHT">
-            <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="next-prayer-label" text="%nextPrayerIn"/>
-            <Text strokeType="OUTSIDE" strokeWidth="0.0" styleClass="next-prayer-time" text="%prayerTimeRemaining">
-                <font>
-                    <Font size="10.0"/>
-                </font>
-            </Text>
-        </VBox>
-    </HBox>
-    <Text styleClass="subtitle" text="%prayerTimesLocation"/>
+<fx:root
+	stylesheets="@../../styles/home/remaining_to_prayer.css" type="VBox"
+	xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+	<HBox alignment="CENTER_LEFT" spacing="10">
+		<Text strokeType="OUTSIDE" strokeWidth="0.0"
+			styleClass="section-title" text="%todayPrayerTimes" />
+		<Pane HBox.hgrow="ALWAYS" />
+		<VBox alignment="CENTER_RIGHT">
+			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+				styleClass="next-prayer-label" text="%nextPrayerIn" />
+			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+				styleClass="next-prayer-time" text="%prayerTimeRemaining">
+				<font>
+					<Font size="10.0" />
+				</font>
+			</Text>
+		</VBox>
+	</HBox>
+	<Text styleClass="subtitle" text="%prayerTimesLocation" />
 </fx:root>

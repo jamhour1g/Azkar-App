@@ -23,7 +23,8 @@ import org.jspecify.annotations.Nullable;
 /// ### Subclass Responsibilities
 /// Concrete subclasses must:
 /// - Declare their own `@Entity` and `@Table` with table-specific constraint names and indexes
-/// - Provide a builder / factory that calls [#AbstractTranslationEntity(Long, RemembranceEntity, Locale, String, String)]
+/// - Provide a builder / factory that calls [#AbstractTranslationEntity(Long, RemembranceEntity, Locale, String,
+// String)]
 ///   with an appropriate `entityKind` label for error messages
 /// - Implement `withText(String)` to create a copy with new text
 ///
@@ -81,9 +82,8 @@ public abstract class AbstractTranslationEntity {
     /// - Database: `NOT NULL` + `CHECK (length(text) > 0)`
     /// - Application: Constructor requires non-blank input
     @Column(
-        nullable = false,
-        check = { @CheckConstraint(constraint = "length(text) > 0") }
-    )
+            nullable = false,
+            check = {@CheckConstraint(constraint = "length(text) > 0")})
     @Getter
     @EqualsAndHashCode.Include
     @ToString.Include
@@ -115,19 +115,12 @@ public abstract class AbstractTranslationEntity {
     ///                    used in error messages when validation fails
     /// @throws IllegalArgumentException if `text` is blank
     protected AbstractTranslationEntity(
-        @Nullable Long id,
-        RemembranceEntity remembrance,
-        Locale locale,
-        String text,
-        String entityKind
-    ) {
+            @Nullable Long id, RemembranceEntity remembrance, Locale locale, String text, String entityKind) {
         this.remembrance = remembrance;
         this.locale = locale;
 
         if (text.isBlank()) {
-            throw new IllegalArgumentException(
-                entityKind + " text must not be blank"
-            );
+            throw new IllegalArgumentException(entityKind + " text must not be blank");
         }
 
         this.text = text;

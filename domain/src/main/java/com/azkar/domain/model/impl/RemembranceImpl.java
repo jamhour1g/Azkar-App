@@ -37,15 +37,15 @@ import org.jspecify.annotations.Nullable;
 /// @param tags         tags associated with this remembrance; not `null`
 @Builder(toBuilder = true)
 public record RemembranceImpl(
-    @Nullable Long id,
-    HadithGrade grade,
-    boolean favorite,
-    @Nullable String source,
-    @Nullable Instant createdAt,
-    @Nullable Instant updatedAt,
-    Map<Locale, Translations> translations,
-    Set<Tag> tags
-) implements Remembrance {
+        @Nullable Long id,
+        HadithGrade grade,
+        boolean favorite,
+        @Nullable String source,
+        @Nullable Instant createdAt,
+        @Nullable Instant updatedAt,
+        Map<Locale, Translations> translations,
+        Set<Tag> tags)
+        implements Remembrance {
     /// Compact constructor that enforces invariants:
     ///
     /// - [updatedAt][#updatedAt] must not be before [createdAt][#createdAt].
@@ -54,13 +54,8 @@ public record RemembranceImpl(
     ///
     /// @throws IllegalArgumentException if `updatedAt` is earlier than `createdAt`
     public RemembranceImpl {
-        if (
-            (createdAt != null && updatedAt != null) &&
-            updatedAt.isBefore(createdAt)
-        ) {
-            throw new IllegalArgumentException(
-                "updatedAt cannot be before createdAt"
-            );
+        if ((createdAt != null && updatedAt != null) && updatedAt.isBefore(createdAt)) {
+            throw new IllegalArgumentException("updatedAt cannot be before createdAt");
         }
 
         source = (source == null || source.isBlank()) ? null : source.trim();

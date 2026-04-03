@@ -35,8 +35,6 @@ public interface TagDataRepository {
     @Query("FROM TagEntity t WHERE lower(t.name) = lower(:name)")
     Optional<TagEntity> findByNameIgnoreCase(String name);
 
-    @Query(
-        "FROM TagEntity t WHERE lower(t.name) LIKE lower(:pattern) ESCAPE '\\'"
-    )
+    @Query("FROM TagEntity t WHERE lower(t.name) LIKE lower(:pattern) ESCAPE '\\'")
     List<TagEntity> findByNameContainingIgnoreCase(String pattern);
 }

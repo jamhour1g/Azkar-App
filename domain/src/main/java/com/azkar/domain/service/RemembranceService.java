@@ -17,10 +17,7 @@ public final class RemembranceService {
     private final RemembranceRepository repo;
     private final TransactionRunner tx;
 
-    public RemembranceService(
-        RemembranceRepository repo,
-        TransactionRunner tx
-    ) {
+    public RemembranceService(RemembranceRepository repo, TransactionRunner tx) {
         this.repo = repo;
         this.tx = tx;
     }
@@ -65,10 +62,7 @@ public final class RemembranceService {
         return repo.findFavorites();
     }
 
-    public List<Remembrance> search(
-        Locale locale,
-        String expressionToSearchFor
-    ) {
+    public List<Remembrance> search(Locale locale, String expressionToSearchFor) {
         return repo.search(locale, expressionToSearchFor);
     }
 }

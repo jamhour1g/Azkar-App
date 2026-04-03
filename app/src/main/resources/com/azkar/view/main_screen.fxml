@@ -3,12 +3,15 @@
 <?import com.azkar.components.home.HomeComponent?>
 <?import com.azkar.components.MainScreenHeader?>
 <?import javafx.scene.layout.BorderPane?>
-<BorderPane fx:id="root" stylesheets="@../styles/main_screen_header.css" xmlns="http://javafx.com/javafx/24.0.1"
-            xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.azkar.controllers.MainScreenController">
-    <top>
-        <MainScreenHeader fx:id="header"/>
-    </top>
-    <center>
-        <HomeComponent fx:id="homeComponent"/>
-    </center>
+<BorderPane fx:id="root"
+	stylesheets="@../styles/main_screen_header.css"
+	xmlns="http://javafx.com/javafx/24.0.1"
+	xmlns:fx="http://javafx.com/fxml/1"
+	fx:controller="com.azkar.controllers.MainScreenController">
+	<top>
+		<MainScreenHeader fx:id="header" />
+	</top>
+	<center>
+		<HomeComponent fx:id="homeComponent" />
+	</center>
 </BorderPane>
