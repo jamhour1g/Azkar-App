@@ -5,11 +5,11 @@
    ========================================================= */
 
 .header {
-    -fx-background-color: white;
-    -fx-padding: 20 40;
-    -fx-alignment: center;
-    -fx-spacing: 20;
-    -fx-border-color: #e5e7eb;
+    -fx-background-color: -color-card-bg;
+    -fx-padding: 20 36;
+    -fx-alignment: center-left;
+    -fx-spacing: 24;
+    -fx-border-color: -color-border;
     -fx-border-width: 0 0 1 0;
 }
 
@@ -20,9 +20,14 @@
 }
 
 .logo-title {
-    -fx-font-size: 20px;
-    -fx-font-weight: bold;
+    -fx-font-size: 21px;
+    -fx-font-weight: 700;
     -fx-fill: -color-text-primary;
+}
+
+.header-logo-icon {
+    -fx-icon-color: -color-primary;
+    -fx-fill: -color-primary;
 }
 
 /* ---------- Navigation Buttons ---------- */
@@ -30,17 +35,47 @@
     -fx-background-color: transparent;
     -fx-text-fill: -color-text-primary;
     -fx-font-size: 14px;
-    -fx-font-weight: 500;
-    -fx-padding: 6 8;
-    -fx-background-radius: 6;
+    -fx-font-weight: 600;
+    -fx-padding: 8 12;
+    -fx-background-radius: 8;
     -fx-cursor: hand;
-    -fx-border-color: transparent;
 }
 
 .nav-btn:hover {
+    -fx-background-color: -color-highlight;
     -fx-text-fill: -color-primary;
-    -fx-background-radius: 6;
-    -fx-transition: 0.2s ease-in-out;
+}
+
+.nav-btn-active {
+    -fx-background-color: -color-highlight;
+    -fx-text-fill: -color-primary;
+}
+
+.icon-action-btn {
+    -fx-background-color: transparent;
+    -fx-padding: 8;
+    -fx-background-radius: 999;
+    -fx-cursor: hand;
+}
+
+.icon-action-btn:hover {
+    -fx-background-color: -color-highlight;
+}
+
+.action-icon {
+    -fx-icon-color: -color-text-secondary;
+}
+
+.icon-action-btn:hover .action-icon {
+    -fx-icon-color: -color-primary;
+}
+
+.avatar {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #dbeafe, #bfdbfe);
+    -fx-background-radius: 999;
+    -fx-border-width: 2;
+    -fx-border-radius: 999;
+    -fx-border-color: -color-border;
 }
 
 
@@ -63,8 +98,8 @@
 /* ---------- Header ---------- */
 @media (prefers-color-scheme: dark) {
     .header {
-        -fx-background-color: #1e1e1e;
-        -fx-border-color: #2c2c2c;
+        -fx-background-color: -color-card-bg;
+        -fx-border-color: -color-border;
     }
 
     .nav-btn {
@@ -72,6 +107,16 @@
     }
 
     .nav-btn:hover {
+        -fx-background-color: #2c2c2c;
         -fx-text-fill: -color-primary;
+    }
+
+    .action-icon {
+        -fx-icon-color: -color-text-primary;
+    }
+
+    .avatar {
+        -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #475569, #334155);
+        -fx-border-color: #334155;
     }
 }

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.azkar.components.home.HomeComponent?>
 <?import com.azkar.components.MainScreenHeader?>
+<?import com.azkar.components.home.HomeComponent?>
 <?import javafx.scene.layout.BorderPane?>
+
 <BorderPane fx:id="root"
 	stylesheets="@../styles/main_screen_header.css"
 	xmlns="http://javafx.com/javafx/24.0.1"

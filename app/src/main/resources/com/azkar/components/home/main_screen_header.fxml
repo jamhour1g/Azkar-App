@@ -3,45 +3,48 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
-<fx:root alignment="CENTER" spacing="20" styleClass="header"
-	stylesheets="@../../styles/main_screen_header.css" type="HBox"
-	xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
-	<FontIcon iconLiteral="fab-ussunnah" iconSize="50"
-		styleClass="icon-primary" />
-	<VBox>
+
+<fx:root alignment="CENTER_LEFT" spacing="24"
+	styleClass="header" stylesheets="@../../styles/main_screen_header.css"
+	type="HBox" xmlns="http://javafx.com/javafx/25"
+	xmlns:fx="http://javafx.com/fxml/1">
+	<FontIcon iconLiteral="fab-ussunnah" iconSize="42"
+		styleClass="header-logo-icon" />
+	<VBox spacing="2.0">
 		<Text strokeType="OUTSIDE" strokeWidth="0.0"
-			styleClass="logo-title" text="%azkar">
-			<font>
-				<Font size="22.0" />
-			</font>
-		</Text>
+			styleClass="logo-title" text="%azkar" />
 		<Text strokeType="OUTSIDE" strokeWidth="0.0"
 			styleClass="header-greeting-sub" text="%yourCompanion" />
 	</VBox>
-	<Pane HBox.hgrow="SOMETIMES" /> <!-- spacer -->
-	<HBox alignment="CENTER" spacing="15">
+
+	<Pane HBox.hgrow="ALWAYS" />
+
+	<HBox alignment="CENTER" spacing="12.0">
 		<Button fx:id="homeHeaderBtn" alignment="CENTER"
-			mnemonicParsing="false" styleClass="nav-btn" text="%home" />
+			mnemonicParsing="false" onAction="#onHomeClicked"
+			styleClass="nav-btn" text="%home" />
 		<Button fx:id="azkarLibHeaderBtn" alignment="CENTER"
-			mnemonicParsing="false" styleClass="nav-btn" text="%azkarLibrary" />
+			mnemonicParsing="false" onAction="#onAzkarLibraryClicked"
+			styleClass="nav-btn" text="%azkarLibrary" />
 	</HBox>
-	<Pane HBox.hgrow="SOMETIMES" />
-	<HBox alignment="CENTER" spacing="15">
+
+	<Pane HBox.hgrow="ALWAYS" />
+
+	<HBox alignment="CENTER" spacing="10.0">
 		<ToggleButton fx:id="darkModeToggle"
-			mnemonicParsing="false" styleClass="nav-btn">
+			mnemonicParsing="false" styleClass="icon-action-btn">
 			<graphic>
-				<FontIcon iconLiteral="far-moon" iconSize="20"
-					styleClass="nav-btn" />
+				<FontIcon fx:id="themeIcon" iconLiteral="far-moon"
+					iconSize="20" styleClass="action-icon" />
 			</graphic>
 		</ToggleButton>
 		<Button fx:id="settingsBtn" alignment="CENTER"
-			mnemonicParsing="false" styleClass="nav-btn">
+			mnemonicParsing="false" styleClass="icon-action-btn">
 			<graphic>
 				<FontIcon iconLiteral="fas-cog" iconSize="20"
-					styleClass="nav-btn" />
+					styleClass="action-icon" />
 			</graphic>
 		</Button>
 	</HBox>

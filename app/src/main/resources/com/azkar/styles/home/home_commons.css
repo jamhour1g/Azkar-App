@@ -1,7 +1,7 @@
 /* ---------- Section Titles ---------- */
 .section-title {
-    -fx-font-size: 28px;
-    -fx-font-weight: bold;
+    -fx-font-size: 30px;
+    -fx-font-weight: 700;
     -fx-fill: -color-text-primary;
     -fx-padding: 0 0 8px 0;
 }

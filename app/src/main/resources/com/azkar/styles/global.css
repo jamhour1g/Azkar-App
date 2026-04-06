@@ -35,22 +35,361 @@
     -color-text-primary: #333333;
     -color-text-secondary: #5f6368;
     -color-highlight: #d1e3ff;
+    -color-card-bg: #ffffff;
+    -color-border: #e2e8f0;
+    -color-accent: #fbbf24;
 
     -fx-background-color: -color-background;
     -fx-font-family: "Inter", "Segoe UI", system-ui, sans-serif;
     -fx-font-smoothing-type: lcd;
 }
 
-/* ---------- Cards & Containers ---------- */
+/* ---------- Cards ---------- */
 .card {
-    -fx-background-color: white;
+    -fx-background-color: -color-card-bg;
     -fx-background-radius: 16px;
     -fx-padding: 20px;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 12, 0.2, 0, 4);
     -fx-alignment: top-left;
 }
 
-/* Root colors */
+.card-sm {
+    -fx-background-color: -color-card-bg;
+    -fx-background-radius: 16px;
+    -fx-padding: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 8, 0.1, 0, 2);
+}
+
+.card-lg {
+    -fx-background-color: -color-card-bg;
+    -fx-background-radius: 16px;
+    -fx-padding: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 16, 0.3, 0, 6);
+}
+
+/* ---------- Typography ---------- */
+.heading-xl {
+    -fx-font-size: 48px;
+    -fx-font-weight: 700;
+    -fx-fill: -color-text-primary;
+}
+
+.heading-lg {
+    -fx-font-size: 32px;
+    -fx-font-weight: 700;
+    -fx-fill: -color-text-primary;
+}
+
+.heading-md {
+    -fx-font-size: 24px;
+    -fx-font-weight: 700;
+    -fx-fill: -color-text-primary;
+}
+
+.heading-sm {
+    -fx-font-size: 20px;
+    -fx-font-weight: 700;
+    -fx-fill: -color-text-primary;
+}
+
+.body-lg {
+    -fx-font-size: 18px;
+    -fx-fill: -color-text-primary;
+}
+
+.body-md {
+    -fx-font-size: 16px;
+    -fx-fill: -color-text-primary;
+}
+
+.body-sm {
+    -fx-font-size: 14px;
+    -fx-fill: -color-text-secondary;
+}
+
+.arabic-text {
+    -fx-font-family: "Amiri", serif;
+    -fx-font-size: 24px;
+    -fx-fill: -color-text-primary;
+}
+
+.arabic-text-lg {
+    -fx-font-family: "Amiri", serif;
+    -fx-font-size: 32px;
+    -fx-fill: -color-text-primary;
+}
+
+/* ---------- Buttons ---------- */
+.nav-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text-primary;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-padding: 8px 16px;
+    -fx-background-radius: 8px;
+    -fx-cursor: hand;
+}
+
+.nav-btn:hover {
+    -fx-background-color: -color-highlight;
+    -fx-text-fill: -color-primary;
+}
+
+.btn-primary {
+    -fx-background-color: -color-primary;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-padding: 10px 20px;
+    -fx-background-radius: 8px;
+    -fx-cursor: hand;
+}
+
+.btn-primary:hover {
+    -fx-opacity: 0.9;
+}
+
+.btn-secondary {
+    -fx-background-color: -color-card-bg;
+    -fx-text-fill: -color-text-secondary;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-padding: 10px 20px;
+    -fx-cursor: hand;
+}
+
+.btn-secondary:hover {
+    -fx-background-color: derive(-color-background, -5%);
+    -fx-text-fill: -color-text-primary;
+}
+
+.icon-btn {
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 8px;
+    -fx-background-radius: 50%;
+}
+
+.icon-btn:hover {
+    -fx-background-color: derive(-color-background, -5%);
+}
+
+.icon-circle-btn {
+    -fx-background-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 8px;
+    -fx-background-radius: 50%;
+}
+
+.icon-circle-btn:hover {
+    -fx-background-color: derive(-color-background, -5%);
+}
+
+.icon-circle-btn:selected {
+    -fx-background-color: -color-primary;
+}
+
+.icon-circle-btn:selected .ikonli-font-icon {
+    -fx-icon-color: white;
+}
+
+/* ---------- Prayer Rows ---------- */
+.prayer-row {
+    -fx-padding: 16px;
+    -fx-spacing: 16px;
+    -fx-alignment: center-left;
+    -fx-background-radius: 0;
+}
+
+.prayer-row:hover {
+    -fx-background-color: derive(-color-background, -2%);
+}
+
+.prayer-row.next-prayer {
+    -fx-background-color: -color-primary;
+    -fx-background-radius: 12px;
+    -fx-padding: 16px;
+    -fx-margin: 8px 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.15), 8, 0.2, 0, 2);
+}
+
+.prayer-row.next-prayer .prayer-name {
+    -fx-fill: white;
+}
+
+.prayer-row.next-prayer .prayer-time {
+    -fx-fill: rgba(255, 255, 255, 0.8);
+}
+
+.prayer-row.next-prayer .prayer-value {
+    -fx-fill: white;
+}
+
+.prayer-row.next-prayer .icon-circle-btn:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+}
+
+.prayer-row.next-prayer .ikonli-font-icon {
+    -fx-icon-color: white;
+}
+
+.prayer-name {
+    -fx-font-size: 18px;
+    -fx-font-weight: 600;
+    -fx-fill: -color-text-primary;
+}
+
+.prayer-time {
+    -fx-font-size: 14px;
+    -fx-fill: -color-text-secondary;
+}
+
+.prayer-value {
+    -fx-font-size: 18px;
+    -fx-font-weight: 700;
+    -fx-fill: -color-text-primary;
+}
+
+/* ---------- Prayer Icon Container ---------- */
+.prayer-icon-container {
+    -fx-background-color: -color-highlight;
+    -fx-background-radius: 50%;
+    -fx-padding: 12px;
+    -fx-alignment: center;
+}
+
+.prayer-icon-container .ikonli-font-icon {
+    -fx-icon-color: -color-primary;
+}
+
+.prayer-row.next-prayer .prayer-icon-container {
+    -fx-background-color: rgba(255, 255, 255, 0.3);
+}
+
+.prayer-row.next-prayer .prayer-icon-container .ikonli-font-icon {
+    -fx-icon-color: white;
+}
+
+/* ---------- Form Elements ---------- */
+.form-input {
+    -fx-background-color: -color-card-bg;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px 16px;
+    -fx-font-size: 14px;
+    -fx-text-fill: -color-text-primary;
+    -fx-prompt-text-fill: -color-text-secondary;
+}
+
+.form-input:focused {
+    -fx-border-color: -color-primary;
+    -fx-effect: dropshadow(gaussian, -color-primary, 4, 0.3, 0, 0);
+}
+
+.form-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: 500;
+    -fx-fill: -color-text-secondary;
+}
+
+.form-textarea {
+    -fx-background-color: -color-card-bg;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px 16px;
+    -fx-font-size: 14px;
+    -fx-text-fill: -color-text-primary;
+    -fx-prompt-text-fill: -color-text-secondary;
+}
+
+.form-textarea:focused {
+    -fx-border-color: -color-primary;
+    -fx-effect: dropshadow(gaussian, -color-primary, 4, 0.3, 0, 0);
+}
+
+/* ---------- Settings ---------- */
+.settings-section {
+    -fx-background-color: -color-card-bg;
+    -fx-background-radius: 8px;
+    -fx-padding: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 8, 0.1, 0, 2);
+}
+
+.settings-sidebar {
+    -fx-background-color: -color-card-bg;
+    -fx-border-color: -color-border;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 24px;
+}
+
+.settings-nav-item {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text-secondary;
+    -fx-font-size: 14px;
+    -fx-padding: 10px 16px;
+    -fx-background-radius: 8px;
+    -fx-alignment: center-left;
+    -fx-cursor: hand;
+}
+
+.settings-nav-item:hover {
+    -fx-background-color: -color-secondary;
+    -fx-text-fill: -color-text-primary;
+}
+
+.settings-nav-item:selected {
+    -fx-background-color: -color-secondary;
+    -fx-text-fill: -color-text-primary;
+    -fx-font-weight: 600;
+}
+
+/* ---------- Overlay Card ---------- */
+.overlay-card {
+    -fx-background-radius: 16px;
+    -fx-padding: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 16, 0.3, 0, 8);
+}
+
+/* ---------- Avatar ---------- */
+.avatar {
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
+    -fx-border-width: 2px;
+    -fx-border-color: -color-border;
+}
+
+/* ---------- Tray Popup ---------- */
+.tray-popup {
+    -fx-background-color: -color-card-bg;
+    -fx-background-radius: 12px;
+    -fx-padding: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 16, 0.3, 0, 4);
+    -fx-border-color: -color-border;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+}
+
+/* ---------- Notification Banner ---------- */
+.notification-banner {
+    -fx-background-color: -color-card-bg;
+    -fx-background-radius: 12px;
+    -fx-padding: 16px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 8, 0.2, 0, 2);
+    -fx-border-color: -color-border;
+    -fx-border-radius: 12px;
+}
+
+/* ---------- Divider ---------- */
+.divider-line {
+    -fx-background-color: -color-border;
+}
+
+/* ---------- Dark Mode ---------- */
 @media (prefers-color-scheme: dark) {
     .root {
         -color-primary: #8ab4f8;
@@ -58,11 +397,74 @@
         -color-text-primary: #e0e0e0;
         -color-text-secondary: #a0a0a0;
         -color-highlight: #2c2c2c;
+        -color-card-bg: #1e1e1e;
+        -color-border: #2c2c2c;
         -fx-background-color: -color-background;
     }
 
     .card {
         -fx-background-color: #1e1e1e;
         -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 12, 0.2, 0, 4);
+    }
+
+    .card-sm {
+        -fx-background-color: #1e1e1e;
+    }
+
+    .card-lg {
+        -fx-background-color: #1e1e1e;
+    }
+
+    .settings-section {
+        -fx-background-color: #1e1e1e;
+    }
+
+    .settings-sidebar {
+        -fx-background-color: #1e1e1e;
+    }
+
+    .nav-btn:hover {
+        -fx-background-color: #2c2c2c;
+    }
+
+    .icon-btn:hover {
+        -fx-background-color: #2c2c2c;
+    }
+
+    .icon-circle-btn:hover {
+        -fx-background-color: #2c2c2c;
+    }
+
+    .form-input {
+        -fx-background-color: #1e1e1e;
+        -fx-border-color: #2c2c2c;
+    }
+
+    .form-textarea {
+        -fx-background-color: #1e1e1e;
+        -fx-border-color: #2c2c2c;
+    }
+
+    .btn-secondary {
+        -fx-background-color: #1e1e1e;
+        -fx-border-color: #2c2c2c;
+    }
+
+    .btn-secondary:hover {
+        -fx-background-color: #2c2c2c;
+    }
+
+    .tray-popup {
+        -fx-background-color: #1e1e1e;
+        -fx-border-color: #2c2c2c;
+    }
+
+    .notification-banner {
+        -fx-background-color: #1e1e1e;
+        -fx-border-color: #2c2c2c;
+    }
+
+    .prayer-row:hover {
+        -fx-background-color: #2c2c2c;
     }
 }

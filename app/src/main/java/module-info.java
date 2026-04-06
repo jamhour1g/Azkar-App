@@ -11,6 +11,8 @@ module com.azkar.app {
             javafx.fxml;
     opens com.azkar.components.home to
             javafx.fxml;
+    opens com.azkar.components.library to
+            javafx.fxml;
 
     exports com.azkar to
             javafx.graphics;

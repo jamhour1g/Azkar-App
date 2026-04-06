@@ -2,15 +2,16 @@
 @import url("../home/home_commons.css");
 
 .next-prayer-label {
-    -fx-font-size: 16px;
+    -fx-font-size: 17px;
     -fx-font-weight: 600;
     -fx-fill: -color-primary;
     -fx-padding: 0 0 4px 0;
 }
 
 .next-prayer-time {
+    -fx-font-family: "Inter", "Segoe UI", system-ui, sans-serif;
     -fx-font-size: 24px;
-    -fx-font-weight: bold;
+    -fx-font-weight: 700;
     -fx-fill: -color-text-primary;
 }
 

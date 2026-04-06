@@ -1,7 +1,7 @@
 @import url("../global.css");
 
 .settings-card {
-    -fx-background-color: white;
+    -fx-background-color: -color-card-bg;
     -fx-background-radius: 16px;
     -fx-padding: 16px;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 4, 0.1, 0, 2);
@@ -10,7 +10,7 @@
 }
 
 .settings-label {
-    -fx-font-size: 16px;
+    -fx-font-size: 17px;
     -fx-font-weight: 600;
     -fx-fill: -color-text-primary;
 }
@@ -18,6 +18,9 @@
 
 .toggle-switch {
     -thumb-move-animation-time: 200;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-padding: 0;
 }
 
 .toggle-switch:disabled {
@@ -29,35 +32,55 @@
     -fx-text-fill: -color-text-primary;
 }
 
-.toggle-switch .thumb-area {
+.toggle-switch .thumb-area,
+.toggle-switch:focused .thumb-area,
+.toggle-switch:pressed .thumb-area,
+.toggle-switch:armed .thumb-area {
     -fx-background-radius: 999;
     -fx-background-color: #e5e7eb;
     -fx-background-insets: 0;
-    -fx-padding: 2;
+    -fx-padding: 1;
     -fx-pref-width: 44px;
     -fx-pref-height: 24px;
-}
-
-.toggle-switch:selected .thumb-area {
-    -fx-background-color: -color-primary;
-}
-
-.toggle-switch .thumb {
-    -fx-background-color: -color-primary, white;
-    -fx-border-color: #d1d5db;
-    -fx-border-width: 0px;
-    -fx-background-radius: 50%;
-    -fx-pref-width: 20px;
-    -fx-pref-height: 20px;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 2, 0.2, 0, 1);
 }
 
 .toggle-switch:hover .thumb-area {
     -fx-background-color: #d1d5db;
 }
 
+.toggle-switch:selected .thumb-area,
+.toggle-switch:selected:focused .thumb-area,
+.toggle-switch:selected:pressed .thumb-area,
+.toggle-switch:selected:armed .thumb-area {
+    -fx-background-color: -color-primary;
+    -fx-background-insets: 0;
+}
+
 .toggle-switch:selected:hover .thumb-area {
     -fx-background-color: derive(-color-primary, -10%);
+    -fx-background-insets: 0;
+}
+
+.toggle-switch .thumb,
+.toggle-switch:hover .thumb,
+.toggle-switch:focused .thumb,
+.toggle-switch:pressed .thumb,
+.toggle-switch:armed .thumb,
+.toggle-switch:selected .thumb,
+.toggle-switch:selected:hover .thumb,
+.toggle-switch:selected:focused .thumb,
+.toggle-switch:selected:pressed .thumb,
+.toggle-switch:selected:armed .thumb {
+    -fx-background-color: white;
+    -fx-body-color: white;
+    -fx-color: white;
+    -fx-background-insets: 0;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 0px;
+    -fx-background-radius: 50%;
+    -fx-pref-width: 20px;
+    -fx-pref-height: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 2, 0.2, 0, 1);
 }
 
 /* Cards */
@@ -71,32 +94,47 @@
         -fx-fill: -color-text-primary;
     }
 
-    .toggle-switch .thumb-area {
+    .toggle-switch .thumb-area,
+    .toggle-switch:focused .thumb-area,
+    .toggle-switch:pressed .thumb-area,
+    .toggle-switch:armed .thumb-area {
         -fx-background-color: #2c2c2c;
-    }
-
-    .toggle-switch:selected .thumb-area {
-        -fx-background-color: -color-primary;
-    }
-
-    .toggle-switch .thumb {
-        -fx-background-color: -color-primary, #1e1e1e;
-        -fx-border-color: #444;
+        -fx-background-insets: 0;
     }
 
     .toggle-switch:hover .thumb-area {
-        -fx-background-color: derive(-color-primary, -40%); /* subtle tint */
-        -fx-effect: dropshadow(gaussian, rgba(138, 180, 248, 0.2), 8, 0.2, 0, 0);
-        -fx-transition: all 0.2s ease-in-out;
+        -fx-background-color: #374151;
+    }
+
+    .toggle-switch:selected .thumb-area,
+    .toggle-switch:selected:focused .thumb-area,
+    .toggle-switch:selected:pressed .thumb-area,
+    .toggle-switch:selected:armed .thumb-area {
+        -fx-background-color: -color-primary;
+        -fx-background-insets: 0;
     }
 
     .toggle-switch:selected:hover .thumb-area {
         -fx-background-color: derive(-color-primary, 20%);
-        -fx-effect: dropshadow(gaussian, rgba(138, 180, 248, 0.4), 10, 0.3, 0, 0);
+        -fx-background-insets: 0;
     }
 
-    .toggle-switch:hover .thumb {
-        -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.3), 4, 0.3, 0, 1);
-        -fx-transition: all 0.15s ease-in-out;
+    .toggle-switch .thumb,
+    .toggle-switch:hover .thumb,
+    .toggle-switch:focused .thumb,
+    .toggle-switch:pressed .thumb,
+    .toggle-switch:armed .thumb,
+    .toggle-switch:selected .thumb,
+    .toggle-switch:selected:hover .thumb,
+    .toggle-switch:selected:focused .thumb,
+    .toggle-switch:selected:pressed .thumb,
+    .toggle-switch:selected:armed .thumb {
+        -fx-background-color: #f8fafc;
+        -fx-body-color: #f8fafc;
+        -fx-color: #f8fafc;
+        -fx-background-insets: 0;
+        -fx-border-color: #475569;
+        -fx-border-width: 0px;
+        -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.18), 4, 0.2, 0, 1);
     }
 }

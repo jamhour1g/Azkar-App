@@ -12,8 +12,8 @@ public class FavoritesCardComponent extends BorderPane {
         var bundle = ResourceBundle.getBundle(bundleName);
         var fxmlLoader = new FXMLLoader(
                 getClass().getResource("/com/azkar/components/home/favorites_card_component.fxml"), bundle);
-        fxmlLoader.setController(this);
         fxmlLoader.setRoot(this);
+        fxmlLoader.setController(this);
         fxmlLoader.load();
     }
 
