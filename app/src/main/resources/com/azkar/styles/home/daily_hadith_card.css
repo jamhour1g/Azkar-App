@@ -4,9 +4,9 @@
 /* ---------- Hadith Styles ---------- */
 .hadith-vertical-line {
     -fx-background-color: -color-primary;
-    -fx-pref-width: 4px;
-    -fx-max-width: 4px;
-    -fx-min-width: 4px;
+    -fx-pref-width: 3px;
+    -fx-max-width: 3px;
+    -fx-min-width: 3px;
     -fx-padding: 0;
 }
 
@@ -20,7 +20,7 @@
 
 .hadith-en {
     -fx-font-size: 16px;
-    -fx-fill: -color-text-secondary;
+    -fx-fill: #6f7480;
     -fx-font-style: italic;
     -fx-padding: 0 0 8px 0;
 }

@@ -2,23 +2,29 @@
 
 /* ---------- Greeting Section ---------- */
 .greeting-container {
-    -fx-padding: 32px 16px 16px 16px;
+    -fx-padding: 30px 16px 8px 16px;
     -fx-alignment: center;
-    -fx-spacing: 5;
+    -fx-spacing: 8;
     -fx-text-alignment: center;
 }
 
 .greeting-title {
-    -fx-font-size: 40px;
-    -fx-font-weight: bold;
+    -fx-font-size: 48px;
+    -fx-font-weight: 700;
     -fx-fill: -color-text-primary;
-    -fx-padding: 0 0 8px 0;
+    -fx-padding: 0 0 2px 0;
 }
 
-.greeting-sub {
+.greeting-location {
     -fx-font-size: 16px;
     -fx-fill: -color-text-secondary;
-    -fx-padding: 4px 0 0 0;
+    -fx-padding: 2px 0 0 0;
+}
+
+.greeting-date {
+    -fx-font-size: 14px;
+    -fx-fill: -color-text-secondary;
+    -fx-opacity: 0.95;
 }
 
 /* Text colors */
@@ -27,7 +33,8 @@
         -fx-fill: -color-text-primary;
     }
 
-    .greeting-sub {
+    .greeting-location,
+    .greeting-date {
         -fx-fill: -color-text-secondary;
     }
 }

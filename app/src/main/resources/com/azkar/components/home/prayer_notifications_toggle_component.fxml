@@ -18,10 +18,6 @@
 		</padding>
 	</Pane>
 	<ToggleSwitch fx:id="togglePrayerNotifications"
-		alignment="CENTER" contentDisplay="GRAPHIC_ONLY" prefHeight="20.0"
-		prefWidth="70.0" styleClass="toggle-switch">
-		<padding>
-			<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-		</padding>
-	</ToggleSwitch>
+		alignment="CENTER" contentDisplay="GRAPHIC_ONLY" prefHeight="24.0"
+		prefWidth="44.0" styleClass="toggle-switch" />
 </fx:root>

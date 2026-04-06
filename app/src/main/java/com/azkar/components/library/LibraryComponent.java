@@ -1,23 +1,23 @@
-package com.azkar.components.home;
+package com.azkar.components.library;
 
 import java.util.ResourceBundle;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.ScrollPane;
 import lombok.SneakyThrows;
 
-public class RemainingToPrayerComponent extends VBox {
+public class LibraryComponent extends ScrollPane {
 
     @SneakyThrows
-    private RemainingToPrayerComponent(String bundleName) {
+    private LibraryComponent(String bundleName) {
         var loadedBundle = ResourceBundle.getBundle(bundleName);
         var fxmlLoader = new FXMLLoader(
-                getClass().getResource("/com/azkar/components/home/remaining_to_prayer_component.fxml"), loadedBundle);
+                getClass().getResource("/com/azkar/components/library/library_component.fxml"), loadedBundle);
         fxmlLoader.setRoot(this);
         fxmlLoader.setController(this);
         fxmlLoader.load();
     }
 
-    public RemainingToPrayerComponent() {
+    public LibraryComponent() {
         this("com.azkar.i18n.home");
     }
 }

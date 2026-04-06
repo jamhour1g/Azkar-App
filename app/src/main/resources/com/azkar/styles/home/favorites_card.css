@@ -2,6 +2,28 @@
 @import url("../home/daily_hadith_card.css");
 @import url(../home/home_commons.css);
 
+.favorites-header {
+    -fx-padding: 0 0 10px 0;
+}
+
+.favorites-star {
+    -fx-icon-color: -color-accent;
+}
+
+.favorites-content {
+    -fx-padding: 6 0 6 0;
+}
+
+.favorites-badge-icon {
+    -fx-icon-color: -color-accent;
+}
+
+.favorites-badge-text {
+    -fx-fill: -color-text-secondary;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+
 .icon-btn {
     -fx-background-color: transparent;
     -fx-padding: 6;
@@ -13,8 +35,37 @@
     -fx-background-color: rgba(0, 0, 0, 0.05);
 }
 
+.browse-btn {
+    -fx-background-color: -color-highlight;
+}
+
+.browse-icon {
+    -fx-icon-color: -color-primary;
+}
+
+.browse-btn:hover {
+    -fx-background-color: derive(-color-highlight, -8%);
+}
+
 /* Icons */
 @media (prefers-color-scheme: dark) {
+    .favorites-star,
+    .favorites-badge-icon {
+        -fx-icon-color: #facc15;
+    }
+
+    .favorites-badge-text {
+        -fx-fill: -color-text-secondary;
+    }
+
+    .browse-btn {
+        -fx-background-color: #334155;
+    }
+
+    .browse-icon {
+        -fx-icon-color: #93c5fd;
+    }
+
     .icon-btn:hover {
         -fx-background-color: rgba(255, 255, 255, 0.08);
     }

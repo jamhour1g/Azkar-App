@@ -2,13 +2,20 @@
 
 .prayer-row {
     -fx-padding: 12 16;
-    -fx-spacing: 12;
-    -fx-alignment: center;
+    -fx-spacing: 10;
+    -fx-alignment: center-left;
 }
 
-.prayer-row .ikonli-font-icon {
+.prayer-icon {
     -fx-icon-color: -color-primary;
-    -fx-icon-size: 22px;
+}
+
+.notification-icon {
+    -fx-icon-color: -color-text-secondary;
+}
+
+.prayer-row.next-prayer .notification-icon {
+    -fx-icon-color: white;
 }
 
 .prayer-name {
@@ -32,7 +39,7 @@
 .icon-circle-btn {
     -fx-background-color: transparent;
     -fx-background-radius: 999;
-    -fx-padding: 6;
+    -fx-padding: 4;
     -fx-cursor: hand;
 }
 

@@ -4,7 +4,8 @@
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Text?>
-<fx:root spacing="10.0" styleClass="card"
+
+<fx:root spacing="12.0" styleClass="card-lg"
 	stylesheets="@../../styles/home/daily_hadith_card.css" type="VBox"
 	xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
 	<Text strokeType="OUTSIDE" strokeWidth="0.0"
@@ -20,15 +21,14 @@
 			</HBox.margin>
 		</Separator>
 
-		<!-- Daily Hadith -->
 		<VBox spacing="10">
-			<Text strokeType="OUTSIDE" strokeWidth="0.0"
-				styleClass="hadith-ar" text="%hadithExample" />
-			<Text strokeType="OUTSIDE" strokeWidth="0.0"
-				styleClass="hadith-en" text="%explanationExample"
+			<Text fx:id="hadithArabic" strokeType="OUTSIDE"
+				strokeWidth="0.0" styleClass="hadith-ar" text="%hadithExample" />
+			<Text fx:id="hadithEnglish" strokeType="OUTSIDE"
+				strokeWidth="0.0" styleClass="hadith-en" text="%explanationExample"
 				wrappingWidth="800.0" />
-			<Text strokeType="OUTSIDE" strokeWidth="0.0"
-				styleClass="hadith-source" text="%sourceExample" />
+			<Text fx:id="hadithSource" strokeType="OUTSIDE"
+				strokeWidth="0.0" styleClass="hadith-source" text="%sourceExample" />
 		</VBox>
 	</HBox>
 </fx:root>

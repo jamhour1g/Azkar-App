@@ -18,8 +18,8 @@ public class PrayerNotificationsToggleComponent extends HBox {
         var fxmlLoader = new FXMLLoader(
                 getClass().getResource("/com/azkar/components/home/prayer_notifications_toggle_component.fxml"),
                 bundle);
-        fxmlLoader.setController(this);
         fxmlLoader.setRoot(this);
+        fxmlLoader.setController(this);
         fxmlLoader.load();
     }
 

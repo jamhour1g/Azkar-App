@@ -7,11 +7,46 @@
 
 /* ---------- Layout ---------- */
 .main {
-    -fx-padding: 20 28 28 28;
+    -fx-background-color: -color-card-bg;
+    -fx-padding: 24 28 32 28;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.main:focused {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+    -fx-background-insets: 0;
+}
+
+.main > .viewport {
+    -fx-background-color: -color-card-bg;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.main > .corner {
+    -fx-background-color: -color-card-bg;
 }
 
 .main-content {
-    -fx-background-color: -color-background;
+    -fx-fill-width: true;
+    -fx-background-color: -color-card-bg;
+    -fx-padding: 10 0 12 0;
+}
+
+.dashboard-content {
+    -fx-alignment: top-left;
+    -fx-fill-height: true;
+    -fx-padding: 6 0 0 0;
+}
+
+.left-column {
+    -fx-max-width: infinity;
+}
+
+.prayer-table-card {
+    -fx-padding: 8;
 }
 
 /* ---------- Settings & Toggles ---------- */
@@ -35,7 +70,10 @@
 
 /* Layouts */
 @media (prefers-color-scheme: dark) {
-    .main, .main-content {
+    .main,
+    .main > .viewport,
+    .main > .corner,
+    .main-content {
         -fx-background-color: -color-background;
     }
 }
