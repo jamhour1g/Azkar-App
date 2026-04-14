@@ -1,0 +1,93 @@
+{
+  "skill_name": "javafx-fxml-custom-components",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I want a reusable JavaFX component that I can use directly as a tag in parent FXML, like <SearchBar queryText=\"abc\"/>. Show me: (1) parent FXML imports + tag usage, (2) component FXML using fx:root, (3) Java component class with the right FXMLLoader wiring and queryText attribute mapping.",
+      "expected_output": "Shows custom component as FXML class tag with import lines, fx:root-backed component class, correct setRoot/setController/load order, and queryText setter/property mapping.",
+      "files": [],
+      "expectations": [
+        "Includes parent FXML import processing instruction(s) and direct custom tag usage",
+        "Uses fx:root in component FXML and avoids fx:controller conflict for the same document",
+        "Java component class shows setRoot(this) and setController(this) before loader.load()",
+        "Explains how queryText attribute maps to writable bean API (setter/property)"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "In my parent FXML I use custom tags like <PrayerRowComponent prayerName=\"Fajr\" prayerTime=\"04:50 AM\" prayerValue=\"04:50 AM\"/>. Explain exactly what APIs the component class must expose so these attributes work, and show a concise component class snippet with these properties.",
+      "expected_output": "Explains attribute-to-setter/property mapping for custom tag usage and provides matching component APIs for prayerName/prayerTime/prayerValue.",
+      "files": [],
+      "expectations": [
+        "Explicitly maps prayerName/prayerTime/prayerValue tag attributes to writable component APIs",
+        "Shows concrete setter/property methods for each attribute",
+        "Explains JavaBean mapping rule (fooBar -> setFooBar) and minimum required public API"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "My parent FXML has <HomeComponent/> and <MainScreenHeader/> tags, but loader fails with class/property errors. Give me a step-by-step troubleshooting checklist focused on custom class tags (imports, class visibility, constructor/wiring, attribute mapping), plus Scene Builder notes. Also clarify when SceneBuilder.cfg classpath hack is appropriate.",
+      "expected_output": "Provides tag-focused checklist (imports/class tags, fx:root constructor wiring, attribute mapping), root causes, and last-resort framing for SceneBuilder.cfg after modern workflows.",
+      "files": [],
+      "expectations": [
+        "Provides a numbered, step-by-step troubleshooting checklist focused on custom class tags",
+        "Includes a distinct likely-root-causes section covering import/class resolution and cannot-set-property issues",
+        "States that SceneBuilder.cfg classpath hack is a last-resort legacy fallback"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need to build a home screen for my app that shows: a greeting message, daily hadith card, prayer times with notifications, and a favorites section. Create the FXML and Java components for this screen.",
+      "expected_output": "Multiple small, focused component files (not one monolithic FXML). Each component under 60 lines. Clear composition pattern in parent screen component. Explanation of why each component was extracted.",
+      "files": [],
+      "expectations": [
+        "Creates 5+ separate component FXML files (not one large file)",
+        "Each component FXML is under 60 lines (excluding imports)",
+        "Parent/screen component only handles layout, uses child component tags",
+        "Explains component boundaries and decomposition rationale",
+        "Each component class has correct fx:root wiring (setRoot/setController/load)",
+        "Components expose clear attribute APIs (setters/properties)"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I have a 200-line FXML file with a greeting section, hadith section, prayer times section, and favorites section all in one file. How should I refactor this? Show me the decomposition strategy and the resulting component structure.",
+      "expected_output": "Step-by-step decomposition strategy showing how to extract each section into its own component. Results in 4+ small component files plus one parent composition file. Explains the decomposition process and benefits.",
+      "files": [],
+      "expectations": [
+        "Identifies logical boundaries in the monolithic FXML",
+        "Shows how to extract each section into a separate component",
+        "Resulting components are each under 60 lines",
+        "Parent file only handles layout composition",
+        "Explains decomposition strategy and benefits (reusability, testability, maintainability)",
+        "Provides concrete before/after FXML examples"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Create a PrayerRowComponent that I can reuse 5 times in a GridPane for different prayers (Fajr, Dhuhr, Asr, Maghrib, Isha). Each row should show prayer name, time, and a notification toggle. Show the component FXML, Java class, and how to use it 5 times in parent FXML.",
+      "expected_output": "Single focused PrayerRowComponent (under 40 lines FXML) with prayerName/prayerTime attribute APIs. Parent FXML shows 5 instances of the component with different attribute values. Component class exposes proper setters/properties.",
+      "files": [],
+      "expectations": [
+        "PrayerRowComponent FXML is under 40 lines and focused on single responsibility",
+        "Component class exposes setPrayerName/setPrayerTime setters with property APIs",
+        "Parent FXML uses component 5 times with different attribute values",
+        "Demonstrates DRY principle - no duplicated markup",
+        "Component uses fx:root with correct wiring pattern"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "What are the signs that tell me I should extract a separate FXML component? Give me concrete criteria and examples of when to decompose vs when to keep things inline.",
+      "expected_output": "Clear decomposition criteria with examples: logical grouping, reusability potential, complexity threshold (15+ lines, 5+ nesting), independent state, visual boundaries. Shows good vs bad examples.",
+      "files": [],
+      "expectations": [
+        "Lists specific decomposition criteria (logical grouping, reusability, complexity, state, visual boundaries)",
+        "Provides concrete size limits (20-40 lines target, 60 max, 5 nesting levels)",
+        "Shows good decomposition example with multiple small components",
+        "Shows bad monolith example with everything inline",
+        "Explains when NOT to decompose (simple, one-off UI with 5-10 lines)"
+      ]
+    }
+  ]
+}
