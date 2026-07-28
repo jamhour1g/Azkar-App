@@ -12,13 +12,13 @@
 		<VBox alignment="CENTER_RIGHT">
 			<Text strokeType="OUTSIDE" strokeWidth="0.0"
 				styleClass="next-prayer-label" text="%nextPrayerIn" />
-			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+			<Text fx:id="countdownText" strokeType="OUTSIDE" strokeWidth="0.0"
 				styleClass="next-prayer-time" text="%prayerTimeRemaining">
 				<font>
-					<Font size="10.0" />
+					<Font size="24.0" name="Inter Bold" />
 				</font>
 			</Text>
 		</VBox>
 	</HBox>
-	<Text styleClass="subtitle" text="%prayerTimesLocation" />
+	<Text fx:id="locationText" styleClass="subtitle" text="%prayerTimesLocation" />
 </fx:root>
