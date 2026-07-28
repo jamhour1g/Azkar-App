@@ -7,7 +7,7 @@
 
 /* ---------- Layout ---------- */
 .main {
-    -fx-background-color: -color-card-bg;
+    -fx-background-color: -color-background;
     -fx-padding: 24 28 32 28;
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
@@ -20,18 +20,18 @@
 }
 
 .main > .viewport {
-    -fx-background-color: -color-card-bg;
+    -fx-background-color: -color-background;
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
 }
 
 .main > .corner {
-    -fx-background-color: -color-card-bg;
+    -fx-background-color: -color-background;
 }
 
 .main-content {
     -fx-fill-width: true;
-    -fx-background-color: -color-card-bg;
+    -fx-background-color: -color-background;
     -fx-padding: 10 0 12 0;
 }
 

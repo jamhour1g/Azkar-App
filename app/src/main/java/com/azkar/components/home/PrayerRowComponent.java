@@ -1,21 +1,20 @@
 package com.azkar.components.home;
 
+import java.io.IOException;
 import java.util.ResourceBundle;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.StringProperty;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
-import lombok.SneakyThrows;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 public class PrayerRowComponent extends HBox {
 
     private final BooleanProperty nextPrayer = new SimpleBooleanProperty(this, "nextPrayer", false);
-
-    private String prayerIconLiteral = "far-sun";
+    private final BooleanProperty notificationEnabled = new SimpleBooleanProperty(this, "notificationEnabled", false);
 
     @FXML
     private Text prayerName;
@@ -29,22 +28,36 @@ public class PrayerRowComponent extends HBox {
     @FXML
     private FontIcon prayerIcon;
 
-    @SneakyThrows
-    private PrayerRowComponent(String bundleName) {
-        var bundle = ResourceBundle.getBundle(bundleName);
-        var fxmlLoader =
-                new FXMLLoader(getClass().getResource("/com/azkar/components/home/prayer_row_component.fxml"), bundle);
-        fxmlLoader.setRoot(this);
-        fxmlLoader.setController(this);
-        fxmlLoader.load();
+    @FXML
+    private ToggleButton prayerNotificationToggle;
 
-        nextPrayer.addListener((obs, oldValue, newValue) -> applyNextPrayerStyle(newValue));
-        setPrayerIcon(prayerIconLiteral);
-        applyNextPrayerStyle(nextPrayer.get());
-    }
+    @FXML
+    private FontIcon notificationIcon;
 
     public PrayerRowComponent() {
-        this("com.azkar.i18n.home");
+        super();
+        var bundle = ResourceBundle.getBundle("com.azkar.i18n.home");
+        var fxmlLoader = new FXMLLoader(
+                getClass().getResource("/com/azkar/components/home/prayer_row_component.fxml"),
+                bundle);
+        fxmlLoader.setRoot(this);
+        fxmlLoader.setController(this);
+        try {
+            fxmlLoader.load();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to load FXML", e);
+        }
+        nextPrayer.addListener((observable, oldValue, newValue) -> applyNextPrayerStyle(newValue));
+        notificationEnabled.addListener((observable, oldValue, enabled) -> applyNotificationStyle(enabled));
+        applyStyles();
+        if (prayerNotificationToggle != null) {
+            prayerNotificationToggle.setOnAction(event -> setNotificationEnabled(prayerNotificationToggle.isSelected()));
+        }
+    }
+
+    private void applyStyles() {
+        applyNextPrayerStyle(nextPrayer.get());
+        applyNotificationStyle(notificationEnabled.get());
     }
 
     public void setPrayerName(String prayerName) {
@@ -55,20 +68,12 @@ public class PrayerRowComponent extends HBox {
         return prayerName.getText();
     }
 
-    public StringProperty prayerNameProperty() {
-        return prayerName.textProperty();
-    }
-
     public void setPrayerTime(String prayerTime) {
         this.prayerTime.setText(prayerTime);
     }
 
     public String getPrayerTime() {
         return prayerTime.getText();
-    }
-
-    public StringProperty prayerTimeProperty() {
-        return prayerTime.textProperty();
     }
 
     public void setPrayerValue(String prayerValue) {
@@ -79,10 +84,6 @@ public class PrayerRowComponent extends HBox {
         return prayerValue.getText();
     }
 
-    public StringProperty prayerValueProperty() {
-        return prayerValue.textProperty();
-    }
-
     public boolean isNextPrayer() {
         return nextPrayer.get();
     }
@@ -91,15 +92,28 @@ public class PrayerRowComponent extends HBox {
         this.nextPrayer.set(nextPrayer);
     }
 
-    public void setPrayerIcon(String prayerIcon) {
-        prayerIconLiteral = prayerIcon;
-        if (this.prayerIcon != null && prayerIcon != null && !prayerIcon.isBlank()) {
-            this.prayerIcon.setIconLiteral(prayerIcon);
+    public void setPrayerIcon(String iconLiteral) {
+        if (prayerIcon != null && iconLiteral != null && !iconLiteral.isBlank()) {
+            prayerIcon.setIconLiteral(iconLiteral);
         }
     }
 
-    public String getPrayerIcon() {
-        return prayerIconLiteral;
+    public boolean isNotificationEnabled() {
+        return notificationEnabled.get();
+    }
+
+    public void setNotificationEnabled(boolean enabled) {
+        notificationEnabled.set(enabled);
+    }
+
+    public BooleanProperty notificationEnabledProperty() {
+        return notificationEnabled;
+    }
+
+    public void setNotificationVisible(boolean visible) {
+        if (prayerNotificationToggle == null) return;
+        prayerNotificationToggle.setManaged(visible);
+        prayerNotificationToggle.setVisible(visible);
     }
 
     private void applyNextPrayerStyle(boolean active) {
@@ -109,6 +123,15 @@ public class PrayerRowComponent extends HBox {
             }
         } else {
             getStyleClass().remove("next-prayer");
+        }
+    }
+
+    private void applyNotificationStyle(boolean enabled) {
+        if (prayerNotificationToggle != null && prayerNotificationToggle.isSelected() != enabled) {
+            prayerNotificationToggle.setSelected(enabled);
+        }
+        if (notificationIcon != null) {
+            notificationIcon.setIconLiteral(enabled ? "fas-bell" : "far-bell");
         }
     }
 }

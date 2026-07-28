@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<fx:root alignment="CENTER" managed="false" spacing="8.0"
+	styleClass="library-empty-state"
+	stylesheets="@../../styles/library/library_empty_state_component.css"
+	type="VBox" visible="false" xmlns="http://javafx.com/javafx/25"
+	xmlns:fx="http://javafx.com/fxml/1">
+	<padding>
+		<Insets bottom="18.0" left="16.0" right="16.0" top="18.0" />
+	</padding>
+	<FontIcon iconLiteral="far-star" iconSize="22"
+		styleClass="library-empty-icon" />
+	<Text strokeType="OUTSIDE" strokeWidth="0.0"
+		styleClass="library-empty-title" text="%libraryFavoritesEmptyTitle" />
+	<Text strokeType="OUTSIDE" strokeWidth="0.0"
+		styleClass="library-empty-subtitle" text="%libraryFavoritesEmptyHint"
+		wrappingWidth="620.0" />
+</fx:root>

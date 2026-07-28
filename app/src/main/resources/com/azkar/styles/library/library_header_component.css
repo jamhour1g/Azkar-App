@@ -1,0 +1,17 @@
+@import url("../global.css");
+@import url("library_shared_controls.css");
+
+.library-header {
+    -fx-padding: 4px 0 0 0;
+}
+
+.library-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: 700;
+    -fx-fill: -color-text-primary;
+}
+
+.library-subtitle {
+    -fx-font-size: 13px;
+    -fx-fill: -color-text-secondary;
+}

@@ -8,6 +8,8 @@ plugins {
 version = "0.1.0"
 
 dependencies {
+  implementation(project(":data"))
+  implementation(project(":domain"))
 
   // JavaFX
   implementation(libs.org.openjfx.javafx.controls)
@@ -42,6 +44,7 @@ javafx {
 application {
   mainModule = "com.azkar.app"
   mainClass = "com.azkar.Launcher"
+  applicationDefaultJvmArgs = listOf("--enable-native-access=javafx.graphics")
 }
 
 tasks.jar {

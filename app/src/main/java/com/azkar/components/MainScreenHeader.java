@@ -1,43 +1,43 @@
 package com.azkar.components;
 
-import java.util.ResourceBundle;
+import com.azkar.i18n.AppLocale;
 import javafx.application.ColorScheme;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.HBox;
-import lombok.Setter;
-import lombok.SneakyThrows;
+import javafx.scene.text.Text;
+import lombok.val;
 import org.kordamp.ikonli.javafx.FontIcon;
+
+import java.io.IOException;
 
 public class MainScreenHeader extends HBox {
 
-    public enum HeaderTab {
+    private enum HeaderTab {
         HOME,
         LIBRARY
     }
 
-    @Setter
-    private Runnable onHomeAction;
 
-    @Setter
-    private Runnable onAzkarLibraryAction;
+    private final ObjectProperty<EventHandler<ActionEvent>> onHomeAction = new SimpleObjectProperty<>(this, "onHomeAction");
 
-    private boolean updatingThemeToggle;
-    private Scene boundScene;
-    private ChangeListener<ColorScheme> colorSchemeListener;
+    private final ObjectProperty<EventHandler<ActionEvent>> onAzkarLibraryAction = new SimpleObjectProperty<>(this, "onAzkarLibraryAction");
+
+    private final ObjectProperty<EventHandler<ActionEvent>> onSettingsAction = new SimpleObjectProperty<>(this, "onSettingsAction");
 
     @FXML
     private Button homeHeaderBtn;
 
     @FXML
     private Button azkarLibHeaderBtn;
-
-    @FXML
-    private Button qiblaHeaderBtn;
 
     @FXML
     private Button settingsBtn;
@@ -48,108 +48,125 @@ public class MainScreenHeader extends HBox {
     @FXML
     private FontIcon themeIcon;
 
-    @SneakyThrows
-    private MainScreenHeader(String bundleName) {
-        var loadedBundle = ResourceBundle.getBundle(bundleName);
-        var fxmlLoader = new FXMLLoader(
-                getClass().getResource("/com/azkar/components/home/main_screen_header.fxml"), loadedBundle);
+    private final ChangeListener<ColorScheme> colorSchemeListener = (_, _, newScheme) -> {
+        boolean darkMode = (newScheme == ColorScheme.DARK);
+        darkModeToggle.setSelected(darkMode);
+        updateThemeIcon(darkMode);
+    };
+
+    private static final String FXML_PATH = "/com/azkar/components/home/main_screen_header.fxml";
+
+    public MainScreenHeader() {
+        super();
+        val fxmlLoader = new FXMLLoader(
+                getClass().getResource(FXML_PATH),
+                AppLocale.bundle());
         fxmlLoader.setRoot(this);
         fxmlLoader.setController(this);
-        fxmlLoader.load();
+        try {
+            fxmlLoader.load();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to load FXML", e);
+        }
 
-        setActiveTab(HeaderTab.HOME);
+        onHomeAction.addListener((_, _, newVal) -> homeHeaderBtn.setOnAction(e -> {
+            setActiveTab(HeaderTab.HOME);
+            newVal.handle(e);
+        }));
+
+        onAzkarLibraryAction.addListener((_, _, newVal) -> azkarLibHeaderBtn.setOnAction(e -> {
+            setActiveTab(HeaderTab.LIBRARY);
+            newVal.handle(e);
+        }));
+
+        onSettingsAction.addListener((_, _, newVal) -> settingsBtn.setOnAction(newVal));
+
         setupThemeToggle();
     }
 
-    public MainScreenHeader() {
-        this("com.azkar.i18n.home");
+    public final ObjectProperty<EventHandler<ActionEvent>> onHomeActionProperty() {
+        return onHomeAction;
     }
 
-    public void setActiveTab(HeaderTab tab) {
+    public final ObjectProperty<EventHandler<ActionEvent>> onAzkarLibraryActionProperty() {
+        return onAzkarLibraryAction;
+    }
+
+    public final ObjectProperty<EventHandler<ActionEvent>> onSettingsActionProperty() {
+        return onSettingsAction;
+    }
+
+    public final void setOnHomeAction(EventHandler<ActionEvent> value) {
+        onHomeActionProperty().set(value);
+    }
+
+    public final EventHandler<ActionEvent> getOnHomeAction() {
+        return onHomeActionProperty().get();
+    }
+
+    public final void setOnAzkarLibraryAction(EventHandler<ActionEvent> value) {
+        onAzkarLibraryActionProperty().set(value);
+    }
+
+    public final EventHandler<ActionEvent> getOnAzkarLibraryAction() {
+        return onAzkarLibraryActionProperty().get();
+    }
+
+    public final void setOnSettingsAction(EventHandler<ActionEvent> value) {
+        onSettingsActionProperty().set(value);
+    }
+
+    public final EventHandler<ActionEvent> getOnSettingsAction() {
+        return onSettingsActionProperty().get();
+    }
+
+    private void setActiveTab(HeaderTab tab) {
         homeHeaderBtn.getStyleClass().remove("nav-btn-active");
         azkarLibHeaderBtn.getStyleClass().remove("nav-btn-active");
-
-        if (tab == HeaderTab.HOME) {
-            homeHeaderBtn.getStyleClass().add("nav-btn-active");
-        } else if (tab == HeaderTab.LIBRARY) {
-            azkarLibHeaderBtn.getStyleClass().add("nav-btn-active");
+        switch (tab) {
+            case HOME -> homeHeaderBtn.getStyleClass().add("nav-btn-active");
+            case LIBRARY -> azkarLibHeaderBtn.getStyleClass().add("nav-btn-active");
         }
     }
 
-    @FXML
-    private void onHomeClicked() {
-        if (onHomeAction != null) {
-            onHomeAction.run();
-        }
-    }
-
-    @FXML
-    private void onAzkarLibraryClicked() {
-        if (onAzkarLibraryAction != null) {
-            onAzkarLibraryAction.run();
-        }
-    }
 
     private void setupThemeToggle() {
         darkModeToggle.selectedProperty().addListener((_, _, isSelected) -> {
-            if (!updatingThemeToggle) {
-                applyThemeFromToggle(isSelected);
-            }
+            applyThemeFromToggle(isSelected);
             updateThemeIcon(isSelected);
         });
 
-        sceneProperty().addListener((_, _, newScene) -> bindThemeToggle(newScene));
+        sceneProperty().addListener((_, oldScene, newScene) -> {
+            if (oldScene != null) {
+                oldScene.getPreferences().colorSchemeProperty().removeListener(colorSchemeListener);
+            }
+
+            if (newScene != null) {
+                newScene.getPreferences().colorSchemeProperty().addListener(colorSchemeListener);
+                syncToggleFromScene(newScene);
+            }
+        });
 
         if (getScene() != null) {
-            bindThemeToggle(getScene());
+            getScene().getPreferences().colorSchemeProperty().addListener(colorSchemeListener);
+            syncToggleFromScene(getScene());
         } else {
             updateThemeIcon(darkModeToggle.isSelected());
         }
     }
 
-    private void bindThemeToggle(Scene scene) {
-        if (boundScene != null && colorSchemeListener != null) {
-            boundScene.getPreferences().colorSchemeProperty().removeListener(colorSchemeListener);
-        }
-
-        boundScene = scene;
-        if (scene == null) {
-            return;
-        }
-
-        colorSchemeListener = (_, _, newScheme) -> syncThemeToggleFromColorScheme(newScheme);
-        scene.getPreferences().colorSchemeProperty().addListener(colorSchemeListener);
-
-        syncThemeToggleFromColorScheme(scene.getPreferences().getColorScheme());
-    }
-
-    private void syncThemeToggleFromColorScheme(ColorScheme colorScheme) {
-        boolean darkMode = colorScheme == ColorScheme.DARK;
-
-        updatingThemeToggle = true;
-        try {
-            darkModeToggle.setSelected(darkMode);
-        } finally {
-            updatingThemeToggle = false;
-        }
-
+    private void syncToggleFromScene(Scene scene) {
+        boolean darkMode = scene.getPreferences().getColorScheme() == ColorScheme.DARK;
+        darkModeToggle.setSelected(darkMode);
         updateThemeIcon(darkMode);
     }
 
     private void applyThemeFromToggle(boolean darkModeEnabled) {
-        Scene scene = boundScene != null ? boundScene : getScene();
-        if (scene == null) {
-            return;
-        }
-
-        scene.getPreferences().setColorScheme(darkModeEnabled ? ColorScheme.DARK : ColorScheme.LIGHT);
+        getScene().getPreferences().setColorScheme(darkModeEnabled ? ColorScheme.DARK : ColorScheme.LIGHT);
     }
 
     private void updateThemeIcon(boolean darkModeEnabled) {
-        if (themeIcon == null) {
-            return;
-        }
-
         themeIcon.setIconLiteral(darkModeEnabled ? "fas-sun" : "far-moon");
     }
+
 }

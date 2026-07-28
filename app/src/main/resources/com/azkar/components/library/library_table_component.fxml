@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+
+<fx:root fixedCellSize="54.0" styleClass="library-table"
+	stylesheets="@../../styles/library/library_table_component.css"
+	type="TableView" xmlns="http://javafx.com/javafx/25"
+	xmlns:fx="http://javafx.com/fxml/1">
+	<columns>
+		<TableColumn fx:id="categoryColumn" prefWidth="140.0"
+			text="%libraryColCategory" />
+		<TableColumn fx:id="arabicColumn" prefWidth="270.0"
+			text="%libraryColArabic" />
+		<TableColumn fx:id="englishColumn" prefWidth="270.0"
+			text="%libraryColEnglish" />
+		<TableColumn fx:id="sourceColumn" prefWidth="180.0"
+			text="%libraryColSource" />
+		<TableColumn fx:id="actionsColumn" prefWidth="245.0"
+			text="%libraryColActions" />
+	</columns>
+</fx:root>

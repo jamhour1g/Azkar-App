@@ -1,0 +1,99 @@
+@import url("../global.css");
+@import url("library_shared_controls.css");
+
+.library-toolbar {
+    -fx-alignment: center-left;
+}
+
+.library-search-wrap {
+    -fx-background-color: -color-card-bg;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 0 10px;
+}
+
+.library-search-icon {
+    -fx-icon-color: -color-text-secondary;
+}
+
+.library-search {
+    -fx-pref-height: 40px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-font-size: 13px;
+    -fx-text-fill: -color-text-primary;
+    -fx-prompt-text-fill: -color-text-secondary;
+}
+
+.library-switch-wrap {
+    -fx-padding: 0 2px;
+}
+
+.library-switch-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-secondary;
+}
+
+.library-view-switch {
+    -fx-background-color: -color-card-bg;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-padding: 2px;
+    -fx-alignment: center;
+    -fx-max-height: 34px;
+}
+
+.library-view-toggle {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+    -fx-min-width: 34px;
+    -fx-pref-width: 34px;
+    -fx-max-width: 34px;
+    -fx-min-height: 30px;
+    -fx-pref-height: 30px;
+    -fx-max-height: 30px;
+    -fx-alignment: center;
+    -fx-content-display: graphic-only;
+    -fx-text-fill: -color-text-secondary;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.library-view-icon {
+    -fx-icon-color: -color-text-secondary;
+}
+
+.library-view-toggle:hover,
+.library-view-toggle:focused,
+.library-view-toggle:pressed,
+.library-view-toggle:armed {
+    -fx-background-color: -color-hover-neutral;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+}
+
+.library-view-toggle:selected {
+    -fx-background-color: -color-highlight;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-text-fill: -color-primary;
+}
+
+.library-view-toggle:selected .library-view-icon {
+    -fx-icon-color: -color-primary;
+}
+
+.library-view-toggle-left {
+    -fx-background-radius: 10px 0 0 10px;
+}
+
+.library-view-toggle-right {
+    -fx-background-radius: 0 10px 10px 0;
+}

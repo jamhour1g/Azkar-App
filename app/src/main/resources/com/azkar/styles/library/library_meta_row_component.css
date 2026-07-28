@@ -1,0 +1,17 @@
+@import url("../global.css");
+@import url("library_shared_controls.css");
+
+.library-meta-row {
+    -fx-alignment: center-left;
+}
+
+.library-result-count {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-secondary;
+}
+
+.library-sort-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-text-secondary;
+}

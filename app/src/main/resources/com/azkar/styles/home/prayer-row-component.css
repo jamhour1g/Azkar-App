@@ -44,7 +44,7 @@
 }
 
 .icon-circle-btn:hover {
-    -fx-background-color: #f3f4f6;
+    -fx-background-color: -color-hover-neutral;
 }
 
 /* Text colors */
@@ -59,7 +59,7 @@
     }
 
     .icon-circle-btn:hover {
-        -fx-background-color: #2c2c2c;
+        -fx-background-color: -color-hover-neutral;
     }
 
 }

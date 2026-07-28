@@ -1,0 +1,162 @@
+@import url("../global.css");
+@import url("library_shared_controls.css");
+
+.library-reminder-panel {
+    -fx-background-color: linear-gradient(to bottom right, #f8f2e5, #e8f0fb);
+    -fx-background-radius: 16px;
+    -fx-border-color: rgba(78, 96, 115, 0.18);
+    -fx-border-radius: 16px;
+    -fx-padding: 12px;
+    -fx-effect: dropshadow(gaussian, rgba(65, 76, 90, 0.08), 16, 0.2, 0, 4);
+}
+
+.library-reminder-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 800;
+    -fx-fill: -color-text-primary;
+}
+
+.library-reminder-subtitle {
+    -fx-text-fill: -color-text-secondary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+}
+
+.library-reminder-icon {
+    -fx-icon-color: -color-primary;
+}
+
+.library-reminder-section {
+    -fx-background-color: rgba(255, 255, 255, 0.78);
+    -fx-background-radius: 12px;
+    -fx-padding: 10px;
+    -fx-spacing: 8px;
+}
+
+.library-reminder-section-title {
+    -fx-text-fill: -color-text-primary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+}
+
+.library-reminder-mode-box {
+    -fx-background-color: rgba(252, 249, 243, 0.92);
+    -fx-background-radius: 10px;
+    -fx-padding: 8px;
+}
+
+.library-reminder-field {
+    -fx-text-fill: -color-text-secondary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.library-reminder-chip-btn {
+    -fx-background-color: rgba(78, 96, 115, 0.12);
+    -fx-text-fill: -color-primary;
+    -fx-background-radius: 999px;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-padding: 6px 12px;
+    -fx-cursor: hand;
+}
+
+.library-reminder-chip-btn:hover {
+    -fx-background-color: rgba(78, 96, 115, 0.2);
+}
+
+.library-reminder-input {
+    -fx-background-color: -color-card-bg;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-padding: 6px 10px;
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-text-primary;
+}
+
+.library-reminder-input:focused {
+    -fx-border-color: -color-primary;
+    -fx-effect: dropshadow(gaussian, rgba(138, 180, 248, 0.25), 6, 0.2, 0, 0);
+}
+
+.library-reminder-chips {
+    -fx-padding: 2px 0 0 0;
+}
+
+.library-reminder-pick-chip {
+    -fx-background-color: rgba(255, 255, 255, 0.9);
+    -fx-border-color: rgba(78, 96, 115, 0.24);
+    -fx-border-radius: 999px;
+    -fx-background-radius: 999px;
+    -fx-padding: 4px 8px;
+    -fx-spacing: 6px;
+    -fx-alignment: center-left;
+}
+
+.library-reminder-pick-label {
+    -fx-text-fill: -color-text-primary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.library-reminder-priority-pill {
+    -fx-background-radius: 999px;
+    -fx-padding: 2px 8px;
+    -fx-font-size: 10px;
+    -fx-font-weight: 800;
+}
+
+.library-reminder-priority-pill-high {
+    -fx-background-color: rgba(178, 37, 37, 0.16);
+    -fx-text-fill: #a92424;
+}
+
+.library-reminder-priority-pill-medium {
+    -fx-background-color: rgba(171, 129, 35, 0.16);
+    -fx-text-fill: #7f5f16;
+}
+
+.library-reminder-priority-pill-low {
+    -fx-background-color: rgba(38, 122, 86, 0.16);
+    -fx-text-fill: #1f6b4a;
+}
+
+.library-reminder-chip-remove {
+    -fx-background-color: transparent;
+    -fx-text-fill: -color-text-secondary;
+    -fx-padding: 0;
+    -fx-font-weight: 900;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+}
+
+.library-reminder-chip-remove:hover {
+    -fx-text-fill: #b22525;
+}
+
+.library-reminder-status {
+    -fx-text-fill: -color-primary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+}
+
+.library-reminder-stat,
+.library-reminder-preview {
+    -fx-text-fill: -color-text-secondary;
+    -fx-font-size: 12px;
+}
+
+.library-stop-btn {
+    -fx-background-color: rgba(255, 255, 255, 0.7);
+    -fx-border-color: rgba(78, 96, 115, 0.3);
+    -fx-border-radius: 999px;
+    -fx-background-radius: 999px;
+    -fx-padding: 8px 12px;
+    -fx-font-weight: 700;
+    -fx-cursor: hand;
+}
+
+.library-stop-btn:hover {
+    -fx-background-color: rgba(78, 96, 115, 0.12);
+}

@@ -1,0 +1,25 @@
+@import url("../global.css");
+
+.library-empty-state {
+    -fx-background-color: -color-card-bg;
+    -fx-background-radius: 14px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 14px;
+    -fx-border-width: 1px;
+}
+
+.library-empty-icon {
+    -fx-icon-color: -color-accent;
+}
+
+.library-empty-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: 700;
+    -fx-fill: -color-text-primary;
+}
+
+.library-empty-subtitle {
+    -fx-font-size: 13px;
+    -fx-fill: -color-text-secondary;
+    -fx-text-alignment: center;
+}

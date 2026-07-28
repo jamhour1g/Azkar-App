@@ -1,5 +1,12 @@
 @org.jspecify.annotations.NullMarked
 module com.azkar.data {
+    requires jakarta.cdi;
+    requires com.google.gson;
+    requires org.jboss.logging;
+    requires jakarta.xml.bind;
+    requires com.fasterxml.classmate;
+    requires com.zaxxer.hikari;
+    requires net.bytebuddy;
     requires java.sql;
     requires com.h2database;
     requires jakarta.persistence;
@@ -8,6 +15,7 @@ module com.azkar.data {
     requires org.hibernate.orm.core;
     requires org.flywaydb.core;
     requires org.slf4j;
+    requires org.glassfish.jaxb.runtime;
     requires com.azkar.domain;
 
     // Compile-time only

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<?import com.azkar.components.library.ui.browse.LibraryTableComponent?>
+<?import com.azkar.components.library.ui.browse.LibraryGridPaneComponent?>
+<?import com.azkar.components.library.ui.state.LibraryLoadingStateComponent?>
+<?import com.azkar.components.library.ui.state.LibraryEmptyStateComponent?>
+<fx:root minWidth="640.0" spacing="10.0"
+	styleClass="library-browse-pane"
+	stylesheets="@../../styles/library/library_browse_pane_component.css"
+	type="VBox" VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/25"
+	xmlns:fx="http://javafx.com/fxml/1">
+	<TabPane fx:id="categoriesTabs" side="TOP"
+		styleClass="library-tabs-pane" tabClosingPolicy="UNAVAILABLE">
+		<tabs>
+			<Tab fx:id="allTab" text="%libraryTabAll" />
+			<Tab fx:id="favoritesTab" text="%libraryTabFavorites" />
+		</tabs>
+	</TabPane>
+	<StackPane fx:id="browseStack"
+		styleClass="library-browse-stack" VBox.vgrow="ALWAYS">
+		<LibraryTableComponent fx:id="tableComponent"
+			StackPane.alignment="CENTER" />
+		<LibraryGridPaneComponent
+			fx:id="gridPaneComponent" />
+		<LibraryLoadingStateComponent
+			fx:id="loadingStateComponent" />
+		<LibraryEmptyStateComponent
+			fx:id="emptyStateComponent" />
+	</StackPane>
+</fx:root>

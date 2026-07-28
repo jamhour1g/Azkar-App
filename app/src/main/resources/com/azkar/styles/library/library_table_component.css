@@ -1,0 +1,60 @@
+@import url("../global.css");
+@import url("library_shared_controls.css");
+
+.library-table {
+    -fx-background-color: transparent;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-padding: 0;
+}
+
+.library-table .column-header-background {
+    -fx-background-color: -color-highlight;
+    -fx-background-radius: 10px 10px 0 0;
+}
+
+.library-table .column-header,
+.library-table .filler {
+    -fx-background-color: transparent;
+}
+
+.library-table .column-header .label {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-secondary;
+}
+
+.library-table .table-row-cell {
+    -fx-border-color: transparent transparent -color-border transparent;
+    -fx-background-color: transparent;
+}
+
+.library-table .table-row-cell:filled:selected {
+    -fx-background-color: -color-highlight;
+}
+
+.library-table .table-cell {
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-text-primary;
+    -fx-alignment: center-left;
+}
+
+.library-table-actions {
+    -fx-alignment: center-left;
+    -fx-fill-height: false;
+    -fx-max-width: 96px;
+    -fx-pref-width: 96px;
+    -fx-min-width: 96px;
+}
+
+.library-table-actions .library-icon-btn {
+    -fx-padding: 0;
+    -fx-min-width: 28px;
+    -fx-pref-width: 28px;
+    -fx-max-width: 28px;
+    -fx-min-height: 28px;
+    -fx-pref-height: 28px;
+    -fx-max-height: 28px;
+    -fx-content-display: graphic-only;
+}

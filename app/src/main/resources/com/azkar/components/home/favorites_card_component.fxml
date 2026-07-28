@@ -25,15 +25,17 @@
 	<center>
 		<VBox alignment="CENTER" spacing="10.0"
 			styleClass="favorites-content">
-			<Text strokeType="OUTSIDE" strokeWidth="0.0"
-				styleClass="hadith-ar" text="%favoriteAzkarArabic"
+			<Text fx:id="favoriteArabicText" strokeType="OUTSIDE"
+				strokeWidth="0.0" styleClass="hadith-ar" text="%favoriteAzkarArabic"
 				textAlignment="CENTER" wrappingWidth="300.0" />
-			<Text strokeType="OUTSIDE" strokeWidth="0.0"
-				styleClass="hadith-en" text="%favoriteAzkarEnglish"
-				textAlignment="CENTER" wrappingWidth="300.0" />
-			<Text strokeType="OUTSIDE" strokeWidth="0.0"
-				styleClass="hadith-source" text="%favoriteAzkarSource"
-				textAlignment="CENTER" wrappingWidth="300.0" />
+			<Text fx:id="favoriteEnglishText" strokeType="OUTSIDE"
+				strokeWidth="0.0" styleClass="hadith-en"
+				text="%favoriteAzkarEnglish" textAlignment="CENTER"
+				wrappingWidth="300.0" />
+			<Text fx:id="favoriteSourceText" strokeType="OUTSIDE"
+				strokeWidth="0.0" styleClass="hadith-source"
+				text="%favoriteAzkarSource" textAlignment="CENTER"
+				wrappingWidth="300.0" />
 		</VBox>
 	</center>
 	<bottom>
@@ -51,7 +53,28 @@
 					styleClass="favorites-badge-text" text="%favorited" />
 			</HBox>
 			<Pane HBox.hgrow="SOMETIMES" />
-			<Button mnemonicParsing="false"
+			<HBox alignment="CENTER" spacing="6.0"
+				styleClass="favorites-nav-actions">
+				<Button fx:id="previousFavoriteButton"
+					mnemonicParsing="false" styleClass="icon-btn nav-btn"
+					text="%favoritePrevLabel">
+					<graphic>
+						<FontIcon fx:id="previousIcon"
+							iconLiteral="fas-chevron-left" iconSize="12"
+							styleClass="nav-icon" />
+					</graphic>
+				</Button>
+				<Button fx:id="nextFavoriteButton" mnemonicParsing="false"
+					styleClass="icon-btn nav-btn" text="%favoriteNextLabel"
+					textOverrun="ELLIPSIS">
+					<graphic>
+						<FontIcon fx:id="nextIcon"
+							iconLiteral="fas-chevron-right" iconSize="12"
+							styleClass="nav-icon" />
+					</graphic>
+				</Button>
+			</HBox>
+			<Button fx:id="browseFavoriteButton" mnemonicParsing="false"
 				styleClass="icon-btn browse-btn">
 				<HBox.margin>
 					<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
@@ -60,7 +83,8 @@
 					<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
 				</padding>
 				<graphic>
-					<FontIcon iconLiteral="fas-arrow-right" iconSize="16"
+					<FontIcon fx:id="browseArrowIcon"
+						iconLiteral="fas-arrow-right" iconSize="16"
 						styleClass="browse-icon" />
 				</graphic>
 			</Button>

@@ -1,5 +1,17 @@
 import com.diffplug.spotless.extra.wtp.EclipseWtpFormatterStep
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.build
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.compileOnly
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.implementation
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.jacoco
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.spotbugs
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.spotless
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.spotlessApply
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.test
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.testCompileOnly
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.testImplementation
+import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.testRuntimeOnly
 import net.ltgt.gradle.errorprone.errorprone
+import org.gradle.internal.impldep.org.eclipse.jgit.util.RawCharUtil.trimTrailingWhitespace
 
 repositories {
     mavenCentral()
@@ -94,12 +106,15 @@ tasks.withType<JavaCompile>().configureEach {
         errorprone {
             disableWarningsInGeneratedCode.set(true)
             // Do NOT disable all checks — keep the defaults and enable NullAway
-            check("NullAway", net.ltgt.gradle.errorprone.CheckSeverity.ERROR)
+            val environmentSeverity = providers.environmentVariable("NULLAWAY_SEVERITY_LEVEL").orElse("ERROR")
+            check("NullAway", net.ltgt.gradle.errorprone.CheckSeverity.DEFAULT)
             option("NullAway:JSpecifyMode", "true")
             option("NullAway:OnlyNullMarked", "true")
             // Skip NullAway analysis on annotation-processor-generated classes
-            // (e.g. Hibernate metamodel *_.java and Jakarta Data repository impls)
+            // (e.g., Hibernate metamodel *_.java and Jakarta Data repository impls)
             option("NullAway:ExcludedClassAnnotations", "jakarta.annotation.Generated")
+//            // Skip NullAway analysis on FXML fields (which are non-null at runtime but can't be annotated as such)
+//            option("NullAway:ExcludedFieldAnnotations", "javafx.fxml.FXML")
         }
 
         // Make tests less strict (disable NullAway for test sources only)

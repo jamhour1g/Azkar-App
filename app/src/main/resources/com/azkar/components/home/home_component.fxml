@@ -6,44 +6,47 @@
 <?import javafx.scene.layout.*?>
 
 <fx:root fitToHeight="true" fitToWidth="true"
-	focusTraversable="false" hbarPolicy="NEVER" styleClass="main"
-	stylesheets="@../../styles/home/home_component.css" type="ScrollPane"
-	vbarPolicy="NEVER" xmlns="http://javafx.com/javafx/25"
-	xmlns:fx="http://javafx.com/fxml/1">
+         hbarPolicy="NEVER" styleClass="main"
+         stylesheets="@../../styles/home/home_component.css" type="ScrollPane"
+         vbarPolicy="NEVER" xmlns="http://javafx.com/javafx/25"
+         xmlns:fx="http://javafx.com/fxml/1">
 
-	<VBox alignment="TOP_CENTER" spacing="26.0"
-		styleClass="main-content">
-		<GreetingComponent />
+    <VBox alignment="TOP_CENTER" spacing="26.0"
+          styleClass="main-content">
+        <GreetingComponent/>
 
-		<HBox alignment="TOP_LEFT" maxWidth="Infinity" spacing="24.0"
-			styleClass="dashboard-content">
-			<VBox maxWidth="Infinity" spacing="18.0"
-				styleClass="left-column" HBox.hgrow="ALWAYS">
-				<DailyHadithCardComponent />
-				<VBox spacing="12.0">
-					<RemainingToPrayerComponent />
-					<PrayerNotificationsToggleComponent />
-					<VBox spacing="4.0" styleClass="card prayer-table-card">
-						<PrayerRowComponent prayerIcon="far-sun"
-							prayerName="%fajr" prayerTime="%fajrTime"
-							prayerValue="%fajrValue" />
-						<PrayerRowComponent nextPrayer="true"
-							prayerIcon="far-sun" prayerName="%dhuhr" prayerTime="%dhuhrTime"
-							prayerValue="%dhuhrValue" />
-						<PrayerRowComponent prayerIcon="far-sun"
-							prayerName="%asr" prayerTime="%asrTime" prayerValue="%asrValue" />
-						<PrayerRowComponent prayerIcon="far-sun"
-							prayerName="%maghrib" prayerTime="%maghribTime"
-							prayerValue="%maghribValue" />
-						<PrayerRowComponent prayerIcon="far-moon"
-							prayerName="%isha" prayerTime="%ishaTime"
-							prayerValue="%ishaValue" />
-					</VBox>
-				</VBox>
-			</VBox>
+        <HBox maxWidth="Infinity" spacing="24.0"
+              styleClass="dashboard-content">
+            <VBox maxWidth="Infinity" spacing="18.0"
+                  styleClass="left-column" HBox.hgrow="ALWAYS">
+                <DailyHadithCardComponent />
+                <VBox spacing="12.0">
+                    <RemainingToPrayerComponent
+                            fx:id="remainingToPrayerComponent"/>
+                    <PrayerNotificationsToggleComponent
+                            fx:id="prayerNotificationsToggleComponent"/>
+                    <VBox spacing="4.0" styleClass="card prayer-table-card">
+                        <PrayerRowComponent fx:id="fajrRow"
+                                            prayerName="%fajr" prayerTime="%fajrTime"
+                                            prayerValue="%fajrValue"/>
+                        <PrayerRowComponent fx:id="dhuhrRow"
+                                            nextPrayer="true" prayerName="%dhuhr"
+                                            prayerTime="%dhuhrTime" prayerValue="%dhuhrValue"/>
+                        <PrayerRowComponent fx:id="asrRow"
+                                            prayerName="%asr" prayerTime="%asrTime"
+                                            prayerValue="%asrValue"/>
+                        <PrayerRowComponent fx:id="maghribRow"
+                                            prayerName="%maghrib"
+                                            prayerTime="%maghribTime" prayerValue="%maghribValue"/>
+                        <PrayerRowComponent fx:id="ishaRow"
+                                            prayerName="%isha" prayerTime="%ishaTime"
+                                            prayerValue="%ishaValue"/>
+                    </VBox>
+                </VBox>
+            </VBox>
 
-			<FavoritesCardComponent maxWidth="360.0"
-				prefWidth="340.0" />
-		</HBox>
-	</VBox>
+            <FavoritesCardComponent
+                    fx:id="favoritesCardComponent" maxWidth="360.0" prefWidth="340.0"/>
+        </HBox>
+    </VBox>
 </fx:root>

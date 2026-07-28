@@ -1,5 +1,8 @@
 package com.azkar.data.config;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -12,6 +15,21 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DataSourceConfig {
 
-    /// Default JDBC URL pointing to a file-based H2 database.
-    public static final String JDBC_URL = "jdbc:h2:file:./db/remembrance;AUTO_SERVER=TRUE";
+    private static final Path DATABASE_DIRECTORY =
+            Path.of(System.getProperty("user.home"), ".azkar", "db");
+
+    /// Default JDBC URL pointing to a deterministic user-level file-based H2 database.
+    public static final String JDBC_URL = buildJdbcUrl();
+
+    private static String buildJdbcUrl() {
+        try {
+            Files.createDirectories(DATABASE_DIRECTORY);
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "Unable to create database directory: " + DATABASE_DIRECTORY.toAbsolutePath(), exception);
+        }
+
+        Path databasePath = DATABASE_DIRECTORY.resolve("remembrance").toAbsolutePath();
+        return "jdbc:h2:file:" + databasePath.toString().replace('\\', '/') + ";AUTO_SERVER=TRUE";
+    }
 }

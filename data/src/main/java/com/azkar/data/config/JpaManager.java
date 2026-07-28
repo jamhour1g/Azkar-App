@@ -4,6 +4,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +22,11 @@ public final class JpaManager implements AutoCloseable {
 
     @Nullable private static volatile JpaManager instance;
 
+    private static final Lock INSTANCE_LOCK = new ReentrantLock();
+
     @Nullable private EntityManagerFactory emf;
+
+    private final Lock emfLock = new ReentrantLock();
 
     private JpaManager() {
         System.setProperty("org.jboss.logging.provider", "slf4j");
@@ -28,11 +34,14 @@ public final class JpaManager implements AutoCloseable {
 
     public static JpaManager getInstance() {
         if (instance == null) {
-            synchronized (JpaManager.class) {
+            INSTANCE_LOCK.lock();
+            try {
                 if (instance == null) {
                     LOGGER.atDebug().log("Creating JpaManager instance");
                     instance = new JpaManager();
                 }
+            } finally {
+                INSTANCE_LOCK.unlock();
             }
         }
         // Just suppress the warning for nullability since at this point we know it's not null
@@ -40,18 +49,23 @@ public final class JpaManager implements AutoCloseable {
         return instance;
     }
 
-    public synchronized EntityManagerFactory getDataEntityManagerFactory() {
-        if (emf == null || !emf.isOpen()) {
-            String jdbcUrl = DataSourceConfig.JDBC_URL;
+    public EntityManagerFactory getDataEntityManagerFactory() {
+        emfLock.lock();
+        try {
+            if (emf == null || !emf.isOpen()) {
+                String jdbcUrl = DataSourceConfig.JDBC_URL;
 
-            // Run Flyway migrations before creating the EMF
-            FlywayMigrator.migrate(jdbcUrl);
+                // Run Flyway migrations before creating the EMF
+                FlywayMigrator.migrate(jdbcUrl);
 
-            // Override the JDBC URL so persistence.xml doesn't need it
-            Map<String, String> props = Map.of("jakarta.persistence.jdbc.url", jdbcUrl);
-            emf = Persistence.createEntityManagerFactory(DATA_PERSISTENCE_UNIT, props);
+                // Override the JDBC URL so persistence.xml doesn't need it
+                Map<String, String> props = Map.of("jakarta.persistence.jdbc.url", jdbcUrl);
+                emf = Persistence.createEntityManagerFactory(DATA_PERSISTENCE_UNIT, props);
+            }
+            return emf;
+        } finally {
+            emfLock.unlock();
         }
-        return emf;
     }
 
     /// Convenience helper. Callers can just use try-with-resources on the EM.
@@ -59,11 +73,20 @@ public final class JpaManager implements AutoCloseable {
         return getDataEntityManagerFactory().createEntityManager();
     }
 
+    public void warmUp() {
+        getDataEntityManagerFactory();
+    }
+
     @Override
-    public synchronized void close() {
-        if (emf != null && emf.isOpen()) {
-            LOGGER.atDebug().log("Closing EntityManagerFactory");
-            emf.close();
+    public void close() {
+        emfLock.lock();
+        try {
+            if (emf != null && emf.isOpen()) {
+                LOGGER.atDebug().log("Closing EntityManagerFactory");
+                emf.close();
+            }
+        } finally {
+            emfLock.unlock();
         }
     }
 

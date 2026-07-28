@@ -2,6 +2,10 @@
 @import url("home_commons.css");
 
 /* ---------- Hadith Styles ---------- */
+.hadith-texts {
+    -fx-max-width: infinity;
+}
+
 .hadith-vertical-line {
     -fx-background-color: -color-primary;
     -fx-pref-width: 3px;
@@ -16,6 +20,7 @@
     -fx-font-weight: bold;
     -fx-fill: -color-text-primary;
     -fx-padding: 0 0 8px 0;
+    -fx-line-spacing: 2px;
 }
 
 .hadith-en {
@@ -23,6 +28,7 @@
     -fx-fill: #6f7480;
     -fx-font-style: italic;
     -fx-padding: 0 0 8px 0;
+    -fx-line-spacing: 1px;
 }
 
 .hadith-source {
@@ -30,6 +36,13 @@
     -fx-fill: #6b7280;
     -fx-font-style: normal;
     -fx-padding: 5px 0 0 0;
+}
+
+.hadith-read-more-btn {
+    -fx-padding: 8px 14px;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-alignment: center;
 }
 
 

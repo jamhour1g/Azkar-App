@@ -1,0 +1,51 @@
+@import url("../global.css");
+
+.library-grid-wrapper {
+    -fx-background-color: transparent;
+}
+
+.library-grid-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.library-grid-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.library-grid-scroll > .corner {
+    -fx-background-color: transparent;
+}
+
+.library-grid-flow {
+    -fx-padding: 2px;
+    -fx-alignment: top-left;
+}
+
+.library-grid-pagination {
+    -fx-padding: 4px 0 0 0;
+}
+
+.library-page-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 6px 10px;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-secondary;
+    -fx-cursor: hand;
+}
+
+.library-page-btn:hover {
+    -fx-background-color: -color-highlight;
+    -fx-text-fill: -color-primary;
+}
+
+.library-grid-page-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-secondary;
+}

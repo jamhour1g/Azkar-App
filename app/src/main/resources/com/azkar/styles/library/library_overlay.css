@@ -1,0 +1,142 @@
+@import url("../global.css");
+@import url("library_shared_controls.css");
+
+.library-dialog-pane {
+    -fx-background-color: -color-card-bg;
+    -fx-border-color: -color-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-border-insets: 0;
+    -fx-background-insets: 0;
+    -fx-padding: 14px;
+}
+
+.library-dialog-pane:header .header-panel {
+    -fx-background-color: transparent;
+    -fx-padding: 0 0 8px 0;
+}
+
+.library-dialog-pane:header .header-panel .label {
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-primary;
+}
+
+.library-dialog-pane .content {
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-text-secondary;
+}
+
+.library-dialog-content {
+    -fx-background-color: transparent;
+}
+
+.library-dialog-label {
+    -fx-text-fill: -color-text-secondary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.library-dialog-validation {
+    -fx-text-fill: #b22525;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.library-dialog-toggle {
+    -fx-background-color: transparent;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 999px;
+    -fx-background-radius: 999px;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-secondary;
+    -fx-padding: 6px 10px;
+    -fx-cursor: hand;
+}
+
+.library-dialog-toggle:hover {
+    -fx-background-color: -color-highlight;
+    -fx-text-fill: -color-primary;
+}
+
+.library-dialog-toggle:selected {
+    -fx-background-color: -color-highlight;
+    -fx-border-color: -color-primary;
+    -fx-text-fill: -color-primary;
+}
+
+.library-dialog-pane .button-bar .button {
+    -fx-background-color: transparent;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 999px;
+    -fx-background-radius: 999px;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-secondary;
+    -fx-padding: 6px 14px;
+}
+
+.library-dialog-pane .button-bar .button:hover {
+    -fx-background-color: -color-highlight;
+    -fx-text-fill: -color-primary;
+}
+
+.library-dialog-pane .button-bar .button:default {
+    -fx-background-color: -color-primary;
+    -fx-border-color: -color-primary;
+    -fx-text-fill: white;
+}
+
+.library-dialog-input,
+.library-dialog-combo {
+    -fx-background-color: -color-card-bg;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-text-primary;
+    -fx-padding: 6px 10px;
+}
+
+.library-dialog-input:focused,
+.library-dialog-combo:focused {
+    -fx-border-color: -color-primary;
+    -fx-effect: dropshadow(gaussian, rgba(138, 180, 248, 0.25), 6, 0.2, 0, 0);
+}
+
+.library-toast {
+    -fx-background-color: -color-card-bg;
+    -fx-background-radius: 10px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.18), 14, 0.3, 0, 4);
+}
+
+.library-toast-high {
+    -fx-border-color: rgba(178, 37, 37, 0.45);
+    -fx-background-color: linear-gradient(to bottom right, rgba(255, 244, 244, 0.98), rgba(255, 249, 249, 0.98));
+}
+
+.library-toast-medium {
+    -fx-border-color: rgba(171, 129, 35, 0.45);
+    -fx-background-color: linear-gradient(to bottom right, rgba(255, 250, 240, 0.98), rgba(255, 252, 246, 0.98));
+}
+
+.library-toast-low {
+    -fx-border-color: rgba(38, 122, 86, 0.45);
+    -fx-background-color: linear-gradient(to bottom right, rgba(243, 253, 248, 0.98), rgba(248, 255, 252, 0.98));
+}
+
+.library-toast-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-primary;
+}
+
+.library-toast-message {
+    -fx-font-size: 12px;
+    -fx-text-fill: -color-text-secondary;
+}

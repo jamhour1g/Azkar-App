@@ -1,0 +1,50 @@
+@import url("../global.css");
+
+.library-browse-pane {
+    -fx-background-color: -color-card-bg;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-padding: 12px;
+    -fx-background-insets: 0 5px 0 0;
+    -fx-border-insets: 0 5px 0 0;
+}
+
+.library-tabs-pane {
+    -fx-background-color: transparent;
+}
+
+.library-tabs-pane .tab-header-background {
+    -fx-background-color: transparent;
+}
+
+.library-tabs-pane .tab {
+    -fx-background-color: transparent;
+    -fx-padding: 7px 12px;
+}
+
+.library-tabs-pane .tab .tab-label {
+    -fx-text-fill: -color-text-secondary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.library-tabs-pane .tab:selected {
+    -fx-border-color: transparent transparent -color-primary transparent;
+    -fx-border-width: 0 0 2px 0;
+}
+
+.library-tabs-pane .tab:selected .tab-label {
+    -fx-text-fill: -color-primary;
+}
+
+.library-tabs-pane .tab-content-area {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+}
+
+.library-browse-stack {
+    -fx-background-color: transparent;
+}

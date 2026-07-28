@@ -23,10 +23,10 @@
 
 	<HBox alignment="CENTER" spacing="12.0">
 		<Button fx:id="homeHeaderBtn" alignment="CENTER"
-			mnemonicParsing="false" onAction="#onHomeClicked"
+			mnemonicParsing="false"
 			styleClass="nav-btn" text="%home" />
 		<Button fx:id="azkarLibHeaderBtn" alignment="CENTER"
-			mnemonicParsing="false" onAction="#onAzkarLibraryClicked"
+			mnemonicParsing="false"
 			styleClass="nav-btn" text="%azkarLibrary" />
 	</HBox>
 
@@ -41,7 +41,8 @@
 			</graphic>
 		</ToggleButton>
 		<Button fx:id="settingsBtn" alignment="CENTER"
-			mnemonicParsing="false" styleClass="icon-action-btn">
+			mnemonicParsing="false"
+			styleClass="icon-action-btn">
 			<graphic>
 				<FontIcon iconLiteral="fas-cog" iconSize="20"
 					styleClass="action-icon" />

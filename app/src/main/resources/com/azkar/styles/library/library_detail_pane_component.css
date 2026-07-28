@@ -1,0 +1,44 @@
+@import url("../global.css");
+@import url("library_shared_controls.css");
+
+.library-detail-pane {
+    -fx-background-color: -color-card-bg;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-padding: 12px;
+    -fx-background-insets: 0 0 0 5px;
+    -fx-border-insets: 0 0 0 5px;
+}
+
+.library-detail-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-primary;
+}
+
+.library-detail-ar {
+    -fx-font-size: 21px;
+    -fx-font-family: "Amiri", serif;
+    -fx-font-weight: 700;
+    -fx-text-fill: -color-text-primary;
+}
+
+.library-detail-en {
+    -fx-font-size: 13px;
+    -fx-text-fill: -color-text-secondary;
+}
+
+.library-detail-source {
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: -color-text-secondary;
+}
+
+.library-detail-actions {
+    -fx-padding: 2px 0 0 0;
+}
+
+.library-detail-actions .library-icon-btn {
+    -fx-padding: 5px;
+}

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.layout.HBox?>
+<?import org.controlsfx.control.ToggleSwitch?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<fx:root alignment="CENTER_LEFT" spacing="10.0"
+	styleClass="library-toolbar"
+	stylesheets="@../../styles/library/library_filter_toolbar_component.css"
+	type="HBox" xmlns="http://javafx.com/javafx/25"
+	xmlns:fx="http://javafx.com/fxml/1">
+	<HBox alignment="CENTER_LEFT" spacing="8.0"
+		styleClass="library-search-wrap" HBox.hgrow="ALWAYS">
+		<FontIcon iconLiteral="fas-search" iconSize="14"
+			styleClass="library-search-icon" />
+		<TextField fx:id="searchField"
+			promptText="%librarySearchPrompt" styleClass="library-search"
+			HBox.hgrow="ALWAYS" />
+	</HBox>
+	<ComboBox fx:id="collectionCombo" prefWidth="220.0"
+		styleClass="library-collection-picker" />
+	<HBox alignment="CENTER_LEFT" spacing="8.0"
+		styleClass="library-switch-wrap">
+		<Label styleClass="library-switch-label"
+			text="%libraryToggleFavoritesOnly" />
+		<ToggleSwitch fx:id="favoritesOnlyToggle"
+			contentDisplay="GRAPHIC_ONLY" prefHeight="24.0" prefWidth="44.0"
+			styleClass="toggle-switch library-favorites-switch" />
+	</HBox>
+	<HBox alignment="CENTER" spacing="0.0"
+		styleClass="library-view-switch">
+		<ToggleButton fx:id="listViewToggle"
+			contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false"
+			styleClass="library-view-toggle library-view-toggle-left">
+			<graphic>
+				<FontIcon iconLiteral="fas-list" iconSize="12"
+					styleClass="library-view-icon" />
+			</graphic>
+			<toggleGroup>
+				<ToggleGroup fx:id="viewModeGroup" />
+			</toggleGroup>
+		</ToggleButton>
+		<ToggleButton fx:id="gridViewToggle"
+			contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false"
+			styleClass="library-view-toggle library-view-toggle-right"
+			toggleGroup="$viewModeGroup">
+			<graphic>
+				<FontIcon iconLiteral="fas-th-large" iconSize="12"
+					styleClass="library-view-icon" />
+			</graphic>
+		</ToggleButton>
+	</HBox>
+</fx:root>

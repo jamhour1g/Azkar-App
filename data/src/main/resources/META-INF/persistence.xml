@@ -20,9 +20,6 @@
             <!-- JDBC driver; the URL is supplied programmatically via DataSourceConfig -->
             <property name="jakarta.persistence.jdbc.driver" value="org.h2.Driver"/>
 
-            <!-- Dialect -->
-            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
-
             <!-- Schema managed outside Hibernate (Flyway) -->
             <property name="jakarta.persistence.schema-generation.database.action" value="none"/>
 

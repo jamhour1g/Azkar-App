@@ -1,0 +1,14 @@
+@import url("../global.css");
+
+.library-loading-state {
+    -fx-background-color: -color-card-bg;
+    -fx-background-radius: 14px;
+    -fx-border-color: -color-border;
+    -fx-border-radius: 14px;
+    -fx-border-width: 1px;
+}
+
+.library-loading-text {
+    -fx-font-size: 13px;
+    -fx-fill: -color-text-secondary;
+}

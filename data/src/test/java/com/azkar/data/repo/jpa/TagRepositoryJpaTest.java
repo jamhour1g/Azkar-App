@@ -32,6 +32,33 @@ class TagRepositoryJpaTest {
         statelessSession = emf.unwrap(SessionFactory.class).openStatelessSession();
         var dataRepo = new TagDataRepository_(statelessSession);
         repo = new TagRepositoryAdapter(dataRepo, em);
+
+        em.getTransaction().begin();
+        try {
+            em.createNativeQuery("DELETE FROM favorite").executeUpdate();
+            em.createNativeQuery("DELETE FROM remembrance_tag").executeUpdate();
+            em.createNativeQuery("DELETE FROM tag").executeUpdate();
+            em.createNativeQuery("DELETE FROM explanation_translation").executeUpdate();
+            em.createNativeQuery("DELETE FROM remembrance_translation").executeUpdate();
+            em.createNativeQuery("DELETE FROM remembrance").executeUpdate();
+
+            em.createNativeQuery("ALTER TABLE remembrance ALTER COLUMN id RESTART WITH 1")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE remembrance_translation ALTER COLUMN id RESTART WITH 1")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE explanation_translation ALTER COLUMN id RESTART WITH 1")
+                    .executeUpdate();
+            em.createNativeQuery("ALTER TABLE tag ALTER COLUMN id RESTART WITH 1").executeUpdate();
+            em.createNativeQuery("ALTER TABLE favorite ALTER COLUMN id RESTART WITH 1")
+                    .executeUpdate();
+
+            em.getTransaction().commit();
+        } catch (RuntimeException exception) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw exception;
+        }
     }
 
     @AfterEach

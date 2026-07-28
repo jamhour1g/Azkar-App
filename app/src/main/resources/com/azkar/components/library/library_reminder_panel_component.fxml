@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<fx:root spacing="10.0" styleClass="library-reminder-panel"
+	stylesheets="@../../styles/library/library_reminder_panel_component.css"
+	type="VBox" xmlns="http://javafx.com/javafx/25"
+	xmlns:fx="http://javafx.com/fxml/1">
+	<HBox alignment="CENTER_LEFT" spacing="8.0">
+		<FontIcon iconLiteral="far-bell" iconSize="15"
+			styleClass="library-reminder-icon" />
+		<VBox spacing="2.0">
+			<Text strokeType="OUTSIDE" strokeWidth="0.0"
+				styleClass="library-reminder-title" text="%libraryReminderTitle" />
+			<Label styleClass="library-reminder-subtitle"
+				text="%libraryReminderSubtitle" wrapText="true" />
+		</VBox>
+	</HBox>
+
+	<VBox spacing="8.0" styleClass="library-reminder-section">
+		<Label styleClass="library-reminder-section-title"
+			text="%libraryReminderModeLabel" />
+		<ChoiceBox fx:id="modeChoice" prefWidth="260.0"
+			styleClass="library-choice" />
+
+		<VBox fx:id="singleModeBox" spacing="8.0"
+			styleClass="library-reminder-mode-box">
+			<Label styleClass="library-reminder-field"
+				text="%libraryReminderSingleItemLabel" />
+			<ChoiceBox fx:id="singleRemembranceChoice"
+				prefWidth="300.0" styleClass="library-choice" />
+			<HBox alignment="CENTER_LEFT" spacing="8.0">
+				<Label styleClass="library-reminder-field"
+					text="%libraryReminderPriorityLabel" />
+				<ChoiceBox fx:id="singlePriorityChoice" prefWidth="140.0"
+					styleClass="library-choice" />
+				<Region HBox.hgrow="ALWAYS" />
+				<Button fx:id="singleApplyButton" mnemonicParsing="false"
+					onAction="#onApplySingleClicked"
+					styleClass="library-reminder-chip-btn"
+					text="%libraryReminderApplySingle" />
+			</HBox>
+			<Label fx:id="singleSelectionLabel"
+				styleClass="library-reminder-stat" wrapText="true" />
+		</VBox>
+
+		<VBox fx:id="collectionsModeBox" spacing="8.0"
+			styleClass="library-reminder-mode-box">
+			<Label styleClass="library-reminder-field"
+				text="%libraryReminderCollectionLabel" />
+			<HBox alignment="CENTER_LEFT" spacing="8.0">
+				<ChoiceBox fx:id="collectionChoice" prefWidth="200.0"
+					styleClass="library-choice" />
+				<ChoiceBox fx:id="collectionPriorityChoice"
+					prefWidth="120.0" styleClass="library-choice" />
+				<Button fx:id="collectionAddButton" mnemonicParsing="false"
+					onAction="#onAddCollectionClicked"
+					styleClass="library-reminder-chip-btn"
+					text="%libraryReminderAddCollection" />
+			</HBox>
+			<FlowPane fx:id="collectionChipsPane" hgap="8.0"
+				prefWrapLength="312.0" styleClass="library-reminder-chips"
+				vgap="8.0" />
+		</VBox>
+
+		<VBox fx:id="customModeBox" spacing="8.0"
+			styleClass="library-reminder-mode-box">
+			<Label styleClass="library-reminder-field"
+				text="%libraryReminderCustomLabel" />
+			<HBox alignment="CENTER_LEFT" spacing="8.0">
+				<TextField fx:id="customCollectionField"
+					promptText="%libraryReminderCustomPrompt"
+					styleClass="library-reminder-input" />
+				<ChoiceBox fx:id="customPriorityChoice" prefWidth="120.0"
+					styleClass="library-choice" />
+				<Button fx:id="customAddButton" mnemonicParsing="false"
+					onAction="#onAddCustomCollectionClicked"
+					styleClass="library-reminder-chip-btn"
+					text="%libraryReminderAddCustom" />
+			</HBox>
+			<FlowPane fx:id="customChipsPane" hgap="8.0"
+				prefWrapLength="312.0" styleClass="library-reminder-chips"
+				vgap="8.0" />
+		</VBox>
+	</VBox>
+
+	<VBox spacing="8.0" styleClass="library-reminder-section">
+		<Label styleClass="library-reminder-section-title"
+			text="%libraryReminderDeliveryLabel" />
+		<HBox alignment="CENTER_LEFT" spacing="8.0">
+			<ChoiceBox fx:id="cadenceChoice" prefWidth="150.0"
+				styleClass="library-choice" />
+			<Spinner fx:id="notificationsPerCycleSpinner" editable="true"
+				prefWidth="82.0" />
+			<ToggleButton fx:id="randomOrderToggle"
+				mnemonicParsing="false" styleClass="library-filter-chip" />
+		</HBox>
+		<HBox alignment="CENTER_LEFT" spacing="8.0">
+			<Button fx:id="scheduleButton" mnemonicParsing="false"
+				onAction="#onScheduleClicked" styleClass="library-add-btn"
+				text="%libraryScheduleButton" />
+			<Button fx:id="stopButton" mnemonicParsing="false"
+				onAction="#onStopClicked" styleClass="library-stop-btn"
+				text="%libraryStopScheduleButton" />
+		</HBox>
+	</VBox>
+
+	<Label fx:id="schedulerStatusLabel"
+		styleClass="library-reminder-status" />
+	<Label fx:id="reminderCollectionCountLabel"
+		styleClass="library-reminder-stat" />
+	<Label fx:id="reminderFavoritesCountLabel"
+		styleClass="library-reminder-stat" />
+	<Label fx:id="schedulerPreviewLabel"
+		styleClass="library-reminder-preview" wrapText="true" />
+</fx:root>

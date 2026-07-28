@@ -1,0 +1,21 @@
+@import url("../global.css");
+
+.library-root {
+    -fx-background-color: -color-background;
+    -fx-spacing: 12px;
+}
+
+.library-main-split {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.library-main-split > .split-pane-divider {
+    -fx-background-color: transparent;
+    -fx-padding: 0 5px;
+}
+
+.library-info-line {
+    -fx-text-fill: -color-text-secondary;
+    -fx-font-size: 11px;
+}

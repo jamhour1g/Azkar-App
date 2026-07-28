@@ -4,13 +4,13 @@
 <?import javafx.scene.text.Text?>
 
 <fx:root stylesheets="@../../styles/home/greeting.css"
-	alignment="CENTER" spacing="8" styleClass="greeting-container"
-	type="VBox" xmlns="http://javafx.com/javafx/25"
-	xmlns:fx="http://javafx.com/fxml/1">
-	<Text fx:id="greetingTitle" strokeType="OUTSIDE" strokeWidth="0.0"
-		styleClass="greeting-title" text="%greetingTitle" />
-	<Text fx:id="locationText" strokeType="OUTSIDE" strokeWidth="0.0"
-		styleClass="greeting-location" text="%prayerTimesLocation" />
-	<Text fx:id="dateText" strokeType="OUTSIDE" strokeWidth="0.0"
-		styleClass="greeting-date" text="%greetingDate" />
+         alignment="CENTER" spacing="8" styleClass="greeting-container"
+         type="VBox" xmlns="http://javafx.com/javafx/25"
+         xmlns:fx="http://javafx.com/fxml/1">
+    <Text strokeType="OUTSIDE" strokeWidth="0.0"
+          styleClass="greeting-title" text="%greetingTitle"/>
+    <Text strokeType="OUTSIDE" strokeWidth="0.0"
+          styleClass="greeting-location" text="%prayerTimesLocation"/>
+    <Text fx:id="dateText" strokeType="OUTSIDE" strokeWidth="0.0"
+          styleClass="greeting-date" text="%greetingDate"/>
 </fx:root>

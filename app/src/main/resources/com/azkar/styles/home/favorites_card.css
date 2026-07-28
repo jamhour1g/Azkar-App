@@ -32,11 +32,39 @@
 }
 
 .icon-btn:hover {
-    -fx-background-color: rgba(0, 0, 0, 0.05);
+    -fx-background-color: -color-hover-neutral-soft;
 }
 
 .browse-btn {
     -fx-background-color: -color-highlight;
+}
+
+.favorites-nav-actions {
+    -fx-alignment: center;
+}
+
+.nav-btn {
+    -fx-background-color: -color-surface-muted;
+    -fx-background-radius: 999;
+    -fx-padding: 6 10;
+    -fx-text-fill: -color-text-secondary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-content-display: left;
+    -fx-graphic-text-gap: 5;
+}
+
+.nav-btn:hover {
+    -fx-background-color: derive(-color-surface-muted, -6%);
+}
+
+.nav-btn:disabled {
+    -fx-opacity: 0.45;
+    -fx-cursor: default;
+}
+
+.nav-icon {
+    -fx-icon-color: -color-text-secondary;
 }
 
 .browse-icon {
@@ -62,11 +90,24 @@
         -fx-background-color: #334155;
     }
 
+    .nav-btn {
+        -fx-background-color: #1f2937;
+        -fx-text-fill: #d1d5db;
+    }
+
+    .nav-btn:hover {
+        -fx-background-color: #334155;
+    }
+
+    .nav-icon {
+        -fx-icon-color: #d1d5db;
+    }
+
     .browse-icon {
         -fx-icon-color: #93c5fd;
     }
 
     .icon-btn:hover {
-        -fx-background-color: rgba(255, 255, 255, 0.08);
+        -fx-background-color: -color-hover-neutral-soft;
     }
 }

@@ -19,24 +19,24 @@
 
 	<VBox alignment="CENTER_LEFT" spacing="2.0">
 		<Text fx:id="prayerName" strokeType="OUTSIDE" strokeWidth="0.0"
-			styleClass="prayer-name" text="PrayerPlaceHolderName" />
+			styleClass="prayer-name" text="" />
 		<Text fx:id="prayerTime" strokeType="OUTSIDE" strokeWidth="0.0"
-			styleClass="prayer-time" text="-00:00 AM" />
+			styleClass="prayer-time" text="" />
 	</VBox>
 
 	<Pane HBox.hgrow="ALWAYS" />
 
 	<Text fx:id="prayerValue" strokeType="OUTSIDE" strokeWidth="0.0"
-		styleClass="prayer-value" text="04:50 AM" />
+		styleClass="prayer-value" text="" />
 
-	<ToggleButton fx:id="fajrPrayerNotificationToggle"
+	<ToggleButton fx:id="prayerNotificationToggle"
 		mnemonicParsing="false" styleClass="icon-circle-btn">
 		<padding>
 			<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
 		</padding>
 		<graphic>
-			<FontIcon iconLiteral="far-bell" iconSize="18"
-				styleClass="notification-icon" />
+			<FontIcon fx:id="notificationIcon" iconLiteral="far-bell"
+				iconSize="18" styleClass="notification-icon" />
 		</graphic>
 	</ToggleButton>
 </fx:root>

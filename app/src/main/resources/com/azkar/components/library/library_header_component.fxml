@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<fx:root alignment="CENTER_LEFT" spacing="14.0"
+	styleClass="library-header"
+	stylesheets="@../../styles/library/library_header_component.css"
+	type="HBox" xmlns="http://javafx.com/javafx/25"
+	xmlns:fx="http://javafx.com/fxml/1">
+	<VBox spacing="4.0">
+		<Text strokeType="OUTSIDE" strokeWidth="0.0"
+			styleClass="library-title" text="%libraryTitle" />
+		<Text strokeType="OUTSIDE" strokeWidth="0.0"
+			styleClass="library-subtitle" text="%librarySubtitle" />
+	</VBox>
+	<Pane HBox.hgrow="ALWAYS" />
+	<Button mnemonicParsing="false" onAction="#onRefreshClicked"
+		styleClass="library-add-btn" text="%libraryRefresh">
+		<graphic>
+			<FontIcon iconLiteral="fas-sync" iconSize="12"
+				styleClass="library-add-icon" />
+		</graphic>
+	</Button>
+</fx:root>

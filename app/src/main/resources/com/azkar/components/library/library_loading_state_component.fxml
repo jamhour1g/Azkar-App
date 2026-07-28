@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+
+<fx:root alignment="CENTER" managed="false" spacing="8.0"
+	styleClass="library-loading-state"
+	stylesheets="@../../styles/library/library_loading_state_component.css"
+	type="VBox" visible="false" xmlns="http://javafx.com/javafx/25"
+	xmlns:fx="http://javafx.com/fxml/1">
+	<padding>
+		<Insets bottom="18.0" left="16.0" right="16.0" top="18.0" />
+	</padding>
+	<ProgressIndicator maxHeight="28.0" maxWidth="28.0"
+		prefHeight="28.0" prefWidth="28.0" />
+	<Text strokeType="OUTSIDE" strokeWidth="0.0"
+		styleClass="library-loading-text" text="%libraryLoading" />
+</fx:root>

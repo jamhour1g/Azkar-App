@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<fx:root spacing="10.0" styleClass="library-grid-wrapper"
+	stylesheets="@../../styles/library/library_grid_pane_component.css"
+	type="VBox" visible="false" managed="false"
+	xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+	<ScrollPane fx:id="gridScrollPane" fitToWidth="true"
+		hbarPolicy="NEVER" styleClass="library-grid-scroll"
+		vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
+		<content>
+			<FlowPane fx:id="cardsFlowPane" hgap="12.0"
+				prefWrapLength="980.0" vgap="12.0" styleClass="library-grid-flow" />
+		</content>
+	</ScrollPane>
+	<HBox alignment="CENTER" spacing="8.0"
+		styleClass="library-grid-pagination">
+		<Button fx:id="gridPrevButton" mnemonicParsing="false"
+			onAction="#onPrevClicked" styleClass="library-page-btn"
+			text="%libraryPrevPage" />
+		<Label fx:id="gridPageLabel"
+			styleClass="library-grid-page-label" />
+		<Button fx:id="gridNextButton" mnemonicParsing="false"
+			onAction="#onNextClicked" styleClass="library-page-btn"
+			text="%libraryNextPage" />
+	</HBox>
+</fx:root>

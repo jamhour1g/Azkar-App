@@ -9,7 +9,7 @@
 }
 
 .next-prayer-time {
-    -fx-font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    -fx-font-family: -font-ui-current;
     -fx-font-size: 24px;
     -fx-font-weight: 700;
     -fx-fill: -color-text-primary;
