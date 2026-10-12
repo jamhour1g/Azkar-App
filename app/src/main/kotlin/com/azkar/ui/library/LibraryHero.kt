@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
@@ -52,6 +53,7 @@ import com.azkar.generated.resources.libraryFiltersLabel
 import com.azkar.generated.resources.libraryHeroLabel
 import com.azkar.generated.resources.libraryHeroSubtitle
 import com.azkar.generated.resources.libraryHeroTitle
+import com.azkar.generated.resources.tagsActionManage
 import com.azkar.ui.components.AzkarOutlinedField
 import com.azkar.ui.components.TooltipIconButton
 import com.azkar.ui.library.model.CollectionScope
@@ -137,9 +139,12 @@ private fun LibraryHeroPreview() {
  *
  * A vertical gradient rather than a flat tint: the illustration runs bright at the top and dark at
  * the bottom, so one flat scrim either greys out the sky or leaves the title on bare pixels.
+ *
+ * Internal rather than private because [TagsHero] lays a banner the same way, and a second banner
+ * that picked its own wash would be the first thing that made two pages look like different apps.
  */
 @Composable
-private fun HeroScrim(colors: AzkarColors) = listOf(colors.heroScrimStart, colors.heroScrimEnd)
+internal fun HeroScrim(colors: AzkarColors) = listOf(colors.heroScrimStart, colors.heroScrimEnd)
 
 /** The eyebrow, the title and the standfirst, stacked at the top of the banner. */
 @Composable
@@ -205,6 +210,11 @@ private fun HeroControlRow(controls: LibraryHeroControls) {
             onClick = controls.onNew,
             emphasized = true,
         )
+        HeroAction(
+            icon = Icons.Filled.Label,
+            description = stringResource(Res.string.tagsActionManage),
+            onClick = controls.onManageTags,
+        )
         FilterUmbrellaButton(controls = controls)
     }
 }
@@ -217,9 +227,13 @@ private fun HeroControlRow(controls: LibraryHeroControls) {
  * the colour of its glyph rather than the colour of its circle: a filled circle next to two hollow
  * ones is a louder statement than adding a collection deserves, and an amber glyph on the same wash
  * says it without changing the row's shape.
+ *
+ * Internal rather than private because [TagsHero]'s band holds the same kind of control in the same
+ * place, and it used to hold a labelled button where this row holds a glyph. A word beside the one
+ * control that adds is the only thing on this page that needed reading before it could be pressed.
  */
 @Composable
-private fun HeroAction(
+internal fun HeroAction(
     icon: ImageVector,
     description: String,
     onClick: () -> Unit,
@@ -347,8 +361,11 @@ private fun HeroEyebrow() {
  * nightfall: at nine in the morning a night sky behind "Your Daily Remembrances" is wrong however
  * bright the room happens to be. A screenshot run therefore has to pin the hour to be reproducible,
  * which is what the harness's own clock override is for.
+ *
+ * Internal rather than private because [TagsHero] is a banner too, and drawing a third colour of
+ * sky for it is how a page ends up looking borrowed from somewhere else.
  */
-private fun heroIllustration() =
+internal fun heroIllustration() =
     if (isNightHour(LocalTime.now(ZoneId.systemDefault()).hour)) {
         Res.drawable.hero_night
     } else {
@@ -431,6 +448,14 @@ data class LibraryHeroControls(
     val narrowing: ShelfNarrowing,
     val onImport: () -> Unit,
     val onNew: () -> Unit,
+    /**
+     * Opens the Manage tags screen.
+     *
+     * The fourth of the shelf's own actions rather than a setting, and it sits with the other three
+     * because that is what it is: a label applied to a collection is the same sort of fact as the
+     * collection, and both are reached from the banner the shelf is already drawn under.
+     */
+    val onManageTags: () -> Unit,
 )
 
 /**

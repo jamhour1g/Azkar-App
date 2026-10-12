@@ -7,6 +7,7 @@ import com.azkar.domain.model.CollectionReminder
 import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.ReminderCadence
 import com.azkar.domain.model.Tag
+import com.azkar.domain.model.TagSummary
 import com.azkar.domain.model.impl.TagImpl
 import java.time.DayOfWeek
 
@@ -23,6 +24,31 @@ import java.time.DayOfWeek
 // `tag` — one label. Stored folded, and it comes back out folded, which is the invariant the unique
 // index on `tag.name` rests on (see `TagTable.name`).
 internal fun TagEntity.toTag(): Tag = TagImpl(id = id.value, name = name, createdAt = createdAt.toInstant())
+
+/**
+ * `tag` — one label, with what is hanging off it.
+ *
+ * A second extension over the same entity rather than an overload of [toTag], because the two answer
+ * different questions and neither is the other with a field missing: a [Tag] is something a collection
+ * *carries*, and carries nothing about how many things carry it, while a [TagSummary] is something the
+ * management screen *lists*, and the two counts are the reason it exists.
+ *
+ * The counts are arguments rather than another query here, because they come from the join tables and
+ * a mapper that went back for them would be issuing a statement per row of the list it is mapping.
+ */
+internal fun TagEntity.toSummary(
+    collectionCount: Int,
+    remembranceCount: Int,
+): TagSummary =
+    TagSummary(
+        id = id.value,
+        name = name,
+        createdAt = createdAt.toInstant(),
+        updatedAt = updatedAt.toInstant(),
+        collectionCount = collectionCount,
+        remembranceCount = remembranceCount,
+        deletedAt = deletedAt?.toInstant(),
+    )
 
 /**
  * `recitation_progress` — how far through one collection one member has got.

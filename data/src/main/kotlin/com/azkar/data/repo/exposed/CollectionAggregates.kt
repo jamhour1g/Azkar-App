@@ -15,6 +15,8 @@ import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -125,6 +127,10 @@ internal object CollectionAggregates {
      * The only read that still returns rows rather than entities: `collection_tag` has no entity
      * class of its own that would carry the join, so the statement is spelled out and each tag row is
      * wrapped on the way past.
+     *
+     * The `deleted_at IS NULL` predicate is what a soft-deleted tag looks like to a collection: absent.
+     * Its `collection_tag` row is deliberately still there — that is what makes restoring it put the
+     * chip back — so without this the shelf would keep drawing a label the user believes they removed.
      */
     private fun tagsByCollection(ids: List<Long>): Map<Long, List<Tag>> {
         if (ids.isEmpty()) {
@@ -133,7 +139,7 @@ internal object CollectionAggregates {
         return CollectionTagTable
             .innerJoin(TagTable)
             .select(CollectionTagTable.collectionId, TagTable.id, TagTable.name, TagTable.createdAt)
-            .where { CollectionTagTable.collectionId inList ids }
+            .where { (CollectionTagTable.collectionId inList ids) and (TagTable.deletedAt eq null) }
             .orderBy(TagTable.id to SortOrder.ASC)
             .groupBy(
                 { it[CollectionTagTable.collectionId].value },

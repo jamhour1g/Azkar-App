@@ -49,6 +49,9 @@ class TagEntity(
     var createdAt: OffsetDateTime by TagTable.createdAt
 
     var updatedAt: OffsetDateTime by TagTable.updatedAt
+
+    /** `null` while the tag is in use. See `TagTable.deletedAt`. */
+    var deletedAt: OffsetDateTime? by TagTable.deletedAt
 }
 
 /** The core zikr record. Its text and commentary live in the two translation tables below. */

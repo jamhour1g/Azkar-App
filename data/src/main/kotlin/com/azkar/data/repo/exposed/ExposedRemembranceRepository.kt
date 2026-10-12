@@ -117,7 +117,7 @@ class ExposedRemembranceRepository(
                     .innerJoin(RemembranceTagTable)
                     .innerJoin(TagTable)
                     .selectAll()
-                    .where { TagTable.name eq Tag.fold(tagName) }
+                    .where { (TagTable.name eq Tag.fold(tagName)) and (TagTable.deletedAt eq null) }
                     .orderBy(RemembranceTable.id to SortOrder.ASC),
             )
         }

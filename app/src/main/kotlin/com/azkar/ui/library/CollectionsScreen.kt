@@ -82,6 +82,7 @@ import org.jetbrains.compose.resources.stringResource
 fun CollectionsScreen(
     onOpenCollection: (Long) -> Unit,
     onOpenRemembrance: (Long) -> Unit,
+    onManageTags: () -> Unit,
     showToast: ShowToast,
     modifier: Modifier = Modifier,
     catalogue: CollectionsCatalogue,
@@ -92,6 +93,7 @@ fun CollectionsScreen(
         state = state,
         onOpenCollection = onOpenCollection,
         onOpenRemembrance = onOpenRemembrance,
+        onManageTags = onManageTags,
         showToast = showToast,
         modifier = modifier,
     )
@@ -106,6 +108,7 @@ internal fun CollectionsScreenContent(
     state: CollectionsState,
     onOpenCollection: (Long) -> Unit,
     onOpenRemembrance: (Long) -> Unit,
+    onManageTags: () -> Unit,
     showToast: ShowToast,
     modifier: Modifier = Modifier,
 ) {
@@ -146,6 +149,7 @@ internal fun CollectionsScreenContent(
                     clipboard.setText(AnnotatedString(text))
                     showToast(toastTitle, copiedLabel, NotificationPriority.LOW)
                 },
+                onManageTags = onManageTags,
             ),
         modifier = modifier,
     )
@@ -174,6 +178,7 @@ private fun CollectionsScreenContentPreview() {
             state = CollectionsState(rememberCoroutineScope(), catalogue),
             onOpenCollection = {},
             onOpenRemembrance = {},
+            onManageTags = {},
             showToast = { _, _, _ -> },
         )
     }
@@ -222,6 +227,8 @@ internal data class ShelfCallbacks(
     val onDelete: (RemembranceCollection) -> Unit,
     val onRead: (Long) -> Unit,
     val onCopy: (String) -> Unit,
+    /** Opens the Manage tags screen. Not a shelf action, but it is reached from the shelf. */
+    val onManageTags: () -> Unit,
 )
 
 /**
@@ -291,6 +298,7 @@ private fun ShelfBodyPreview() {
                     onDelete = {},
                     onRead = {},
                     onCopy = {},
+                    onManageTags = {},
                 ),
         )
     }

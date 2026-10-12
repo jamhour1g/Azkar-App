@@ -24,8 +24,11 @@ import com.azkar.ui.library.CollectionSessionScreen
 import com.azkar.ui.library.CollectionsCatalogue
 import com.azkar.ui.library.CollectionsScreen
 import com.azkar.ui.library.RemembranceReaderScreen
+import com.azkar.ui.library.TagsScreen
+import com.azkar.ui.library.TagsState
 import com.azkar.ui.library.data.CollectionReminderGateway
 import com.azkar.ui.library.data.CollectionsGateway
+import com.azkar.ui.library.data.TagGateway
 import com.azkar.ui.library.rememberCollectionDetailState
 import com.azkar.ui.library.rememberCollectionSessionState
 import com.azkar.ui.library.rememberRemembranceReaderState
@@ -81,6 +84,10 @@ fun AzkarApp(state: AzkarAppState = rememberAzkarAppState()) {
     // screen show up on the ticker's badges without either side knowing the other exists.
     val reminderGateway = koinInject<CollectionReminderGateway>()
     val gateway = koinInject<CollectionsGateway>()
+    // The tag vocabulary is read and written through a seam of its own rather than through
+    // `CollectionsGateway`: the Manage tags screen outlives every collection screen, and a tag is
+    // something the library draws rather than something it contains.
+    val tagsGateway = koinInject<TagGateway>()
     // Outside the locale key with the gateway beside it: cover pictures are bytes, not words, so a
     // language switch must not make fourteen collections decode the same fourteen files again.
     val coverStorage = koinInject<CoverStorage>()
@@ -118,8 +125,7 @@ fun AzkarApp(state: AzkarAppState = rememberAzkarAppState()) {
                                 navigator = navigator,
                                 state = state,
                                 showToast = showToast,
-                                reminders = reminders,
-                                catalogue = catalogue,
+                                library = LibraryContent(reminders, catalogue, tagsGateway),
                             )
                         }
 
@@ -149,24 +155,23 @@ fun AzkarApp(state: AzkarAppState = rememberAzkarAppState()) {
  * [state] reaches the settings entry whole and the two library entries not at all. The settings
  * screen's values already live on the shell, since they outlive the window and so cannot live in
  * something remembered per entry; the library screens were given their own holder for the same reason,
- * and that turned out to be the wrong reason — see [catalogue].
+ * and that turned out to be the wrong reason — see [LibraryContent.catalogue].
  *
- * @param catalogue the one read of the shelf, remembered here rather than in any of the three
- * library entries. [NavDisplay] renders only the top entry and disposes the one under it, so a holder
- * remembered per entry was thrown away and rebuilt on every hop: shelf → collection → back →
- * shelf read the whole database three times over. A holder here outlives the stack instead, so the
- * shelf is read once and every write made on any of the three pages lands in the same place. It is
- * keyed on the locale because the presenter it owns turns raw rows into strings, and those strings
- * have to be rebuilt when the language changes.
+ * @param library the reads the three library destinations share, bundled rather than threaded one by
+ * one. The shelf, the two collection pages and the Manage tags page all draw from the same holder
+ * and the same reminder state, so the alternative was growing this signature every time a library
+ * screen gained a dependency — which is the same reason [CollectionsGatewayDependencies] exists one
+ * layer down.
  */
 @Composable
 private fun ColumnScope.AzkarContent(
     navigator: AzkarNavigator,
     state: AzkarAppState,
     showToast: ShowToast,
-    reminders: CollectionReminderState,
-    catalogue: CollectionsCatalogue,
+    library: LibraryContent,
 ) {
+    val catalogue = library.catalogue
+    val reminders = library.reminders
     // Read inside the spec lambdas rather than passed in: they are re-evaluated on every transition,
     // and the shell already rebuilds this whole subtree on a locale change, so a captured `isRtl`
     // would only ever be a stale copy of a value the composition has already moved past.
@@ -189,15 +194,69 @@ private fun ColumnScope.AzkarContent(
                     CollectionsScreen(
                         onOpenCollection = navigator::showCollection,
                         onOpenRemembrance = navigator::showRemembrance,
+                        onManageTags = navigator::showTags,
                         showToast = showToast,
                         catalogue = catalogue,
                     )
                 }
                 collectionEntries(navigator, showToast, reminders, catalogue)
+                tagsEntry(navigator, showToast, library)
                 readerAndSettingsEntries(navigator, showToast, state, catalogue)
             },
     )
 }
+
+/**
+ * The Manage tags screen, remembered beside the shelf rather than inside its own entry.
+ *
+ * Held here for the same reason [catalogue] is: `NavDisplay` renders only the entry on top of the
+ * stack and disposes the one under it, so a holder remembered per entry would be thrown away and
+ * rebuilt on every trip between the shelf and this page — which would re-read the vocabulary each
+ * time and lose the half of it the user had scrolled to.
+ *
+ * The holder is told when the vocabulary changed rather than reloading the shelf itself, because
+ * the shelf's label chips are derived from a copy taken when the shelf was last read. See
+ * [CollectionsCatalogue.tagsChanged], which is the door that opens for exactly this.
+ */
+private fun EntryProviderScope<AzkarDestination>.tagsEntry(
+    navigator: AzkarNavigator,
+    showToast: ShowToast,
+    library: LibraryContent,
+) {
+    entry(AzkarDestination.Tags) {
+        val scope = rememberCoroutineScope()
+        val catalogue = library.catalogue
+        val gateway = library.tagsGateway
+        val tags = remember(gateway, scope) { TagsState(scope, gateway, catalogue::tagsChanged) }
+        TagsScreen(
+            state = tags,
+            onBack = navigator::back,
+            showToast = showToast,
+            onOpenCollection = navigator::showCollection,
+            onOpenRemembrance = navigator::showRemembrance,
+        )
+    }
+}
+
+/**
+ * The reads every library destination shares.
+ *
+ * A bag rather than a six-line parameter list for the same reason [CollectionsGatewayDependencies] is
+ * one: the destinations under the library tab are a family, they draw from one shelf and one set of
+ * reminders, and every screen added to that family would otherwise mean a new parameter here and a
+ * new argument at the one call site that builds it.
+ *
+ * [catalogue] is the one read of the shelf, remembered beside the navigation rather than inside any
+ * entry. [NavDisplay] renders only the entry on top of the stack and disposes the one under it, so a
+ * holder remembered per entry was thrown away and rebuilt on every hop: shelf → collection → back →
+ * shelf read the whole database three times over. A holder here outlives the stack instead, so the
+ * shelf is read once and every write made on any of the library pages lands in the same place.
+ */
+private data class LibraryContent(
+    val reminders: CollectionReminderState,
+    val catalogue: CollectionsCatalogue,
+    val tagsGateway: TagGateway,
+)
 
 /**
  * The two screens a collection leads to: the detail page and the recitation session.

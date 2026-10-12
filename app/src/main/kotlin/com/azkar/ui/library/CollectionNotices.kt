@@ -6,6 +6,7 @@ import com.azkar.generated.resources.collectionsNoticeCollectionUnstarred
 import com.azkar.generated.resources.collectionsNoticeCreated
 import com.azkar.generated.resources.collectionsNoticeDeleted
 import com.azkar.generated.resources.collectionsNoticeDuplicated
+import com.azkar.generated.resources.collectionsNoticeEdited
 import com.azkar.generated.resources.collectionsNoticeFailed
 import com.azkar.generated.resources.collectionsNoticeFavoriteAdded
 import com.azkar.generated.resources.collectionsNoticeFavoriteRemoved
@@ -17,7 +18,9 @@ import com.azkar.generated.resources.collectionsNoticePinned
 import com.azkar.generated.resources.collectionsNoticeProgressReset
 import com.azkar.generated.resources.collectionsNoticeReminderRemoved
 import com.azkar.generated.resources.collectionsNoticeReminderSaved
-import com.azkar.generated.resources.collectionsNoticeEdited
+import com.azkar.generated.resources.collectionsNoticeTagDeleted
+import com.azkar.generated.resources.collectionsNoticeTagRenamed
+import com.azkar.generated.resources.collectionsNoticeTagRestored
 import com.azkar.generated.resources.collectionsNoticeUnpinned
 import com.azkar.ui.shell.NotificationPriority
 import org.jetbrains.compose.resources.StringResource
@@ -54,6 +57,9 @@ val CollectionNoticeKey.messageResource: StringResource
             CollectionNoticeKey.FAVORITE_REMOVED -> Res.string.collectionsNoticeFavoriteRemoved
             CollectionNoticeKey.FAVORITED -> Res.string.collectionsNoticeCollectionStarred
             CollectionNoticeKey.UNFAVORITED -> Res.string.collectionsNoticeCollectionUnstarred
+            CollectionNoticeKey.TAG_RENAMED -> Res.string.collectionsNoticeTagRenamed
+            CollectionNoticeKey.TAG_DELETED -> Res.string.collectionsNoticeTagDeleted
+            CollectionNoticeKey.TAG_RESTORED -> Res.string.collectionsNoticeTagRestored
             CollectionNoticeKey.FAILED -> Res.string.collectionsNoticeFailed
         }
 
@@ -62,6 +68,9 @@ val CollectionNoticeKey.priority: NotificationPriority
     get() =
         when (this) {
             CollectionNoticeKey.FAILED -> NotificationPriority.HIGH
-            CollectionNoticeKey.DELETED, CollectionNoticeKey.FAVORITE_REMOVED -> NotificationPriority.MEDIUM
+            CollectionNoticeKey.DELETED,
+            CollectionNoticeKey.FAVORITE_REMOVED,
+            CollectionNoticeKey.TAG_DELETED,
+            -> NotificationPriority.MEDIUM
             else -> NotificationPriority.LOW
         }

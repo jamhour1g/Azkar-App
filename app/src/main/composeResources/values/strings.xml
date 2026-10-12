@@ -365,4 +365,93 @@
     <string name="remembranceEditorTranslationHelp">Optional. Leave this empty to keep the translation as it is.</string>
     <string name="remembranceEditorSave">Save</string>
     <string name="remembranceEditorAction">Edit</string>
+    <!-- The Manage tags screen, reached from the library shelf rather than from Settings. A tag is a
+         word the shelf is sorted by, so the screen that looks after them belongs beside the shelf
+         rather than among the app's preferences. -->
+    <string name="collectionsNoticeTagRenamed">Tag renamed.</string>
+    <string name="collectionsNoticeTagDeleted">Tag deleted. It can be restored from the deleted list.</string>
+    <string name="collectionsNoticeTagRestored">Tag restored.</string>
+    <string name="tagsTitle">Manage tags</string>
+    <string name="tagsSubtitle">Organize labels used across collections and remembrances.</string>
+    <string name="tagsActionBack">Back to the library</string>
+    <string name="tagsActionNew">New tag</string>
+    <string name="tagsActionManage">Manage tags</string>
+    <string name="tagsActionRename">Rename</string>
+    <string name="tagsActionDelete">Delete</string>
+    <string name="tagsActionRestore">Restore</string>
+    <string name="tagsSearchPlaceholder">Search tags</string>
+    <string name="tagsShowDeleted">Deleted</string>
+    <!-- The three figures in the band. They answer "how much of the library is named?" rather than
+         "what can I do here?", which is why the tag count is pluralized and the other two are not:
+         the second and third never read as a count of one thing in the reader's mind, they read as
+         "of the tags above". -->
+    <string name="tagsStatCollections">%1$d used in collections</string>
+    <string name="tagsStatRemembrances">%1$d remembrances tagged</string>
+    <!-- The scope and order dropdowns. Every entry names a state the list can be in rather than the
+         action that produces it, so the closed control can be read on its own. -->
+    <string name="tagsScopeAll">All tags</string>
+    <string name="tagsScopeUsed">In use</string>
+    <string name="tagsScopeUnused">Unused</string>
+    <string name="tagsScopeDeleted">Deleted</string>
+    <string name="tagsSortNameAsc">Name A–Z</string>
+    <string name="tagsSortNameDesc">Name Z–A</string>
+    <string name="tagsSortMostUsed">Most used</string>
+    <string name="tagsSortLeastUsed">Least used</string>
+    <string name="tagsSortNewest">Newest</string>
+    <!-- The row's second column and its third control. The count badge rides on the deleted toggle
+         rather than beside it, so the number that explains why the toggle is worth pressing is
+         inside the control it is an argument for. -->
+    <string name="tagsShowDeletedCount">Deleted (%1$d)</string>
+    <string name="tagsRowAdded">Added %1$s</string>
+    <string name="tagsActionViewUsage">View usage</string>
+    <!-- The footer states the one rule a user cannot discover and one number they would otherwise
+         have to count rows to get. -->
+    <string name="tagsDialogRenameNote">Tag names are case-insensitive; renaming updates every place this tag is used.</string>
+    <string name="tagsPageLabel">%1$d / %2$d</string>
+    <string name="tagsPagePrevious">Previous page</string>
+    <string name="tagsPageNext">Next page</string>
+    <!-- The drill-down. Titled after the tag so the panel says which question is being answered
+         even once the list below it has been read. -->
+    <string name="tagsUsageTitle">Where &quot;%1$s&quot; is used</string>
+    <string name="tagsUsageCollectionsTitle">Collections</string>
+    <string name="tagsUsageRemembrancesTitle">Remembrances</string>
+    <string name="tagsUsageEmpty">Nothing carries this tag yet.</string>
+    <string name="tagsUsageLoading">Reading what this tag is on…</string>
+    <string name="tagsUsageNoText">Text not available</string>
+    <string name="tagsUsageOpenHint">Open a row to see it.</string>
+    <string name="tagsUnusedLabel">Not used by anything yet</string>
+    <string name="tagsDeletedTitle">Deleted tags</string>
+    <string name="tagsEmptyTitle">No tags yet</string>
+    <string name="tagsEmptyHint">Tags are added when you label a collection. Add one here to start a new label.</string>
+    <string name="tagsSearchEmptyTitle">No tags match &quot;%1$s&quot;</string>
+    <string name="tagsSearchEmptyHint">Try a shorter search.</string>
+    <string name="tagsEmptyDeletedTitle">No deleted tags</string>
+    <string name="tagsEmptyDeletedHint">Tags you remove are kept here, so you can put one back.</string>
+    <string name="tagsDialogNewTitle">New tag</string>
+    <string name="tagsDialogRenameTitle">Rename tag</string>
+    <string name="tagsDialogNameLabel">Name</string>
+    <string name="tagsDialogNamePlaceholder">e.g. morning</string>
+    <string name="tagsDialogNameRequired">A tag needs a name.</string>
+    <string name="tagsDialogNameTaken">Another tag already has this name.</string>
+    <!-- The counts are stated in the sentence rather than left to the row: a confirmation is where a
+         user decides whether deleting is safe, and the figures are the decision. -->
+    <string name="tagsDialogDeleteTitle">Delete this tag?</string>
+    <string name="tagsDialogDeleteBody">%1$s will come off %2$s and %3$s. It stays on this screen so you can put it back.</string>
+
+    <plurals name="tagsUsageCollections">
+        <item quantity="one">%1$d collection</item>
+        <item quantity="other">%1$d collections</item>
+    </plurals>
+    <plurals name="tagsUsageRemembrances">
+        <item quantity="one">%1$d remembrance</item>
+        <item quantity="other">%1$d remembrances</item>
+    </plurals>
+    <plurals name="tagsStatTags">
+        <item quantity="one">%1$d tag</item>
+        <item quantity="other">%1$d tags</item>
+    </plurals>
+    <plurals name="tagsFooterShowing">
+        <item quantity="one">Showing %1$d tag</item>
+        <item quantity="other">Showing %1$d tags</item>
+    </plurals>
 </resources>

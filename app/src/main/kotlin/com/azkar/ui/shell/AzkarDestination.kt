@@ -79,6 +79,19 @@ sealed interface AzkarDestination : NavKey {
      * the bar.
      */
     data object Settings : AzkarDestination
+
+    /**
+     * `ui/library/TagsScreen.kt` — the user's own vocabulary, and the one place it can be edited.
+     *
+     * A child of the library rather than of Settings, which is where a reader looks for everything
+     * else about a library but the answer there. Tags are what the shelf's own label chips are drawn
+     * from and what the collection editor offers as options, so a tag that has been renamed or removed
+     * is already changing what two other screens show; a screen that could only be reached from a gear
+     * would leave the tag list looking like an app preference rather than the thing every chip is cut
+     * from. It is pushed rather than swapped for the same reason [CollectionDetail] is — the shelf's
+     * filters and search survive the trip, so coming back lands on the same narrowed shelf.
+     */
+    data object Tags : AzkarDestination
 }
 
 /**
@@ -101,6 +114,7 @@ val AzkarDestination.rootTab: AzkarDestination
             is AzkarDestination.CollectionDetail,
             is AzkarDestination.CollectionSession,
             is AzkarDestination.RemembranceReader,
+            is AzkarDestination.Tags,
             -> AzkarDestination.Library
 
             else -> this
@@ -194,6 +208,20 @@ class AzkarNavigator(
     fun showRemembrance(id: Long) {
         if (backStack.last() != AzkarDestination.RemembranceReader(id)) {
             backStack.add(AzkarDestination.RemembranceReader(id))
+        }
+    }
+
+    /**
+     * Opens the tag manager on top of the shelf.
+     *
+     * Pushed with the same no-op guard as every other child here, so a double click cannot stack two
+     * copies. A user coming from a *collection's* editor reaches the same destination, and that is
+     * also a no-op rather than a push — the manager is one screen with one set of rows, and a second
+     * copy underneath the first would only mean a back press that appears to do nothing.
+     */
+    fun showTags() {
+        if (backStack.last() != AzkarDestination.Tags) {
+            backStack.add(AzkarDestination.Tags)
         }
     }
 

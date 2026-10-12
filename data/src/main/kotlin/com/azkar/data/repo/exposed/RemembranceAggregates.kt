@@ -15,6 +15,8 @@ import com.azkar.data.table.entity.RemembranceTranslationEntity
 import com.azkar.data.table.entity.TagEntity
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.Tag
+import com.azkar.domain.model.TagUsageRemembrance
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -67,6 +69,40 @@ internal object RemembranceAggregates {
     }
 
     /**
+     * Enough of each loaded parent to name it in a list and open it, without assembling the aggregate.
+     *
+     * The tag management screen's usage panel asks for exactly this: an id to navigate by and one line
+     * to recognise the passage by. Going through [load] instead would fetch every explanation in every
+     * locale for every passage on the panel, none of which the panel prints or can reach.
+     *
+     * An `Iterable` receiver materialised once for the same reason [CollectionAggregates.summaries]
+     * does: the callers hand over a query result, which is lazy, and this walks it twice — once for
+     * the ids the translation read is keyed by and once to build the rows.
+     *
+     * Only the translation table is read, for the same reason the explanation table is left alone here
+     * — a panel row is identified by its passage, not by what someone wrote about it.
+     */
+    fun Iterable<RemembranceEntity>.usageRows(): List<TagUsageRemembrance> {
+        val rows = this.toList()
+        if (rows.isEmpty()) {
+            return emptyList()
+        }
+        val ids = rows.map { it.id.value }
+        val texts =
+            localizedTexts(
+                RemembranceTranslationEntity.find { RemembranceTranslationTable.remembranceId inList ids },
+            )
+        return rows.map { entity ->
+            val id = entity.id.value
+            TagUsageRemembrance(
+                id = id,
+                texts = texts[id].orEmpty().mapValues { (_, row) -> row.text },
+                source = entity.sourceText,
+            )
+        }
+    }
+
+    /**
      * The locale codes one remembrance already has a row for in the given translation table.
      *
      * Takes the table rather than an entity class because both translation tables answer this
@@ -106,6 +142,10 @@ internal object RemembranceAggregates {
      * it once for the page is what keeps this off the N+1 path the rest of this class avoids. The
      * joined rows are wrapped into [TagEntity]s so the name and the id come off the entity rather
      * than off column indices.
+     *
+     * `deleted_at IS NULL` here for the same reason it is in the collections aggregate: a soft-deleted
+     * tag keeps its `remembrance_tag` rows so that restoring it is lossless, which means the join
+     * alone cannot tell a live tag from a tombstone.
      */
     private fun tagsByRemembrance(ids: List<Long>): Map<Long, Set<Tag>> {
         if (ids.isEmpty()) {
@@ -113,7 +153,7 @@ internal object RemembranceAggregates {
         }
         return (RemembranceTagTable innerJoin TagTable)
             .selectAll()
-            .where { RemembranceTagTable.remembranceId inList ids }
+            .where { (RemembranceTagTable.remembranceId inList ids) and (TagTable.deletedAt eq null) }
             .groupBy(
                 { it[RemembranceTagTable.remembranceId].value },
                 { TagEntity.wrapRow(it).toTag() },

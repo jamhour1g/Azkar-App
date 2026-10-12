@@ -12,6 +12,8 @@ import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.CollectionsGatewayDependencies
 import com.azkar.ui.library.data.DomainCollectionsGateway
 import com.azkar.ui.library.data.DomainReminderGateway
+import com.azkar.ui.library.data.DomainTagsGateway
+import com.azkar.ui.library.data.TagGateway
 import com.azkar.ui.shell.ThemePreferenceStore
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -69,4 +71,9 @@ val appModule =
         } bind CollectionHomeGateway::class
 
         single<HomeGateway> { DomainHomeGateway(get(), get()) }
+
+        // Under its own seam rather than added to `CollectionsGateway`, because a tag outlives the
+        // screens that attach one to a collection: deleting or renaming one is a job the library has
+        // and no collection screen should be able to do by accident. One dependency, so no bag.
+        single<TagGateway> { DomainTagsGateway(get()) }
     }

@@ -28,6 +28,8 @@ import com.azkar.ui.library.data.CollectionReminderGateway
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.DomainCollectionsGateway
 import com.azkar.ui.library.data.DomainReminderGateway
+import com.azkar.ui.library.data.DomainTagsGateway
+import com.azkar.ui.library.data.TagGateway
 import com.azkar.ui.shell.ReminderNotifier
 import com.azkar.ui.shell.ThemePreferenceStore
 import de.infix.testBalloon.framework.core.testSuite
@@ -78,6 +80,7 @@ val AppModuleSuite by testSuite("AppModule") {
                     koin.get<CollectionsGateway>(),
                     koin.get<CollectionHomeGateway>(),
                     koin.get<HomeGateway>(),
+                    koin.get<TagGateway>(),
                     koin.get<ThemePreferenceStore>(),
                     koin.get<LocaleStore>(),
                 ),
@@ -90,6 +93,7 @@ val AppModuleSuite by testSuite("AppModule") {
             assertThat(koin.get<HomeGateway>()).isSameAs(koin.get<HomeGateway>())
             assertThat(koin.get<CollectionReminderGateway>()).isSameAs(koin.get<CollectionReminderGateway>())
             assertThat(koin.get<CollectionsGateway>()).isSameAs(koin.get<CollectionsGateway>())
+            assertThat(koin.get<TagGateway>()).isSameAs(koin.get<TagGateway>())
         }
 
         test("the library shelf and the home rail share one collections gateway") { graph ->
@@ -118,6 +122,7 @@ val AppModuleSuite by testSuite("AppModule") {
             assertThat(koin.getOrNull<DomainCollectionsGateway>()).isNull()
             assertThat(koin.getOrNull<DomainReminderGateway>()).isNull()
             assertThat(koin.getOrNull<DomainHomeGateway>()).isNull()
+            assertThat(koin.getOrNull<DomainTagsGateway>()).isNull()
         }
 
         test("the module registers its seams and nothing else") {
@@ -130,6 +135,7 @@ val AppModuleSuite by testSuite("AppModule") {
                     CollectionReminderGateway::class,
                     CollectionsGateway::class,
                     HomeGateway::class,
+                    TagGateway::class,
                 )
         }
 

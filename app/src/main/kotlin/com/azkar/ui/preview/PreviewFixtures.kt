@@ -677,6 +677,7 @@ fun previewLibraryHeroControls(
         narrowing = narrowing,
         onImport = {},
         onNew = {},
+        onManageTags = {},
     )
 
 /**

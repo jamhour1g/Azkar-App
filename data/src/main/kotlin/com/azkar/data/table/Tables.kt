@@ -123,6 +123,27 @@ object TagTable : TimestampedIdTable("tag") {
      */
     val name = varchar("name", MAX_NAME_LENGTH)
 
+    /**
+     * When this tag was taken out of circulation, or `null` while it is still in use.
+     *
+     * A tombstone rather than a delete, and the whole reason this table has one column that the other
+     * nine tables do not. A tag is shared: the row is a single fact that a dozen collections and a
+     * hundred remembrances each hold an edge to, and the `collection_tag` / `remembrance_tag` rows are
+     * what make that sharing cheap. Removing the tag outright therefore cannot mean "forget it" — it
+     * would mean silently rewriting the labels of every collection carrying it, which is a larger
+     * edit than the person who clicked Delete was asking to make.
+     *
+     * So the row stays, the edges stay, and only the reading changes: every read of `tag` outside
+     * `TagService.restore` asks for `deleted_at IS NULL`. That makes the deletion reversible for free
+     * — clearing this column brings the tag back to the exact shelves it left, because the edges that
+     * were never touched are still pointing at the same id.
+     *
+     * Null rather than a flag because a flag has a fourth state to get wrong. With a boolean,
+     * `false` would have to mean both "deleted, and the date is unknown" and "not deleted", and
+     * [createdAt] next to it is the evidence that the date is always written.
+     */
+    val deletedAt = timestampWithTimeZone(DELETED_AT).nullable()
+
     init {
         // Serves `findByNameIgnoreCase` directly, since the name it is handed is folded too.
         uniqueIndex("uq_tag__name", name)
@@ -433,6 +454,7 @@ object CollectionReminderTable : TimestampedIdTable("collection_reminder") {
 
 private const val CREATED_AT = "created_at"
 private const val UPDATED_AT = "updated_at"
+private const val DELETED_AT = "deleted_at"
 private const val MAX_NAME_LENGTH = 255
 private const val MAX_GRADE_LENGTH = 32
 private const val MAX_ENUM_LENGTH = 32

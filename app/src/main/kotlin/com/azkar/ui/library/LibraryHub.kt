@@ -38,10 +38,10 @@ import com.azkar.domain.model.RemembranceCollection
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionsActionDelete
 import com.azkar.generated.resources.collectionsActionDuplicate
+import com.azkar.generated.resources.collectionsActionEdit
 import com.azkar.generated.resources.collectionsActionFavorite
 import com.azkar.generated.resources.collectionsActionOpen
 import com.azkar.generated.resources.collectionsActionPin
-import com.azkar.generated.resources.collectionsActionEdit
 import com.azkar.generated.resources.collectionsActionUnfavorite
 import com.azkar.generated.resources.collectionsActionUnpin
 import com.azkar.generated.resources.collectionsDuplicateNameSuffix
@@ -141,6 +141,7 @@ private fun ShelfColumn(
                         ),
                     onImport = callbacks.onImport,
                     onNew = callbacks.onCreate,
+                    onManageTags = callbacks.onManageTags,
                 ),
             compact = compact,
         )

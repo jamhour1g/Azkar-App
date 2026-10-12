@@ -259,6 +259,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                     CollectionsScreen(
                         onOpenCollection = {},
                         onOpenRemembrance = {},
+                        onManageTags = {},
                         showToast = { _, _, _ -> },
                         catalogue = rememberPreviewCatalogue(Locale.ENGLISH),
                     )
@@ -282,6 +283,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                     CollectionsScreen(
                         onOpenCollection = {},
                         onOpenRemembrance = {},
+                        onManageTags = {},
                         showToast = { _, _, _ -> },
                         catalogue = rememberPreviewCatalogue(Locale.ENGLISH),
                     )
@@ -307,6 +309,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                     CollectionsScreen(
                         onOpenCollection = { opened += it },
                         onOpenRemembrance = {},
+                        onManageTags = {},
                         showToast = { _, _, _ -> },
                         catalogue = rememberPreviewCatalogue(Locale.ENGLISH),
                     )

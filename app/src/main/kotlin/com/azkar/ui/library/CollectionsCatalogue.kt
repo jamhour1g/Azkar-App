@@ -68,6 +68,9 @@ enum class CollectionNoticeKey {
     UNFAVORITED,
     REMINDER_SAVED,
     REMINDER_REMOVED,
+    TAG_RENAMED,
+    TAG_DELETED,
+    TAG_RESTORED,
     FAILED,
 }
 
@@ -582,7 +585,8 @@ class CollectionsCatalogue(
      * dialog, which is composed inside the keyed subtree, is the one place that sees the current one.
      */
     suspend fun pickCoverImage(title: String): String? =
-        CoverImageChooser.choose(title)
+        CoverImageChooser
+            .choose(title)
             ?.file
             ?.toPath()
             ?.let { CoverImageChooser.ingest(it, ::storeCoverImage) }
@@ -724,6 +728,24 @@ class CollectionsCatalogue(
      */
     private fun reloadQuietly() {
         startRead(showSpinner = false)
+    }
+
+    /**
+     * Re-reads the shelf because the tag vocabulary changed underneath it.
+     *
+     * Public, unlike [reloadQuietly], because the write that needs it happened somewhere else. A tag
+     * renamed on the Manage tags screen is reached from the shelf's own label chips, and the chips are
+     * derived from [shelfTags] — which is a copy taken when the catalogue was last read. Without this,
+     * a tag renamed in the next screen over would keep its old name on every chip behind it until
+     * something unrelated triggered a read, which is the one thing a rename cannot be allowed to do:
+     * the whole reason to rename a tag is that the name is wrong everywhere at once.
+     *
+     * The same reason it does not reload itself: this catalogue owns collections and their members,
+     * not tags. It is told the vocabulary moved rather than reaching for the tag service to find out,
+     * so the shelf keeps asking its own gateway for the shelf's own facts.
+     */
+    fun tagsChanged() {
+        reloadQuietly()
     }
 
     /**
