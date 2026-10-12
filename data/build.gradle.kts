@@ -1,36 +1,46 @@
 plugins {
-  `java-library`
-  id("azkar-common")
+    `java-library`
+    id("azkar-common")
+    // Applied unversioned: buildSrc owns it on the classpath (detekt needs the
+    // Kotlin plugin to resolve source sets), and the version must match the
+    // catalog's Kotlin exactly.
+    id("org.jetbrains.kotlin.jvm")
+}
+
+java {
+    // `azkar-common` turns module-path inference on for every module. Exposed is a
+    // plain classpath library with no JPMS descriptor, and this module no longer
+    // ships a `module-info.java`, so `:data` opts out like `:app` does.
+    modularity.inferModulePath = false
 }
 
 dependencies {
-  // Database
-  implementation(libs.com.h2database.h2)
-  implementation(libs.org.hibernate.orm.hibernate.core)
-  implementation(libs.org.hibernate.orm.hibernate.hikaricp)
-  implementation(libs.com.zaxxer.hikari)
-  implementation(libs.org.flywaydb.flyway.core)
-  implementation(libs.com.google.code.gson.gson)
-  implementation(libs.org.jboss.logging.jboss.logging)
-  implementation(libs.jakarta.xml.bind.jakarta.xml.bind.api)
-  implementation(libs.org.glassfish.jaxb.jaxb.runtime)
-  implementation(libs.com.fasterxml.classmate.classmate)
-  implementation(libs.net.bytebuddy.byte.buddy)
+    implementation(project(":domain"))
 
-  // Jakarta Data
-  implementation(libs.jakarta.data.jakarta.data.api)
+    // Database: Exposed owns the schema, the queries and the seed data.
+    implementation(libs.org.jetbrains.exposed.exposed.core)
+    implementation(libs.org.jetbrains.exposed.exposed.jdbc)
+    implementation(libs.org.jetbrains.exposed.exposed.java.time)
+    // The entity layer. Repositories address rows as `LongEntity` / `CompositeEntity`
+    // instances bound to the same `Table` objects below, rather than as bare
+    // `ResultRow`s and hand-written update blocks.
+    implementation(libs.org.jetbrains.exposed.exposed.dao)
+    // DDL generation against a live database, replacing the former SQL migrations.
+    implementation(libs.org.jetbrains.exposed.exposed.migration.jdbc)
 
-  // JPA
-  implementation(libs.jakarta.persistence.jakarta.persistence.api)
-  implementation(libs.jakarta.inject.jakarta.inject.api)
-  implementation(libs.jakarta.enterprise.jakarta.enterprise.cdi.api)
-  implementation(libs.jakarta.transaction.jakarta.transaction.api)
+    // Embedded H2 (file-backed in the app, in-memory in tests).
+    implementation(libs.com.h2database.h2)
+    // Connection pool. Exposed opens a fresh connection per transaction when given a
+    // plain JDBC URL, which is far too chatty for the AUTO_SERVER H2 file database.
+    implementation(libs.com.zaxxer.hikari)
 
-  // Hibernate-generated Jakarta Data repository impls reference CDI types at runtime
-  testRuntimeOnly(libs.jakarta.enterprise.jakarta.enterprise.cdi.api)
+    // The domain ports are `suspend`, so the adapter that runs them needs a coroutine
+    // builder. Exposed happens to drag coroutines-core in transitively; declaring it
+    // keeps this module honest if Exposed ever stops depending on it.
+    implementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.core)
 
-  implementation(project(":domain"))
-
-  // Hibernate annotation processor — generates Jakarta Data repository implementations
-  annotationProcessor(libs.org.hibernate.orm.hibernate.processor)
+    // This module owns the data half of the Koin graph (`dataModule`), so it needs the
+    // container DSL. The Compose bindings stay in `:app`, which is the only module with a
+    // UI.
+    implementation(libs.io.insert.koin.koin.core)
 }

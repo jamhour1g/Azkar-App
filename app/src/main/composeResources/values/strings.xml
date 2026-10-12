@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+    <!-- Header Bar -->
+    <string name="title">Azkar - Your Spiritual Companion</string>
+    <string name="azkar">Azkar</string>
+    <string name="yourCompanion">Your Spiritual Companion</string>
+    <string name="azkarLibrary">Azkar Library</string>
+    <string name="home">Home</string>
+    <!-- Main Content -->
+    <string name="greetingTitle">Assalamu Alaikum</string>
+    <string name="greetingDate">14 Dhu al-Hijjah 1445 AH | 20 June 2024</string>
+    <string name="dailyHadith">Daily Hadith</string>
+    <string name="todaysAzkar">Today's Azkar</string>
+    <string name="noHadithSource">Source not available currently.</string>
+    <string name="readMore">Read more</string>
+    <string name="dailyHadithDetailsTitle">Daily hadith details</string>
+    <string name="dailyHadithDetailsHeader">Full hadith text</string>
+    <string name="dailyHadithDetailsArabic">Arabic</string>
+    <string name="dailyHadithDetailsEnglish">English translation</string>
+    <string name="dailyHadithDetailsSource">Source</string>
+    <string name="hadithExample">"Verily, the best of you are those who have the best manners."</string>
+    <string name="explanationExample">It was not part of the Prophet's character to speak or act indecently, nor would he deliberately do that. Indeed, he was of exemplary good character. The Prophet (may Allah's peace and blessings be upon him) used to say: The best among you in the sight of Allah are those who possess the best manners; in doing good, having a smiling face, refraining from harming others and bearing harm from them, and associating with people in a pleasant manner.</string>
+    <string name="sourceExample">[Authentic hadith] - [Narrated by Bukhari &amp; Muslim] - [Sahih Bukhari - 3559]</string>
+    <!-- Prayer times section -->
+    <string name="todayPrayerTimes">Today's Prayer Times</string>
+    <string name="nextPrayerIn">Next prayer in:</string>
+    <string name="nextPrayerLabel">Next prayer</string>
+    <string name="prayerTimesLocation">Prayer times for Ramallah, Palestine</string>
+    <string name="prayerTimeRemaining">2h 15m 30s</string>
+    <string name="prayerNotification">All Prayer Notifications</string>
+    <string name="prayerNotificationsShort">Notifications</string>
+    <string name="fajr">Fajr</string>
+    <string name="fajrTime">04:50 AM</string>
+    <string name="fajrValue">04:50</string>
+    <string name="dhuhr">Dhuhr</string>
+    <string name="dhuhrTime">Next prayer</string>
+    <string name="dhuhrValue">01:20 PM</string>
+    <string name="asr">Asr</string>
+    <string name="asrTime">05:15 PM</string>
+    <string name="asrValue">05:15</string>
+    <string name="maghrib">Maghrib</string>
+    <string name="maghribTime">07:45 PM</string>
+    <string name="maghribValue">07:45</string>
+    <string name="isha">Isha</string>
+    <string name="ishaTime">09:30 PM</string>
+    <string name="ishaValue">09:30</string>
+    <!-- Favorites card -->
+    <string name="favoriteAzkar">Favorite Azkar</string>
+    <string name="favoriteAzkarArabic">Subhanallahi wa bihamdih, Subhanallahil azeem</string>
+    <string name="favoriteAzkarEnglish">"Glorified is God and praised is He, Glorified is God the Most Great."</string>
+    <string name="favoriteAzkarSource">Sahih al-Bukhari</string>
+    <string name="favoritePosition">%1$d / %2$d</string>
+    <string name="noFavoritesYet">No favorites yet</string>
+    <string name="favoritePrevLabel">Previous</string>
+    <string name="favoriteNextLabel">Next</string>
+    <!-- Library: the shared language of a remembrance tile -->
+    <string name="librarySourceLabel">Source:</string>
+    <string name="librarySourceUnknown">Unknown source</string>
+    <string name="libraryMissingText">No text available for this remembrance.</string>
+    <string name="libraryCategoryMorning">Morning Azkar</string>
+    <string name="libraryCategoryEvening">Evening Azkar</string>
+    <string name="libraryCategoryTravel">Travel Azkar</string>
+    <string name="libraryCategoryUncategorized">Uncategorized</string>
+    <string name="libraryActionRead">Read More</string>
+    <string name="libraryActionFavorite">Add to Favorites</string>
+    <string name="libraryActionCopy">Copy</string>
+    <string name="libraryActionCopyCopied">Copied to clipboard</string>
+    <string name="libraryActionMore">More actions</string>
+    <string name="libraryReadDialogTitle">Remembrance Details</string>
+    <string name="libraryLoading">Loading library...</string>
+    <string name="libraryLoadFailed">Failed to load library data.</string>
+    <!-- Library: the collections hub -->
+    <string name="collectionsTitle">Collections</string>
+    <string name="collectionsSubtitle">Every azkar has a home. Open one to read what is inside it.</string>
+    <string name="collectionsActionNew">New Collection</string>
+    <string name="collectionsSearchCollections">Search collections...</string>
+    <string name="collectionsSearchRemembrances">Search every remembrance...</string>
+    <string name="collectionsScopeLabel">Show</string>
+    <string name="collectionsSortLabel">Sort</string>
+    <string name="libraryFiltersLabel">Filters and sorting</string>
+    <string name="collectionsLabelsAll">All labels</string>
+    <string name="collectionsLabelsScrollBack">Show earlier labels</string>
+    <string name="collectionsLabelsScrollForward">Show later labels</string>
+    <string name="collectionsScopeAll">All</string>
+    <string name="collectionsScopeOfficial">Included</string>
+    <string name="collectionsScopeCustom">Yours</string>
+    <string name="collectionsScopePinned">Pinned</string>
+    <string name="collectionsScopeFavorite">Starred</string>
+    <string name="collectionsScopeInProgress">In Progress</string>
+    <string name="collectionsSortRecent">Recently Opened</string>
+    <string name="collectionsSortName">Name</string>
+    <string name="collectionsSortItems">Most Remembrances</string>
+    <string name="collectionsSortProgress">Most Progress</string>
+    <string name="collectionsActionOpen">Open</string>
+    <string name="collectionsActionRename">Rename</string>
+    <string name="collectionsActionDuplicate">Duplicate</string>
+    <string name="collectionsActionDelete">Delete</string>
+    <string name="collectionsActionPin">Pin to Top</string>
+    <string name="collectionsActionUnpin">Unpin</string>
+    <string name="collectionsActionShowOnHome">Show on Home</string>
+    <string name="collectionsActionHideFromHome">Hide from Home</string>
+    <string name="homeCollectionActionStart">Start</string>
+    <string name="homeCollectionActionContinue">Continue</string>
+    <string name="homeCollectionActionDone">Done</string>
+    <string name="homeCollectionProgressFormat">%1$d of %2$d</string>
+    <string name="collectionDragHandle">Drag to reorder</string>
+    <string name="collectionsActionAddMembers">Add Remembrances</string>
+    <string name="collectionsActionBack">Back to Collections</string>
+    <string name="collectionsEmptyTitle">No collections yet</string>
+    <string name="collectionsEmptyHint">Make one to gather the azkar you come back to.</string>
+    <string name="collectionsNoMatchesTitle">Nothing on the shelf matches</string>
+    <string name="collectionsNoMatchesHint">Try a different word, or clear the filter above.</string>
+    <string name="collectionsSearchEmptyTitle">No remembrance matched</string>
+    <string name="collectionsSearchEmptyHint">The search reaches the text, the source and the categories of every collection.</string>
+    <string name="collectionsKindOfficial">Included with Azkar</string>
+    <string name="collectionsKindCustom">Your collection</string>
+    <!-- Library: the create / rename / duplicate dialog -->
+    <string name="collectionsDialogCreateTitle">New Collection</string>
+    <string name="collectionsDialogRenameTitle">Rename Collection</string>
+    <string name="collectionsDialogDuplicateTitle">Duplicate Collection</string>
+    <string name="collectionsDialogDeleteTitle">Delete Collection?</string>
+    <string name="collectionsDialogDeleteBody">"%1$s will be removed from your shelf. The remembrances in it are not deleted."</string>
+    <string name="collectionsDialogNameLabel">Name</string>
+    <string name="collectionsDialogNamePlaceholder">Morning Azkar</string>
+    <string name="collectionsDialogDescriptionLabel">Description</string>
+    <string name="collectionsDialogDescriptionPlaceholder">What belongs in here</string>
+    <string name="collectionsDialogTagsLabel">Labels</string>
+    <string name="collectionsDialogTagsPlaceholder">morning, sleep</string>
+    <string name="collectionsDialogTagsHint">Separate labels with commas. These are the same labels remembrances carry.</string>
+    <string name="collectionsDialogCoverLabel">Cover</string>
+    <string name="collectionsDialogCoverNone">No picture — the app draws one.</string>
+    <string name="collectionsDialogCoverChosen">A picture is set for this collection.</string>
+    <string name="collectionsDialogCoverBusy">Copying…</string>
+    <string name="collectionsActionChooseCover">Choose a picture…</string>
+    <string name="collectionsActionRemoveCover">Remove the picture</string>
+    <string name="collectionsNoticeCoverSet">Cover updated.</string>
+    <string name="collectionsNoticeCoverRemoved">Cover removed.</string>
+    <string name="collectionsDialogNameRequired">Give the collection a name.</string>
+    <string name="collectionsActionCancel">Cancel</string>
+    <string name="collectionsActionCreate">Create</string>
+    <string name="collectionsActionSave">Save</string>
+    <string name="collectionsDuplicateNameSuffix">%1$s (copy)</string>
+    <!-- Library: a collection's own page -->
+    <string name="collectionDetailEmptyTitle">This collection is empty</string>
+    <string name="collectionDetailEmptyHint">Add the remembrances you want in it, or start from one of the collections Azkar ships with.</string>
+    <!-- The reader page. Its own "gone" copy because this is the one screen that can be pointed at a
+         row the database no longer holds from four different places, and a message about a collection
+         would be the wrong subject in front of someone who never asked about one. -->
+    <string name="remembranceReaderTitle">Remembrance</string>
+    <string name="remembranceReaderBack">Back</string>
+    <string name="remembranceReaderMissingTitle">This remembrance is gone</string>
+    <string name="remembranceReaderMissingHint">It was deleted, or the library was reloaded without it.</string>
+    <string name="collectionDetailMissingTitle">That collection is gone</string>
+    <string name="collectionDetailMissingHint">It was deleted, or the shelf was reloaded without it.</string>
+    <string name="collectionDetailAddPickerTitle">Add Remembrances</string>
+    <string name="collectionDetailAddPickerHint">Tick everything you want and add it in one go.</string>
+    <string name="collectionDetailAddPickerEmpty">Nothing left to add — this collection already holds everything.</string>
+    <string name="collectionDetailSelectAll">Select All</string>
+    <string name="collectionDetailClearSelection">Clear</string>
+    <string name="collectionDetailAdd">Add</string>
+    <string name="collectionDetailRemove">Remove</string>
+    <string name="collectionDetailRemoveTitle">Remove From Collection?</string>
+    <string name="collectionDetailRemoveBody">%1$d remembrances will leave this collection. They stay in the rest of your library.</string>
+    <!-- Library: one-shot outcomes -->
+    <string name="collectionsNoticeCreated">Collection created.</string>
+    <string name="collectionsNoticeRenamed">Collection renamed.</string>
+    <string name="collectionsNoticeDeleted">Collection deleted.</string>
+    <string name="collectionsNoticeDuplicated">Collection duplicated.</string>
+    <string name="collectionsNoticePinned">Pinned to the top of the shelf.</string>
+    <string name="collectionsNoticeUnpinned">Unpinned.</string>
+    <string name="collectionsNoticeMembersAdded">Remembrances added.</string>
+    <string name="collectionsNoticeMembersRemoved">Remembrances removed.</string>
+    <string name="collectionsNoticeFavoriteAdded">Added to favorites.</string>
+    <string name="collectionsNoticeFavoriteRemoved">Removed from favorites.</string>
+    <string name="collectionsNoticeCollectionStarred">Collection starred.</string>
+    <string name="collectionsNoticeCollectionUnstarred">Star removed from collection.</string>
+    <string name="collectionsNoticeFailed">That did not work. Nothing was changed.</string>
+    <string name="collectionsToastTitle">Azkar Library</string>
+    <string name="toastMessageFallback">Done.</string>
+    <!-- Settings -->
+    <string name="settingsTitle">Settings</string>
+    <string name="settingsSubtitle">How the app looks and reads</string>
+    <string name="settingsBack">Back</string>
+    <string name="settingsThemeHeader">Appearance</string>
+    <string name="settingsThemeBody">Follow the desktop, or pin light or dark for every launch.</string>
+    <string name="settingsThemeSystem">System</string>
+    <string name="settingsThemeLight">Light</string>
+    <string name="settingsThemeDark">Dark</string>
+    <string name="settingsLanguageHeader">Language</string>
+    <string name="settingsLanguageBody">Your selection updates interface and remembrance text.</string>
+    <string name="settingsLanguageEnglish">English</string>
+    <string name="settingsLanguageArabic">Arabic</string>
+
+    <plurals name="collectionsMemberCount">
+        <item quantity="one">%1$d remembrance</item>
+        <item quantity="other">%1$d remembrances</item>
+    </plurals>
+    <plurals name="collectionsSelectionCount">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <plurals name="remembranceInCollections">
+        <item quantity="one">In %1$d collection</item>
+        <item quantity="other">In %1$d collections</item>
+    </plurals>
+    <plurals name="collectionsSearchResultCount">
+        <item quantity="one">%1$d match</item>
+        <item quantity="other">%1$d matches</item>
+    </plurals>
+
+    <string name="collectionsActionStart">Start</string>
+    <string name="collectionDetailProgressFormat">%1$d of %2$d recited</string>
+    <string name="collectionDetailActionResetProgress">Reset progress</string>
+    <string name="collectionDetailActionResume">Resume</string>
+    <string name="collectionDetailResetConfirmTitle">Reset recitation progress?</string>
+    <string name="collectionDetailResetConfirmBody">Every count recorded against this collection will be forgotten. The remembrances themselves are untouched.</string>
+    <string name="collectionsNoticeProgressReset">Recitation progress reset</string>
+    <string name="collectionsNoticeOnHome">Shown on Home</string>
+    <string name="collectionsNoticeOffHome">Hidden from Home</string>
+    <string name="collectionsNoticeReminderSaved">Reminder saved</string>
+    <string name="collectionsNoticeReminderRemoved">Reminder removed</string>
+
+    <string name="collectionReminderNone">No reminder yet</string>
+    <string name="collectionReminderSet">Reminding you</string>
+    <string name="collectionReminderDialogTitle">Remind me about this collection</string>
+    <string name="collectionReminderDialogHint">You will get a notification on your desktop, and one here, when it comes round.</string>
+    <string name="collectionReminderCadenceLabel">How often</string>
+    <string name="collectionReminderDayLabel">On which day</string>
+    <string name="collectionReminderTimeLabel">At what time</string>
+    <string name="collectionReminderCadenceDaily">Every day</string>
+    <string name="collectionReminderCadenceWeekdays">Weekdays</string>
+    <string name="collectionReminderCadenceWeekly">Once a week</string>
+    <string name="collectionReminderDayMonday">Monday</string>
+    <string name="collectionReminderDayTuesday">Tuesday</string>
+    <string name="collectionReminderDayWednesday">Wednesday</string>
+    <string name="collectionReminderDayThursday">Thursday</string>
+    <string name="collectionReminderDayFriday">Friday</string>
+    <string name="collectionReminderDaySaturday">Saturday</string>
+    <string name="collectionReminderDaySunday">Sunday</string>
+    <string name="collectionReminderRunning">Reminder is on</string>
+    <string name="collectionReminderPaused">Reminder is paused</string>
+    <string name="collectionReminderPauseHint">Switch it off to keep the time without the notifications.</string>
+    <string name="collectionReminderRemove">Remove reminder</string>
+    <string name="collectionReminderRemoveTitle">Remove this reminder?</string>
+    <string name="collectionReminderRemoveBody">The collection keeps every remembrance it has. Only the schedule goes.</string>
+    <string name="collectionReminderFiredTitle">Time to recite</string>
+    <string name="collectionReminderFiredFormat">%1$s — %2$d remembrances waiting</string>
+    <string name="collectionReminderFiredEmpty">%1$s has nothing in it yet</string>
+    <string name="collectionSessionActionAgain">Recite again</string>
+    <string name="collectionSessionActionSkip">Skip</string>
+    <string name="collectionSessionActionResume">Back to where I was</string>
+    <string name="collectionSessionActionRestart">Start over</string>
+    <string name="collectionSessionFinishedTitle">Finished</string>
+    <string name="collectionSessionFinishedBody">You have recited every remembrance in this collection.</string>
+    <string name="collectionSessionMissingTitle">Collection unavailable</string>
+    <string name="collectionSessionMissingHint">It is no longer on your shelf, so there is nothing to recite.</string>
+    <string name="collectionsActionClose">Close</string>
+    <string name="collectionsActionShare">Share</string>
+    <string name="collectionsActionImport">Import</string>
+    <string name="collectionShareTitle">Share this collection</string>
+    <string name="collectionShareHint">Copy this list and paste it into another install of Azkar to bring the remembrances across. You choose the encoding; both carry the same remembrances.</string>
+    <string name="collectionShareCopy">Copy to clipboard</string>
+    <string name="collectionShareCopied">Collection copied to the clipboard</string>
+    <string name="collectionImportAddTitle">Import collections</string>
+    <string name="collectionImportHint">Paste a list someone shared with you, or type one yourself. Remembrances are matched by their text and citation, so anything this build does not recognise is reported rather than invented.</string>
+    <string name="collectionImportFormatJson">Azkar file</string>
+    <string name="collectionImportFormatText">Plain list</string>
+    <string name="collectionImportPayloadLabel">The list</string>
+    <string name="collectionImportPayloadPlaceholder">Paste here</string>
+    <string name="collectionImportPreview">Check what it will do</string>
+    <string name="collectionImportAdd">Import</string>
+    <string name="collectionImportPlanned">Here is what it will do</string>
+    <string name="collectionImportUnreadableTitle">That is not an Azkar collections list</string>
+    <string name="collectionImportUnreadableHint">Check the encoding above matches how the list was copied, and that nothing was left out of the middle of it.</string>
+    <string name="collectionImportEmptyTitle">Nothing to import</string>
+    <string name="collectionImportEmptyHint">The list reads, but it does not describe any remembrances or collections.</string>
+    <string name="collectionImportCreateCount">New collections</string>
+    <string name="collectionImportMergeCount">Added to your collections</string>
+    <string name="collectionImportUnmatchedCount">Remembrances not recognised</string>
+    <string name="collectionImportSkippedLabel">Left alone because we already ship them</string>
+    <string name="collectionImportUnmatchedLabel">Not recognised by this build</string>
+    <string name="collectionImportReportTitle">Import finished</string>
+    <string name="collectionImportResultCreated">Collections created</string>
+    <string name="collectionImportResultMerged">Collections added to</string>
+    <string name="collectionImportResultMembers">Remembrances added</string>
+
+    <!-- The library's own layout: the banner and the chips above the shelf. -->
+    <string name="libraryHeroLabel">Azkar Library</string>
+    <string name="libraryHeroTitle">Your Daily Remembrances</string>
+    <string name="libraryHeroSubtitle">Browse and organize your daily remembrances by category.</string>
+    <string name="collectionsProgressFormat">%1$d of %2$d recited</string>
+
+    <!-- The categories the seed data is tagged with. Every tag name in the shipped TSV has a label
+         here, so a category is never shown in English over an Arabic page: the presenter's map is
+         built from these keys and anything absent from it falls through to its raw name. -->
+    <string name="libraryCategoryMuslimData">Muslim Data</string>
+    <string name="libraryCategoryPrayer">After Prayer</string>
+    <string name="libraryCategoryMorningEvening">Morning &amp; Evening Azkar</string>
+    <string name="libraryCategoryPraising">Praising Allah</string>
+    <string name="libraryCategoryJoyDistress">Joy &amp; Distress</string>
+    <string name="libraryCategoryGoodEtiquette">Good Etiquette</string>
+    <string name="libraryCategorySicknessDeath">Sickness &amp; Death</string>
+    <string name="libraryCategoryHomeFamily">Home &amp; Family</string>
+    <string name="libraryCategoryNature">Nature</string>
+    <string name="libraryCategoryFoodDrink">Food &amp; Drink</string>
+    <string name="libraryCategoryHajjUmrah">Hajj &amp; Umrah</string>
+
+    <!-- The detail page's own layout: the hero band, the continue-reading card, the member
+         toolbar. Grouped together because they are drawn as one column and are read as one page. -->
+    <string name="collectionDetailBackLink">All Collections</string>
+    <string name="collectionDetailHeroProgressFormat">%1$d of %2$d completed</string>
+    <string name="collectionDetailRemainingFormat">~ %1$s remaining</string>
+    <string name="collectionDetailDurationFormat">~%1$s</string>
+    <string name="collectionDetailPositionFormat">%1$d / %2$d</string>
+    <string name="collectionDetailContinueReading">Continue Reading</string>
+    <string name="collectionDetailActionRemindMe">Remind me</string>
+    <string name="collectionDetailRemindAtFormat">Remind at %1$s</string>
+    <string name="collectionMembersSortBy">Sort by</string>
+    <string name="collectionMembersViewGrid">Grid</string>
+    <string name="collectionMembersViewList">List</string>
+    <string name="collectionSortSequence">In order</string>
+    <string name="collectionSortTitle">By title</string>
+    <string name="collectionSortCategory">By category</string>
+    <string name="collectionDetailActionRemoveFromCollection">Remove from collection</string>
+
+    <!-- The recitation session. Its progress and duration wording is the same claim the collection page
+         makes, so it borrows those keys rather than carrying a second copy translators would have to
+         keep in step; only what is genuinely its own lives here. -->
+    <string name="collectionsActionFavorite">Favorite</string>
+    <string name="collectionsActionUnfavorite">Remove Favorite</string>
+    <string name="collectionSessionActionPrevious">Previous</string>
+    <string name="collectionSessionActionNext">Next</string>
+    <string name="collectionSessionTranslationLabel">Translation</string>
+    <string name="remembranceEditorTitle">Edit this remembrance</string>
+    <string name="remembranceEditorArabicLabel">Arabic text</string>
+    <string name="remembranceEditorArabicPlaceholder">What the remembrance says</string>
+    <string name="remembranceEditorArabicRequired">A remembrance cannot be empty.</string>
+    <string name="remembranceEditorEnglishLabel">English translation</string>
+    <string name="remembranceEditorEnglishPlaceholder">How it reads in English</string>
+    <string name="remembranceEditorTranslationHelp">Optional. Leave this empty to keep the translation as it is.</string>
+    <string name="remembranceEditorSave">Save</string>
+    <string name="remembranceEditorAction">Edit</string>
+</resources>

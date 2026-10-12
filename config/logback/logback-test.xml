@@ -1,0 +1,31 @@
+<configuration>
+
+    <!--
+      The configuration every module's unit tests run under. `logback-test.xml` is the file
+      Logback looks for *before* `logback.xml`, and the shipped one lives in `:app`'s main
+      resources, so without this file `:data`'s and `:domain`'s tests would fall back to
+      Logback's built-in default and `:app`'s would inherit the packaged INFO level — which
+      silently discards exactly the `debug` statements the log-assertion tests are about.
+
+      Two deliberate differences from production:
+
+      * `com.azkar` is pinned to DEBUG regardless of `AZKAR_LOG_LEVEL`. A test that asserts a
+        `debug` statement fires has to be independent of the shell the suite happened to be
+        launched from.
+      * Third-party chatter stays at WARN, so a failing test prints our diagnostics without
+        drowning them in Exposed/H2/Hikari narration.
+    -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%level] %logger{40} %msg %kvp%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.azkar" level="DEBUG"/>
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+
+    <root level="WARN">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>

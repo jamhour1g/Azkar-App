@@ -1,140 +1,278 @@
+// The Compose Gradle plugin still marks its own dependency accessors experimental, which the
+// `compose.uiTest` accessor below needs. Scoped to this script because it is a Gradle-level flag
+// and the app's own source has its own opt-ins.
+@file:OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
 plugins {
-  application
-  id("azkar-common")
-  alias(libs.plugins.org.openjfx.javafxplugin)
-  id("dev.hydraulic.conveyor") version "2.0"
+    id("azkar-common")
+    // Applied unversioned: buildSrc owns these two on the classpath (detekt needs the
+    // Kotlin plugin to resolve source sets), and the Compose compiler version must
+    // match Kotlin exactly.
+    id("org.jetbrains.kotlin.jvm")
+    id("org.jetbrains.kotlin.plugin.compose")
+    // Applied for `CollectionTransfer`'s JSON: the import/export feature is the app's
+    // first machine-readable document, and a hand-written parser is where escaping bugs
+    // and unescaped Arabic live.
+    id("org.jetbrains.kotlin.plugin.serialization")
+    alias(libs.plugins.org.jetbrains.compose)
 }
 
 version = "0.1.0"
 
+kotlin {
+    compilerOptions {
+        // The Compose Styles API (`androidx.compose.foundation.style.Style`,
+        // `Modifier.styleable`, `rememberUpdatedStyleState`) is still flagged experimental and
+        // every use of it is an error until the module opts in.
+        //
+        // It is declared here rather than in `azkar-common` because `:data` and `:domain` have no
+        // Compose dependency at all — the flag would name a package those modules cannot resolve.
+        //
+        // The skill's own prerequisites also ask for `compileSdk 37` / Compose BOM `2026.04.01`.
+        // Those are Android-only and do not apply to this build; the desktop foundation artifact
+        // (`foundation-desktop`) ships the API on its own, which is why only the opt-in is needed.
+        freeCompilerArgs.add("-opt-in=androidx.compose.foundation.style.ExperimentalFoundationStyleApi")
+    }
+}
+
+java {
+    // Skiko (the Compose Desktop renderer) is not a JPMS module and needs JNI
+    // access to unpack its native runtime, so `:app` runs from the classpath.
+    // `azkar-common` turns module-path inference on for every module; `:domain`
+    // and `:data` keep their descriptors, `:app` opts out — which is why
+    // `app/src/main/java/module-info.java` is deleted.
+    modularity.inferModulePath = false
+}
+
+repositories {
+    // Compose Multiplatform's desktop artifacts delegate part of their runtime
+    // graph (`lifecycle-runtime-compose`, `savedstate-compose`) to the upstream
+    // `androidx.*` coordinates, which are only published to Google's Maven.
+    // Scoped by group so every other dependency still resolves from Maven Central.
+    google {
+        content {
+            includeGroupByRegex("androidx\\..*")
+            includeGroupByRegex("com\\.google\\.android.*")
+        }
+    }
+}
+
 dependencies {
-  implementation(project(":data"))
-  implementation(project(":domain"))
+    implementation(project(":data"))
+    implementation(project(":domain"))
 
-  // JavaFX
-  implementation(libs.org.openjfx.javafx.controls)
-  implementation(libs.org.openjfx.javafx.fxml)
-  implementation(libs.org.openjfx.javafx.media)
-  implementation(libs.org.openjfx.javafx.web)
+    // Compose Multiplatform (desktop only — the JVM target is the sole target)
+    implementation(compose.desktop.currentOs)
+    implementation(compose.components.resources)
+    implementation(libs.org.jetbrains.compose.material3)
+    implementation(libs.org.jetbrains.compose.material.icons.extended)
+    // `@Preview` / tooling annotations. `debugImplementation` of ui-tooling would
+    // add the live-reload devtools; the preview artifact itself is tiny and lets
+    // the IDE render `@Preview` composables without a running app.
+    implementation(libs.org.jetbrains.compose.ui.tooling.preview)
 
-  // UI Libraries
-  implementation(libs.org.kordamp.ikonli.ikonli.javafx)
-  implementation(libs.org.kordamp.ikonli.ikonli.fontawesome6.pack)
-  implementation(libs.org.controlsfx.controlsfx)
+    // `kotlinx-coroutines-swing` below is what drives Swing-dispatched coroutines; `core` is
+    // declared in its own right because `DatabaseWarmUp` reaches for `Dispatchers`, `Job` and
+    // `CoroutineScope` directly rather than through the Swing extension.
+    implementation(libs.org.jetbrains.kotlinx.kotlinx.serialization.json)
+    implementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.core)
+    implementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.swing)
 
-  // Logging: Logback as SLF4J backend
-  runtimeOnly(libs.ch.qos.logback.logback.classic)
+    // App settings (locale, notification switches). DataStore replaces `java.util.prefs`: it is
+    // transactional, it survives a crash mid-write, and it exposes `Flow` reads, so the UI can
+    // observe the stored value instead of each state holder hand-rolling a mirror of it.
+    implementation(libs.androidx.datastore.preferences.core)
+
+    // Navigation 3. The back stack replaces the `when (state.tab)` the shell used to switch
+    // screens with: destinations are sealed `NavKey` values, so the history is a real list and a
+    // destination added on top of another one comes back on pop. `navigation3-runtime` resolves
+    // from the `google()` repository above and `navigation3-ui` from Maven Central, since AndroidX
+    // never published a desktop variant of the latter.
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.org.jetbrains.androidx.navigation3.ui)
+
+    // Dependency injection. This module owns the top of the Koin graph (`appModule`) and is
+    // the only module that reads it back out of a composition, so it needs both the container
+    // and the Compose bindings. `:data` declares the lower half against `koin-core` alone.
+    implementation(libs.io.insert.koin.koin.core)
+    implementation(libs.io.insert.koin.koin.compose)
+
+    // `runTest` supplies virtual time and a deterministic scheduler, which is what makes the
+    // library's debounced search assertable without a real 180 ms wait.
+    testImplementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.test)
+
+    // Compose UI tests, for the controls. `runComposeUiTest` renders off-screen and drives input
+    // through `mainClock`, so the recomposition cost of a hover can be counted a frame at a time
+    // instead of being guessed at from a profiler attached to a live desktop session.
+    testImplementation(compose.uiTest)
 }
 
-javafx {
-  version = libs.org.openjfx.javafx.web.get().version
+// Compose Multiplatform 1.12.x re-publishes the Compose runtime under
+// `org.jetbrains.compose.runtime:<module>-desktop`, but those artifacts are empty
+// stubs: the classes live in the `androidx.compose.runtime` coordinates, which the
+// androidx lifecycle artifacts in the same graph depend on directly. Both land on
+// the classpath under the same file name, so `distZip`/`distTar`/`installDist` fail
+// with "duplicate ... runtime-desktop-1.12.1.jar". Dropping the stubs leaves the
+// androidx jars as the single source of the runtime classes.
+configurations
+    .matching { it.isCanBeResolved }
+    .configureEach {
+        exclude(group = "org.jetbrains.compose.runtime", module = "runtime-desktop")
+        exclude(group = "org.jetbrains.compose.runtime", module = "runtime-saveable-desktop")
+    }
 
-  val moduleNames =
-      listOf(
-              libs.org.openjfx.javafx.web.get().module.name,
-              libs.org.openjfx.javafx.controls.get().module.name,
-              libs.org.openjfx.javafx.fxml.get().module.name,
-              libs.org.openjfx.javafx.media.get().module.name)
-          .map { it.replace("-", ".") }
-          .toTypedArray()
-
-  modules(*moduleNames)
-}
-
-application {
-  mainModule = "com.azkar.app"
-  mainClass = "com.azkar.Launcher"
-  applicationDefaultJvmArgs = listOf("--enable-native-access=javafx.graphics")
-}
-
+// The Gradle `application` plugin is deliberately NOT applied: `org.jetbrains.compose`
+// contributes its own `run` task and the two collide. Everything that plugin used to
+// give us comes from `compose.desktop { application { } }` at the bottom instead.
 tasks.jar {
-  archiveFileName.set("azkar-app.jar")
-  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    archiveFileName.set("azkar-app.jar")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-  manifest { attributes["Main-Class"] = "com.azkar.Launcher" }
+    manifest { attributes["Main-Class"] = "com.azkar.MainKt" }
 
-  // Include resources (FXML, CSS, etc.)
-  from(sourceSets.main.get().output)
+    // Include resources (bundles, fonts, etc.)
+    from(sourceSets.main.get().output)
 }
 
 // ---------------------------------------------------------------------------
-// Native packaging is handled by Hydraulic Conveyor.
-// See conveyor.conf in this module for configuration.
+// Off-screen screenshot harness.
 //
-// Convenience tasks (require Conveyor CLI on PATH):
-//   ./gradlew :app:runConveyor       — run the app in packaged form
-//   ./gradlew :app:makeWindowsApp    — build Windows app directory
-//   ./gradlew :app:makeMacAmd64App   — build macOS app (Intel)
-//   ./gradlew :app:makeMacAarch64App — build macOS app (Apple Silicon)
-//   ./gradlew :app:makeLinuxApp      — build Linux app
+// Rasterises a screen to a PNG without needing a display server, which is how
+// the UI gets visually verified on a headless machine. It lives in its own
+// source set so it never ends up in the shipped jar.
+//
+//   ./gradlew :app:runScreenshot -Pazkar.screenshot.screen=collections
+//
+// `screen` accepts `app` (default), `home`, `settings`, `collections` or
+// `collection-detail`. Two extra switches exercise the appearance axes that
+// are otherwise only reachable through user interaction, so a single headless
+// run can check both of them:
+//
+//   ./gradlew :app:runScreenshot -Pazkar.screenshot.locale=ar   # RTL mirroring
+//   ./gradlew :app:runScreenshot -Pazkar.screenshot.dark=true   # dark palette
+//
+// `collection-detail` has one further switch, because its member grid is only half
+// reachable from the way the page opens:
+//
+//   ./gradlew :app:runScreenshot -Pazkar.screenshot.screen=collection-detail \
+//       -Pazkar.screenshot.memberView=list
 // ---------------------------------------------------------------------------
 
-val conveyorExecutable =
-    if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) {
-      "conveyor.cmd"
-    } else {
-      "conveyor"
+val screenshot: SourceSet by
+    sourceSets.creating {
+        compileClasspath += sourceSets.main.get().compileClasspath + sourceSets.main.get().output
+        runtimeClasspath += sourceSets.main.get().runtimeClasspath + sourceSets.main.get().output
     }
 
-tasks.register<Exec>("runConveyor") {
-  group = "conveyor"
-  description = "Run the app in packaged form via Conveyor"
-  dependsOn("jar", "writeConveyorConfig")
-  workingDir = projectDir
-  commandLine(conveyorExecutable, "run")
-}
+configurations["screenshotImplementation"].extendsFrom(configurations.implementation.get())
 
-fun registerConveyorMakeTask(
-    name: String,
-    taskDescription: String,
-    machine: String,
-    outputSubDir: String,
-    target: String
-) {
+configurations["screenshotRuntimeOnly"].extendsFrom(configurations.runtimeOnly.get())
 
-  val conveyorOutputRoot = "build/installers"
-  tasks.register<Exec>(name) {
-    group = "conveyor"
-    description = taskDescription
-    dependsOn("jar", "writeConveyorConfig")
-    workingDir = projectDir
-    commandLine(
-        conveyorExecutable,
-        "-Kapp.machines=$machine",
-        "make",
-        "--output-dir=$conveyorOutputRoot/$outputSubDir",
-        target)
-    doLast {
-      println(
-          "Conveyor output directory: ${projectDir.resolve("$conveyorOutputRoot/$outputSubDir")}")
+tasks.register<JavaExec>("runScreenshot") {
+    group = "verification"
+    description = "Rasterise a screen to a PNG (headless UI check)"
+    mainClass.set("com.azkar.ScreenshotKt")
+    classpath = screenshot.runtimeClasspath
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+    systemProperty(
+        "azkar.screenshot.out",
+        providers.gradleProperty("azkar.screenshot.out").getOrElse("build/screenshot.png"),
+    )
+    providers.gradleProperty("azkar.screenshot.screen").orNull?.let {
+        systemProperty("azkar.screenshot.screen", it)
     }
-  }
+    providers.gradleProperty("azkar.screenshot.width").orNull?.let {
+        systemProperty("azkar.screenshot.width", it)
+    }
+    providers.gradleProperty("azkar.screenshot.height").orNull?.let {
+        systemProperty("azkar.screenshot.height", it)
+    }
+    providers.gradleProperty("azkar.screenshot.locale").orNull?.let {
+        systemProperty("azkar.screenshot.locale", it)
+    }
+    providers.gradleProperty("azkar.screenshot.dark").orNull?.let {
+        systemProperty("azkar.screenshot.dark", it)
+    }
+    providers.gradleProperty("azkar.screenshot.memberView").orNull?.let {
+        systemProperty("azkar.screenshot.memberView", it)
+    }
+    dependsOn(tasks.named("screenshotClasses"))
 }
 
-registerConveyorMakeTask(
-    name = "makeWindowsApp",
-    taskDescription = "Build the Windows app directory via Conveyor",
-    machine = "windows.amd64",
-    outputSubDir = "windows-app",
-    target = "windows-app")
+// ---------------------------------------------------------------------------
+// Native packaging via the Compose Multiplatform plugin (jpackage under the
+// hood). Per-host-OS task names are suffixed, so on Linux you get
+// `packageDeb` / `packageUberJarForCurrentOS`; on Windows `packageMsi` /
+// `packageExe`; on macOS `packageDmg` / `packagePkg`.
+//
+//   ./gradlew :app:run                          — run from the IDE/classpath
+//   ./gradlew :app:packageUberJarForCurrentOS   — fat jar for the current OS
+//   ./gradlew :app:packageDeb                   — native installer (Linux)
+//   ./gradlew :app:packageDistributionForCurrentOS — unsigned native image
+// ---------------------------------------------------------------------------
 
-registerConveyorMakeTask(
-    name = "makeMacAmd64App",
-    taskDescription = "Build the macOS app (Intel) via Conveyor",
-    machine = "mac.amd64",
-    outputSubDir = "mac-amd64-app",
-    target = "mac-app")
+// Compose Multiplatform's own resource system, which replaces the hand-rolled
+// `ResourceBundle` + typed `Strings` facade (see `i18n/Strings.kt`).
+//
+// The generated `Res` class is public because background work — the reminder
+// scheduler and the filtering service — has to resolve strings outside a
+// composition, and the generated accessors are the only way to name a key.
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "com.azkar.generated.resources"
+    generateResClass = always
+}
 
-registerConveyorMakeTask(
-    name = "makeMacAarch64App",
-    taskDescription = "Build the macOS app (Apple Silicon) via Conveyor",
-    machine = "mac.aarch64",
-    outputSubDir = "mac-aarch64-app",
-    target = "mac-app")
+compose.desktop {
+    application {
+        mainClass = "com.azkar.MainKt"
+        jvmArgs += "--enable-native-access=ALL-UNNAMED"
 
-registerConveyorMakeTask(
-    name = "makeLinuxApp",
-    taskDescription = "Build the Linux app via Conveyor",
-    machine = "linux.amd64.glibc",
-    outputSubDir = "linux-app",
-    target = "linux-app")
+        nativeDistributions {
+            // `AppImage` is deliberately excluded: it needs FUSE at runtime, which is
+            // unavailable on most CI runners. `Deb` is the portable Linux artifact.
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+
+            // Debian package names must be lowercase, so the package is `azkar`
+            // while the user-visible application name stays `Azkar`.
+            packageName = "Azkar"
+            packageVersion = project.version.toString()
+            description =
+                "Azkar — a companion app for daily adhkar: prayer times, remembrances, and reminders."
+            vendor = "jamhour1g"
+            copyright = "© 2025 jamhour1g"
+
+            // Skiko draws through AWT, so `java.desktop` (which transitively pulls
+            // java.datatransfer, java.xml and java.prefs) is mandatory. H2/Hikari/Exposed
+            // need java.sql + java.naming, and Logback needs java.logging.
+            modules("java.desktop", "java.sql", "java.naming", "java.logging", "jdk.unsupported")
+
+            // The app mark, rasterised from `AzkarIcons.Brand` — the same `ImageVector` the header
+            // lockup draws, so the taskbar entry, the dock tile, the desktop shortcut and the
+            // window's own title bar all show one mark rather than four. Without these jpackage
+            // falls back to the generic Java coffee cup, which is what the taskbar showed before.
+            // `Main.kt` sets the in-app window icon from the vector directly, so these three files
+            // exist only for the packager, which needs real image files rather than draw commands.
+            val iconDirectory = rootProject.layout.projectDirectory.dir("assets/icons")
+            linux {
+                // Debian package names must be lowercase; the user-visible name stays
+                // `Azkar` via `packageName` on the distribution above.
+                packageName = "azkar"
+                shortcut = true
+                iconFile = iconDirectory.file("azkar.png").asFile
+            }
+            windows {
+                iconFile = iconDirectory.file("azkar.ico").asFile
+                menu = true
+                perUserInstall = true
+            }
+            macOS {
+                bundleID = "com.azkar.app"
+                dockName = "Azkar"
+                iconFile = iconDirectory.file("azkar.icns").asFile
+            }
+        }
+    }
+}

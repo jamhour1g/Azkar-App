@@ -1,0 +1,291 @@
+package com.azkar.ui.home
+
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.nextPrayerLabel
+import org.jetbrains.compose.resources.getString
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeFormatterBuilder
+import java.time.format.TextStyle
+import java.time.temporal.ChronoField
+import java.util.Locale
+
+/** The five fixed prayers, in the order `PrayerTimesController.bindPrayerRows` inserted them. */
+enum class PrayerKey(
+    val id: String,
+) {
+    FAJR("fajr"),
+    DHUHR("dhuhr"),
+    ASR("asr"),
+    MAGHRIB("maghrib"),
+    ISHA("isha"),
+}
+
+/**
+ * One rendered prayer row, replacing the mutable `PrayerEntry` record plus the JavaFX
+ * `PrayerRowComponent` it used to write into.
+ */
+@Immutable
+data class PrayerRowState(
+    val key: PrayerKey,
+    val name: String,
+    val timeLabel: String,
+    val value: String,
+    val isNext: Boolean,
+    val notificationsEnabled: Boolean,
+)
+
+/** `.next-prayer-time` text plus the raw remaining duration behind it. */
+@Immutable
+data class CountdownState(
+    val text: String,
+    val remaining: Duration,
+)
+
+/**
+ * Stands in for the table until the localized prayer text has been resolved.
+ *
+ * The home screen shows a one-frame empty table on launch, which is what it already did while the
+ * ticker was still in its `LaunchedEffect`.
+ */
+private val EMPTY_SNAPSHOT = PrayerTimesSnapshot(rows = emptyList(), countdown = CountdownState("", Duration.ZERO))
+
+/**
+ * Port of `com.azkar.components.home.controller.PrayerTimesController`.
+ *
+ * The JavaFX version wrote into `PrayerRowComponent` setters from a `Timeline`; the Compose port
+ * keeps the exact same parsing/formatting rules but returns immutable snapshots that
+ * [PrayerTimesState] republishes once per second.
+ */
+class PrayerTimesModel(
+    private val uiLocale: Locale,
+) {
+    private val localizedBundleTimeFormatter = twelveHourFormatter(uiLocale)
+    private val englishBundleTimeFormatter = twelveHourFormatter(Locale.ENGLISH)
+    private val timeFormatter12 = DateTimeFormatter.ofPattern("hh:mm a", uiLocale)
+    private val timeFormatter24 = DateTimeFormatter.ofPattern("HH:mm")
+
+    /** Declared before [load] because the parsing that does uses it. */
+    private val timeParsers =
+        listOf(
+            localizedBundleTimeFormatter,
+            englishBundleTimeFormatter,
+            timeFormatter24,
+        )
+
+    /**
+     * Empty until [load] has resolved the localized prayer names and times.
+     *
+     * [snapshot] runs on a one-second ticker, so it has to stay synchronous; resolving the text
+     * once per locale and holding it in a field is what lets it be, and it also keeps the parse
+     * from being repeated every tick.
+     */
+    private var prayers: List<ParsedPrayer> = emptyList()
+
+    /**
+     * The label a bundle puts in place of a time for the next prayer, used by [parsePrayerTime] to
+     * skip it. Resolved by [load] before any parsing happens.
+     */
+    private var nextPrayerLabel: String = ""
+
+    /**
+     * Resolves the localized names, display times and display values.
+     *
+     * Idempotent, so it is safe for the two [PrayerTimesState] entry points to both call it
+     * without coordinating.
+     */
+    suspend fun load() {
+        if (prayers.isNotEmpty()) return
+        nextPrayerLabel = getString(Res.string.nextPrayerLabel)
+        prayers =
+            PrayerKey.entries.map { key ->
+                val displayTime = key.displayTime()
+                val displayValue = key.value()
+                ParsedPrayer(
+                    key = key,
+                    name = key.name(),
+                    displayTime = displayTime,
+                    displayValue = displayValue,
+                    time = parsePrayerTime(displayTime, displayValue),
+                )
+            }
+    }
+
+    /** Resolves the next upcoming prayer and formats the whole table for [now]. */
+    fun snapshot(now: LocalDateTime): PrayerTimesSnapshot {
+        if (prayers.isEmpty()) return EMPTY_SNAPSHOT
+        val next = computeNextPrayer(now)
+        val rows =
+            prayers.map { prayer ->
+                val isNext = prayer.key == next.prayer.key
+                PrayerRowState(
+                    key = prayer.key,
+                    name = prayer.name,
+                    timeLabel = if (isNext) nextPrayerLabel else formatTime(prayer.time),
+                    value = prayer.displayValue,
+                    isNext = isNext,
+                    notificationsEnabled = false,
+                )
+            }
+        return PrayerTimesSnapshot(
+            rows = rows,
+            countdown = CountdownState(formatDuration(next.remaining), next.remaining),
+        )
+    }
+
+    private fun computeNextPrayer(now: LocalDateTime): NextPrayer {
+        val moments =
+            prayers.flatMap { prayer ->
+                val today = LocalDateTime.of(now.toLocalDate(), prayer.time)
+                listOf(today to prayer, today.plusDays(1) to prayer)
+            }
+        val nearest =
+            moments
+                .filter { (at, _) -> !at.isBefore(now) }
+                .minByOrNull { (at, _) -> at }
+                ?: moments.first()
+        return NextPrayer(nearest.second, Duration.between(now, nearest.first))
+    }
+
+    private fun parsePrayerTime(vararg candidates: String): LocalTime =
+        candidates
+            .asSequence()
+            .filter { it.isNotBlank() }
+            .filterNot { it.equals(nextPrayerLabel, ignoreCase = true) }
+            .mapNotNull(::parseWithAnyFormatter)
+            .firstOrNull() ?: LocalTime.MIDNIGHT
+
+    private fun parseWithAnyFormatter(candidate: String): LocalTime? =
+        timeParsers.firstNotNullOfOrNull { formatter ->
+            runCatching { LocalTime.parse(candidate, formatter) }.getOrNull()
+        }
+
+    private fun formatTime(time: LocalTime): String = timeFormatter12.format(time)
+
+    private fun formatDuration(duration: Duration): String {
+        val totalSeconds = maxOf(0L, duration.seconds)
+        return String.format(
+            uiLocale,
+            "%02d:%02d:%02d",
+            totalSeconds / 3600,
+            (totalSeconds % 3600) / 60,
+            totalSeconds % 60,
+        )
+    }
+
+    private data class ParsedPrayer(
+        val key: PrayerKey,
+        val name: String,
+        val displayTime: String,
+        val displayValue: String,
+        val time: LocalTime,
+    )
+
+    private data class NextPrayer(
+        val prayer: ParsedPrayer,
+        val remaining: Duration,
+    )
+
+    private companion object {
+        fun twelveHourFormatter(locale: Locale): DateTimeFormatter =
+            DateTimeFormatterBuilder()
+                .parseCaseInsensitive()
+                .appendValue(ChronoField.CLOCK_HOUR_OF_AMPM)
+                .appendLiteral(':')
+                .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
+                .appendLiteral(' ')
+                .appendText(ChronoField.AMPM_OF_DAY, TextStyle.SHORT)
+                .toFormatter(locale)
+    }
+}
+
+/** The full table plus the countdown, the two things the home screen renders. */
+@Immutable
+data class PrayerTimesSnapshot(
+    val rows: List<PrayerRowState>,
+    val countdown: CountdownState,
+)
+
+/**
+ * Observable wrapper around [PrayerTimesModel], replacing `HomeComponent`'s `Timeline`.
+ *
+ * The ticking itself lives in the composable's `LaunchedEffect`; this holder only stores the
+ * latest snapshot and the persisted notification switches so a preference change re-renders
+ * without restarting the ticker.
+ */
+@Stable
+class PrayerTimesState(
+    uiLocale: Locale,
+) {
+    private val model = PrayerTimesModel(uiLocale)
+    private var loaded: Boolean = false
+
+    var snapshot: PrayerTimesSnapshot by mutableStateOf(EMPTY_SNAPSHOT)
+        private set
+
+    var notificationFlags: Map<PrayerKey, Boolean> by mutableStateOf(emptyMap())
+        private set
+
+    var running: Boolean by mutableStateOf(false)
+        private set
+
+    /**
+     * Resolves the localized prayer text, then starts ticking.
+     *
+     * Suspends because the text comes from the resource store now, and the table cannot be built
+     * without it — [EMPTY_SNAPSHOT] stands in until it arrives.
+     */
+    suspend fun start() {
+        ensureLoaded()
+        running = true
+        tick()
+    }
+
+    /**
+     * Loads the model once, for entry points that publish a snapshot before [start] runs.
+     *
+     * [applyAllFlags] and the ticker are launched independently, so whichever loses the race has
+     * to be able to ask for the text itself rather than assume [start] got there first.
+     */
+    private suspend fun ensureLoaded() {
+        if (loaded) return
+        model.load()
+        loaded = true
+    }
+
+    fun stop() {
+        running = false
+    }
+
+    fun tick(now: LocalDateTime = LocalDateTime.now()) {
+        val fresh = model.snapshot(now)
+        snapshot =
+            if (notificationFlags.isEmpty()) {
+                fresh
+            } else {
+                fresh.copy(
+                    rows = fresh.rows.map { it.copy(notificationsEnabled = notificationFlags[it.key] == true) },
+                )
+            }
+    }
+
+    /**
+     * Replaces the rendered switch states with [flags].
+     *
+     * The whole map goes in at once because it is always the complete set — a single-bell update
+     * reaches here as a new complete map from the settings store, not as a patch, so a row can
+     * never be left showing a switch the store has already moved past.
+     */
+    suspend fun applyAllFlags(flags: Map<PrayerKey, Boolean>) {
+        ensureLoaded()
+        notificationFlags = flags
+        tick()
+    }
+}

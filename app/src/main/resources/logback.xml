@@ -3,7 +3,20 @@
     <!-- ── Console Appender ─────────────────────────────────────────── -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>[%logger] [%method] [%thread] [%date{yyyy-MM-dd@HH:mm:ss}] [%level] - %msg%n</pattern>
+            <!--
+              `%kvp` is load-bearing, not decoration: it is what renders the `payload` of
+              `logger.atWarn { message = …; payload = mapOf(…) }`. Without it the structured
+              context is built, handed to Logback, and then silently dropped — the log line
+              reads as a bare message. Logback joins the pairs with a single space and adds no
+              separator of its own, hence the space before `%kvp`; lines that carry no payload
+              therefore end in one trailing space, which is the cheaper trade.
+
+              `%method` resolves through the FQCN kotlin-logging hands SLF4J, so it names the
+              call site rather than the framework. `%replace`/`%ex` are deliberately absent:
+              a throwable is logged by passing it as the first argument (`logger.warn(e) { … }`),
+              and Logback appends its stack trace on its own.
+            -->
+            <pattern>[%logger] [%method] [%thread] [%date{yyyy-MM-dd@HH:mm:ss}] [%level] - %msg %kvp%n</pattern>
         </encoder>
     </appender>
 
@@ -15,17 +28,27 @@
             <maxHistory>30</maxHistory>
         </rollingPolicy>
         <encoder>
-            <pattern>[%logger] [%method] [%thread] [%date{yyyy-MM-dd@HH:mm:ss}] [%level] - %msg%n</pattern>
+            <pattern>[%logger] [%method] [%thread] [%date{yyyy-MM-dd@HH:mm:ss}] [%level] - %msg %kvp%n</pattern>
         </encoder>
     </appender>
     -->
 
     <!-- Quieten noisy libraries -->
-    <logger name="org.hibernate" level="WARN"/>
-    <logger name="org.flywaydb" level="WARN"/>
     <logger name="com.zaxxer.hikari" level="WARN"/>
 
-    <root level="INFO">
+    <!--
+      `AZKAR_LOG_LEVEL` is read as a system property first and an environment variable second,
+      which is what lets the level be raised without editing a file that ships inside the
+      installer:
+
+          AZKAR_LOG_LEVEL=DEBUG ./azkar              # packaged app
+          AZKAR_LOG_LEVEL=DEBUG ./gradlew :app:run   # from source
+
+      It defaults to INFO because a packaged desktop app is an end-user product: startup,
+      schema application and seeding are worth seeing once, per-run narration is not. See
+      docs/logging.md.
+    -->
+    <root level="${AZKAR_LOG_LEVEL:-INFO}">
         <appender-ref ref="CONSOLE"/>
         <!-- <appender-ref ref="FILE"/> -->
     </root>

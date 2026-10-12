@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources>
+    <!-- Header Bar -->
+    <string name="title">اذكار - رفيقك الروحي</string>
+    <string name="azkar">اذكار</string>
+    <string name="yourCompanion">رفيقك الروحي</string>
+    <string name="azkarLibrary">مكتبة الاذكار</string>
+    <string name="home">الرئيسية</string>
+    <!-- Main Content -->
+    <string name="greetingTitle">السلام عليكم</string>
+    <string name="greetingDate">14 ذو الحجة 1445 هـ</string>
+    <string name="dailyHadith">ورد اليوم</string>
+    <string name="todaysAzkar">ذكر اليوم</string>
+    <string name="noHadithSource">المصدر غير متاح حالياً.</string>
+    <string name="readMore">اقرأ المزيد</string>
+    <string name="dailyHadithDetailsTitle">تفاصيل الورد</string>
+    <string name="dailyHadithDetailsHeader">النص الكامل</string>
+    <string name="dailyHadithDetailsArabic">النص</string>
+    <string name="dailyHadithDetailsEnglish">الشرح</string>
+    <string name="dailyHadithDetailsSource">المصدر</string>
+    <string name="hadithExample">إِنَّ مِنْ خِيَارِكُمْ أَحْسَنَكُمْ أَخْلَاقًا.</string>
+    <string name="explanationExample">كان النبي صلى الله عليه وسلم أحسن الناس خلقًا، وكان يحث على مكارم الأخلاق، وفي هذا تذكير بأن خير الناس من حسن خلقه وتعامل بلطف مع الآخرين.</string>
+    <string name="sourceExample">[حديث صحيح] - [رواه البخاري ومسلم]</string>
+    <!-- Prayer times section -->
+    <string name="todayPrayerTimes">مواقيت الصلاة اليوم</string>
+    <string name="nextPrayerIn">متبقي على الصلاة:</string>
+    <string name="nextPrayerLabel">الصلاة القادمة</string>
+    <string name="prayerTimesLocation">مواقيت الصلاة لرام الله، فلسطين</string>
+    <string name="prayerTimeRemaining">02:15:30</string>
+    <string name="prayerNotification">تنبيهات الصلوات</string>
+    <string name="prayerNotificationsShort">التنبيهات</string>
+    <string name="fajr">الفجر</string>
+    <string name="fajrTime">04:50 AM</string>
+    <string name="fajrValue">04:50</string>
+    <string name="dhuhr">الظهر</string>
+    <string name="dhuhrTime">الصلاة القادمة</string>
+    <string name="dhuhrValue">01:20 PM</string>
+    <string name="asr">العصر</string>
+    <string name="asrTime">05:15 PM</string>
+    <string name="asrValue">05:15</string>
+    <string name="maghrib">المغرب</string>
+    <string name="maghribTime">07:45 PM</string>
+    <string name="maghribValue">07:45</string>
+    <string name="isha">العشاء</string>
+    <string name="ishaTime">09:30 PM</string>
+    <string name="ishaValue">09:30</string>
+    <!-- Favorites card -->
+    <string name="favoriteAzkar">ورد مفضل</string>
+    <string name="favoriteAzkarArabic">سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ</string>
+    <string name="favoriteAzkarEnglish">فضل هذا الذكر: كلمتان خفيفتان على اللسان، ثقيلتان في الميزان، حبيبتان إلى الرحمن.</string>
+    <string name="favoriteAzkarSource">صحيح البخاري</string>
+    <string name="favoritePosition">%1$d / %2$d</string>
+    <string name="noFavoritesYet">لا توجد أذكار مفضلة بعد</string>
+    <string name="favoritePrevLabel">السابق</string>
+    <string name="favoriteNextLabel">التالي</string>
+    <!-- Library: the shared language of a remembrance tile -->
+    <string name="librarySourceLabel">المصدر:</string>
+    <string name="librarySourceUnknown">مصدر غير معروف</string>
+    <string name="libraryMissingText">لا يوجد نص متاح لهذا الذكر.</string>
+    <string name="libraryCategoryMorning">أذكار الصباح</string>
+    <string name="libraryCategoryEvening">أذكار المساء</string>
+    <string name="libraryCategoryTravel">أذكار السفر</string>
+    <string name="libraryCategoryUncategorized">غير مصنف</string>
+    <string name="libraryActionRead">عرض التفاصيل</string>
+    <string name="libraryActionFavorite">إضافة إلى المفضلة</string>
+    <string name="libraryActionCopy">نسخ</string>
+    <string name="libraryActionCopyCopied">تم النسخ إلى الحافظة</string>
+    <string name="libraryActionMore">إجراءات إضافية</string>
+    <string name="libraryReadDialogTitle">تفاصيل الذكر</string>
+    <string name="libraryLoading">جاري تحميل المكتبة...</string>
+    <string name="libraryLoadFailed">فشل تحميل بيانات المكتبة.</string>
+    <!-- Library: the collections hub -->
+    <string name="collectionsTitle">المجموعات</string>
+    <string name="collectionsSubtitle">لكل ذكر مكانه. افتح مجموعة لتقرأ ما فيها.</string>
+    <string name="collectionsActionNew">مجموعة جديدة</string>
+    <string name="collectionsSearchCollections">ابحث في المجموعات...</string>
+    <string name="collectionsSearchRemembrances">ابحث في كل الأذكار...</string>
+    <string name="collectionsScopeLabel">اعرض</string>
+    <string name="collectionsSortLabel">الترتيب</string>
+    <string name="libraryFiltersLabel">التصفية والترتيب</string>
+    <string name="collectionsLabelsAll">كل الوسوم</string>
+    <string name="collectionsLabelsScrollBack">أظهر الوسوم السابقة</string>
+    <string name="collectionsLabelsScrollForward">أظهر الوسوم التالية</string>
+    <string name="collectionsScopeAll">الكل</string>
+    <string name="collectionsScopeOfficial">جاهزة</string>
+    <string name="collectionsScopeCustom">لك</string>
+    <string name="collectionsScopePinned">المثبّتة</string>
+    <string name="collectionsScopeFavorite">المُنضّة</string>
+    <string name="collectionsScopeInProgress">قيد الإنجاز</string>
+    <string name="collectionsSortRecent">الأخيرة فتحًا</string>
+    <string name="collectionsSortName">الاسم</string>
+    <string name="collectionsSortItems">الأكثر أذكارًا</string>
+    <string name="collectionsSortProgress">الأكثر إنجازًا</string>
+    <string name="collectionsActionOpen">فتح</string>
+    <string name="collectionsActionRename">إعادة تسمية</string>
+    <string name="collectionsActionDuplicate">نسخ</string>
+    <string name="collectionsActionDelete">حذف</string>
+    <string name="collectionsActionPin">تثبيت في الأعلى</string>
+    <string name="collectionsActionUnpin">إلغاء التثبيت</string>
+    <string name="collectionsActionShowOnHome">أظهرها في الرئيسية</string>
+    <string name="collectionsActionHideFromHome">أخفها عن الرئيسية</string>
+    <string name="homeCollectionActionStart">ابدأ</string>
+    <string name="homeCollectionActionContinue">تابع</string>
+    <string name="homeCollectionActionDone">تم</string>
+    <string name="homeCollectionProgressFormat">%1$d من %2$d</string>
+    <string name="collectionDragHandle">اسحب لإعادة الترتيب</string>
+    <string name="collectionsActionAddMembers">إضافة أذكار</string>
+    <string name="collectionsActionBack">العودة إلى المجموعات</string>
+    <string name="collectionsEmptyTitle">لا توجد مجموعات بعد</string>
+    <string name="collectionsEmptyHint">أنشئ مجموعة تجمع الأذكار التي تعود إليها.</string>
+    <string name="collectionsNoMatchesTitle">لا شيء على الرف يطابق</string>
+    <string name="collectionsNoMatchesHint">جرّب كلمة أخرى، أو أزل التصفية من الأعلى.</string>
+    <string name="collectionsSearchEmptyTitle">لا ذكر مطابق</string>
+    <string name="collectionsSearchEmptyHint">يشمل البحث النص والمصدر وتصنيفات كل المجموعات.</string>
+    <string name="collectionsKindOfficial">جاهزة مع التطبيق</string>
+    <string name="collectionsKindCustom">مجموعتك</string>
+    <!-- Library: the create / rename / duplicate dialog -->
+    <string name="collectionsDialogCreateTitle">مجموعة جديدة</string>
+    <string name="collectionsDialogRenameTitle">إعادة تسمية المجموعة</string>
+    <string name="collectionsDialogDuplicateTitle">نسخ المجموعة</string>
+    <string name="collectionsDialogDeleteTitle">حذف المجموعة؟</string>
+    <string name="collectionsDialogDeleteBody">ستُزال "%1$s" من رفك. الأذكار التي فيها لا تُحذف.</string>
+    <string name="collectionsDialogNameLabel">الاسم</string>
+    <string name="collectionsDialogNamePlaceholder">أذكار الصباح</string>
+    <string name="collectionsDialogDescriptionLabel">الوصف</string>
+    <string name="collectionsDialogDescriptionPlaceholder">ما الذي ينتمي إلى هنا</string>
+    <string name="collectionsDialogTagsLabel">الوسوم</string>
+    <string name="collectionsDialogTagsPlaceholder">صباح، نوم</string>
+    <string name="collectionsDialogTagsHint">افصل بين الوسوم بفواصل. هذه هي الوسوم نفسها التي تحملها الأذكار.</string>
+    <string name="collectionsDialogCoverLabel">الغلاف</string>
+    <string name="collectionsDialogCoverNone">لا صورة — يرسم التطبيق واحدة.</string>
+    <string name="collectionsDialogCoverChosen">تم ضبط صورة لهذه المجموعة.</string>
+    <string name="collectionsDialogCoverBusy">جارٍ النسخ…</string>
+    <string name="collectionsActionChooseCover">اختر صورة…</string>
+    <string name="collectionsActionRemoveCover">أزل الصورة</string>
+    <string name="collectionsNoticeCoverSet">تم تحديث الغلاف.</string>
+    <string name="collectionsNoticeCoverRemoved">تمت إزالة الغلاف.</string>
+    <string name="collectionsDialogNameRequired">أعطِ المجموعة اسمًا.</string>
+    <string name="collectionsActionCancel">إلغاء</string>
+    <string name="collectionsActionCreate">إنشاء</string>
+    <string name="collectionsActionSave">حفظ</string>
+    <string name="collectionsDuplicateNameSuffix">%1$s (نسخة)</string>
+    <!-- Library: a collection's own page -->
+    <string name="collectionDetailEmptyTitle">هذه المجموعة فارغة</string>
+    <string name="collectionDetailEmptyHint">أضف الأذكار التي تريدها فيها، أو ابدأ من إحدى مجموعات التطبيق.</string>
+    <!-- قراءة قراءة القراءة — رأس خاصّبةً لها يميز. -->
+    <string name="remembranceReaderTitle">ذكر</string>
+    <string name="remembranceReaderBack">عودة</string>
+    <string name="remembranceReaderMissingTitle">لم يعد هذا الذكر</string>
+    <string name="remembranceReaderMissingHint">حُذف، أو أُعيد تحميل المكتبة بلاسه.</string>
+    <string name="collectionDetailMissingTitle">لم تعد هذه المجموعة موجودة</string>
+    <string name="collectionDetailMissingHint">حُذفت، أو أُعيد تحميل الرف بدونها.</string>
+    <string name="collectionDetailAddPickerTitle">إضافة أذكار</string>
+    <string name="collectionDetailAddPickerHint">ضع علامة على ما تريده وأضفه دفعة واحدة.</string>
+    <string name="collectionDetailAddPickerEmpty">لا شيء لإضافته — تحتوي هذه المجموعة على كل شيء.</string>
+    <string name="collectionDetailSelectAll">تحديد الكل</string>
+    <string name="collectionDetailClearSelection">إلغاء التحديد</string>
+    <string name="collectionDetailAdd">إضافة</string>
+    <string name="collectionDetailRemove">إزالة</string>
+    <string name="collectionDetailRemoveTitle">إزالة من المجموعة؟</string>
+    <string name="collectionDetailRemoveBody">سيغادر %1$d ذكرًا هذه المجموعة. وتبقى في بقية مكتبتك.</string>
+    <!-- Library: one-shot outcomes -->
+    <string name="collectionsNoticeCreated">تم إنشاء المجموعة.</string>
+    <string name="collectionsNoticeRenamed">تم تغيير اسم المجموعة.</string>
+    <string name="collectionsNoticeDeleted">تم حذف المجموعة.</string>
+    <string name="collectionsNoticeDuplicated">تم نسخ المجموعة.</string>
+    <string name="collectionsNoticePinned">ثُبّتت في أعلى الرف.</string>
+    <string name="collectionsNoticeUnpinned">أُلغي تثبيتها.</string>
+    <string name="collectionsNoticeMembersAdded">تمت إضافة الأذكار.</string>
+    <string name="collectionsNoticeMembersRemoved">تمت إزالة الأذكار.</string>
+    <string name="collectionsNoticeFavoriteAdded">أُضيف إلى المفضلة.</string>
+    <string name="collectionsNoticeFavoriteRemoved">أُزيل من المفضلة.</string>
+    <string name="collectionsNoticeCollectionStarred">أُضيفت المجموعة نجمة.</string>
+    <string name="collectionsNoticeCollectionUnstarred">أّزيلت النجمة من المجموعة.</string>
+    <string name="collectionsNoticeFailed">لم ينجح ذلك. لم يتغيّر شيء.</string>
+    <string name="collectionsToastTitle">مكتبة الأذكار</string>
+    <string name="toastMessageFallback">تم.</string>
+    <!-- Settings -->
+    <string name="settingsTitle">الإعدادات</string>
+    <string name="settingsSubtitle">شكل التطبيق ولغته</string>
+    <string name="settingsBack">رجوع</string>
+    <string name="settingsThemeHeader">المظهر</string>
+    <string name="settingsThemeBody">اتبع إعدادات سطح المكتب، أو اختر الفاتح أو الداكن لكل مرة تفتح فيها التطبيق.</string>
+    <string name="settingsThemeSystem">النظام</string>
+    <string name="settingsThemeLight">فاتح</string>
+    <string name="settingsThemeDark">داكن</string>
+    <string name="settingsLanguageHeader">اللغة</string>
+    <string name="settingsLanguageBody">سيؤثر الاختيار على الواجهة ونصوص الأذكار.</string>
+    <string name="settingsLanguageEnglish">الإنجليزية</string>
+    <string name="settingsLanguageArabic">العربية</string>
+
+    <plurals name="collectionsMemberCount">
+        <item quantity="zero">لا أذكار</item>
+        <item quantity="one">ذكر واحد</item>
+        <item quantity="two">ذكران</item>
+        <item quantity="few">%1$d أذكار</item>
+        <item quantity="many">%1$d ذكرًا</item>
+        <item quantity="other">%1$d ذكر</item>
+    </plurals>
+    <plurals name="collectionsSelectionCount">
+        <item quantity="zero">لم يُحدَّد شيء</item>
+        <item quantity="one">محدَّد واحد</item>
+        <item quantity="two">محدَّدان</item>
+        <item quantity="few">%1$d محدَّدة</item>
+        <item quantity="many">%1$d محدَّدًا</item>
+        <item quantity="other">%1$d محدَّد</item>
+    </plurals>
+    <plurals name="remembranceInCollections">
+        <item quantity="zero">لا مجموعات</item>
+        <item quantity="one">في مجموعة واحدة</item>
+        <item quantity="two">في مجموعتين</item>
+        <item quantity="few">في %1$d مجموعات</item>
+        <item quantity="many">في %1$d مجموعة</item>
+        <item quantity="other">في %1$d مجموعة</item>
+    </plurals>
+    <plurals name="collectionsSearchResultCount">
+        <item quantity="zero">لا نتائج</item>
+        <item quantity="one">نتيجة واحدة</item>
+        <item quantity="two">نتيجتان</item>
+        <item quantity="few">%1$d نتائج</item>
+        <item quantity="many">%1$d نتيجة</item>
+        <item quantity="other">%1$d نتيجة</item>
+    </plurals>
+
+    <string name="collectionsActionStart">ابدأ</string>
+    <string name="collectionDetailProgressFormat">ذُكر %1$d من %2$d</string>
+    <string name="collectionDetailActionResetProgress">تصفير التقدّم</string>
+    <string name="collectionDetailActionResume">استأنف</string>
+    <string name="collectionDetailResetConfirmTitle">تصفير تقدّم الذِّكر؟</string>
+    <string name="collectionDetailResetConfirmBody">سيُنسى كل عدّ سُجّل على هذه المجموعة. أما الأذكار نفسها فتبقى كما هي.</string>
+    <string name="collectionsNoticeProgressReset">صُفِّر تقدّم الذِّكر</string>
+    <string name="collectionsNoticeOnHome">ظاهرة في الرئيسية</string>
+    <string name="collectionsNoticeOffHome">مخفية عن الرئيسية</string>
+    <string name="collectionsNoticeReminderSaved">حُفظ التذكير</string>
+    <string name="collectionsNoticeReminderRemoved">حُذف التذكير</string>
+
+    <string name="collectionReminderNone">لا تذكير بعد</string>
+    <string name="collectionReminderSet">يذكّرك الآن</string>
+    <string name="collectionReminderDialogTitle">ذكّرني بهذه المجموعة</string>
+    <string name="collectionReminderDialogHint">سيصلك إشعار على سطح المكتب، وإشعار هنا، عند حلول الموعد.</string>
+    <string name="collectionReminderCadenceLabel">كم مرة</string>
+    <string name="collectionReminderDayLabel">في أي يوم</string>
+    <string name="collectionReminderTimeLabel">في أي وقت</string>
+    <string name="collectionReminderCadenceDaily">كل يوم</string>
+    <string name="collectionReminderCadenceWeekdays">أيام الأسبوع</string>
+    <string name="collectionReminderCadenceWeekly">مرة في الأسبوع</string>
+    <string name="collectionReminderDayMonday">الاثنين</string>
+    <string name="collectionReminderDayTuesday">الثلاثاء</string>
+    <string name="collectionReminderDayWednesday">الأربعاء</string>
+    <string name="collectionReminderDayThursday">الخميس</string>
+    <string name="collectionReminderDayFriday">الجمعة</string>
+    <string name="collectionReminderDaySaturday">السبت</string>
+    <string name="collectionReminderDaySunday">الأحد</string>
+    <string name="collectionReminderRunning">التذكير مُفعَّل</string>
+    <string name="collectionReminderPaused">التذكير مُوقوف مؤتًاً</string>
+    <string name="collectionReminderPauseHint">أطفه للاحتفاط بالموعد دون التنبيهات.</string>
+    <string name="collectionReminderRemove">احذف التذكير</string>
+    <string name="collectionReminderRemoveTitle">حذف هذا التذكير؟</string>
+    <string name="collectionReminderRemoveBody">تحتفظ المجموعة بكل ذكر فيها. ستُحذف الجدولة فقط.</string>
+    <string name="collectionReminderFiredTitle">حان وقت الذكر</string>
+    <string name="collectionReminderFiredFormat">%1$s — %2$d ذكرًا في انتظارك</string>
+    <string name="collectionReminderFiredEmpty">%1$s لا تحوي أي ذكر بعد</string>
+    <string name="collectionSessionActionAgain">أعِده</string>
+    <string name="collectionSessionActionSkip">تخطَّ</string>
+    <string name="collectionSessionActionResume">عُد إلى موضعك</string>
+    <string name="collectionSessionActionRestart">ابدأ من جديد</string>
+    <string name="collectionSessionFinishedTitle">انتهى</string>
+    <string name="collectionSessionFinishedBody">لقد ذكرت كل ذكر في هذه المجموعة.</string>
+    <string name="collectionSessionMissingTitle">المجموعة غير متاحة</string>
+    <string name="collectionSessionMissingHint">لم تعد على مكتبتك، فليس هناك ما يُذكر.</string>
+    <string name="collectionsActionClose">إغلاق</string>
+    <string name="collectionsActionShare">مشاركة</string>
+    <string name="collectionsActionImport">استيراد</string>
+    <string name="collectionShareTitle">مشاركة هذه المجموعة</string>
+    <string name="collectionShareHint">انسخ هذه القائمة والصقها في نسخة أخرى من أذكار لنقل الأذكار. وأنت تختار الصيغة؛ وكلتاهما تحمل الأذكار نفسها.</string>
+    <string name="collectionShareCopy">انسخ إلى الحافظة</string>
+    <string name="collectionShareCopied">نُسخت المجموعة إلى الحافظة</string>
+    <string name="collectionImportAddTitle">استيراد مجموعات</string>
+    <string name="collectionImportHint">الصق قائمة شاركها معك أحد، أو اكتبها بنفسك. يُطابَق الأذكار بنصِّها ومصدرها، فما لم تعرفه هذه النسخة يُبلَّغ عنه ولا يُختلق.</string>
+    <string name="collectionImportFormatJson">ملف أذكار</string>
+    <string name="collectionImportFormatText">قائمة بسيطة</string>
+    <string name="collectionImportPayloadLabel">القائمة</string>
+    <string name="collectionImportPayloadPlaceholder">الصق هنا</string>
+    <string name="collectionImportPreview">تابع ما سيفعله</string>
+    <string name="collectionImportAdd">استورد</string>
+    <string name="collectionImportPlanned">هذه ما سيفعله</string>
+    <string name="collectionImportUnreadableTitle">هذه ليست قائمة مجموعات من أذكار</string>
+    <string name="collectionImportUnreadableHint">تأكَّد أن الصيغة أعلاه تطابق الطريقة التي نُسخت بها القائمة، وأن شيئًا لم يُحذف من وسطها.</string>
+    <string name="collectionImportEmptyTitle">لا شيء للاستيراد</string>
+    <string name="collectionImportEmptyHint">تُقرأ القائمة، لكنها لا تصف أي أذكار ولا مجموعات.</string>
+    <string name="collectionImportCreateCount">مجموعات جديدة</string>
+    <string name="collectionImportMergeCount">أُضيفت إلى مجموعاتك</string>
+    <string name="collectionImportUnmatchedCount">أذكار لم تُعرف</string>
+    <string name="collectionImportSkippedLabel">تُركت لأننا نوفّرها سلفًا</string>
+    <string name="collectionImportUnmatchedLabel">لم تعرفها هذه النسخة</string>
+    <string name="collectionImportReportTitle">تمَّ الاستيراد</string>
+    <string name="collectionImportResultCreated">مج أُنشئت</string>
+    <string name="collectionImportResultMerged">مج أُضيفت إليها</string>
+    <string name="collectionImportResultMembers">أذكار أُضيفت</string>
+
+    <!-- The library's own layout: the banner and the chips above the shelf. -->
+    <string name="libraryHeroLabel">مكتبة الأذكار</string>
+    <string name="libraryHeroTitle">أذكارك اليومية</string>
+    <string name="libraryHeroSubtitle">تصفّح أذكارك اليومية ونظّمها حسب تصنيفها.</string>
+    <string name="collectionsProgressFormat">ذُكر %1$d من %2$d</string>
+
+    <!-- The categories the seed data is tagged with. Every tag name in the shipped TSV has a label
+         here, so a category is never shown in English over an Arabic page: the presenter's map is
+         built from these keys and anything absent from it falls through to its raw name. -->
+    <string name="libraryCategoryMuslimData">بيانات المسلمين</string>
+    <string name="libraryCategoryPrayer">أذكار بعد الصلاة</string>
+    <string name="libraryCategoryMorningEvening">أذكار الصباح والمساء</string>
+    <string name="libraryCategoryPraising">الثناء على الله</string>
+    <string name="libraryCategoryJoyDistress">الفرح والهمّ</string>
+    <string name="libraryCategoryGoodEtiquette">حسن الأدب</string>
+    <string name="libraryCategorySicknessDeath">المرض والموت</string>
+    <string name="libraryCategoryHomeFamily">البيت والأسرة</string>
+    <string name="libraryCategoryNature">الطبيعة</string>
+    <string name="libraryCategoryFoodDrink">الطعام والشراب</string>
+    <string name="libraryCategoryHajjUmrah">الحجّ والعمرة</string>
+
+    <!-- The detail page's own layout: the hero band, the continue-reading card, the member
+         toolbar. Grouped together because they are drawn as one column and are read as one page. -->
+    <string name="collectionDetailBackLink">كل المجموعات</string>
+    <string name="collectionDetailHeroProgressFormat">أُتمّ %1$d من %2$d</string>
+    <string name="collectionDetailRemainingFormat">يتبقّى ~ %1$s</string>
+    <string name="collectionDetailDurationFormat">~%1$s</string>
+    <string name="collectionDetailPositionFormat">%1$d / %2$d</string>
+    <string name="collectionDetailContinueReading">متابعة القراءة</string>
+    <string name="collectionDetailActionRemindMe">ذكِّرني</string>
+    <string name="collectionDetailRemindAtFormat">ذكِّرني في %1$s</string>
+    <string name="collectionMembersSortBy">ترتيب حسب</string>
+    <string name="collectionMembersViewGrid">شبكة</string>
+    <string name="collectionMembersViewList">قائمة</string>
+    <string name="collectionSortSequence">حسب الترتيب</string>
+    <string name="collectionSortTitle">حسب النص</string>
+    <string name="collectionSortCategory">حسب التصنيف</string>
+    <string name="collectionDetailActionRemoveFromCollection">إزالة من المجموعة</string>
+
+    <!-- The recitation session. Its progress and duration wording is the same claim the collection page
+         makes, so it borrows those keys rather than carrying a second copy translators would have to
+         keep in step; only what is genuinely its own lives here. -->
+    <string name="collectionsActionFavorite">المفضَّلة</string>
+    <string name="collectionsActionUnfavorite">أزل من المفضَّلة</string>
+    <string name="collectionSessionActionPrevious">السابق</string>
+    <string name="collectionSessionActionNext">التالي</string>
+    <string name="collectionSessionTranslationLabel">الترجمة</string>
+    <string name="remembranceEditorTitle">عدّل هذا الذكر</string>
+    <string name="remembranceEditorArabicLabel">النص العربي</string>
+    <string name="remembranceEditorArabicPlaceholder">ما نص الذكر</string>
+    <string name="remembranceEditorArabicRequired">لا يمكن أن يكون الذكر فارغًا.</string>
+    <string name="remembranceEditorEnglishLabel">الترجمة الإنجليزية</string>
+    <string name="remembranceEditorEnglishPlaceholder">كيف يُقرأ بالإنجليزية</string>
+    <string name="remembranceEditorTranslationHelp">اختياري. اتركه فارغًا للإبقاء على الترجمة كما هي.</string>
+    <string name="remembranceEditorSave">حفظ</string>
+    <string name="remembranceEditorAction">عدّل</string>
+</resources>

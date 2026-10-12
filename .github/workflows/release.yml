@@ -1,8 +1,13 @@
-# Build native installers via Hydraulic Conveyor and publish as a GitHub Release.
-# Conveyor builds for ALL platforms (Windows, macOS, Linux) from a single Linux runner.
+# Build native installers with the Compose Multiplatform plugin's jpackage
+# tasks and publish them as a GitHub Release.
+#
+# jpackage cannot cross-compile, so the matrix runs one runner per target OS.
 # Runs only on tag pushes (e.g. v1.0.0).
 #
-# Docs: https://conveyor.hydraulic.dev/22.0/continuous-integration/
+# Tasks provided by org.jetbrains.compose:
+#   Linux   -> :app:packageDeb
+#   Windows -> :app:packageMsi
+#   macOS   -> :app:packageDmg   (universal, arm64 + x64)
 
 name: Release
 
@@ -15,16 +20,33 @@ concurrency:
 
 jobs:
   build-and-release:
-    name: Build installers & create release (Conveyor)
-    runs-on: ubuntu-latest
+    name: Build ${{ matrix.target }} installer
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+            task: ':app:packageDeb'
+            artifact: azkar-linux
+          - os: windows-latest
+            target: windows
+            task: ':app:packageMsi'
+            artifact: azkar-windows
+          - os: macos-latest
+            target: macos
+            task: ':app:packageDmg'
+            artifact: azkar-macos
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '25'
           distribution: 'temurin'
@@ -39,15 +61,24 @@ jobs:
         env:
           CI: true
 
-      # Generates app/generated.conveyor.conf with correct paths for this runner.
-      # Must run after 'build' so the JAR files exist in the expected locations.
-      - name: Generate Conveyor config from Gradle
-        run: ./gradlew :app:writeConveyorConfig
+      - name: Package ${{ matrix.target }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew ${{ matrix.task }}
+        env:
+          CI: true
 
-      - name: Run Conveyor
-        uses: hydraulic-software/conveyor/actions/build@v22.0
-        with:
-          command: make copied-site
-          extra_flags: -f app/conveyor.conf
-          signing_key: ${{ secrets.SIGNING_KEY }}
-          agree_to_license: 1
+      - name: Collect installer
+        shell: bash
+        run: |
+          mkdir -p dist
+          find app/build/compose/binaries -type f \( -name '*.deb' -o -name '*.msi' -o -name '*.dmg' \) \
+            -exec cp {} dist/ \;
+          ls -l dist
+
+      - name: Upload installer
+        shell: bash
+        run: gh release create "${{ github.ref_name }}" dist/* --title "${{ github.ref_name }}" --generate-notes --repo "${{ github.repository }}" || \
+             gh release upload "${{ github.ref_name }}" dist/* --clobber --repo "${{ github.repository }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

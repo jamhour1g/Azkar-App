@@ -7,7 +7,6 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        maven("https://maven.hq.hydraulic.software") // Hydraulic Conveyor plugin (used by :app)
     }
 }
 

@@ -1,0 +1,14 @@
+root = true
+
+[*.{kt,kts}]
+ktlint_code_style = ktlint_official
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Compose Multiplatform generates the string accessors as member-extension properties on a nested
+# `Res` object (`Res.string.title`), in the package `com.azkar.generated.resources`. Importing `Res`
+# alone does not bring those extensions into scope, so every consumer needs
+# `import com.azkar.generated.resources.*` — or up to 164 individual imports per file. The rule is
+# switched off rather than suppressed file by file, because it cannot be satisfied otherwise.
+ktlint_standard_no-wildcard-imports = disabled
+# Keep in sync with detekt's Complexity/LongMethod-adjacent MaxLineLength default of 120;
+# ktlint_official would otherwise allow 140 and re-join lines detekt then rejects.
+max_line_length = 120

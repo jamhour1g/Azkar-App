@@ -1,70 +1,129 @@
 [versions]
-org-openjfx-javafx = "26"
-org-junit-jupiter-junit-jupiter = "5.13.4"
-org-kordamp-ikonli-ikonli-javafx = "12.4.0"
-org-hibernate = "7.2.5.Final"
-org-slf4j = "2.0.17"
+# The JUnit Platform version is dictated by testBalloon: its `testBalloon-framework-core`
+# artifact pulls in `junit-platform-engine` at exactly this version, and the launcher has to
+# match the engine it drives.
+org-junit-junit-platform = "1.13.4"
+# testBalloon ships two artifacts that must always move together: the Gradle plugin
+# (`de-infix.testBalloon`), which installs a Kotlin compiler plugin, and the runtime library
+# (`testBalloon-framework-core`). Neither works alone.
+de-infix-test-balloon = "1.1.0"
+org-jetbrains-exposed = "1.5.0"
+org-slf4j = "2.0.20"
 ch-qos-logback = "1.5.32"
+# kotlin-logging is the Kotlin-facing facade over the SLF4J API; logback stays the runtime
+# backend, so `logback.xml` keeps working untouched.
+io-github-oshai-kotlin-logging = "7.0.7"
+jetbrains-kotlin = "2.4.20"
+jetbrains-compose = "1.12.1"
+jetbrains-coroutines = "1.11.0"
+# Collection import/export is the first place in the app that needs a machine-readable
+# document, and hand-rolling a JSON parser is not a thing worth doing: escaping, unicode
+# and malformed input are all places to get it wrong.
+jetbrains-serialization = "1.9.0"
+# detekt is the Kotlin/Compose static-analysis gate; it replaces SpotBugs.
+detekt = "2.0.0-alpha.5"
+# Compose Multiplatform versions its Material 3 / extended-icons artifacts independently
+# of the `org.jetbrains.compose` plugin, so they are pinned here explicitly.
+#
+# This is an alpha, and that is not a preference. Material 3 Expressive has never had a stable
+# release: in 1.9.0 (the last stable, and the version the 1.12.1 plugin resolves by default) the
+# entire Expressive surface -- `MaterialExpressiveTheme`, `MotionScheme`, `MaterialTheme.motionScheme`
+# -- is declared `internal`, and `LoadingIndicator` / `WavyProgressIndicator` / `ButtonGroup` /
+# `SplitButton` are not in the artifact at all. So there is no stable version this app could pin
+# and still use the API it wants. 1.13.0-alpha02 is the newest release that carries all of it.
+#
+# The cost is version skew against the `org.jetbrains.compose` plugin, which stays at 1.12.1:
+# material3 is now four alpha ahead of the plugin's own view of it. That is tolerated because
+# material3's public API is additive across these versions and nothing else in the plugin pulls a
+# competing material3 in. Revisit on every CMP upgrade, and drop the pin back to the plugin's
+# default once Expressive ships stable.
+jetbrains-material3 = "1.13.0-alpha02"
+jetbrains-material-icons-extended = "1.7.3"
+# Navigation 3. The runtime lives under the AndroidX name and is published only to Google's
+# Maven, which is why `app/build.gradle.kts` scopes a `google()` repository to `androidx.*`.
+androidx-navigation3 = "1.2.0-beta01"
+# `NavDisplay` has no AndroidX desktop artifact, so the UI half comes from JetBrains' Compose
+# Multiplatform port instead. The two releases move in lockstep and this one resolves its own
+# Compose dependencies upwards to whatever the app already pins.
+org-jetbrains-androidx-navigation3 = "1.2.0-beta01"
+# Koin is the app's dependency-injection container. `koin-core` holds the DSL and the
+# definitions; `koin-compose` adds the Compose bindings (`KoinApplication`, `koinInject`)
+# used by the screens. Neither is the Android artifact, because there is no Android build here.
+insert-koin = "4.2.2"
 
 [libraries]
-# Nullability (they are used in the BuildSrc just not by the plugin called by name don't remove)
-#noinspection UnusedVersionCatalogEntry
-org-jspecify-jspecify = { module = "org.jspecify:jspecify", version = "1.0.0" }
-#noinspection UnusedVersionCatalogEntry
-com-google-errorprone-error-prone-core = { module = "com.google.errorprone:error_prone_core", version = "2.41.0" }
-#noinspection UnusedVersionCatalogEntry
-com-uber-nullaway-nullaway = { module = "com.uber.nullaway:nullaway", version = "0.12.8" }
-
-# JPA Dependencies
-jakarta-enterprise-jakarta-enterprise-cdi-api = { module = "jakarta.enterprise:jakarta.enterprise.cdi-api", version = "4.0.1" }
-jakarta-inject-jakarta-inject-api = { module = "jakarta.inject:jakarta.inject-api", version = "2.0.1" }
-jakarta-persistence-jakarta-persistence-api = { module = "jakarta.persistence:jakarta.persistence-api", version = "3.2.0" }
-jakarta-transaction-jakarta-transaction-api = { module = "jakarta.transaction:jakarta.transaction-api", version = "2.0.1" }
-
 # Database Dependencies
-com-h2database-h2 = { module = "com.h2database:h2", version = "2.2.220" }
-org-hibernate-orm-hibernate-core = { module = "org.hibernate.orm:hibernate-core", version.ref = "org-hibernate" }
-org-hibernate-orm-hibernate-hikaricp = { module = "org.hibernate.orm:hibernate-hikaricp", version.ref = "org-hibernate" }
-org-hibernate-orm-hibernate-processor = { module = "org.hibernate.orm:hibernate-processor", version.ref = "org-hibernate" }
-jakarta-data-jakarta-data-api = { module = "jakarta.data:jakarta.data-api", version = "1.1.0-M2" }
-org-flywaydb-flyway-core = { module = "org.flywaydb:flyway-core", version = "9.22.3" }
-com-zaxxer-hikari = { module = "com.zaxxer:HikariCP", version = "7.0.2" }
-com-google-code-gson-gson = { module = "com.google.code.gson:gson", version = "2.13.1" }
-org-jboss-logging-jboss-logging = { module = "org.jboss.logging:jboss-logging", version = "3.6.1.Final" }
-jakarta-xml-bind-jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version = "4.0.2" }
-org-glassfish-jaxb-jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version = "4.0.5" }
-com-fasterxml-classmate-classmate = { module = "com.fasterxml:classmate", version = "1.7.1" }
-net-bytebuddy-byte-buddy = { module = "net.bytebuddy:byte-buddy", version = "1.18.1" }
+com-h2database-h2 = { module = "com.h2database:h2", version = "2.4.240" }
+# Exposed 1.x moved every public type into the versioned `org.jetbrains.exposed.v1.*`
+# packages, so these coordinates are only source-compatible with 1.5.0+.
+org-jetbrains-exposed-exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "org-jetbrains-exposed" }
+org-jetbrains-exposed-exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "org-jetbrains-exposed" }
+# The DAO layer: `Entity`, `LongEntity`, `CompositeEntityID`, `EntityClass` over the very
+# same `Table` objects `exposed-core` declares. Separate from core — the entity API is
+# not part of it.
+org-jetbrains-exposed-exposed-dao = { module = "org.jetbrains.exposed:exposed-dao", version.ref = "org-jetbrains-exposed" }
+# The schema stores `created_at`/`updated_at` as `TIMESTAMP WITH TIME ZONE`, which
+# `exposed-java-time` maps through `timestampWithTimeZone()` (`OffsetDateTime`).
+org-jetbrains-exposed-exposed-java-time = { module = "org.jetbrains.exposed:exposed-java-time", version.ref = "org-jetbrains-exposed" }
+# `SchemaUtils.createMissingTablesAndColumns` / `statementsRequiredToActualizeScheme` are
+# deprecated; `MigrationUtils` is the supported way to bring a live database in line with the
+# `Table` objects in `com.azkar.data.table`.
+org-jetbrains-exposed-exposed-migration-jdbc = { module = "org.jetbrains.exposed:exposed-migration-jdbc", version.ref = "org-jetbrains-exposed" }
+com-zaxxer-hikari = { module = "com.zaxxer:HikariCP", version = "7.1.0" }
 
-# JavaFX
-org-openjfx-javafx-controls = { module = "org.openjfx:javafx-controls", version.ref = "org-openjfx-javafx" }
-org-openjfx-javafx-fxml = { module = "org.openjfx:javafx-fxml", version.ref = "org-openjfx-javafx" }
-org-openjfx-javafx-media = { module = "org.openjfx:javafx-media", version.ref = "org-openjfx-javafx" }
-org-openjfx-javafx-web = { module = "org.openjfx:javafx-web", version.ref = "org-openjfx-javafx" }
+# UI (Compose Multiplatform)
+org-jetbrains-compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "jetbrains-material3" }
+org-jetbrains-compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "jetbrains-material-icons-extended" }
+org-jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "jetbrains-compose" }
+org-jetbrains-kotlinx-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "jetbrains-serialization" }
+org-jetbrains-kotlinx-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "jetbrains-coroutines" }
+# Jetpack DataStore, the `common`/`jvm` artifact. `-core` is the variant without the Android
+# dependencies, which is the one a desktop-only build can use; `datastore-preferences` itself
+# drags in `android.app` and is not resolvable here. Replaces `java.util.prefs` for app settings.
+androidx-datastore-preferences-core = { module = "androidx.datastore:datastore-preferences-core", version = "1.2.1" }
+org-jetbrains-kotlinx-kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "jetbrains-coroutines" }
+# Navigation 3: the runtime supplies `NavKey`, `NavBackStack` and `entryProvider`, the UI module
+# supplies `NavDisplay`. Both are named explicitly because the app calls into each of them
+# directly, and a library's own `implementation` dependencies are not on the consumer's compile
+# classpath.
+androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "androidx-navigation3" }
+org-jetbrains-androidx-navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "org-jetbrains-androidx-navigation3" }
+# `runTest` gives virtual time, so the library's 180 ms search debounce is asserted without
+# the test actually waiting for it.
+org-jetbrains-kotlinx-kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "jetbrains-coroutines" }
 
-# UI Libs
-org-kordamp-ikonli-ikonli-javafx = { module = "org.kordamp.ikonli:ikonli-javafx", version.ref = "org-kordamp-ikonli-ikonli-javafx" }
-org-kordamp-ikonli-ikonli-fontawesome6-pack = { module = "org.kordamp.ikonli:ikonli-fontawesome6-pack", version.ref = "org-kordamp-ikonli-ikonli-javafx" }
-org-controlsfx-controlsfx = { module = "org.controlsfx:controlsfx", version = "11.2.2" }
+# Dependency injection
+# `koin-core` is the platform-agnostic container. `koin-compose` is named explicitly for the
+# same reason the Navigation 3 entries above are: the app calls `KoinApplication` and
+# `koinInject` directly, and a library's own `implementation` dependencies are not on the
+# consumer's compile classpath.
+io-insert-koin-koin-core = { module = "io.insert-koin:koin-core", version.ref = "insert-koin" }
+io-insert-koin-koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "insert-koin" }
 
 # Testing (they are used in the BuildSrc just not by the plugin called by name don't remove)
+# testBalloon is the test framework. AssertJ still works with it unchanged: testBalloon only
+# replaces the test *engine*, not the assertion library, so there is no adapter to add.
 #noinspection UnusedVersionCatalogEntry
-org-junit-jupiter-junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "org-junit-jupiter-junit-jupiter" }
+de-infix-test-balloon-framework-core = { module = "de.infix.testBalloon:testBalloon-framework-core", version.ref = "de-infix-test-balloon" }
 #noinspection UnusedVersionCatalogEntry
-org-junit-junit-bom = { module = "org.junit:junit-bom", version.ref = "org-junit-jupiter-junit-jupiter" }
+org-junit-platform-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "org-junit-junit-platform" }
 #noinspection UnusedVersionCatalogEntry
-org-junit-platform-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.13.4" }
-#noinspection UnusedVersionCatalogEntry
-org-assertj-assertj-core = { module = "org.assertj:assertj-core", version = "3.27.3" }
+org-assertj-assertj-core = { module = "org.assertj:assertj-core", version = "3.27.7" }
 
 # Logging
+# Every module logs through the kotlin-logging facade, never through `LoggerFactory` directly.
+# The `-jvm` artifact resolves to `Slf4jLoggerFactory` on the classpath, so Logback remains the
+# backend and no extra configuration is needed.
+io-github-oshai-kotlin-logging-jvm = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "io-github-oshai-kotlin-logging" }
 #noinspection UnusedVersionCatalogEntry
 org-slf4j-slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "org-slf4j" }
 ch-qos-logback-logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "ch-qos-logback" }
 
 [plugins]
-org-openjfx-javafxplugin = { id = "org.openjfx.javafxplugin", version = "0.1.0" }
-io-freefair-lombok = { id = "io.freefair.lombok", version = "9.1.0" }
+org-jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrains-kotlin" }
+org-jetbrains-kotlin-plugin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "jetbrains-kotlin" }
+org-jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "jetbrains-compose" }
+org-jetbrains-kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "jetbrains-kotlin" }
 com-diffplug-spotless = { id = "com.diffplug.spotless", version = "7.2.1" }
-com-github-spotbugs = { id = "com.github.spotbugs", version = "6.2.4" }
-net-ltgt-errorprone = { id = "net.ltgt.errorprone", version = "4.3.0" }
+dev-detekt = { id = "dev.detekt", version.ref = "detekt" }
+de-infix-test-balloon = { id = "de.infix.testBalloon", version.ref = "de-infix-test-balloon" }

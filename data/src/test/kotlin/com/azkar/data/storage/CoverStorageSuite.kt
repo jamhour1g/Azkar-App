@@ -1,0 +1,175 @@
+package com.azkar.data.storage
+
+import de.infix.testBalloon.framework.core.testSuite
+import org.assertj.core.api.Assertions.assertThat
+import java.nio.file.Files
+import java.nio.file.Path
+
+/**
+ * The cover directory is the one part of the app's state that is not in the database, so nothing
+ * else checks these rules for it. Each test gets its own directory rather than the real
+ * `~/.azkar/covers`: a suite that swept the user's actual pictures would be a far worse bug than
+ * any it is looking for.
+ */
+val CoverStorageSuite by testSuite("CoverStorage") {
+    testSuite("storing a file the user picked") {
+        test("the copy lands in the covers directory and keeps the extension") {
+            withCovers { storage ->
+                val source = imageFile("sunset.jpg", SUNSET_BYTES)
+
+                val name = storage.store(source)
+
+                assertThat(name).endsWith(".jpg")
+                assertThat(storage.resolve(name)).exists()
+                assertThat(Files.readAllBytes(storage.resolve(name))).isEqualTo(SUNSET_BYTES)
+            }
+        }
+
+        test("the stored name is not the path, so the library survives a moved home directory") {
+            withCovers { storage ->
+                val name = storage.store(imageFile("sunset.jpg", SUNSET_BYTES))
+
+                assertThat(name).doesNotContain("/")
+                assertThat(storage.resolve(name).parent).isEqualTo(storage.resolve(""))
+            }
+        }
+
+        test("two stores of one file are two files, because a replacement needs somewhere new to go") {
+            withCovers { storage ->
+                val source = imageFile("sunset.jpg", SUNSET_BYTES)
+
+                assertThat(storage.store(source)).isNotEqualTo(storage.store(source))
+            }
+        }
+
+        test("a file with no usable extension is stored as a png, because the bytes are what matter") {
+            withCovers { storage ->
+                assertThat(storage.store(imageFile("pasted-image", SUNSET_BYTES))).endsWith(".png")
+            }
+        }
+    }
+
+    testSuite("storing bytes that arrived over the wire") {
+        test("the extension is normalised rather than taken on trust") {
+            withCovers { storage ->
+                val name = storage.store(SUNSET_BYTES, "JPG")
+
+                assertThat(name).endsWith(".jpg")
+                assertThat(storage.read(name)).isEqualTo(SUNSET_BYTES)
+            }
+        }
+
+        test("a leading dot is dropped rather than doubled") {
+            withCovers { storage ->
+                assertThat(storage.store(SUNSET_BYTES, ".webp")).endsWith(".webp")
+            }
+        }
+
+        test("an extension carrying a separator is refused, because it would write outside the directory") {
+            withCovers { storage ->
+                val name = storage.store(SUNSET_BYTES, "../escaped")
+
+                assertThat(name).endsWith(".png")
+                assertThat(name).doesNotContain("/")
+                assertThat(storage.resolve(name).parent).isEqualTo(storage.resolve(""))
+            }
+        }
+
+        test("an extension too long to be one is refused for the same reason") {
+            withCovers { storage ->
+                assertThat(storage.store(SUNSET_BYTES, "notanextension")).endsWith(".png")
+            }
+        }
+    }
+
+    testSuite("reading a cover back") {
+        test("a stored cover reads as the bytes that went in") {
+            withCovers { storage ->
+                val name = storage.store(SUNSET_BYTES, ".png")
+
+                assertThat(storage.read(name)).isEqualTo(SUNSET_BYTES)
+            }
+        }
+
+        test("a cover whose file the user deleted reads as nothing rather than throwing") {
+            withCovers { storage ->
+                val name = storage.store(SUNSET_BYTES, ".png")
+                Files.delete(storage.resolve(name))
+
+                assertThat(storage.read(name)).isNull()
+            }
+        }
+
+        test("a name that was never stored reads as nothing") {
+            withCovers { storage ->
+                assertThat(storage.read("never-stored.png")).isNull()
+            }
+        }
+    }
+
+    testSuite("removing a cover") {
+        test("deleting takes the file away") {
+            withCovers { storage ->
+                val name = storage.store(SUNSET_BYTES, ".png")
+
+                storage.delete(name)
+
+                assertThat(storage.read(name)).isNull()
+            }
+        }
+
+        test("deleting a name that is not there is not a failure, because there is nothing to remove") {
+            withCovers { storage ->
+                storage.delete("never-stored.png")
+            }
+        }
+    }
+
+    testSuite("sweeping what nothing points at any more") {
+        test("a cover no collection refers to goes, and the count says how many") {
+            withCovers { storage ->
+                val kept = storage.store(SUNSET_BYTES, ".png")
+                storage.store(SUNSET_BYTES, ".jpg")
+                storage.store(SUNSET_BYTES, ".webp")
+
+                val swept = storage.sweepOrphans(setOf(kept))
+
+                assertThat(swept).isEqualTo(2)
+                assertThat(storage.storedNames()).containsExactly(kept)
+            }
+        }
+
+        test("sweeping with nothing to remove deletes nothing") {
+            withCovers { storage ->
+                val name = storage.store(SUNSET_BYTES, ".png")
+
+                assertThat(storage.sweepOrphans(setOf(name))).isEqualTo(0)
+                assertThat(storage.read(name)).isEqualTo(SUNSET_BYTES)
+            }
+        }
+
+        test("a directory that was never created reads as holding nothing rather than failing") {
+            withCovers { storage ->
+                assertThat(storage.storedNames()).isEmpty()
+                assertThat(storage.sweepOrphans(emptySet())).isEqualTo(0)
+            }
+        }
+    }
+}
+
+/** A covers directory of this suite's own, so nothing here can touch the user's real pictures. */
+private fun withCovers(block: (CoverStorage) -> Unit) {
+    val storage = CoverStorage(Files.createTempDirectory("azkar-cover-suite"))
+    block(storage)
+}
+
+private fun imageFile(
+    name: String,
+    bytes: ByteArray,
+): Path {
+    val file = Files.createTempDirectory("azkar-cover-suite-src").resolve(name)
+    Files.write(file, bytes)
+    return file
+}
+
+private val SUNSET_BYTES = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 1, 2, 3)

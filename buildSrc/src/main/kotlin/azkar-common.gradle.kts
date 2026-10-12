@@ -1,143 +1,160 @@
-import com.diffplug.spotless.extra.wtp.EclipseWtpFormatterStep
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.build
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.compileOnly
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.implementation
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.jacoco
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.spotbugs
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.spotless
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.spotlessApply
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.test
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.testCompileOnly
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.testImplementation
-import gradle.kotlin.dsl.accessors._4736730e652d8dca0feb89367e9d3576.testRuntimeOnly
-import net.ltgt.gradle.errorprone.errorprone
-import org.gradle.internal.impldep.org.eclipse.jgit.util.RawCharUtil.trimTrailingWhitespace
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 repositories {
     mavenCentral()
 }
 
 plugins {
-    id("io.freefair.lombok")
     id("com.diffplug.spotless")
-    id("com.github.spotbugs")
-    id("net.ltgt.errorprone")
+    id("dev.detekt")
+    // `org.jetbrains.kotlin.jvm` already applies this; it is listed because the `sourceSets` and
+    // `java` extension lookups below resolve through it rather than through the Kotlin plugin.
     id("java")
     id("jacoco")
+}
+
+// `config/testing` holds test helpers that belong to no single module and are compiled into
+// every module's `test` compilation. `config/logback` holds the Logback configuration tests run
+// under, wired the same way. Both are neutral siblings of `config/detekt` rather than `src`
+// directories precisely so they can be shared; the Spotless and detekt targets below are
+// pointed at `config/testing` explicitly, which is what keeps those files formatted and linted
+// like any other.
+val sharedTestingDirectory = rootProject.layout.projectDirectory.dir("config/testing")
+val sharedLogbackDirectory = rootProject.layout.projectDirectory.dir("config/logback")
+
+// `de.infix.testBalloon` installs a Kotlin *compiler* plugin, and it reaches for the `kotlin`
+// extension while it is still being applied — so unlike every plugin above it cannot sit in the
+// `plugins` block. The modules apply `org.jetbrains.kotlin.jvm` themselves, and this waits for
+// that to happen first. Applying it to a module without Kotlin sources is harmless: the
+// compiler plugin then reports itself as not applicable and does nothing.
+plugins.withId("org.jetbrains.kotlin.jvm") {
+    pluginManager.apply("de.infix.testBalloon")
+
+    val testSourceSet = extensions.getByType<KotlinJvmProjectExtension>().sourceSets.getByName("test")
+    testSourceSet.kotlin.srcDir(sharedTestingDirectory)
+    // `logback-test.xml` is the one file Logback looks for ahead of `logback.xml`, so putting it
+    // on every module's test runtime classpath is what stops the unit tests from inheriting the
+    // shipped INFO-level configuration.
+    testSourceSet.resources.srcDir(sharedLogbackDirectory)
 }
 
 val libs = extensions.getByType(VersionCatalogsExtension::class.java).named("libs")
 
 dependencies {
 
-    // SLF4J API for all modules
+    // Logging for all modules. kotlin-logging is the facade every module logs through: it keeps
+    // messages lazily evaluated and drops the `LoggerFactory.getLogger(Foo::class.java)`
+    // boilerplate. It resolves to SLF4J at runtime, so Logback stays the backend.
+    implementation(libs.findLibrary("io-github-oshai-kotlin-logging-jvm").get())
+    // The `-jvm` artifact already depends on `slf4j-api`, but pinning it here keeps the facade
+    // and the API it compiles against on the exact same version.
     implementation(libs.findLibrary("org-slf4j-slf4j-api").get())
+    // Logback is the SLF4J provider, and it has to be declared here rather than in `:app`:
+    // kotlin-logging only binds a logger factory, it does not bring a backend, so a module that
+    // logs without one silently gets SLF4J's NOP logger. `:data` holds most of the log statements
+    // in the repo, so leaving this to the application module muted all of them. `runtimeOnly` is
+    // right because the backend is a runtime concern — the config lives in `logback.xml` and the
+    // compiled code only ever touches the SLF4J API.
+    runtimeOnly(libs.findLibrary("ch-qos-logback-logback-classic").get())
+    // ...and on the test compile classpath as well, because `config/testing`'s log-capture helper
+    // is written against `ListAppender`/`ILoggingEvent`. `runtimeOnly` covers the test *runtime*
+    // (the Java plugin's `testRuntimeOnly` extends `runtimeOnly`) but not its compile classpath.
+    testImplementation(libs.findLibrary("ch-qos-logback-logback-classic").get())
 
-    // JSpecify: annotations only; don't ship them at runtime
-    compileOnly(libs.findLibrary("org-jspecify-jspecify").get())
-    testCompileOnly(libs.findLibrary("org-jspecify-jspecify").get())
-
-    // Error Prone + NullAway for ALL modules
-    errorprone(libs.findLibrary("com-google-errorprone-error-prone-core").get())
-    errorprone(libs.findLibrary("com-uber-nullaway-nullaway").get())
-
-    // JUnit (shared default)
-    testImplementation(platform(libs.findLibrary("org-junit-junit-bom").get()))
-    testImplementation(libs.findLibrary("org-junit-jupiter-junit-jupiter").get())
+    // Testing (shared default)
+    // testBalloon replaces JUnit entirely: it plugs its own TestEngine into the JUnit
+    // Platform, so `tasks.test { useJUnitPlatform() }` below is all the wiring Gradle
+    // needs. It also injects the launcher itself, but Gradle 9 no longer does that for
+    // you, so the launcher stays declared here.
+    testImplementation(libs.findLibrary("de-infix-test-balloon-framework-core").get())
     testRuntimeOnly(libs.findLibrary("org-junit-platform-junit-platform-launcher").get())
     testImplementation(libs.findLibrary("org-assertj-assertj-core").get())
 }
 
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        // `RemembranceImpl` and `TagImpl` are data classes with a `private` constructor, because
+        // their `init` blocks trim and validate a field that the generated `copy()` would otherwise
+        // hand straight to `equals`/`hashCode` unchecked. Kotlin still published a public `copy()`,
+        // which reopened the hole the private constructor exists to close. This flag derives
+        // `copy()`'s visibility from the constructor's, so the invariant holds for `copy()` too.
+        // Without it the compiler says so on every build and the warning is easy to ignore.
+        freeCompilerArgs.add("-Xconsistent-data-class-copy-visibility")
+    }
+}
+
 java {
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    // The one place the bytecode level is decided, for every module. Without a toolchain each
+    // module's `compileJava` inherits the version of whatever JVM happens to be running Gradle,
+    // while Kotlin's `jvmTarget` stays pinned — and the two disagreeing is a hard build failure
+    // ("Inconsistent JVM-target compatibility detected for tasks 'compileJava' (26) and
+    // 'compileKotlin' (25)"). That is not hypothetical: IntelliJ runs Gradle on the *project* JDK,
+    // so bumping the IDE's project SDK to 26 broke `./gradlew build` for everyone on the repo.
+    // Pinning the toolchain instead decouples the build from that choice: whoever launches Gradle
+    // (IntelliJ on 26, CI on 25, a shell on whatever sdkman is `current`) compiles against 25.
+    // The Kotlin plugin derives `jvmTarget` from this toolchain, which is why the per-module
+    // `jvmTarget` lines that used to live in each `build.gradle.kts` are gone — one setting, and
+    // the two compilers cannot drift apart.
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
+
+    // Left at the default for any module that adds a descriptor, but every current module opts out.
     modularity.inferModulePath = true
 }
 
-// https://github.com/diffplug/spotless/tree/main/plugin-gradle#palantir-java-format
 spotless {
-    java {
-        cleanthat()
-        importOrder()
-        removeUnusedImports()
-        trimTrailingWhitespace()
-        endWithNewline()
-        palantirJavaFormat("2.90.0")
-        formatAnnotations()
-    }
-
+    // `sharedTestingDirectory` is deliberately absent: Spotless rejects any target outside the
+    // project directory, and the shared helper sits at the repository root. The root project's
+    // own `build.gradle.kts` formats it instead, reading the same `.editorconfig`.
     kotlin {
         target("src/**/*.kt")
-        ktfmt()
+        targetExclude("**/build/**")
+        ktlint()
     }
 
     kotlinGradle {
         target("*.gradle.kts")
-        ktfmt()
-    }
-
-    format("fxml") {
-        target("src/*/resources/**/*.fxml")
-        eclipseWtp(EclipseWtpFormatterStep.XML)
-        trimTrailingWhitespace()
-        endWithNewline()
+        targetExclude("**/build/**")
+        ktlint()
     }
 }
 
-// https://spotbugs-gradle-plugin.netlify.app/com/github/spotbugs/snom/spotbugsextension
-spotbugs {
-    toolVersion = "4.9.4"
-    effort = com.github.spotbugs.snom.Effort.MAX
-    reportLevel = com.github.spotbugs.snom.Confidence.LOW
-    showProgress = true
-    ignoreFailures = !System.getenv().containsKey("CI")
-    reportsDir = file("${layout.buildDirectory}/reports/spotbugs")
-    projectName = name
-    release = version.toString()
-    maxHeapSize = "512m"
-    jvmArgs = listOf("-Duser.language=en")
+// detekt is the static-analysis gate, with type resolution wired up below so its type-aware
+// rules are live rather than silently inert.
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(
+        rootProject.layout.projectDirectory.file("config/detekt/detekt.yml"),
+        rootProject.layout.projectDirectory.file("config/detekt/detekt-compose.yml"),
+    )
+    source.setFrom(layout.projectDirectory.dir("src"), sharedTestingDirectory)
+    parallel = true
+    ignoreFailures = false
+    basePath.set(rootProject.projectDir)
 }
 
-// Error Prone + NullAway for all Java compilations
-tasks.withType<JavaCompile>().configureEach {
-    options.apply {
-        encoding = "UTF-8"
+tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
+    include("**/*.kt", "**/*.kts")
+    exclude("**/build/**", "**/generated/**")
 
-        errorprone {
-            disableWarningsInGeneratedCode.set(true)
-            // Do NOT disable all checks — keep the defaults and enable NullAway
-            val environmentSeverity = providers.environmentVariable("NULLAWAY_SEVERITY_LEVEL").orElse("ERROR")
-            check("NullAway", net.ltgt.gradle.errorprone.CheckSeverity.DEFAULT)
-            option("NullAway:JSpecifyMode", "true")
-            option("NullAway:OnlyNullMarked", "true")
-            // Skip NullAway analysis on annotation-processor-generated classes
-            // (e.g., Hibernate metamodel *_.java and Jakarta Data repository impls)
-            option("NullAway:ExcludedClassAnnotations", "jakarta.annotation.Generated")
-//            // Skip NullAway analysis on FXML fields (which are non-null at runtime but can't be annotated as such)
-//            option("NullAway:ExcludedFieldAnnotations", "javafx.fxml.FXML")
-        }
-
-        // Make tests less strict (disable NullAway for test sources only)
-        if (name.contains("test", ignoreCase = true)) {
-            errorprone.disable("NullAway")
-        }
-
-    }
-
-}
-
-tasks.withType<Javadoc> {
-    options.encoding = "UTF-8"
+    // Type resolution. Detekt silently reports *nothing* for every resolution-dependent rule
+    // without a compile classpath, so the default config's type-aware rules — `ForbiddenMethodCall`
+    // among them — were all inert. This is the price of admitting they are: it surfaces the
+    // backlog they had been hiding, which is the point.
+    classpath.setFrom(sourceSets["main"].compileClasspath, sourceSets["test"].compileClasspath)
 }
 
 tasks.test {
+    // testBalloon registers itself as a JUnit Platform TestEngine, so the Platform is still
+    // what runs the tests — only the engine behind it changed.
     useJUnitPlatform()
     finalizedBy(tasks.named("jacocoTestReport"))
 }
 
 // JaCoCo — test coverage reporting
 jacoco {
-    toolVersion = "0.8.13"
+    toolVersion = "0.8.15"
 }
 
 tasks.named<JacocoReport>("jacocoTestReport") {

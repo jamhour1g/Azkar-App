@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "kotlin-multiplatform-libraries-expert": {
+      "source": "jetbrains/klibs-io",
+      "sourceType": "github",
+      "skillPath": "skills/kmp-libraries-expert/SKILL.md",
+      "computedHash": "d7e922bf42a73eecdc08d3a4688a2ca7f78e5fc9df2ac2cb1dd10a03265549c3"
+    }
+  }
+}

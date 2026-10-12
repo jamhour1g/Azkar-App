@@ -1,0 +1,187 @@
+package com.azkar.data.repo.exposed
+
+import ch.qos.logback.classic.Level
+import com.azkar.domain.model.HadithGrade
+import com.azkar.domain.model.Remembrance
+import com.azkar.domain.model.Tag
+import com.azkar.domain.model.impl.RemembranceImpl
+import com.azkar.domain.model.impl.TagImpl
+import com.azkar.testUtils.exposedRepositories
+import com.azkar.testing.captureLogs
+import de.infix.testBalloon.framework.core.testSuite
+import org.assertj.core.api.Assertions.assertThat
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.util.Locale
+
+/**
+ * Round-trips a whole remembrance aggregate through the Exposed tables.
+ *
+ * A remembrance is not one row but five: the core record, a translation and an explanation per
+ * locale, tag links, and an optional favorite. These tests walk that graph out to the database
+ * and back to prove the reassembly holds — in particular that a locale present in only one of
+ * the two translation tables is dropped rather than surfaced half-populated.
+ */
+val RemembranceAggregateMappingSuite by testSuite("Remembrance aggregate mapping") {
+    exposedRepositories {
+        test("save() then findById(): the whole aggregate survives the round trip") { repositories ->
+            val saved =
+                repositories.remembrances.save(
+                    remembrance(
+                        source = "Abu Huraira",
+                        favorite = true,
+                        tags = setOf(tag("GOLD"), tag("SILVER")),
+                    ),
+                )
+
+            assertThat(saved.id).isNotNull()
+            assertThat(saved.source).isEqualTo("Abu Huraira")
+            assertThat(saved.grade).isEqualTo(HadithGrade.SAHIH)
+            assertThat(saved.isFavorite).isTrue()
+            assertThat(saved.tags.map { it.name }).containsExactlyInAnyOrder("gold", "silver")
+            assertEnglish(saved, "Seek knowledge", EXPLANATION)
+        }
+
+        test("save(): a tag already used by another remembrance is reused, not duplicated") { repositories ->
+            // Spelled differently on the way in, which the fold makes irrelevant: both find the
+            // one stored row rather than racing to create a second.
+            repositories.remembrances.save(remembrance(source = "First", tags = setOf(tag("SHARED"))))
+            repositories.remembrances.save(remembrance(source = "Second", tags = setOf(tag("shared"))))
+
+            assertThat(repositories.tags.findAll().map { it.name }).containsExactly("shared")
+            assertThat(repositories.remembrances.findByTagNameIgnoreCase("Shared")).hasSize(2)
+        }
+
+        test("save(): re-saving with new text updates the row in place instead of adding one") { repositories ->
+            val saved = repositories.remembrances.save(remembrance(source = "Abu Huraira"))
+            val id = requireNotNull(saved.id)
+
+            val updated =
+                rebuild(
+                    saved,
+                    translations = mapOf(ENGLISH to Remembrance.Translations(pair(EXPLANATION), pair("Updated text"))),
+                )
+            repositories.remembrances.save(updated)
+
+            assertEnglish(requireNotNull(repositories.remembrances.findById(id)), "Updated text", EXPLANATION)
+        }
+
+        test("save(): removing a locale from the aggregate deletes its rows") { repositories ->
+            val saved = repositories.remembrances.save(remembrance(source = "Abu Huraira", extraLocale = true))
+            val id = requireNotNull(saved.id)
+            assertThat(saved.translations).hasSize(2)
+
+            val withoutArabic = rebuild(saved, translations = mapOf(ENGLISH to ENGLISH_TRANSLATIONS))
+            repositories.remembrances.save(withoutArabic)
+
+            assertThat(requireNotNull(repositories.remembrances.findById(id)).translations)
+                .containsOnlyKeys(ENGLISH)
+        }
+
+        test("save(): unmarking a favorite clears the flag and leaves the favourites rail") { repositories ->
+            val saved = repositories.remembrances.save(remembrance(source = "Abu Huraira", favorite = true))
+            val id = requireNotNull(saved.id)
+
+            repositories.remembrances.save(rebuild(saved, favorite = false))
+
+            assertThat(requireNotNull(repositories.remembrances.findById(id)).isFavorite).isFalse()
+            assertThat(repositories.remembrances.findFavorites().map { it.id }).doesNotContain(id)
+        }
+
+        test("findById(): a locale with no counterpart is dropped, and the drop is reported") { repositories ->
+            val saved = repositories.remembrances.save(remembrance(source = "Abu Huraira", extraLocale = true))
+            val id = requireNotNull(saved.id)
+
+            // `save()` always writes a translation and an explanation together, so the two tables
+            // can only drift apart behind its back — which is what a hand-edited or partially
+            // migrated database looks like, and the case the mapper's warning exists for.
+            transaction(repositories.database) {
+                exec("DELETE FROM explanation_translation WHERE remembrance_id = $id AND locale_code = 'ar'")
+            }
+
+            val logs =
+                captureLogs(MAPPER_LOGGER) {
+                    val reloaded = requireNotNull(repositories.remembrances.findById(id))
+                    assertThat(reloaded.translations).containsOnlyKeys(ENGLISH)
+                }
+
+            assertThat(logs.messagesAt(Level.WARN)).containsExactly("Dropped locales missing counterpart")
+            // The payload is the only thing naming *which* locale and *which* row went wrong, so
+            // losing it would leave a warning that cannot be acted on. All three fields are always
+            // set, which is what distinguishes "nothing was dropped" from "the field was lost".
+            assertThat(logs.payload.keys)
+                .describedAs("Every field the mapper sets, so a renamed key fails loudly")
+                .containsExactlyInAnyOrder("remembranceId", "droppedTranslations", "droppedExplanations")
+            assertThat(logs.payload["remembranceId"]).containsExactly(id.toString())
+            // A locale is named by the table it *survived* in, not the one it went missing from:
+            // Arabic lost its explanation, so it is the translation that had to be dropped, and the
+            // empty set is what the surviving side looks like.
+            assertThat(logs.payload["droppedTranslations"]).containsExactly("[ar]")
+            assertThat(logs.payload["droppedExplanations"]).containsExactly("[]")
+        }
+    }
+}
+
+/** The logger [RemembranceMapper] writes to, named by hand so the test cannot drift from the class. */
+private const val MAPPER_LOGGER = "com.azkar.data.mapping.RemembranceMapper"
+
+// ------------------------------------------------------------------ fixtures
+
+private fun remembrance(
+    source: String,
+    favorite: Boolean = false,
+    tags: Set<Tag> = emptySet(),
+    extraLocale: Boolean = false,
+): Remembrance {
+    val translations = mutableMapOf(ENGLISH to ENGLISH_TRANSLATIONS)
+    if (extraLocale) {
+        translations[ARABIC] = Remembrance.Translations(pair("شرح"), pair("ذكر"))
+    }
+    return RemembranceImpl(
+        id = null,
+        grade = HadithGrade.SAHIH,
+        isFavorite = favorite,
+        source = source,
+        translations = translations,
+        tags = tags,
+    )
+}
+
+/** The same aggregate with a few fields swapped, standing in for what a caller would send back. */
+private fun rebuild(
+    remembrance: Remembrance,
+    translations: Map<Locale, Remembrance.Translations> = remembrance.translations,
+    favorite: Boolean = remembrance.isFavorite,
+): Remembrance =
+    RemembranceImpl(
+        id = remembrance.id,
+        grade = remembrance.grade,
+        isFavorite = favorite,
+        source = remembrance.source,
+        createdAt = remembrance.createdAt,
+        updatedAt = remembrance.updatedAt,
+        translations = translations,
+        tags = remembrance.tags,
+    )
+
+private fun tag(name: String): Tag = TagImpl(name = name)
+
+private fun pair(text: String) = Remembrance.Translations.Pair(null, text)
+
+private fun assertEnglish(
+    remembrance: Remembrance,
+    translation: String,
+    explanation: String,
+) {
+    val resolved = requireNotNull(remembrance.translationsFor(ENGLISH))
+    assertThat(resolved.translationPair.text).isEqualTo(translation)
+    assertThat(resolved.explanationPair.text).isEqualTo(explanation)
+}
+
+private val ENGLISH: Locale = Locale.ENGLISH
+private val ARABIC: Locale = Locale.forLanguageTag("ar")
+private const val EXPLANATION = "An explanation of the hadith"
+private val ENGLISH_TRANSLATIONS =
+    Remembrance.Translations(
+        Remembrance.Translations.Pair(null, EXPLANATION),
+        Remembrance.Translations.Pair(null, "Seek knowledge"),
+    )

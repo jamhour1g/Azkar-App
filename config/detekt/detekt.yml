@@ -1,0 +1,108 @@
+# Every module logs through the kotlin-logging facade. These are the ways that can be broken, so
+# each one is a rule rather than a note in a style guide.
+config:
+  validation: true
+  warningsAsErrors: true
+
+style:
+  MagicNumber:
+    active: false
+
+  # Compose Multiplatform generates the string accessors as member-extension properties on a nested
+  # `Res` object (`Res.string.title`), in the package `com.azkar.generated.resources`. Importing
+  # `Res` alone does not bring those extensions into scope, so every consumer needs
+  # `import com.azkar.generated.resources.*` — or up to 164 individual imports per file. Disabled
+  # for the same reason as the matching `.editorconfig` setting; the rule cannot be satisfied
+  # otherwise, and `@Suppress("WildcardImport")` on ~20 files would only hide that.
+  WildcardImport:
+    active: false
+
+  # `LoggerFactory.getLogger(Foo::class.java)` is the boilerplate kotlin-logging exists to remove,
+  # and a raw `org.slf4j.Logger` in a signature lets a logger be passed around instead of looked up
+  # where it is used. Banned at the import so neither the factory nor the type can be reached.
+  ForbiddenImport:
+    active: true
+    # `config/testing` is the one place that legitimately holds a backend handle: `LogCapture`
+    # attaches a `ListAppender` to a Logback logger, which is a no-op question for any other
+    # binding and would silently capture nothing.
+    excludes: ['**/testing/**']
+    forbiddenImports:
+      - 'org.slf4j.LoggerFactory'
+      - 'org.slf4j.Logger'
+      - 'java.util.logging.Logger'
+      - 'java.util.logging.LogManager'
+
+  # The ways a log line can escape the configured backend, and therefore the only ways it can
+  # escape the level, the pattern and the appenders set in `logback.xml`. `print` and `println`
+  # bypass Logback entirely: they ignore `AZKAR_LOG_LEVEL`, they never reach the configured
+  # appenders, and in a packaged app they go to a console the user does not have.
+  #
+  # detekt 2.x resolves the call and matches the resolved symbol's fully-qualified name, so each
+  # spelling needs its own entry — it does *not* match on the bare callee. `println(x)` resolves
+  # to `kotlin.io.println` (detekt's own default entry, which is `active: false` there and
+  # therefore does nothing on its own), while `System.out.println(x)` resolves to
+  # `java.io.PrintStream.println` because that is the function the receiver actually selects.
+  # Both are listed so the ban covers the Kotlin-idiomatic call and the explicit stream call.
+  #
+  # This rule needs type resolution, which the `detekt` task now has — it did not, and the rule
+  # silently matched nothing until the task was given a classpath.
+  #
+  # Nothing is lost by leaving `printStackTrace` out: detekt's built-in `PrintStackTrace` rule
+  # needs no resolution and already covers it.
+  ForbiddenMethodCall:
+    active: true
+    # The log-capture harness is the one place allowed to write to a stream directly: it is test
+    # scaffolding, and a `println` there is a diagnostic for a failing test rather than a log line
+    # the app is meant to emit.
+    excludes: ['**/testing/**']
+    methods:
+      - value: 'kotlin.io.println'
+        reason: >-
+          Log through kotlin-logging so the line honours `logback.xml`: its level is
+          configurable, it reaches the configured appenders, and it can carry a throwable. The
+          single justified exception is the `runScreenshot` tool, whose stdout is its contract,
+          and which suppresses this rule locally.
+      - value: 'kotlin.io.print'
+        reason: >-
+          Log through kotlin-logging so the line honours `logback.xml`. Unbuffered writes to
+          stdout are the failure mode this rule exists to prevent.
+      - value: 'java.io.PrintStream.println'
+        reason: >-
+          Log through kotlin-logging, and use the bare `println` rather than reaching for the
+          stream: the stream is exactly the output channel the logging configuration cannot
+          reach.
+      - value: 'java.io.PrintStream.print'
+        reason: 'Log through kotlin-logging, and use the bare `print` rather than the stream.'
+
+coroutines:
+  # A hard-coded `Dispatchers.IO` cannot be replaced from a test, so code that reaches for one has
+  # to be handed its dispatcher instead. Production code obeys; see `ExposedTransactionRunner`.
+  #
+  # Tests are exempt because there is nothing to inject *into*: a test calling
+  # `DatabaseWarmUp(dispatcher = …)` is supplying the value, and naming the scheduler it wants is
+  # the whole point of the call. `TestDispatchers.unconfined` keeps that choice in one place, and
+  # its KDoc says why a test wants `Unconfined` rather than a virtual clock.
+  #
+  # The two rules above are deliberately *not* exempt here: a `println` or a raw SLF4J logger in a
+  # test is the same defect as in production, since it is equally invisible to `logback-test.xml`.
+  # `config/testing` is exempt because it is the harness that reads the backend on purpose.
+  #
+  # `ui/preview` is exempt because a dispatcher there is not a scheduling decision about the app, it
+  # is a decision about how a picture gets drawn. `Dispatchers.Unconfined` is what puts a fixture's
+  # rows in place before a `@Preview` composes, and `Dispatchers.IO` is what DataStore's file reads
+  # need; there is no production path through either call, and no test to hand a replacement
+  # dispatcher to. The two files in that package are the only ones affected — nothing shipped reads
+  # from them, they are reached from `@Preview` functions and the screenshot harness alone.
+  InjectDispatcher:
+    active: true
+    excludes: ['**/test/**', '**/testing/**', '**/ui/preview/**']
+
+naming:
+  # `config/testing` is appended to each module's test source set, so its files are addressed by
+  # their package rather than by where they sit on disk. `LogCapture.kt` is a harness: it holds
+  # `CapturedLogs` alongside the `captureLogs` / `renderAsProduction` helpers, and the file name is
+  # meant to say "the log-capture harness" rather than "the one class below". Every other source
+  # root in the project is a real `src/...` tree, so this exception is scoped to the shared
+  # directory instead of weakening the rule for test code generally.
+  MatchingDeclarationName:
+    excludes: ['**/testing/**']
