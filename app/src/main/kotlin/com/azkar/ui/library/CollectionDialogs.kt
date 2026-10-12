@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.generated.resources.Res
-import com.azkar.generated.resources.collectionsActionStepBack
 import com.azkar.generated.resources.collectionsActionCancel
 import com.azkar.generated.resources.collectionsActionChooseCover
 import com.azkar.generated.resources.collectionsActionCreateCollection
@@ -56,6 +55,7 @@ import com.azkar.generated.resources.collectionsActionDelete
 import com.azkar.generated.resources.collectionsActionNext
 import com.azkar.generated.resources.collectionsActionRemoveCover
 import com.azkar.generated.resources.collectionsActionSave
+import com.azkar.generated.resources.collectionsActionStepBack
 import com.azkar.generated.resources.collectionsDialogChooseCoverTitle
 import com.azkar.generated.resources.collectionsDialogClose
 import com.azkar.generated.resources.collectionsDialogCoverBusy
@@ -65,11 +65,6 @@ import com.azkar.generated.resources.collectionsDialogCoverLabel
 import com.azkar.generated.resources.collectionsDialogCoverNoneBody
 import com.azkar.generated.resources.collectionsDialogCoverNoneTitle
 import com.azkar.generated.resources.collectionsDialogCreateTitle
-import com.azkar.generated.resources.collectionsDialogEditTitle
-import com.azkar.generated.resources.collectionsDialogStepCover
-import com.azkar.generated.resources.collectionsDialogStepDetails
-import com.azkar.generated.resources.collectionsDialogStepProgress
-import com.azkar.generated.resources.collectionsDialogStepTags
 import com.azkar.generated.resources.collectionsDialogDeleteBody
 import com.azkar.generated.resources.collectionsDialogDeleteTitle
 import com.azkar.generated.resources.collectionsDialogDescriptionCount
@@ -77,9 +72,14 @@ import com.azkar.generated.resources.collectionsDialogDescriptionLabel
 import com.azkar.generated.resources.collectionsDialogDescriptionPlaceholder
 import com.azkar.generated.resources.collectionsDialogDuplicateSubtitle
 import com.azkar.generated.resources.collectionsDialogDuplicateTitle
+import com.azkar.generated.resources.collectionsDialogEditTitle
 import com.azkar.generated.resources.collectionsDialogNameLabel
 import com.azkar.generated.resources.collectionsDialogNamePlaceholder
 import com.azkar.generated.resources.collectionsDialogNameRequired
+import com.azkar.generated.resources.collectionsDialogStepCover
+import com.azkar.generated.resources.collectionsDialogStepDetails
+import com.azkar.generated.resources.collectionsDialogStepProgress
+import com.azkar.generated.resources.collectionsDialogStepTags
 import com.azkar.ui.components.AzkarDialogSurface
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarOutlinedField

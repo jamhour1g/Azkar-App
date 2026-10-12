@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ComposeUiTest
-
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -177,8 +176,7 @@ private fun ComposeUiTest.expectNoPhoto() {
     }
 }
 
-private fun ComposeUiTest.photoNodes() =
-    onAllNodes(hasContentDescription(COVER_PHOTO)).fetchSemanticsNodes()
+private fun ComposeUiTest.photoNodes() = onAllNodes(hasContentDescription(COVER_PHOTO)).fetchSemanticsNodes()
 
 private const val NANOS_PER_MILLI = 1_000_000L
 private const val NO_PHOTO_WINDOW_MILLIS = 1_000L

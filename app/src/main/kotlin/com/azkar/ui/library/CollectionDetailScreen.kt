@@ -30,10 +30,10 @@ import com.azkar.generated.resources.collectionShareCopied
 import com.azkar.generated.resources.collectionsActionAddMembers
 import com.azkar.generated.resources.collectionsActionDelete
 import com.azkar.generated.resources.collectionsActionDuplicate
+import com.azkar.generated.resources.collectionsActionEdit
 import com.azkar.generated.resources.collectionsActionFavorite
 import com.azkar.generated.resources.collectionsActionHideFromHome
 import com.azkar.generated.resources.collectionsActionPin
-import com.azkar.generated.resources.collectionsActionEdit
 import com.azkar.generated.resources.collectionsActionShare
 import com.azkar.generated.resources.collectionsActionShowOnHome
 import com.azkar.generated.resources.collectionsActionUnfavorite

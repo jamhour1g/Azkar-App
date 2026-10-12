@@ -49,7 +49,8 @@ val CollectionServiceSuite by testSuite("Collection service creation") {
 
         transaction(database) {
             val rows =
-                CollectionTagTable.selectAll()
+                CollectionTagTable
+                    .selectAll()
                     .filter { it[CollectionTagTable.collectionId].value == created.id }
             assertThat(rows).hasSize(1)
         }
@@ -89,7 +90,13 @@ val CollectionServiceSuite by testSuite("Collection service creation") {
 
         service.create(name = "Morning Azkar", tags = setOf(TagImpl(name = "morning")))
 
-        assertThat(service.findAll().single().tags.map { it.name }).containsExactly("morning")
+        assertThat(
+            service
+                .findAll()
+                .single()
+                .tags
+                .map { it.name },
+        ).containsExactly("morning")
     }
 }
 
