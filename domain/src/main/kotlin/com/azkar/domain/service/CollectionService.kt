@@ -45,9 +45,26 @@ class CollectionService(
     /**
      * Creates a collection.
      *
-     * A new collection always starts empty, unpinned and without a cover, so the generated wash is what
-     * the user sees first and can be replaced by picking a picture or a glyph. A label, a description
-     * and its labels are the only things chosen up front.
+     * A new collection always starts empty and unpinned, so the generated wash is what the user sees
+     * first and can be replaced by picking a picture. A name, a description and its labels are the only
+     * things chosen up front — and the labels are written in a **second statement**, not left to
+     * [repository.save].
+     *
+     * That second write is the whole reason this method is more than a call to `save`. `save` owns the
+     * parent row and deliberately says nothing about labels, because a label is edited by picking one
+     * rather than by filling in a form, and a full-aggregate write would turn every rename into a
+     * silent membership edit. But a collection *being created* has no row to preserve that separation
+     * for: it has never had any labels, so the only statement that can give it any is the one the
+     * caller drives. Passing `tags` into the aggregate and trusting them to appear is the bug this
+     * paragraph exists for — the aggregate carries them, `save` drops them on the floor, and the
+     * collection reaches the shelf with none of the labels the user just picked, which looks exactly
+     * like the app forgetting what they typed.
+     *
+     * The write is guarded on `tags` being non-empty so the ordinary case — a collection with no labels
+     * at all — still costs one statement, and the aggregate is read back afterwards for the same reason
+     * [duplicate] reads its copy back: the only thing that knows what the labels resolved to is the
+     * storage that resolved them, so handing the caller an aggregate read before that would hand it an
+     * empty set.
      */
     suspend fun create(
         name: String,
@@ -57,15 +74,24 @@ class CollectionService(
         tags: Set<Tag> = emptySet(),
     ): RemembranceCollection =
         transactions.run {
-            repository.save(
-                RemembranceCollectionImpl(
-                    name = name,
-                    description = description,
-                    iconKey = iconKey,
-                    coverImagePath = coverImagePath,
-                    tags = tags,
-                ),
-            )
+            val created =
+                repository.save(
+                    RemembranceCollectionImpl(
+                        name = name,
+                        description = description,
+                        iconKey = iconKey,
+                        coverImagePath = coverImagePath,
+                        tags = tags,
+                    ),
+                )
+            if (tags.isEmpty()) {
+                created
+            } else {
+                val id = checkNotNull(created.id) { "A just-created collection must have an id" }
+                repository.setTags(id, tags.map { it.name })
+                repository.findById(id)
+                    ?: throw CollectionNotFoundException(id)
+            }
         }
 
     /** Renames and redescribes the collection identified by [id]. */

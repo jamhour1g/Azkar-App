@@ -664,7 +664,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
         val (state, _) = loaded(gateway)
         state.sort = CollectionSort.NAME
 
-        state.renameCollection(
+        state.editCollection(
             id = 21L,
             name = "Zzz renamed",
             description = null,
@@ -681,7 +681,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
         val gateway = FakeCollectionsGateway(collections = listOf(customCollection(id = 20L, name = "For the car")))
         val (state, _) = loaded(gateway)
 
-        state.renameCollection(
+        state.editCollection(
             id = 20L,
             name = "Car",
             description = null,
@@ -689,7 +689,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
             coverImagePath = null,
         )
 
-        assertThat(state.noticeKey).isEqualTo(CollectionNoticeKey.RENAMED)
+        assertThat(state.noticeKey).isEqualTo(CollectionNoticeKey.EDITED)
     }
 
     test("pinning lifts a collection above the rest of the shelf") {
@@ -850,7 +850,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
             )
         val (state, _) = loaded(gateway)
 
-        state.catalogue.renameCollection(
+        state.catalogue.editCollection(
             id = 20L,
             name = "For the car",
             description = null,
@@ -868,7 +868,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
             )
         val (state, _) = loaded(gateway)
 
-        state.catalogue.renameCollection(
+        state.catalogue.editCollection(
             id = 20L,
             name = "For the car",
             description = null,

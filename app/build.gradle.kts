@@ -99,6 +99,14 @@ dependencies {
     implementation(libs.io.insert.koin.koin.core)
     implementation(libs.io.insert.koin.koin.compose)
 
+    // Images and files. Coil draws the collection covers and FileKit asks for one: on Linux the
+    // only real chooser is the XDG Desktop Portal, which is a D-Bus service with no JDK binding,
+    // and FileKit ships the D-Bus client for it rather than this app shelling out to `zenity`
+    // and dispatching on `os.name`. See `AzkarImageLoader` for where the two meet.
+    implementation(libs.io.coil.kt.coil3.coil.compose)
+    implementation(libs.io.github.vinceglb.filekit.dialogs)
+    implementation(libs.io.github.vinceglb.filekit.coil)
+
     // `runTest` supplies virtual time and a deterministic scheduler, which is what makes the
     // library's debounced search assertable without a real 180 ms wait.
     testImplementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.test)
@@ -247,7 +255,21 @@ compose.desktop {
             // Skiko draws through AWT, so `java.desktop` (which transitively pulls
             // java.datatransfer, java.xml and java.prefs) is mandatory. H2/Hikari/Exposed
             // need java.sql + java.naming, and Logback needs java.logging.
-            modules("java.desktop", "java.sql", "java.naming", "java.logging", "jdk.unsupported")
+            //
+            // `jdk.security.auth` is there for the file dialog and only for the file dialog: the
+            // XDG Desktop Portal authenticates the requester against the session bus over
+            // GSSAPI, and this is the module that speaks it. Running from the classpath resolves
+            // it anyway -- the unnamed module's default root set is every module in the image that
+            // exports something -- so the packaged builds are the only ones where leaving it out
+            // would be felt, which is exactly the case nobody would otherwise catch.
+            modules(
+                "java.desktop",
+                "java.sql",
+                "java.naming",
+                "java.logging",
+                "jdk.unsupported",
+                "jdk.security.auth",
+            )
 
             // The app mark, rasterised from `AzkarIcons.Brand` — the same `ImageVector` the header
             // lockup draws, so the taskbar entry, the dock tile, the desktop shortcut and the

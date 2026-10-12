@@ -33,7 +33,7 @@ import com.azkar.generated.resources.collectionsActionDuplicate
 import com.azkar.generated.resources.collectionsActionFavorite
 import com.azkar.generated.resources.collectionsActionHideFromHome
 import com.azkar.generated.resources.collectionsActionPin
-import com.azkar.generated.resources.collectionsActionRename
+import com.azkar.generated.resources.collectionsActionEdit
 import com.azkar.generated.resources.collectionsActionShare
 import com.azkar.generated.resources.collectionsActionShowOnHome
 import com.azkar.generated.resources.collectionsActionUnfavorite
@@ -652,7 +652,7 @@ private fun headerActions(
 ): DetailActions =
     DetailActions(
         onBack = onBack,
-        onRename = { dialogs.editor = CollectionEditorDraft.rename(it) },
+        onEdit = { dialogs.editor = CollectionEditorDraft.edit(it) },
         onDuplicate = { target, newName ->
             dialogs.editor = CollectionEditorDraft.duplicate(collection = target, newName = newName)
         },
@@ -807,7 +807,7 @@ internal fun memberTileActions(
  */
 private data class DetailActions(
     val onBack: () -> Unit,
-    val onRename: (RemembranceCollection) -> Unit,
+    val onEdit: (RemembranceCollection) -> Unit,
     val onDuplicate: (RemembranceCollection, String) -> Unit,
     val onTogglePin: () -> Unit,
     val onToggleHome: () -> Unit,
@@ -848,8 +848,15 @@ private fun DetailEditorHost(
 ) {
     CollectionEditorDialog(
         draft = draft,
-        covers = collections.covers,
-        onPickCover = { collections.pickCoverImage() },
+        // The same pool the shelf offers, so renaming a collection from its own page offers exactly the
+        // tags that editing it from the shelf would. Both hosts read one derivation on the catalogue,
+        // which is why neither of them sorts a list of tags.
+        environment =
+            CollectionEditorEnvironment(
+                covers = collections.covers,
+                availableTagNames = collections.shelfTags.map { it.name },
+                onPickCover = { title -> collections.pickCoverImage(title) },
+            ),
         onDismiss = onDismiss,
         onConfirm = { name, description, tagNames, coverImagePath ->
             onDismiss()
@@ -858,8 +865,8 @@ private fun DetailEditorHost(
                 // mode; the branch exists rather than a `create` call that would put a new row on the
                 // shelf while the user is reading someone else's collection.
                 CollectionEditorMode.CREATE -> Unit
-                CollectionEditorMode.RENAME ->
-                    collections.renameCollection(
+                CollectionEditorMode.EDIT ->
+                    collections.editCollection(
                         id = draft.collectionId,
                         name = name,
                         description = description,
@@ -924,9 +931,9 @@ private fun detailMenuItems(
     return buildList {
         add(
             AzkarMenuItem(
-                label = stringResource(Res.string.collectionsActionRename),
-                onClick = { actions.onRename(collection) },
-                icon = ActionIcons.rename,
+                label = stringResource(Res.string.collectionsActionEdit),
+                onClick = { actions.onEdit(collection) },
+                icon = ActionIcons.edit,
             ),
         )
         addAll(identityMenuItems(collection = collection, actions = actions, duplicateName = duplicateName))

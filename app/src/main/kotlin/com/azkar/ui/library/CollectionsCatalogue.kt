@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
+import com.azkar.domain.model.Tag
 import com.azkar.domain.model.withMember
 import com.azkar.domain.model.withMembers
 import com.azkar.domain.model.withoutMember
@@ -51,7 +52,7 @@ sealed interface CollectionNotice {
 
 enum class CollectionNoticeKey {
     CREATED,
-    RENAMED,
+    EDITED,
     DELETED,
     DUPLICATED,
     PINNED,
@@ -200,6 +201,26 @@ class CollectionsCatalogue(
 
     var allRemembrances: List<Remembrance> by mutableStateOf(emptyList())
         private set
+
+    /**
+     * Every tag in use anywhere in the library, alphabetically and with no duplicates.
+     *
+     * Collected from the loaded collections rather than read from the tag table, so a picker can
+     * never offer a tag that matches nothing — which is the failure a "create a new one" affordance
+     * sits right next to, and the user pays for when storage refuses the save. Ordered by name
+     * because nothing here has a natural order, and one that shifted as a tag was renamed would move
+     * a chip out from under the pointer mid-click.
+     *
+     * Lives on the catalogue rather than on [CollectionsState] because two screens now need it: the
+     * shelf's label chips, and the editor dialog's tag picker, which the detail page opens too and
+     * where there is no [CollectionsState] to ask.
+     */
+    val shelfTags: List<Tag>
+        get() =
+            allCollections
+                .flatMap { it.tags }
+                .distinctBy { it.id }
+                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
 
     var loading: Boolean by mutableStateOf(false)
         private set
@@ -468,18 +489,27 @@ class CollectionsCatalogue(
         }
     }
 
-    fun renameCollection(
+    /**
+     * Writes every field of a collection that already exists.
+     *
+     * Named for what it does rather than for the name it takes: this used to be the rename, and a
+     * method called `renameCollection` that also replaces the description, the tags and the cover is
+     * how the dialog ended up labelled "Rename Collection" while offering four fields. The write is
+     * still one — a collection has no partial update — so the name is one of four arguments rather
+     * than one of one.
+     */
+    fun editCollection(
         id: Long,
         name: String,
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
     ) = mutate(
-        description = "rename collection $id",
-        onSuccess = CollectionNoticeKey.RENAMED,
+        description = "edit collection $id",
+        onSuccess = CollectionNoticeKey.EDITED,
     ) {
         val saved =
-            gateway.renameCollection(
+            gateway.editCollection(
                 id = id,
                 name = name,
                 description = description,
@@ -546,9 +576,16 @@ class CollectionsCatalogue(
      * the detail editor need the same two steps in the same order, and a null here means both "the
      * user cancelled" and "the file could not be read" — the dialog shows the same thing either way,
      * so the screens have nothing to do with the difference.
+     *
+     * The dialog's own title is passed in rather than read here. This holder is remembered across a
+     * language switch, so a caption resolved down here would be the language the app launched in; the
+     * dialog, which is composed inside the keyed subtree, is the one place that sees the current one.
      */
-    suspend fun pickCoverImage(): String? =
-        CoverImageChooser.choose()?.let { CoverImageChooser.ingest(it, ::storeCoverImage) }
+    suspend fun pickCoverImage(title: String): String? =
+        CoverImageChooser.choose(title)
+            ?.file
+            ?.toPath()
+            ?.let { CoverImageChooser.ingest(it, ::storeCoverImage) }
 
     fun duplicateCollection(
         id: Long,

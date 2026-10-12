@@ -634,7 +634,7 @@ internal fun previewCollectionHeroActions(): CollectionHeroActions =
         onEditReminder = {},
         menuItems =
             listOf(
-                AzkarMenuItem(label = "Rename", onClick = {}, icon = ActionIcons.rename),
+                AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),
                 AzkarMenuItem(label = "Duplicate", onClick = {}, icon = ActionIcons.duplicate),
                 AzkarMenuItem(label = "Delete", onClick = {}, icon = ActionIcons.delete),
             ),

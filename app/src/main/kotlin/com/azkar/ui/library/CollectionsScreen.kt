@@ -134,7 +134,7 @@ internal fun CollectionsScreenContent(
                     state.findCollection(id)
                     onOpenCollection(id)
                 },
-                onRename = { collection -> editor = CollectionEditorDraft.rename(collection) },
+                onEdit = { collection -> editor = CollectionEditorDraft.edit(collection) },
                 // The copy's name arrives pre-resolved: this lambda is not a composable, so it
                 // could not call `stringResource` for itself.
                 onDuplicate = { collection, newName ->
@@ -217,7 +217,7 @@ internal data class ShelfCallbacks(
     val onCreate: () -> Unit,
     val onImport: () -> Unit,
     val onOpen: (Long) -> Unit,
-    val onRename: (RemembranceCollection) -> Unit,
+    val onEdit: (RemembranceCollection) -> Unit,
     val onDuplicate: (RemembranceCollection, String) -> Unit,
     val onDelete: (RemembranceCollection) -> Unit,
     val onRead: (Long) -> Unit,
@@ -286,7 +286,7 @@ private fun ShelfBodyPreview() {
                     onCreate = {},
                     onImport = {},
                     onOpen = {},
-                    onRename = {},
+                    onEdit = {},
                     onDuplicate = { _, _ -> },
                     onDelete = {},
                     onRead = {},
@@ -307,12 +307,20 @@ private fun CollectionEditorHost(
 ) {
     CollectionEditorDialog(
         draft = draft,
-        covers = state.covers,
-        // The chooser runs the platform's own file dialog, which blocks, and the copy afterwards
-        // touches the filesystem. Both are what the dialog's `onPickCover` suspending shape is for:
-        // it awaits the whole thing and reports a cancelled pick as `null` rather than leaving the
-        // caller to guess which of "no file chosen" and "chosen but unreadable" it was handed.
-        onPickCover = { state.pickCoverImage() },
+        // The shelf's own labels, not every tag the database knows about: a collection lives on the
+        // shelf, so the only tags worth offering are the ones its neighbours already carry. Anything
+        // else is still reachable through the panel's own "create a tag" row.
+        environment =
+            CollectionEditorEnvironment(
+                covers = state.covers,
+                availableTagNames = state.shelfLabels.map { it.name },
+                // The chooser runs the platform's own file dialog, which blocks, and the copy afterwards
+                // touches the filesystem. Both are what the dialog's `onPickCover` suspending shape is
+                // for: it awaits the whole thing and reports a cancelled pick as `null` rather than
+                // leaving the caller to guess which of "no file chosen" and "chosen but unreadable" it
+                // was handed.
+                onPickCover = { title -> state.pickCoverImage(title) },
+            ),
         onDismiss = onDismiss,
         onConfirm = { name, description, tagNames, coverImagePath ->
             onDismiss()
@@ -326,8 +334,8 @@ private fun CollectionEditorHost(
                         onCreated = {},
                     )
 
-                CollectionEditorMode.RENAME ->
-                    state.renameCollection(
+                CollectionEditorMode.EDIT ->
+                    state.editCollection(
                         id = draft.collectionId,
                         name = name,
                         description = description,

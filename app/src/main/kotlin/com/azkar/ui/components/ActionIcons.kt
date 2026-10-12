@@ -79,8 +79,8 @@ internal object ActionIcons {
      */
     val open: ImageVector get() = Icons.AutoMirrored.Outlined.ArrowForward
 
-    /** Rename, in every menu and every editor. The pencil, not a text cursor — a cursor means "edit here". */
-    val rename: ImageVector get() = Icons.Outlined.Edit
+    /** Edit, in every menu and every editor. The pencil, not a text cursor — a cursor means "edit here". */
+    val edit: ImageVector get() = Icons.Outlined.Edit
 
     /** Copy, and duplication too: both write a second copy of the same thing somewhere. */
     val copy: ImageVector get() = Icons.Outlined.ContentCopy

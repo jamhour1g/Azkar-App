@@ -92,7 +92,7 @@
     <string name="collectionsSortItems">الأكثر أذكارًا</string>
     <string name="collectionsSortProgress">الأكثر إنجازًا</string>
     <string name="collectionsActionOpen">فتح</string>
-    <string name="collectionsActionRename">إعادة تسمية</string>
+    <string name="collectionsActionEdit">تحرير</string>
     <string name="collectionsActionDuplicate">نسخ</string>
     <string name="collectionsActionDelete">حذف</string>
     <string name="collectionsActionPin">تثبيت في الأعلى</string>
@@ -114,30 +114,55 @@
     <string name="collectionsSearchEmptyHint">يشمل البحث النص والمصدر وتصنيفات كل المجموعات.</string>
     <string name="collectionsKindOfficial">جاهزة مع التطبيق</string>
     <string name="collectionsKindCustom">مجموعتك</string>
-    <!-- Library: the create / rename / duplicate dialog -->
+    <!-- Library: the create / edit / duplicate dialog, which walks its way through its steps -->
     <string name="collectionsDialogCreateTitle">مجموعة جديدة</string>
-    <string name="collectionsDialogRenameTitle">إعادة تسمية المجموعة</string>
+    <string name="collectionsDialogEditTitle">تحرير المجموعة</string>
     <string name="collectionsDialogDuplicateTitle">نسخ المجموعة</string>
+    <!-- One sentence per step. It replaces the task sentence once there is more than one step: three
+         fields behind one scroll read as a wall, so the header says which field it is standing on. -->
+    <string name="collectionsDialogStepDetails">ما الذي تُسمّيه، وما الغرض منه</string>
+    <string name="collectionsDialogStepTags">الوسوم هي الطريقة التي يجد بها الرفُ المجموعة ثانيةً</string>
+    <string name="collectionsDialogStepCover">امنحه صورة، أو دع التطبيق يرسم واحدة</string>
+    <!-- A one-step editor has no progress to narrate, so it keeps the sentence about the task. -->
+    <string name="collectionsDialogDuplicateSubtitle">أنشئ نسخة يمكن تعديلها على حدة</string>
+    <string name="collectionsDialogStepProgress">الخطوة %1$d من %2$d</string>
     <string name="collectionsDialogDeleteTitle">حذف المجموعة؟</string>
     <string name="collectionsDialogDeleteBody">ستُزال "%1$s" من رفك. الأذكار التي فيها لا تُحذف.</string>
-    <string name="collectionsDialogNameLabel">الاسم</string>
-    <string name="collectionsDialogNamePlaceholder">أذكار الصباح</string>
+    <string name="collectionsDialogClose">إغلاق</string>
+    <string name="collectionsDialogNameLabel">اسم المجموعة</string>
+    <string name="collectionsDialogNamePlaceholder">مثال: أذكار الصباح</string>
     <string name="collectionsDialogDescriptionLabel">الوصف</string>
-    <string name="collectionsDialogDescriptionPlaceholder">ما الذي ينتمي إلى هنا</string>
+    <string name="collectionsDialogDescriptionPlaceholder">ما الغرض من هذه المجموعة؟ (اختياري)</string>
+    <string name="collectionsDialogDescriptionCount">%1$d/%2$d</string>
     <string name="collectionsDialogTagsLabel">الوسوم</string>
-    <string name="collectionsDialogTagsPlaceholder">صباح، نوم</string>
-    <string name="collectionsDialogTagsHint">افصل بين الوسوم بفواصل. هذه هي الوسوم نفسها التي تحملها الأذكار.</string>
+    <string name="collectionsDialogTagsHint">اختر وسومًا موجودة أو أنشئ وسمًا جديدًا.</string>
+    <string name="collectionsDialogTagsSearchPlaceholder">ابحث في الوسوم…</string>
+    <string name="collectionsDialogTagsCreate">إنشاء وسم</string>
+    <string name="collectionsDialogTagsNewLabel">إنشاء وسم جديد</string>
+    <string name="collectionsDialogTagsNewPlaceholder">اسم الوسم الجديد</string>
+    <string name="collectionsDialogTagsNone">لا وسوم بعد. أنشئ أول وسم.</string>
+    <string name="collectionsDialogTagsCollapse">طي الوسوم</string>
+    <string name="collectionsDialogTagsExpand">توسيع الوسوم</string>
     <string name="collectionsDialogCoverLabel">الغلاف</string>
-    <string name="collectionsDialogCoverNone">لا صورة — يرسم التطبيق واحدة.</string>
-    <string name="collectionsDialogCoverChosen">تم ضبط صورة لهذه المجموعة.</string>
+    <string name="collectionsDialogCoverNoneTitle">لم يُختر غلاف</string>
+    <string name="collectionsDialogCoverNoneBody">سيُنشأ غلاف بسيط تلقائيًا.</string>
+    <string name="collectionsDialogCoverChosenTitle">تم اختيار الغلاف</string>
+    <string name="collectionsDialogCoverChosenBody">هذه الصورة تنتقل مع المجموعة.</string>
+    <!-- See the English note: a description on a card's cover photograph, and only on a real one. -->
+    <string name="collectionsCoverPhoto">صورة الغلاف</string>
     <string name="collectionsDialogCoverBusy">جارٍ النسخ…</string>
     <string name="collectionsActionChooseCover">اختر صورة…</string>
+    <!-- See the English note: the title bar of the system file dialog, in the language on screen. -->
+    <string name="collectionsDialogChooseCoverTitle">اختر صورة الغلاف</string>
     <string name="collectionsActionRemoveCover">أزل الصورة</string>
     <string name="collectionsNoticeCoverSet">تم تحديث الغلاف.</string>
     <string name="collectionsNoticeCoverRemoved">تمت إزالة الغلاف.</string>
     <string name="collectionsDialogNameRequired">أعطِ المجموعة اسمًا.</string>
     <string name="collectionsActionCancel">إلغاء</string>
-    <string name="collectionsActionCreate">إنشاء</string>
+    <string name="collectionsActionStepBack">رجوع</string>
+    <string name="collectionsActionNext">التالي</string>
+    <string name="collectionsActionAddTag">إضافة وسم</string>
+    <string name="collectionsActionCreateCollection">إنشاء المجموعة</string>
     <string name="collectionsActionSave">حفظ</string>
     <string name="collectionsDuplicateNameSuffix">%1$s (نسخة)</string>
     <!-- Library: a collection's own page -->
@@ -161,7 +186,7 @@
     <string name="collectionDetailRemoveBody">سيغادر %1$d ذكرًا هذه المجموعة. وتبقى في بقية مكتبتك.</string>
     <!-- Library: one-shot outcomes -->
     <string name="collectionsNoticeCreated">تم إنشاء المجموعة.</string>
-    <string name="collectionsNoticeRenamed">تم تغيير اسم المجموعة.</string>
+    <string name="collectionsNoticeEdited">تم تحديث المجموعة.</string>
     <string name="collectionsNoticeDeleted">تم حذف المجموعة.</string>
     <string name="collectionsNoticeDuplicated">تم نسخ المجموعة.</string>
     <string name="collectionsNoticePinned">ثُبّتت في أعلى الرف.</string>

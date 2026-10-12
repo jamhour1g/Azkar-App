@@ -99,13 +99,13 @@ class CollectionsState(
         onCreated: (Long) -> Unit,
     ) = catalogue.createCollection(name, description, tagNames, coverImagePath, onCreated)
 
-    fun renameCollection(
+    fun editCollection(
         id: Long,
         name: String,
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
-    ) = catalogue.renameCollection(id, name, description, tagNames, coverImagePath)
+    ) = catalogue.editCollection(id, name, description, tagNames, coverImagePath)
 
     fun deleteCollection(id: Long) = catalogue.deleteCollection(id)
 
@@ -125,7 +125,7 @@ class CollectionsState(
      * a name to hold or gets nothing to change — they mean the same thing, and reporting which had
      * happened would only invite it to treat a failed copy differently from a deliberate skip.
      */
-    suspend fun pickCoverImage(): String? = catalogue.pickCoverImage()
+    suspend fun pickCoverImage(title: String): String? = catalogue.pickCoverImage(title)
 
     // ---- filters -------------------------------------------------------------------------------
 
@@ -184,17 +184,12 @@ class CollectionsState(
     /**
      * Every label in use on the shelf, for the label chips, alphabetically and with no duplicates.
      *
-     * Collected from the loaded collections rather than read from the tag table, so the chips can
-     * never offer a label that filters the shelf down to nothing. Ordered by name for the same reason
-     * the chips scroll: nothing here has a natural order, and one that changed as a label was renamed
-     * would move a chip out from under the pointer.
+     * Read straight through from [CollectionsCatalogue.shelfTags] rather than collected here, because
+     * the editor's tag picker needs the same list and it is opened from the detail page too, where
+     * there is no [CollectionsState] to ask. Two derivations of "every tag in use" would eventually
+     * disagree about ordering, and a chip row that reorders itself is a bug nobody can reproduce.
      */
-    val shelfLabels: List<Tag>
-        get() =
-            allCollections
-                .flatMap { it.tags }
-                .distinctBy { it.id }
-                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+    val shelfLabels: List<Tag> get() = catalogue.shelfTags
 
     /**
      * How many remembrances the whole shelf holds, for the sidebar's "All Collections" row.

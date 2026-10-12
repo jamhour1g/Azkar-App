@@ -41,7 +41,7 @@ import com.azkar.generated.resources.collectionsActionDuplicate
 import com.azkar.generated.resources.collectionsActionFavorite
 import com.azkar.generated.resources.collectionsActionOpen
 import com.azkar.generated.resources.collectionsActionPin
-import com.azkar.generated.resources.collectionsActionRename
+import com.azkar.generated.resources.collectionsActionEdit
 import com.azkar.generated.resources.collectionsActionUnfavorite
 import com.azkar.generated.resources.collectionsActionUnpin
 import com.azkar.generated.resources.collectionsDuplicateNameSuffix
@@ -407,6 +407,10 @@ private fun ShelfCard(
         preview = collectionPreview(state.presenter, collection),
         items = tile.overflowItems(state, callbacks, collection),
         onOpen = { id?.let(callbacks.onOpen) },
+        // Without this the card has no way to decode the picture the user chose and falls back to the
+        // generated wash, so the shelf looks as though the cover was never picked. It has no default
+        // for that reason: a parameter this easy to leave out should not compile when it is.
+        covers = state.covers,
         // The height is the card's own contract. A row is sized by its tallest item, so without it
         // one card whose preview needed a third line would make every card beside it taller than its
         // own content.
@@ -487,8 +491,8 @@ private fun CollectionTile.overflowItems(
 /**
  * What the tile *is*: opening it, and changing or copying what it contains.
  *
- * The only group that varies with the kind in the middle of it — rename sits after open and before
- * duplicate, so that a menu which has it reads open → rename → duplicate and a menu which has not reads
+ * The only group that varies with the kind in the middle of it — edit sits after open and before
+ * duplicate, so that a menu which has it reads open → edit → duplicate and a menu which has not reads
  * open → duplicate, and the entry that is missing is the same place in both.
  */
 @Composable
@@ -510,9 +514,9 @@ private fun CollectionTile.identityItems(
         )
         add(
             AzkarMenuItem(
-                label = stringResource(Res.string.collectionsActionRename),
-                onClick = { callbacks.onRename(collection) },
-                icon = ActionIcons.rename,
+                label = stringResource(Res.string.collectionsActionEdit),
+                onClick = { callbacks.onEdit(collection) },
+                icon = ActionIcons.edit,
             ),
         )
         add(

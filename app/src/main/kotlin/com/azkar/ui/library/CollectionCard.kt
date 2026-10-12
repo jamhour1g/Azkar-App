@@ -67,11 +67,16 @@ import org.jetbrains.compose.resources.stringResource
  * description, is what tells a user which collection this is before they open it — every shipped
  * collection's description says the same kind of thing, so eleven descriptions side by side say
  * nothing at all.
- * @param items the overflow menu's contents. Built by the screen that owns the shelf, so a grid of
+* @param items the overflow menu's contents. Built by the screen that owns the shelf, so a grid of
  * cards does not each carry a copy of the same five entries.
+ * @param covers the decoder that turns a stored cover name into a picture. Nullable so that a caller
+ * with no storage behind it — a preview, a screenshot — can pass nothing, but deliberately **not
+ * defaulted**: a card that quietly has no decoder cannot draw the picture the user picked and falls
+ * back to the generated wash, which is indistinguishable from the app having thrown the cover away.
+ * Every call site has to say what it has.
  *
- * Every text region below states an explicit `lineHeight` and sits in a box of a fixed height, and
- * the caller gives the whole card a fixed height too. That is not fussiness: Amiri's natural line box
+ * Every text region below states an explicit `lineHeight` and sits in a box of a fixed height, and the
+ * caller gives the whole card a fixed height too. That is not fussiness: Amiri's natural line box
  * is far taller than Inter's, so a card sized by its content came out taller in Arabic than in
  * English, and because a preview that fits on one line is *shorter* than one that needs two, the
  * cards in a single row ended up different heights from each other. An explicit `lineHeight` is what
@@ -84,8 +89,8 @@ fun CollectionCard(
     preview: String,
     items: List<AzkarMenuItem>,
     onOpen: () -> Unit,
+    covers: CollectionCoverCache?,
     modifier: Modifier = Modifier,
-    covers: CollectionCoverCache? = null,
 ) {
     AzkarCard(
         modifier =
@@ -140,10 +145,11 @@ private fun CollectionCardPreview() {
                         preview = "The most beloved of deeds to Allah are the most consistent.",
                         items =
                             listOf(
-                                AzkarMenuItem(label = "Rename", onClick = {}, icon = ActionIcons.rename),
+                                AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),
                                 AzkarMenuItem(label = "Share", onClick = {}, icon = ActionIcons.share),
                             ),
                         onOpen = {},
+                        covers = null,
                         modifier = Modifier.width(240.dp),
                     )
                 }

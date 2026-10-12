@@ -345,7 +345,7 @@ internal class FakeCollectionsGateway(
         return created
     }
 
-    override suspend fun renameCollection(
+    override suspend fun editCollection(
         id: Long,
         name: String,
         description: String?,

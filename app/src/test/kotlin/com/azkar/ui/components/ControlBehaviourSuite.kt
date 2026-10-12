@@ -130,7 +130,7 @@ private fun HostedField(
 
 private fun menuItems(onPick: (String) -> Unit): List<AzkarMenuItem> =
     listOf(
-        AzkarMenuItem(label = "Rename", onClick = { onPick("Rename") }, icon = ActionIcons.rename),
+        AzkarMenuItem(label = "Edit", onClick = { onPick("Rename") }, icon = ActionIcons.edit),
         AzkarMenuItem(label = "Duplicate", onClick = { onPick("Duplicate") }, icon = ActionIcons.duplicate),
     )
 
@@ -514,9 +514,9 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
     test("an overflow menu reveals its items when opened") {
         runComposeUiTest {
             renderOverflowMenu { }
-            onNodeWithText("Rename").assertDoesNotExist()
+            onNodeWithText("Edit").assertDoesNotExist()
             openOverflowMenu()
-            onNodeWithText("Rename").assertIsDisplayed()
+            onNodeWithText("Edit").assertIsDisplayed()
             onNodeWithText("Duplicate").assertIsDisplayed()
         }
     }
@@ -529,7 +529,7 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
             onNodeWithText("Duplicate").performClick()
             assertThat(picked).isEqualTo(listOf("Duplicate"))
             onNodeWithText("Duplicate").assertDoesNotExist()
-            onNodeWithText("Rename").assertDoesNotExist()
+            onNodeWithText("Edit").assertDoesNotExist()
         }
     }
 

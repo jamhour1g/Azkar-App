@@ -410,7 +410,7 @@ interface CollectionsGateway :
      * ordinary values of [coverImagePath] rather than a tri-state the signature would have to invent
      * for them.
      */
-    suspend fun renameCollection(
+    suspend fun editCollection(
         id: Long,
         name: String,
         description: String?,
@@ -421,7 +421,7 @@ interface CollectionsGateway :
     /**
      * Takes a copy of [source] into the app's own cover storage and returns the name to store.
      *
-     * Separate from [createCollection] and [renameCollection] because the file has to be copied before
+     * Separate from [createCollection] and [editCollection] because the file has to be copied before
      * anything references it — a collection pointing at a file the app does not own would break the
      * moment the user moved or deleted the original — and because the dialog wants the copy in hand
      * while it is still open, so it can show the picture it is about to save.
@@ -595,7 +595,7 @@ class DomainCollectionsGateway(
             tags = tagNames.toTags(),
         )
 
-    override suspend fun renameCollection(
+    override suspend fun editCollection(
         id: Long,
         name: String,
         description: String?,

@@ -17,7 +17,7 @@ import com.azkar.generated.resources.collectionsNoticePinned
 import com.azkar.generated.resources.collectionsNoticeProgressReset
 import com.azkar.generated.resources.collectionsNoticeReminderRemoved
 import com.azkar.generated.resources.collectionsNoticeReminderSaved
-import com.azkar.generated.resources.collectionsNoticeRenamed
+import com.azkar.generated.resources.collectionsNoticeEdited
 import com.azkar.generated.resources.collectionsNoticeUnpinned
 import com.azkar.ui.shell.NotificationPriority
 import org.jetbrains.compose.resources.StringResource
@@ -38,7 +38,7 @@ val CollectionNoticeKey.messageResource: StringResource
     get() =
         when (this) {
             CollectionNoticeKey.CREATED -> Res.string.collectionsNoticeCreated
-            CollectionNoticeKey.RENAMED -> Res.string.collectionsNoticeRenamed
+            CollectionNoticeKey.EDITED -> Res.string.collectionsNoticeEdited
             CollectionNoticeKey.DELETED -> Res.string.collectionsNoticeDeleted
             CollectionNoticeKey.DUPLICATED -> Res.string.collectionsNoticeDuplicated
             CollectionNoticeKey.PINNED -> Res.string.collectionsNoticePinned

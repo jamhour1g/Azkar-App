@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import com.azkar.i18n.ENGLISH
 import com.azkar.i18n.isArabic
+import com.azkar.ui.components.InstallAzkarImageLoader
 import com.azkar.ui.theme.AzkarTheme
 import java.util.Locale
 
@@ -185,6 +186,13 @@ fun AzkarTheme(
 ) {
     val colors = if (darkTheme) DarkAzkarColors else LightAzkarColors
     val layoutDirection = if (uiLocale.isArabic) LayoutDirection.Rtl else LayoutDirection.Ltr
+
+    // Not a theme decision -- the palette, the type and the shapes above are -- but it belongs to the
+    // same seam. Coil's loader is a process-wide singleton, and `AzkarTheme` is the one composable
+    // every root already runs through, so installing it here is what makes it impossible for a
+    // preview, the screenshot harness or a UI test to compose a cover without one. See
+    // `AzkarImageLoader` for what the loader is taught and why it lives here.
+    InstallAzkarImageLoader()
 
     CompositionLocalProvider(
         LocalAzkarColors provides colors,

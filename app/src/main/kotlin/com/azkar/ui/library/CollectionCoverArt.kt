@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -19,8 +21,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
+import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionsCoverPhoto
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * The artwork behind a collection's card: the picture the user chose, or a generated wash.
@@ -74,15 +81,32 @@ fun CollectionCoverArt(
     // light theme overlays its badges on a pale wash and a light scrim would do nothing there. That is
     // exactly the slot the app's theme declines to have an opinion about — see `AzkarTheme`.
     val scrim = MaterialTheme.colorScheme.scrim
-    val photo = coverImagePath?.let { path -> covers?.image(path)?.value }
+    // Asked for unconditionally when there is a path, and painted only once Coil says it decoded.
+    // The alternative -- resolving the file first and not asking at all when there is none -- saves
+    // nothing: a `null` model is the loader's own no-op, whereas a conditional here would make the
+    // wash's presence depend on a filesystem check that runs during composition.
+    val photo = rememberAsyncImagePainter(model = coverImagePath?.let { path -> covers?.file(path) })
+    // Collected rather than read: the painter hands back a `StateFlow`, and the question being asked
+    // of it -- "has it decoded yet" -- is exactly what a flow exists to answer. Reading `.value` off
+    // it directly would read a loading state on every recomposition and then never again.
+    val state by photo.state.collectAsState()
+    val showingPhoto = state is AsyncImagePainter.State.Success
     Box(
-        modifier = if (photo == null) modifier.background(brushFor(iconKey)) else modifier,
+        // The wash is painted under the photograph as well as under the glyph. It was not, before:
+        // the old decoder resolved synchronously enough to decide the branch, so the two never
+        // overlapped. Coil does not, and that is the better shape -- a cover that fails to decode
+        // leaves a complete card behind it instead of a hole in the grid.
+        modifier = modifier.background(brushFor(iconKey)),
         contentAlignment = Alignment.Center,
     ) {
-        if (photo != null) {
+        if (showingPhoto) {
             Image(
-                bitmap = photo,
-                contentDescription = null,
+                painter = photo,
+                // The one place in this composable that is described rather than skipped. The wash
+                // below is decoration and stays silent; a photograph is content the user chose to put
+                // there, and a shelf of fourteen collections has no other way to tell a screen reader
+                // which card is showing a picture and which is showing a gradient.
+                contentDescription = stringResource(Res.string.collectionsCoverPhoto),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )

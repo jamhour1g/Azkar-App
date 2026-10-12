@@ -66,7 +66,7 @@ internal class PreviewCollectionsGateway(
     ): RemembranceCollection =
         requireNotNull(collections.firstOrNull()) { "a preview cannot invent a collection to return" }
 
-    override suspend fun renameCollection(
+    override suspend fun editCollection(
         id: Long,
         name: String,
         description: String?,

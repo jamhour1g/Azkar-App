@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.style.Style
 import androidx.compose.foundation.style.styleable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
@@ -81,6 +82,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -361,6 +363,16 @@ fun SecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    /**
+     * An optional glyph before the label, for the buttons whose label names a file or an object
+     * rather than an action ("Choose image…" next to a picture frame, say) and would otherwise be the
+     * only text on the row.
+     *
+     * Deliberately not given a tint of its own — it inherits the button's content colour, exactly as
+     * [PrimaryButton]'s leading icon does, so a glyph can never disagree with the label about
+     * whether the button is enabled.
+     */
+    leadingIcon: ImageVector? = null,
 ) {
     val colors = AzkarTheme.colors
     OutlinedButton(
@@ -377,6 +389,14 @@ fun SecondaryButton(
             ),
         border = BorderStroke(1.dp, if (enabled) colors.border else colors.border.copy(alpha = 0.5f)),
     ) {
+        if (leadingIcon != null) {
+            Icon(
+                imageVector = leadingIcon,
+                contentDescription = null,
+                modifier = Modifier.size(12.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+        }
         Text(
             text = text,
             fontSize = 14.sp,
@@ -398,6 +418,7 @@ private fun SecondaryButtonPreview() {
                 SecondaryButton(text = "Cancel", onClick = {})
                 SecondaryButton(text = "Disabled", onClick = {}, enabled = false)
             }
+            SecondaryButton(text = "Choose image…", onClick = {}, leadingIcon = Icons.Outlined.Image)
         }
     }
 }
@@ -1320,7 +1341,7 @@ private fun AzkarOverflowMenuPreview() {
                 contentDescription = "More actions",
                 items =
                     listOf(
-                        AzkarMenuItem(label = "Rename", onClick = {}, icon = ActionIcons.rename),
+                        AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),
                         AzkarMenuItem(label = "Duplicate", onClick = {}, icon = ActionIcons.duplicate),
                         AzkarMenuItem(label = "Delete", onClick = {}, icon = ActionIcons.delete),
                     ),
@@ -1388,6 +1409,16 @@ fun AzkarOutlinedField(
      * guessing whether commas are wanted.
      */
     supportingText: String? = null,
+    /**
+     * How many lines of text this field may hold, for the fields that are deliberately shorter than a
+     * free-growing box.
+     *
+     * Defaulted to unbounded so that every field which does not pass this keeps whatever limit Material
+     * would have given it if the parameter did not exist. The one caller that does pass it is the
+     * collection description, which fixes a height so that a character counter can sit in the bottom
+     * corner of the field without landing on the last line of the text it is counting.
+     */
+    maxLines: Int = Int.MAX_VALUE,
 ) {
     val colors = AzkarTheme.colors
     OutlinedTextField(
@@ -1395,6 +1426,7 @@ fun AzkarOutlinedField(
         onValueChange = onValueChange,
         modifier = modifier.heightIn(min = minHeight),
         singleLine = singleLine,
+        maxLines = maxLines,
         textStyle = TextStyle(color = colors.textPrimary, fontSize = fontSize),
         placeholder = { Text(text = placeholder, fontSize = fontSize) },
         leadingIcon =

@@ -76,9 +76,17 @@ class ExposedCollectionRepository(
      * Inserts or updates [collection] and reads it back.
      *
      * The reread is what returns the caller the generated id and the stored timestamps. Membership and
-     * labels are *not* written here: both are edited through their own statements because they are
-     * edited by picking things rather than by filling in a form, and a full-aggregate save would make
-     * a rename silently a membership edit.
+     * labels are *not* written here — [setTags] is the only statement that writes them, and
+     * [addMembers] the only one that writes membership. Both are edited through their own statements
+     * because they are edited by picking things rather than by filling in a form, and a full-aggregate
+     * save would make a rename silently a membership edit.
+     *
+     * The aggregate this receives still *carries* a label set, and that set is what the method above
+     * this one wrote on the way in. It is ignored here on purpose, which is worth stating because it
+     * reads like an oversight: a caller who expects `save` to honour `collection.tags` gets a collection
+     * with no labels and a row that disagrees with the object it was handed. Creating a collection with
+     * labels is therefore two statements — this one, then [setTags] — which is what
+     * `CollectionService.create` does.
      */
     override suspend fun save(collection: RemembranceCollection): RemembranceCollection =
         transactions.tx("Failed to save collection") {

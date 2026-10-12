@@ -92,7 +92,7 @@
     <string name="collectionsSortItems">Most Remembrances</string>
     <string name="collectionsSortProgress">Most Progress</string>
     <string name="collectionsActionOpen">Open</string>
-    <string name="collectionsActionRename">Rename</string>
+    <string name="collectionsActionEdit">Edit</string>
     <string name="collectionsActionDuplicate">Duplicate</string>
     <string name="collectionsActionDelete">Delete</string>
     <string name="collectionsActionPin">Pin to Top</string>
@@ -114,30 +114,55 @@
     <string name="collectionsSearchEmptyHint">The search reaches the text, the source and the categories of every collection.</string>
     <string name="collectionsKindOfficial">Included with Azkar</string>
     <string name="collectionsKindCustom">Your collection</string>
-    <!-- Library: the create / rename / duplicate dialog -->
+    <!-- Library: the create / edit / duplicate dialog, which walks its way through its steps -->
     <string name="collectionsDialogCreateTitle">New Collection</string>
-    <string name="collectionsDialogRenameTitle">Rename Collection</string>
+    <string name="collectionsDialogEditTitle">Edit Collection</string>
     <string name="collectionsDialogDuplicateTitle">Duplicate Collection</string>
+    <!-- One sentence per step. It replaces the task sentence once there is more than one step: three
+         fields behind one scroll read as a wall, so the header says which field it is standing on. -->
+    <string name="collectionsDialogStepDetails">What to call it, and what it is for</string>
+    <string name="collectionsDialogStepTags">Tags are how the shelf finds it again</string>
+    <string name="collectionsDialogStepCover">Give it a picture, or let the app draw one</string>
+    <!-- A one-step editor has no progress to narrate, so it keeps the sentence about the task. -->
+    <string name="collectionsDialogDuplicateSubtitle">Make a copy that can be changed on its own</string>
+    <string name="collectionsDialogStepProgress">Step %1$d of %2$d</string>
     <string name="collectionsDialogDeleteTitle">Delete Collection?</string>
     <string name="collectionsDialogDeleteBody">"%1$s will be removed from your shelf. The remembrances in it are not deleted."</string>
-    <string name="collectionsDialogNameLabel">Name</string>
-    <string name="collectionsDialogNamePlaceholder">Morning Azkar</string>
+    <string name="collectionsDialogClose">Close</string>
+    <string name="collectionsDialogNameLabel">Collection name</string>
+    <string name="collectionsDialogNamePlaceholder">e.g. Morning Azkar</string>
     <string name="collectionsDialogDescriptionLabel">Description</string>
-    <string name="collectionsDialogDescriptionPlaceholder">What belongs in here</string>
-    <string name="collectionsDialogTagsLabel">Labels</string>
-    <string name="collectionsDialogTagsPlaceholder">morning, sleep</string>
-    <string name="collectionsDialogTagsHint">Separate labels with commas. These are the same labels remembrances carry.</string>
+    <string name="collectionsDialogDescriptionPlaceholder">What is this collection for? (optional)</string>
+    <string name="collectionsDialogDescriptionCount">%1$d/%2$d</string>
+    <string name="collectionsDialogTagsLabel">Tags</string>
+    <string name="collectionsDialogTagsHint">Choose existing tags or create a new one.</string>
+    <string name="collectionsDialogTagsSearchPlaceholder">Search tags…</string>
+    <string name="collectionsDialogTagsCreate">Create tag</string>
+    <string name="collectionsDialogTagsNewLabel">Create new tag</string>
+    <string name="collectionsDialogTagsNewPlaceholder">New tag name</string>
+    <string name="collectionsDialogTagsNone">No tags yet. Create the first one.</string>
+    <string name="collectionsDialogTagsCollapse">Collapse tags</string>
+    <string name="collectionsDialogTagsExpand">Expand tags</string>
     <string name="collectionsDialogCoverLabel">Cover</string>
-    <string name="collectionsDialogCoverNone">No picture — the app draws one.</string>
-    <string name="collectionsDialogCoverChosen">A picture is set for this collection.</string>
+    <string name="collectionsDialogCoverNoneTitle">No cover selected</string>
+    <string name="collectionsDialogCoverNoneBody">A simple cover will be generated automatically.</string>
+    <string name="collectionsDialogCoverChosenTitle">Cover selected</string>
+    <string name="collectionsDialogCoverChosenBody">This picture travels with the collection.</string>
+    <!-- The description on a card's cover photograph. The generated wash stays undescribed — it is decoration, and announcing a gradient a screen reader cannot convey is noise — while a picture the user chose is content the shelf is showing, so it is named. -->
+    <string name="collectionsCoverPhoto">Cover photo</string>
     <string name="collectionsDialogCoverBusy">Copying…</string>
-    <string name="collectionsActionChooseCover">Choose a picture…</string>
+    <string name="collectionsActionChooseCover">Choose image…</string>
+    <!-- The title bar of the operating system's own file dialog, which this app composes nothing of. Resolved at the point of the click and passed down, because the holder that opens the chooser outlives a language switch. -->
+    <string name="collectionsDialogChooseCoverTitle">Choose a cover image</string>
     <string name="collectionsActionRemoveCover">Remove the picture</string>
     <string name="collectionsNoticeCoverSet">Cover updated.</string>
     <string name="collectionsNoticeCoverRemoved">Cover removed.</string>
     <string name="collectionsDialogNameRequired">Give the collection a name.</string>
     <string name="collectionsActionCancel">Cancel</string>
-    <string name="collectionsActionCreate">Create</string>
+    <string name="collectionsActionStepBack">Back</string>
+    <string name="collectionsActionNext">Next</string>
+    <string name="collectionsActionAddTag">Add tag</string>
+    <string name="collectionsActionCreateCollection">Create collection</string>
     <string name="collectionsActionSave">Save</string>
     <string name="collectionsDuplicateNameSuffix">%1$s (copy)</string>
     <!-- Library: a collection's own page -->
@@ -163,7 +188,7 @@
     <string name="collectionDetailRemoveBody">%1$d remembrances will leave this collection. They stay in the rest of your library.</string>
     <!-- Library: one-shot outcomes -->
     <string name="collectionsNoticeCreated">Collection created.</string>
-    <string name="collectionsNoticeRenamed">Collection renamed.</string>
+    <string name="collectionsNoticeEdited">Collection updated.</string>
     <string name="collectionsNoticeDeleted">Collection deleted.</string>
     <string name="collectionsNoticeDuplicated">Collection duplicated.</string>
     <string name="collectionsNoticePinned">Pinned to the top of the shelf.</string>
