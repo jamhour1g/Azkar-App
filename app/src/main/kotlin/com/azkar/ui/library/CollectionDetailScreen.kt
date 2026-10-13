@@ -59,6 +59,7 @@ import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.Locale
 
 /**
  * One collection, opened.
@@ -149,7 +150,8 @@ internal fun CollectionRegion(
     collection: RemembranceCollection,
     navigation: DetailNavigation,
 ) {
-    val title = headerActions(collections, detail, collection, dialogs, navigation.onBack)
+    val activeLocale = AzkarTheme.locale
+    val title = headerActions(collections, detail, collection, dialogs, navigation.onBack, activeLocale)
 
     CollectionDetailHero(
         collection = collection,
@@ -650,12 +652,13 @@ private fun headerActions(
     collection: RemembranceCollection?,
     dialogs: DetailDialogState,
     onBack: () -> Unit,
+    activeLocale: Locale,
 ): DetailActions =
     DetailActions(
         onBack = onBack,
         onEdit = { dialogs.editor = CollectionEditorDraft.edit(it) },
         onDuplicate = { target, newName ->
-            dialogs.editor = CollectionEditorDraft.duplicate(collection = target, newName = newName, nameLocale = AzkarTheme.locale)
+            dialogs.editor = CollectionEditorDraft.duplicate(collection = target, newName = newName, nameLocale = activeLocale)
         },
         onTogglePin = {
             if (collection != null) {
@@ -847,6 +850,7 @@ private fun DetailEditorHost(
     collections: CollectionsCatalogue,
     onDismiss: () -> Unit,
 ) {
+    val activeLocale = AzkarTheme.locale
     CollectionEditorDialog(
         draft = draft,
         // The same pool the shelf offers, so renaming a collection from its own page offers exactly the
@@ -855,7 +859,7 @@ private fun DetailEditorHost(
         environment =
             CollectionEditorEnvironment(
                 covers = collections.covers,
-                availableTags = collections.shelfTags.map { TagOption.of(it, AzkarTheme.locale) },
+                availableTags = collections.shelfTags.map { TagOption.of(it, activeLocale) },
                 onPickCover = { title -> collections.pickCoverImage(title) },
             ),
         onDismiss = onDismiss,
@@ -875,7 +879,7 @@ private fun DetailEditorHost(
                         coverImagePath = coverImagePath,
                         translations = translations,
                         nameLocale = draft.nameLocale,
-                        tagLocale = AzkarTheme.locale,
+                        tagLocale = activeLocale,
                     )
 
                 // Only the name travels: a duplicate starts clean, and inheriting the cover would

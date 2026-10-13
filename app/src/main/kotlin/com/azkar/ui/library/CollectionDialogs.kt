@@ -1009,7 +1009,7 @@ private fun CollectionNameField(draft: CollectionEditorDraft) {
         color = colors.textSecondary,
         fontSize = HINT_SP,
     )
-    Spacer(Modifier.height(SMALL_GAP))
+    Spacer(Modifier.height(LABEL_GAP))
     AzkarOutlinedField(
         value = draft.name,
         onValueChange = draft::updateName,

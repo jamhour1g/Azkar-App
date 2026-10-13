@@ -113,6 +113,7 @@ internal fun CollectionsScreenContent(
     showToast: ShowToast,
     modifier: Modifier = Modifier,
 ) {
+    val activeLocale = AzkarTheme.locale
     var editor by remember { mutableStateOf<CollectionEditorDraft?>(null) }
     var pendingDelete by remember { mutableStateOf<RemembranceCollection?>(null) }
 
@@ -132,7 +133,7 @@ internal fun CollectionsScreenContent(
         state = state,
         callbacks =
             ShelfCallbacks(
-                onCreate = { editor = CollectionEditorDraft.create(AzkarTheme.locale) },
+                onCreate = { editor = CollectionEditorDraft.create(activeLocale) },
                 onImport = { importer.open() },
                 onOpen = { id ->
                     state.findCollection(id)
@@ -142,7 +143,7 @@ internal fun CollectionsScreenContent(
                 // The copy's name arrives pre-resolved: this lambda is not a composable, so it
                 // could not call `stringResource` for itself.
                 onDuplicate = { collection, newName ->
-                    editor = CollectionEditorDraft.duplicate(collection, newName, AzkarTheme.locale)
+                    editor = CollectionEditorDraft.duplicate(collection, newName, activeLocale)
                 },
                 onDelete = { collection -> pendingDelete = collection },
                 onRead = onOpenRemembrance,
@@ -314,6 +315,7 @@ private fun CollectionEditorHost(
     state: CollectionsState,
     onDismiss: () -> Unit,
 ) {
+    val activeLocale = AzkarTheme.locale
     CollectionEditorDialog(
         draft = draft,
         // The shelf's own labels, not every tag the database knows about: a collection lives on the
@@ -322,7 +324,7 @@ private fun CollectionEditorHost(
         environment =
             CollectionEditorEnvironment(
                 covers = state.covers,
-                availableTags = state.shelfLabels.map { TagOption.of(it, AzkarTheme.locale) },
+                availableTags = state.shelfLabels.map { TagOption.of(it, activeLocale) },
                 // The chooser runs the platform's own file dialog, which blocks, and the copy afterwards
                 // touches the filesystem. Both are what the dialog's `onPickCover` suspending shape is
                 // for: it awaits the whole thing and reports a cancelled pick as `null` rather than
@@ -342,7 +344,6 @@ private fun CollectionEditorHost(
                         coverImagePath = coverImagePath,
                         translations = translations,
                         nameLocale = draft.nameLocale,
-                        tagLocale = AzkarTheme.locale,
                         onCreated = {},
                     )
 
@@ -355,6 +356,7 @@ private fun CollectionEditorHost(
                         coverImagePath = coverImagePath,
                         translations = translations,
                         nameLocale = draft.nameLocale,
+                        tagLocale = activeLocale,
                     )
 
                 CollectionEditorMode.DUPLICATE ->

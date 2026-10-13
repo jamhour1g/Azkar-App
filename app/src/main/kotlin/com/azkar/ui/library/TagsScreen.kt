@@ -228,13 +228,14 @@ private fun TagDialogs(
     onOpenCollection: (Long) -> Unit,
     onOpenRemembrance: (Long) -> Unit,
 ) {
+    val activeLocale = AzkarTheme.locale
     if (targets.creating) {
         TagNameDialog(
             title = stringResource(Res.string.tagsDialogNewTitle),
             initialName = "",
             confirmLabel = stringResource(Res.string.tagsActionNew),
             note = stringResource(Res.string.tagsDialogNewHint),
-            onSubmit = { name, translations -> state.create(name, translations, AzkarTheme.locale) },
+            onSubmit = { name, translations -> state.create(name, translations, activeLocale) },
             onDismiss = targets::closeName,
         )
     }
