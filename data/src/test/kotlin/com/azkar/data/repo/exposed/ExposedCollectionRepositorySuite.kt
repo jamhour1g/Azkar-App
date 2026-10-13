@@ -6,6 +6,7 @@ import com.azkar.domain.exception.CollectionNotFoundException
 import com.azkar.domain.model.CollectionKind
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
+import com.azkar.domain.model.impl.TagImpl
 import com.azkar.domain.model.renamed
 import com.azkar.testUtils.ExposedRepositories
 import com.azkar.testUtils.TestDatabase
@@ -365,7 +366,7 @@ val ExposedCollectionRepositorySuite by testSuite("ExposedCollectionRepository")
 
             test("setTags() replaces the labels rather than adding to them") { repositories ->
                 val collection = newCollection(repositories, "Mine")
-                repositories.collections.setTags(collection, listOf("Morning", "sleep"))
+                repositories.collections.setTags(collection, listOf(TagImpl(name = "Morning"), TagImpl(name = "sleep")))
 
                 assertThat(
                     repositories.collections
@@ -374,7 +375,7 @@ val ExposedCollectionRepositorySuite by testSuite("ExposedCollectionRepository")
                         ?.map { it.name },
                 ).containsExactlyInAnyOrder("morning", "sleep")
 
-                repositories.collections.setTags(collection, listOf("travel"))
+                repositories.collections.setTags(collection, listOf(TagImpl(name = "travel")))
 
                 assertThat(
                     repositories.collections
@@ -391,7 +392,10 @@ val ExposedCollectionRepositorySuite by testSuite("ExposedCollectionRepository")
                 // one link twice, which is a constraint violation rather than a duplicate chip.
                 val collection = newCollection(repositories, "Mine")
 
-                repositories.collections.setTags(collection, listOf("Sleep", "sleep", "SLEEP"))
+                repositories.collections.setTags(
+                    collection,
+                    listOf(TagImpl(name = "Sleep"), TagImpl(name = "sleep"), TagImpl(name = "SLEEP")),
+                )
 
                 assertThat(repositories.collections.findById(collection)?.tags).hasSize(1)
             }
@@ -423,7 +427,7 @@ val ExposedCollectionRepositorySuite by testSuite("ExposedCollectionRepository")
                     .isInstanceOf(CollectionNotFoundException::class.java)
                 assertThat(failureOf { repositories.collections.setPinned(absent, true) })
                     .isInstanceOf(CollectionNotFoundException::class.java)
-                assertThat(failureOf { repositories.collections.setTags(absent, listOf("morning")) })
+                assertThat(failureOf { repositories.collections.setTags(absent, listOf(TagImpl(name = "morning"))) })
                     .isInstanceOf(CollectionNotFoundException::class.java)
                 assertThat(failureOf { repositories.collections.moveMember(absent, 0, 1) })
                     .isInstanceOf(CollectionNotFoundException::class.java)

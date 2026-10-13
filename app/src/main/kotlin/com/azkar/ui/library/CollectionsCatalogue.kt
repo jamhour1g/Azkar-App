@@ -4,6 +4,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
@@ -223,7 +224,7 @@ class CollectionsCatalogue(
             allCollections
                 .flatMap { it.tags }
                 .distinctBy { it.id }
-                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.displayName(uiLocale) })
 
     var loading: Boolean by mutableStateOf(false)
         private set
@@ -472,7 +473,9 @@ class CollectionsCatalogue(
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair> = emptyMap(),
         onCreated: (Long) -> Unit,
+        nameLocale: Locale = Locale.ENGLISH,
     ) {
         mutate(
             description = "create the collection \"$name\"",
@@ -484,6 +487,8 @@ class CollectionsCatalogue(
                     description = description,
                     tagNames = tagNames,
                     coverImagePath = coverImagePath,
+                    translations = translations,
+                    nameLocale = nameLocale,
                 )
             val id = requireNotNull(created.id) { "A saved collection came back without an identifier" }
             allCollections = allCollections + created
@@ -507,6 +512,9 @@ class CollectionsCatalogue(
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>? = null,
+        nameLocale: Locale? = null,
+        tagLocale: Locale? = null,
     ) = mutate(
         description = "edit collection $id",
         onSuccess = CollectionNoticeKey.EDITED,
@@ -518,6 +526,9 @@ class CollectionsCatalogue(
                 description = description,
                 tagNames = tagNames,
                 coverImagePath = coverImagePath,
+                translations = translations,
+                nameLocale = nameLocale,
+                tagLocale = tagLocale,
             )
         replaceCollection(saved)
     }
@@ -594,11 +605,12 @@ class CollectionsCatalogue(
     fun duplicateCollection(
         id: Long,
         newName: String,
+        nameLocale: Locale = Locale.ENGLISH,
     ) = mutate(
         description = "duplicate collection $id",
         onSuccess = CollectionNoticeKey.DUPLICATED,
     ) {
-        val copy = gateway.duplicateCollection(id, newName = newName)
+        val copy = gateway.duplicateCollection(id, newName = newName, nameLocale = nameLocale)
         allCollections = allCollections + copy
         membershipCounts = membershipCountsOf(allCollections)
     }

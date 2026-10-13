@@ -4,20 +4,6 @@ import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
 import com.azkar.generated.resources.Res
-import com.azkar.generated.resources.libraryCategoryEvening
-import com.azkar.generated.resources.libraryCategoryFoodDrink
-import com.azkar.generated.resources.libraryCategoryGoodEtiquette
-import com.azkar.generated.resources.libraryCategoryHajjUmrah
-import com.azkar.generated.resources.libraryCategoryHomeFamily
-import com.azkar.generated.resources.libraryCategoryJoyDistress
-import com.azkar.generated.resources.libraryCategoryMorning
-import com.azkar.generated.resources.libraryCategoryMorningEvening
-import com.azkar.generated.resources.libraryCategoryMuslimData
-import com.azkar.generated.resources.libraryCategoryNature
-import com.azkar.generated.resources.libraryCategoryPraising
-import com.azkar.generated.resources.libraryCategoryPrayer
-import com.azkar.generated.resources.libraryCategorySicknessDeath
-import com.azkar.generated.resources.libraryCategoryTravel
 import com.azkar.generated.resources.libraryCategoryUncategorized
 import com.azkar.generated.resources.libraryMissingText
 import com.azkar.generated.resources.librarySourceUnknown
@@ -46,7 +32,6 @@ class CollectionPresenter(
     private var sourceUnknown: String = ""
     private var missingText: String = ""
     private var categoryUncategorized: String = ""
-    private var categoryLabels: Map<String, String> = emptyMap()
 
     /**
      * Resolves the labels that do not vary per row. Idempotent, so a language switch can call it
@@ -57,23 +42,6 @@ class CollectionPresenter(
         sourceUnknown = getString(Res.string.librarySourceUnknown)
         missingText = getString(Res.string.libraryMissingText)
         categoryUncategorized = getString(Res.string.libraryCategoryUncategorized)
-        categoryLabels =
-            mapOf(
-                "muslim data" to Res.string.libraryCategoryMuslimData,
-                "prayer" to Res.string.libraryCategoryPrayer,
-                "morning" to Res.string.libraryCategoryMorning,
-                "morning & evening" to Res.string.libraryCategoryMorningEvening,
-                "evening" to Res.string.libraryCategoryEvening,
-                "praising allah" to Res.string.libraryCategoryPraising,
-                "joy & distress" to Res.string.libraryCategoryJoyDistress,
-                "good etiquette" to Res.string.libraryCategoryGoodEtiquette,
-                "sickness & death" to Res.string.libraryCategorySicknessDeath,
-                "home & family" to Res.string.libraryCategoryHomeFamily,
-                "nature" to Res.string.libraryCategoryNature,
-                "travel" to Res.string.libraryCategoryTravel,
-                "food & drink" to Res.string.libraryCategoryFoodDrink,
-                "hajj & umrah" to Res.string.libraryCategoryHajjUmrah,
-            ).mapValues { (_, resource) -> getString(resource) }
     }
 
     /**
@@ -83,6 +51,11 @@ class CollectionPresenter(
      * holding every collection at once, which the state layer already does, and doing it per tile
      * would make the shelf quadratic in the number of collections. [recitedCount] is passed in for
      * the same reason — it comes from one grouped read of the whole shelf.
+     *
+     * The name and description are resolved to the interface language here, once, rather than left
+     * to whichever row happens to draw them. A tile is a snapshot that every consumer — the card, the
+     * chip, the search result — already expects to hold finished strings, so resolving at the edge
+     * keeps the resolution rule in one place instead of one per surface.
      */
     fun toTile(
         collection: RemembranceCollection,
@@ -91,8 +64,8 @@ class CollectionPresenter(
     ): CollectionTile =
         CollectionTile(
             id = collection.id ?: MISSING_ID,
-            name = collection.name,
-            description = collection.description.orEmpty(),
+            name = collection.displayName(uiLocale),
+            description = collection.displayDescription(uiLocale).orEmpty(),
             kind = collection.kind,
             iconKey = collection.iconKey ?: iconKeyForTags(collection.tags),
             coverImagePath = collection.coverImagePath,
@@ -141,7 +114,7 @@ class CollectionPresenter(
             inCustomCollections = inCustomCollections,
             position = position.coerceAtLeast(0),
             categories = categories(remembrance),
-            iconKey = iconKeyForCategory(rawCategory(remembrance)),
+            iconKey = iconKeyForCategory(rawCategory(remembrance)?.name ?: CATEGORY_RAW_UNCATEGORIZED),
         )
 
     /**
@@ -158,7 +131,7 @@ class CollectionPresenter(
      */
     fun categories(remembrance: Remembrance): List<String> =
         remembrance.tags
-            .map { localizeCategory(it.name) }
+            .map { it.displayName(uiLocale) }
             .distinct()
             .sortedWith(String.CASE_INSENSITIVE_ORDER)
 
@@ -174,8 +147,8 @@ class CollectionPresenter(
      */
     fun subjectCategories(remembrance: Remembrance): List<String> =
         remembrance.tags
-            .mapNotNull { it.name.takeUnless(String::isPublisherTag) }
-            .map { localizeCategory(it) }
+            .filterNot { it.name.isPublisherTag() }
+            .map { it.displayName(uiLocale) }
             .distinct()
             .sortedWith(String.CASE_INSENSITIVE_ORDER)
 
@@ -194,7 +167,8 @@ class CollectionPresenter(
      * remembrance with no tag but the publisher still leads with the publisher, because that is the
      * only thing true of it.
      */
-    fun primaryCategory(remembrance: Remembrance): String = localizeCategory(rawCategory(remembrance))
+    fun primaryCategory(remembrance: Remembrance): String =
+        rawCategory(remembrance)?.displayName(uiLocale) ?: categoryUncategorized
 
     /**
      * The category as the data stores it, before any label is applied.
@@ -204,9 +178,9 @@ class CollectionPresenter(
      * a label, and "which mark should stand for it" needs the raw name, since a table keyed on
      * translated text would have to be rebuilt for every locale the app ships.
      */
-    private fun rawCategory(remembrance: Remembrance): String {
-        val byName = remembrance.tags.map { it.name }.sortedWith(String.CASE_INSENSITIVE_ORDER)
-        return byName.firstOrNull { !it.isPublisherTag() } ?: byName.firstOrNull() ?: CATEGORY_RAW_UNCATEGORIZED
+    private fun rawCategory(remembrance: Remembrance): Tag? {
+        val byName = remembrance.tags.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+        return byName.firstOrNull { !it.name.isPublisherTag() } ?: byName.firstOrNull()
     }
 
     /**
@@ -303,16 +277,6 @@ class CollectionPresenter(
     private fun hasText(value: String?): Boolean = !value.isNullOrBlank()
 
     /**
-     * The label to print for the stored tag [raw], which is folded to lower case.
-     *
-     * A tag with a string resource of its own gets that; anything else falls through to the raw
-     * name, capitalised. Both halves matter: the resource lookup has to fold because the name
-     * arrives folded, and the fallback has to capitalise because that name is now what the user
-     * reads — the uncategorized placeholder would otherwise print in lower case like a slug.
-     */
-    fun localizeCategory(raw: String): String = categoryLabels[raw.lowercase(Locale.ROOT)] ?: raw.capitalized()
-
-    /**
      * Shortens [text] to [max] characters on a character count, with an ellipsis for the cut.
      *
      * The count is of `Char`s, not grapheme clusters, so a tile holding a Quranic passage with
@@ -365,10 +329,11 @@ class CollectionPresenter(
          * Category tag name to collection mark.
          *
          * A table of English seed-data names rather than of localized labels, for the reason
-         * [iconKeyFor] gives. Kept beside [categoryLabels] on purpose: the two tables cover the same
-         * list of categories and a tag added to one and not the other would show up as a properly-
-         * labeled category wearing the fallback mark, which is the kind of thing nobody notices until
-         * two tiles in a row look identical.
+         * [iconKeyFor] gives, and kept in step with the shipped wording in
+         * `OfficialTagVocabulary` for the same reason it used to be kept beside [categoryLabels]: a
+         * category added to one and not the other shows up as a properly-named category wearing the
+         * fallback mark, which is the kind of thing nobody notices until two tiles in a row look
+         * identical.
          */
         private val categoryIconKeys: Map<String, String> =
             mapOf(

@@ -5,15 +5,19 @@ import com.azkar.data.repo.exposed.CollectionAggregates.summaries
 import com.azkar.data.table.CollectionMemberTable
 import com.azkar.data.table.CollectionTable
 import com.azkar.data.table.CollectionTagTable
+import com.azkar.data.table.CollectionTranslationTable
 import com.azkar.data.table.entity.CollectionEntity
 import com.azkar.data.table.entity.CollectionMemberEntity
 import com.azkar.data.table.entity.CollectionTagEntity
+import com.azkar.data.table.entity.CollectionTranslationEntity
 import com.azkar.data.table.entity.collectionMemberId
 import com.azkar.data.table.entity.collectionTagId
 import com.azkar.data.table.entity.updateAndFlush
 import com.azkar.domain.exception.CollectionNotFoundException
 import com.azkar.domain.model.CollectionSummary
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.RemembranceCollection
+import com.azkar.domain.model.Tag
 import com.azkar.domain.repo.CollectionRepository
 import com.azkar.domain.service.TransactionRunner
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -22,9 +26,11 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.OffsetDateTime
+import java.util.Locale
 
 /**
  * Exposed-backed [CollectionRepository].
@@ -96,6 +102,7 @@ class ExposedCollectionRepository(
             if (existingId != null) {
                 update(id, collection, timestamp)
             }
+            applyTranslations(id, collection.translations, timestamp)
             loadOne(id) ?: error("Collection $id vanished during save")
         }
 
@@ -157,7 +164,7 @@ class ExposedCollectionRepository(
     }
 
     /**
-     * Replaces the collection's labels with exactly [tagNames].
+     * Replaces the collection's labels with exactly [tags].
      *
      * The tag rows themselves are resolved and created here, through
      * [ExposedTagRepository.findOrCreateId], so naming a tag the library has never seen works without
@@ -165,10 +172,10 @@ class ExposedCollectionRepository(
      */
     override suspend fun setTags(
         collectionId: Long,
-        tagNames: Collection<String>,
+        tags: Collection<Tag>,
     ) = transactions.tx("Failed to set the tags of collection id=$collectionId") {
         requireExists(collectionId)
-        replaceTags(collectionId, tagNames)
+        replaceTags(collectionId, tags)
     }
 
     /**
@@ -325,6 +332,7 @@ class ExposedCollectionRepository(
         CollectionEntity
             .new {
                 name = collection.name
+                nameLocaleCode = collection.nameLocale.toLanguageTag()
                 description = collection.description
                 kind = collection.kind
                 iconKey = collection.iconKey
@@ -360,11 +368,75 @@ class ExposedCollectionRepository(
     ) {
         CollectionEntity.findById(id)?.updateAndFlush {
             name = collection.name
+            nameLocaleCode = collection.nameLocale.toLanguageTag()
             description = collection.description
             kind = collection.kind
             iconKey = collection.iconKey
             coverImagePath = collection.coverImagePath
             updatedAt = now
+        }
+    }
+
+    /**
+     * Reconciles a collection's wording to exactly [translations].
+     *
+     * The same shape as the remembrance side's reconcile — a language present and wanted is written, a
+     * language present and not wanted is deleted — because it is the same question about a different
+     * table, and two answerable ways of asking it would drift.
+     *
+     * Passing an empty map therefore *deletes* every translation, which is correct rather than
+     * dangerous: the editor is the thing that decides whether a shelf keeps its Arabic, and a shelf
+     * whose only translation was just deleted by its owner should stop claiming to have one. What
+     * keeps that from being a trap is [CollectionService.rename] defaulting to the existing map, so
+     * "rename" and "rename and drop the translations" are two distinct calls rather than one call
+     * whose meaning depends on what a caller forgot to pass.
+     */
+    private fun applyTranslations(
+        id: Long,
+        translations: Map<Locale, LocalizedPair>,
+        now: OffsetDateTime,
+    ) {
+        val wanted = translations.pairsByLocale()
+        if (wanted.isEmpty()) {
+            CollectionTranslationTable.deleteWhere { CollectionTranslationTable.collectionId eq id }
+            return
+        }
+        val existing =
+            CollectionTranslationTable
+                .selectAll()
+                .where { CollectionTranslationTable.collectionId eq id }
+                .map { it[CollectionTranslationTable.localeCode] }
+                .toSet()
+
+        existing.minus(wanted.keys).forEach { locale ->
+            CollectionTranslationTable.deleteWhere {
+                (CollectionTranslationTable.collectionId eq id) and (CollectionTranslationTable.localeCode eq locale)
+            }
+        }
+
+        wanted.forEach { (locale, pair) ->
+            val row =
+                CollectionTranslationEntity
+                    .find {
+                        (CollectionTranslationTable.collectionId eq id) and
+                            (CollectionTranslationTable.localeCode eq locale)
+                    }.firstOrNull()
+            if (row == null) {
+                CollectionTranslationEntity.new {
+                    this.collectionId = id
+                    this.localeCode = locale
+                    this.name = pair.name
+                    this.description = pair.description
+                    this.createdAt = now
+                    this.updatedAt = now
+                }
+            } else {
+                row.updateAndFlush {
+                    name = pair.name
+                    description = pair.description
+                    updatedAt = now
+                }
+            }
         }
     }
 
@@ -443,13 +515,12 @@ class ExposedCollectionRepository(
      */
     private fun replaceTags(
         collectionId: Long,
-        tagNames: Collection<String>,
+        tags: Collection<Tag>,
     ) {
         val desiredTagIds =
-            tagNames
-                .map(String::trim)
-                .filter { it.isNotEmpty() }
-                .map { tagRepository.findOrCreateId(it) }
+            tags
+                .filter { it.name.isNotBlank() }
+                .map { tagRepository.findOrCreateId(it.name, it.nameLocale) }
                 .toSet()
         val existingTagIds =
             CollectionTagTable

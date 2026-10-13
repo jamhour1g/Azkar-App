@@ -57,9 +57,6 @@
     <string name="librarySourceLabel">المصدر:</string>
     <string name="librarySourceUnknown">مصدر غير معروف</string>
     <string name="libraryMissingText">لا يوجد نص متاح لهذا الذكر.</string>
-    <string name="libraryCategoryMorning">أذكار الصباح</string>
-    <string name="libraryCategoryEvening">أذكار المساء</string>
-    <string name="libraryCategoryTravel">أذكار السفر</string>
     <string name="libraryCategoryUncategorized">غير مصنف</string>
     <string name="libraryActionRead">عرض التفاصيل</string>
     <string name="libraryActionFavorite">إضافة إلى المفضلة</string>
@@ -69,6 +66,13 @@
     <string name="libraryReadDialogTitle">تفاصيل الذكر</string>
     <string name="libraryLoading">جاري تحميل المكتبة...</string>
     <string name="libraryLoadFailed">فشل تحميل بيانات المكتبة.</string>
+    <!-- Authoring: naming a collection or a tag in a language other than the app's -->
+    <string name="contentLanguageNote">يُحفظ كما تكتبه. وعند تغيير لغة التطبيق سيظهر كما هو حتى تضيف ترجمة.</string>
+    <string name="contentTranslationAdd">إضافة ترجمة</string>
+    <string name="contentTranslationFor">الاسم بـ %s</string>
+    <string name="contentPrimaryLanguage">الاسم الأساسي بـ %s</string>
+    <string name="contentTranslationRemove">إزالة هذه الترجمة</string>
+    <string name="contentTranslationLanguageTaken">توجد بالفعل نسخة بـ %s.</string>
     <!-- Library: the collections hub -->
     <string name="collectionsTitle">المجموعات</string>
     <string name="collectionsSubtitle">لكل ذكر مكانه. افتح مجموعة لتقرأ ما فيها.</string>
@@ -332,17 +336,6 @@
     <!-- The categories the seed data is tagged with. Every tag name in the shipped TSV has a label
          here, so a category is never shown in English over an Arabic page: the presenter's map is
          built from these keys and anything absent from it falls through to its raw name. -->
-    <string name="libraryCategoryMuslimData">بيانات المسلمين</string>
-    <string name="libraryCategoryPrayer">أذكار بعد الصلاة</string>
-    <string name="libraryCategoryMorningEvening">أذكار الصباح والمساء</string>
-    <string name="libraryCategoryPraising">الثناء على الله</string>
-    <string name="libraryCategoryJoyDistress">الفرح والهمّ</string>
-    <string name="libraryCategoryGoodEtiquette">حسن الأدب</string>
-    <string name="libraryCategorySicknessDeath">المرض والموت</string>
-    <string name="libraryCategoryHomeFamily">البيت والأسرة</string>
-    <string name="libraryCategoryNature">الطبيعة</string>
-    <string name="libraryCategoryFoodDrink">الطعام والشراب</string>
-    <string name="libraryCategoryHajjUmrah">الحجّ والعمرة</string>
 
     <!-- The detail page's own layout: the hero band, the continue-reading card, the member
          toolbar. Grouped together because they are drawn as one column and are read as one page. -->

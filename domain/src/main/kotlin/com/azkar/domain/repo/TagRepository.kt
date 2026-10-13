@@ -44,6 +44,24 @@ interface TagRepository {
     /** Returns the live tag named [name], or `null` when unknown or deleted. */
     suspend fun findByNameIgnoreCase(name: String): Tag?
 
+    /**
+     * Returns the live tag that carries [text] as one of its translations, in any language, or `null`
+     * when nothing does.
+     *
+     * Exists because a translated tag is known by two names and only one of them is its identity. Once
+     * the shipped labels were translated, a user reading the Arabic shelf sees "أذكار الصباح" on a tag
+     * stored as `morning`, and typing what they saw would otherwise create a second tag with the same
+     * meaning — the exact fork the translation was supposed to prevent. Matched on the text rather than
+     * on a language pair, because the question is "does any live tag already answer to this word",
+     * which is the same question whichever language the reader is typing in.
+     *
+     * Live tags only, like every other read here: a deleted tag's translations are not in circulation
+     * and must not block the name. A live tag whose translations happen to collide is a real ambiguity
+     * the caller has to resolve, and returning it is what lets it be resolved rather than silently
+     * producing a duplicate.
+     */
+    suspend fun findByTranslationIgnoreCase(text: String): Tag?
+
     /** Returns every live tag. */
     suspend fun findAll(): List<Tag>
 

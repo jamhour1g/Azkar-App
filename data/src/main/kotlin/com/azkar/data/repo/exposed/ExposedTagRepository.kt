@@ -10,11 +10,13 @@ import com.azkar.data.table.CollectionTagTable
 import com.azkar.data.table.RemembranceTable
 import com.azkar.data.table.RemembranceTagTable
 import com.azkar.data.table.TagTable
+import com.azkar.data.table.TagTranslationTable
 import com.azkar.data.table.entity.CollectionEntity
 import com.azkar.data.table.entity.CollectionTagEntity
 import com.azkar.data.table.entity.RemembranceEntity
 import com.azkar.data.table.entity.RemembranceTagEntity
 import com.azkar.data.table.entity.TagEntity
+import com.azkar.data.table.entity.TagTranslationEntity
 import com.azkar.data.table.entity.updateAndFlush
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.TagSummary
@@ -23,10 +25,13 @@ import com.azkar.domain.model.impl.TagImpl
 import com.azkar.domain.repo.TagRepository
 import com.azkar.domain.service.TransactionRunner
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.LowerCase
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.core.stringParam
+import java.util.Locale
 
 /**
  * Exposed-backed [TagRepository].
@@ -114,38 +119,93 @@ class ExposedTagRepository(
             // constraint violation for what is a perfectly ordinary "add it back". Reviving is what
             // the user means by that, and it is the only outcome that can bring the tag's shelves
             // back with it — the join rows are still pointing at that id. See [reviveByName].
-            if (existingId == null) {
-                reviveByName(name) ?: run {
-                    val timestamp = now()
-                    val inserted =
-                        TagEntity.new {
+            val saved =
+                if (existingId == null) {
+                    reviveByName(name, tag.nameLocale) ?: run {
+                        val timestamp = now()
+                        val inserted =
+                            TagEntity.new {
+                                this.name = name
+                                nameLocaleCode = tag.nameLocale.toLanguageTag()
+                                createdAt = timestamp
+                                updatedAt = timestamp
+                            }
+                        TagImpl(id = inserted.id.value, name = name, nameLocale = tag.nameLocale, createdAt = inserted.createdAt.toInstant())
+                    }
+                } else {
+                    val before = findTag(existingId)?.name
+                    findTag(existingId)
+                        ?.updateAndFlush {
                             this.name = name
-                            createdAt = timestamp
-                            updatedAt = timestamp
-                        }
-                    TagImpl(id = inserted.id.value, name = name, createdAt = inserted.createdAt.toInstant())
+                            nameLocaleCode = tag.nameLocale.toLanguageTag()
+                            updatedAt = now()
+                        }?.withTranslations()
+                        ?: error("Tag $existingId vanished during save")
+                            // A rename is the user saying "this is what it is called now", and the wording in
+                            // other languages was the wording of the *old* name. Keeping it would leave a
+                            // label that answers to "Morning Azkar" in Arabic after being renamed to
+                            // something else entirely — which is worse than showing the folded name, because
+                            // it is confidently wrong rather than visibly untranslated.
+                            .also { if (before != null && before != name) TagTranslationTable.clearTexts(existingId) }
                 }
-            } else {
-                findTag(existingId)
-                    ?.updateAndFlush {
-                        this.name = name
-                        updatedAt = now()
-                    }?.toTag()
-                    ?: error("Tag $existingId vanished during save")
-            }
+            val id = checkNotNull(saved.id) { "A just-saved tag must have an id" }
+            syncTranslations(id, tag.translations)
+            TagImpl(id = saved.id, name = saved.name, nameLocale = tag.nameLocale, createdAt = saved.createdAt, translations = tag.translations)
         }
+
+    /**
+     * Reconciles a label's wording to exactly [translations], keyed by BCP-47 language tag.
+     *
+     * The same reconcile the remembrance and collection sides do, against the third table of that
+     * shape — see [syncLocalizedTexts], which this is [com.azkar.data.table.entity.LocalizedText]'s
+     * writer for.
+     */
+    private fun syncTranslations(
+        id: Long,
+        translations: Map<Locale, String>,
+    ) {
+        syncLocalizedTexts(TagTranslationEntity, TagTranslationTable, id, translations.textsByLocale(), now())
+    }
 
     override suspend fun findById(id: Long?): Tag? {
         val target = id ?: return null
-        return transactions.tx("Failed to find tag id=$target") { findTag(target)?.toTag() }
+        return transactions.tx("Failed to find tag id=$target") { findTag(target)?.withTranslations() }
     }
 
     override suspend fun findByNameIgnoreCase(name: String): Tag? =
-        transactions.tx("Failed to find tag by name '$name'") { findTagByName(name)?.toTag() }
+        transactions.tx("Failed to find tag by name '$name'") { findTagByName(name)?.withTranslations() }
+
+    /**
+     * The live tag that answers to [text] in any language, or `null`.
+     *
+     * A database equality lookup rather than a substring search: naming a tag "rain" must not conflict
+     * with a translation that merely contains "rainbow". Lowest live id wins among exact matches.
+     *
+     * Matching is case-insensitive, so that typing a translation
+     * with different capitals finds the tag rather than forking it. The stored name is not searched
+     * here — [findByNameIgnoreCase] is the read for that, and the two together are what
+     * `TagService` checks rather than one read that covers both.
+     */
+    override suspend fun findByTranslationIgnoreCase(text: String): Tag? =
+        transactions.tx("Failed to find tag by translation '$text'") {
+            val needle = text.trim()
+            if (needle.isEmpty()) {
+                return@tx null
+            }
+            TagTranslationEntity
+                .find { LowerCase(TagTranslationTable.text) eq stringParam(needle.lowercase(Locale.ROOT)) }
+                .orderBy(TagTranslationTable.ownerId to SortOrder.ASC)
+                .toList()
+                .firstNotNullOfOrNull { translation ->
+                    findTag(translation.ownerId)?.withTranslations()
+                }
+            // `findTag` applies the single definition of "live"; deleted rows are skipped so an old
+            // tombstone cannot hide a later live tag carrying the same exact wording.
+        }
 
     override suspend fun findAll(): List<Tag> =
         transactions.tx("Failed to find all tags") {
-            liveRows().orderBy(TagTable.id to SortOrder.ASC).map { it.toTag() }
+            liveRows().orderBy(TagTable.id to SortOrder.ASC).toList().withTranslations()
         }
 
     override suspend fun findByNameContainingIgnoreCase(fragment: String): List<Tag> =
@@ -153,7 +213,8 @@ class ExposedTagRepository(
             TagEntity
                 .find { (TagTable.name.foldedContains(fragment)) and isLive }
                 .orderBy(TagTable.id to SortOrder.ASC)
-                .map { it.toTag() }
+                .toList()
+                .withTranslations()
         }
 
     override suspend fun findSummaries(): List<TagSummary> =
@@ -227,7 +288,7 @@ class ExposedTagRepository(
      * the deleted tag was still attached to, so re-typing a label they had only just removed restores
      * their organisation rather than quietly discarding it.
      */
-    fun findOrCreateId(name: String): Long {
+    fun findOrCreateId(name: String, nameLocale: Locale = Locale.ENGLISH): Long {
         val folded = Tag.fold(name)
         val existing = findTagRowByName(folded)
         if (existing != null) {
@@ -243,6 +304,7 @@ class ExposedTagRepository(
         return TagEntity
             .new {
                 this.name = folded
+                nameLocaleCode = nameLocale.toLanguageTag()
                 createdAt = timestamp
                 updatedAt = timestamp
             }.id.value
@@ -262,7 +324,7 @@ class ExposedTagRepository(
      * the uniqueness that stops it is the caller's to enforce: the domain checks the name with
      * [com.azkar.domain.service.TagService] before it gets here.
      */
-    private fun reviveByName(name: String): Tag? {
+    private fun reviveByName(name: String, nameLocale: Locale): Tag? {
         val row = findTagRowByName(name)
         if (row == null || row.deletedAt == null) {
             return null
@@ -270,6 +332,7 @@ class ExposedTagRepository(
         return row
             .updateAndFlush {
                 deletedAt = null
+                nameLocaleCode = nameLocale.toLanguageTag()
                 updatedAt = now()
             }.toTag()
     }
@@ -298,6 +361,23 @@ class ExposedTagRepository(
 
     /** The row with this id whether or not it is deleted. For the writers, never for a read. */
     private fun findTagRow(id: Long): TagEntity? = TagEntity.findById(id)
+
+    /**
+     * The one live row carrying this entity's wording, for the single-row reads.
+     *
+     * A [Tag] returned without it would be a lie of omission rather than a default: the model says a
+     * tag carries its translations, and a caller that read one and drew it would show the folded name
+     * while every list built from the same rows showed the word the user actually typed. The cost is
+     * one statement, which is the price of a one-row read on a tag that has wording — and the price
+     * was already being paid by every list on screen.
+     */
+    private fun TagEntity.withTranslations(): Tag =
+        toTag(translations = LibraryTranslations.tagTranslations(listOf(id.value))[id.value].orEmpty())
+
+    private fun List<TagEntity>.withTranslations(): List<Tag> {
+        val translations = LibraryTranslations.tagTranslations(map { it.id.value })
+        return map { it.toTag(translations[it.id.value].orEmpty()) }
+    }
 
     /**
      * Resolves a name to its row, folding first.
@@ -349,11 +429,15 @@ class ExposedTagRepository(
                 .find { RemembranceTagTable.tagId inList ids }
                 .groupBy({ it.tagId.value }, { Unit })
                 .mapValues { (_, links) -> links.size }
+        // One statement for the page, for the same reason the two counts above are: this is a list
+        // screen, and a wording lookup per row would be a statement per tag on it.
+        val translations = LibraryTranslations.tagTranslations(ids)
         return rows.map { row ->
             val id = row.id.value
             row.toSummary(
                 collectionCount = collectionCounts[id] ?: 0,
                 remembranceCount = remembranceCounts[id] ?: 0,
+                translations = translations[id].orEmpty(),
             )
         }
     }

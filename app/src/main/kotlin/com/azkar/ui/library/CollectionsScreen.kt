@@ -50,6 +50,7 @@ import com.azkar.ui.components.TooltipIconButton
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.library.CollectionsState
 import com.azkar.ui.library.model.RemembranceTile
+import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.preview.rememberPreviewCatalogue
 import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ShowToast
@@ -131,7 +132,7 @@ internal fun CollectionsScreenContent(
         state = state,
         callbacks =
             ShelfCallbacks(
-                onCreate = { editor = CollectionEditorDraft.create() },
+                onCreate = { editor = CollectionEditorDraft.create(AzkarTheme.locale) },
                 onImport = { importer.open() },
                 onOpen = { id ->
                     state.findCollection(id)
@@ -141,7 +142,7 @@ internal fun CollectionsScreenContent(
                 // The copy's name arrives pre-resolved: this lambda is not a composable, so it
                 // could not call `stringResource` for itself.
                 onDuplicate = { collection, newName ->
-                    editor = CollectionEditorDraft.duplicate(collection, newName)
+                    editor = CollectionEditorDraft.duplicate(collection, newName, AzkarTheme.locale)
                 },
                 onDelete = { collection -> pendingDelete = collection },
                 onRead = onOpenRemembrance,
@@ -321,7 +322,7 @@ private fun CollectionEditorHost(
         environment =
             CollectionEditorEnvironment(
                 covers = state.covers,
-                availableTagNames = state.shelfLabels.map { it.name },
+                availableTags = state.shelfLabels.map { TagOption.of(it, AzkarTheme.locale) },
                 // The chooser runs the platform's own file dialog, which blocks, and the copy afterwards
                 // touches the filesystem. Both are what the dialog's `onPickCover` suspending shape is
                 // for: it awaits the whole thing and reports a cancelled pick as `null` rather than
@@ -330,7 +331,7 @@ private fun CollectionEditorHost(
                 onPickCover = { title -> state.pickCoverImage(title) },
             ),
         onDismiss = onDismiss,
-        onConfirm = { name, description, tagNames, coverImagePath ->
+        onConfirm = { name, description, tagNames, coverImagePath, translations ->
             onDismiss()
             when (draft.mode) {
                 CollectionEditorMode.CREATE ->
@@ -339,6 +340,9 @@ private fun CollectionEditorHost(
                         description = description,
                         tagNames = tagNames,
                         coverImagePath = coverImagePath,
+                        translations = translations,
+                        nameLocale = draft.nameLocale,
+                        tagLocale = AzkarTheme.locale,
                         onCreated = {},
                     )
 
@@ -349,12 +353,15 @@ private fun CollectionEditorHost(
                         description = description,
                         tagNames = tagNames,
                         coverImagePath = coverImagePath,
+                        translations = translations,
+                        nameLocale = draft.nameLocale,
                     )
 
                 CollectionEditorMode.DUPLICATE ->
                     state.duplicateCollection(
                         id = draft.collectionId,
                         newName = name,
+                        nameLocale = draft.nameLocale,
                     )
             }
         },

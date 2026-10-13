@@ -14,14 +14,10 @@ import com.azkar.generated.resources.collectionsSortItems
 import com.azkar.generated.resources.collectionsSortName
 import com.azkar.generated.resources.collectionsSortProgress
 import com.azkar.generated.resources.collectionsSortRecent
-import com.azkar.generated.resources.libraryCategoryEvening
-import com.azkar.generated.resources.libraryCategoryMorning
-import com.azkar.generated.resources.libraryCategoryTravel
 import com.azkar.ui.library.model.CollectionScope
 import com.azkar.ui.library.model.CollectionSort
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
-import java.util.Locale
 
 // Maps the library enums onto the generated string resources.
 //
@@ -73,23 +69,3 @@ val CollectionKind.labelResource: StringResource
             CollectionKind.OFFICIAL -> Res.string.collectionsKindOfficial
             CollectionKind.CUSTOM -> Res.string.collectionsKindCustom
         }
-
-/**
- * The category resource for [raw], or `null` when the tag is not one of the known categories.
- *
- * The old `Strings.categoryLabel` fell back to the raw tag name, which has no resource — so
- * [localizeTag] keeps that fallback and only awaits a resource for tags that have one.
- */
-fun categoryResourceFor(raw: String): StringResource? =
-    when (raw.lowercase(Locale.ROOT)) {
-        "morning" -> Res.string.libraryCategoryMorning
-        "evening" -> Res.string.libraryCategoryEvening
-        "travel" -> Res.string.libraryCategoryTravel
-        else -> null
-    }
-
-/** The category label for [raw], falling back to the tag name for anything unrecognised. */
-suspend fun localizeTag(raw: String): String {
-    val resource = categoryResourceFor(raw)
-    return resource?.let { getString(it) } ?: raw
-}

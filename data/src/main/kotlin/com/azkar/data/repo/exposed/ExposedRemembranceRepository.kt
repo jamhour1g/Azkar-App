@@ -1,16 +1,13 @@
 package com.azkar.data.repo.exposed
 
 import com.azkar.data.repo.exposed.LikeUtils.lowerCaseContains
-import com.azkar.data.repo.exposed.RemembranceAggregates.existingLocales
 import com.azkar.data.repo.exposed.RemembranceAggregates.load
 import com.azkar.data.table.ExplanationTranslationTable
-import com.azkar.data.table.LocalizedTextTable
 import com.azkar.data.table.RemembranceTable
 import com.azkar.data.table.RemembranceTagTable
 import com.azkar.data.table.RemembranceTranslationTable
 import com.azkar.data.table.TagTable
 import com.azkar.data.table.entity.ExplanationTranslationEntity
-import com.azkar.data.table.entity.LocalizedText
 import com.azkar.data.table.entity.RemembranceEntity
 import com.azkar.data.table.entity.RemembranceTagEntity
 import com.azkar.data.table.entity.RemembranceTranslationEntity
@@ -27,8 +24,6 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.notInList
-import org.jetbrains.exposed.v1.dao.Entity
-import org.jetbrains.exposed.v1.dao.EntityClass
 import org.jetbrains.exposed.v1.jdbc.SizedIterable
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -146,7 +141,7 @@ class ExposedRemembranceRepository(
                     .where {
                         (RemembranceTranslationTable.localeCode eq locale.toLanguageTag()) and
                             RemembranceTranslationTable.text.lowerCaseContains(query)
-                    }.map { it[RemembranceTranslationTable.remembranceId] }
+                    }.map { it[RemembranceTranslationTable.ownerId] }
             if (matchingIds.isEmpty()) {
                 emptyList()
             } else {
@@ -297,7 +292,7 @@ class ExposedRemembranceRepository(
         tags: Set<Tag>,
         now: OffsetDateTime,
     ) {
-        val desiredTagIds = tags.map { tagRepository.findOrCreateId(it.name) }.toSet()
+        val desiredTagIds = tags.map { tagRepository.findOrCreateId(it.name, it.nameLocale) }.toSet()
         val existing =
             RemembranceTagEntity
                 .find { RemembranceTagTable.remembranceId eq id }
@@ -328,62 +323,4 @@ class ExposedRemembranceRepository(
             }
         }
     }
-
-    /**
-     * Reconciles one `*_translation` table for one remembrance: rows for locales that are no
-     * longer present are deleted, known locales are updated in place, the rest are inserted.
-     *
-     * Identity is keyed on `(remembrance_id, locale_code)` — the schema's own unique key — so
-     * the id carried by the incoming domain object is only honoured when it still points at a
-     * live row. A row is found by that pair rather than by the id the domain object remembered,
-     * for exactly that reason: a remembrance re-created after a delete comes back with an id
-     * nothing is holding, and the pair is the only handle that means anything.
-     *
-     * Written as one function over both tables because [RemembranceTranslationEntity] and
-     * [ExplanationTranslationEntity] implement [LocalizedText] and have identical shapes; the
-     * entity class and the table are passed in because that is the only thing that tells them
-     * apart. The type carries two bounds rather than one because it has to be both halves of that
-     * sentence at once: `EntityClass<ID, T>` requires `T : Entity<ID>`, and this function needs
-     * `T` to be a [LocalizedText] as well. A single bound can only be one of the two.
-     */
-    private fun <T> syncLocalizedTexts(
-        entityClass: EntityClass<Long, T>,
-        table: LocalizedTextTable,
-        id: Long,
-        desired: Map<String, String>,
-        now: OffsetDateTime,
-    ) where T : Entity<Long>, T : LocalizedText {
-        val existing = table.existingLocales(id)
-
-        // One statement for the whole batch of removed locales, rather than one per locale.
-        (existing - desired.keys).forEach { locale ->
-            table.deleteWhere { (table.remembranceId eq id) and (table.localeCode eq locale) }
-        }
-        desired.forEach { (locale, text) ->
-            val row =
-                entityClass
-                    .find {
-                        (table.remembranceId eq id) and (table.localeCode eq locale)
-                    }.firstOrNull()
-            if (row != null) {
-                row.updateAndFlush {
-                    this.text = text
-                    updatedAt = now
-                }
-            } else {
-                entityClass.new {
-                    remembranceId = id
-                    localeCode = locale
-                    this.text = text
-                    createdAt = now
-                    updatedAt = now
-                }
-            }
-        }
-    }
-
-    /** Re-keys a per-locale text map by BCP-47 language tag, which is what `locale_code` stores. */
-    private fun Map<Locale, Remembrance.Translations>.textsByLocale(
-        extract: (Remembrance.Translations) -> String,
-    ): Map<String, String> = entries.associate { (locale, value) -> locale.toLanguageTag() to extract(value) }
 }

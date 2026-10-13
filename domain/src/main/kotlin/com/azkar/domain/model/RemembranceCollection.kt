@@ -1,6 +1,7 @@
 package com.azkar.domain.model
 
 import java.time.Instant
+import java.util.Locale
 
 /**
  * A named, ordered group of [Remembrance] entries that the user browses as a unit.
@@ -26,11 +27,33 @@ interface RemembranceCollection {
      *
      * Always present so that search and sorting work in the domain layer, and always editable: a
      * shipped name is a starting suggestion, not a value the user is locked out of.
+     *
+     * This is the *canonical* name, not the one to draw. It is what the row is addressed by and what
+     * the shipped catalogue is matched against, so it has to stay the language it was written in
+     * rather than following the interface — otherwise a name would change underneath the edit dialog
+     * that is changing it. To draw one, ask [displayName].
      */
     val name: String
 
+    /** Language the canonical [name] was entered in; independent of its script and display direction. */
+    val nameLocale: Locale
+
     /** The user's own prose about the collection, or `null` when they wrote none. */
     val description: String?
+
+    /**
+     * The name and description as written in each language they have been given in.
+     *
+     * Empty for anything the user wrote themselves, which is the ordinary state rather than a gap:
+     * one person typing one collection has one language, and inventing a second one would mean
+     * inventing text they never wrote. Non-empty for the collections that shipped, so that a library
+     * read in Arabic reads as Arabic rather than as English with the interface translated around it.
+     *
+     * Keyed by the language the text is written in rather than the language it is for, which is the
+     * same convention [Remembrance.translations] uses and for the same reason — a value carries its
+     * own language, so nothing has to agree about it separately.
+     */
+    val translations: Map<Locale, LocalizedPair>
 
     /** Whether the collection shipped with the application or was built by the user. */
     val kind: CollectionKind
@@ -125,4 +148,22 @@ interface RemembranceCollection {
     /** Whether the user put this collection on the Home screen. */
     val isOnHome: Boolean
         get() = homePinnedAt != null
+
+    /**
+     * The name to draw when the interface is in [locale].
+     *
+     * The language asked for exactly if it was given one, then any other region carrying that same
+     * language, and finally [name]. Never another language than the one asked for: showing a French
+     * name under an Arabic interface is not a worse answer than the English one, it is a wrong one.
+     */
+    fun displayName(locale: Locale): String = translations.displayName(locale, name)
+
+    /**
+     * The prose to draw when the interface is in [locale], or `null` when this language has none.
+     *
+     * `null` rather than the canonical prose when only the name was translated, because a translated
+     * name above an untranslated sentence reads as one unedited mistake rather than as two languages
+     * that were not finished together. An absent description is silent; a borrowed one is not.
+     */
+    fun displayDescription(locale: Locale): String? = translations.displayDescription(locale, description)
 }

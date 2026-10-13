@@ -193,6 +193,18 @@ private class FakeTagRepository(
     override suspend fun findByNameIgnoreCase(name: String): Tag? =
         listOfNotNull(existing, clash).firstOrNull { it.name == name }
 
+    /**
+     * A translation match, answered from the same two rows the name match uses.
+     *
+     * Deliberately not a separate field: the suite asks "is this word already spoken for" rather than
+     * "is this word a stored name", and a fake that could answer those two differently would let a
+     * test pass against a repository that really cannot.
+     */
+    override suspend fun findByTranslationIgnoreCase(text: String): Tag? =
+        listOfNotNull(existing, clash).firstOrNull { tag ->
+            tag.translations.values.any { it == text }
+        }
+
     override suspend fun findAll(): List<Tag> = all
 
     override suspend fun findByNameContainingIgnoreCase(fragment: String): List<Tag> =

@@ -4,9 +4,11 @@ import com.azkar.data.repo.exposed.now
 import com.azkar.data.table.CollectionMemberTable
 import com.azkar.data.table.CollectionTable
 import com.azkar.data.table.CollectionTagTable
+import com.azkar.data.table.CollectionTranslationTable
 import com.azkar.data.table.RemembranceTable
 import com.azkar.data.table.RemembranceTagTable
 import com.azkar.data.table.TagTable
+import com.azkar.data.table.TagTranslationTable
 import com.azkar.domain.model.CollectionKind
 import com.azkar.domain.model.Tag
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -57,6 +59,8 @@ internal object CollectionSeed {
 
         val timestamp = now()
         val collections = insertCollections(catalogue, timestamp)
+        insertTranslations(collections, timestamp)
+        insertTagTranslations(timestamp)
         insertLabels(collections, tagIds)
         insertMembership(collections, tagIds)
 
@@ -127,6 +131,81 @@ internal object CollectionSeed {
         }
 
     /**
+     * Writes the wording of each collection in every language the catalogue carries for it.
+     *
+     * In the same transaction as the rows themselves, and for the same reason membership is: a shelf
+     * that exists in one language only for the first launch of an installation is the exact state this
+     * whole change exists to remove, and a translation written on the next read would arrive too late
+     * to matter to the screen that noticed.
+     *
+     * The English row duplicates the canonical columns, which [OfficialCollectionCatalogue.entry]
+     * explains is deliberate rather than redundant.
+     */
+    private fun insertTranslations(
+        collections: List<Pair<OfficialCollectionCatalogue.Entry, Long>>,
+        timestamp: OffsetDateTime,
+    ) {
+        val rows =
+            collections.flatMap { (entry, collectionId) ->
+                entry.translations.map { (locale, pair) ->
+                    TranslationRow(
+                        collectionId = collectionId,
+                        localeCode = locale,
+                        name = pair.name,
+                        description = pair.description,
+                        timestamp = timestamp,
+                    )
+                }
+            }
+        if (rows.isEmpty()) {
+            return
+        }
+        CollectionTranslationTable.batchInsert(rows, shouldReturnGeneratedValues = false) { row ->
+            this[CollectionTranslationTable.collectionId] = row.collectionId
+            this[CollectionTranslationTable.localeCode] = row.localeCode
+            this[CollectionTranslationTable.name] = row.name
+            this[CollectionTranslationTable.description] = row.description
+            this[CollectionTranslationTable.createdAt] = row.timestamp
+            this[CollectionTranslationTable.updatedAt] = row.timestamp
+        }
+    }
+
+    /**
+     * Gives every shipped label the wording [OfficialTagVocabulary] holds for it.
+     *
+     * Over the whole tag table rather than over [resolveTagIds]'s handful of catalogue tags, because
+     * the vocabulary covers a label no collection is seeded from: `muslim data` is the publisher's own
+     * tag and never names a shelf, but it is on every row the reader can reach. Reading the ids here
+     * rather than passing them in keeps that difference from being the caller's problem.
+     *
+     * Written here rather than where the tag rows are made ([SeedDataLoader.insertTags]) because this
+     * is the object that already owns "what the shipped library says". Anything the vocabulary does
+     * not carry — a tag the user has since added, a slug nobody has worded — is simply not written.
+     */
+    private fun insertTagTranslations(timestamp: OffsetDateTime) {
+        val idsByName =
+            TagTable
+                .select(TagTable.id, TagTable.name)
+                .associate { Tag.fold(it[TagTable.name]) to it[TagTable.id].value }
+        val rows =
+            idsByName.flatMap { (foldedName, tagId) ->
+                OfficialTagVocabulary.wordingFor(foldedName).map { (locale, name) ->
+                    TagTranslationRow(tagId, locale, name, timestamp)
+                }
+            }
+        if (rows.isEmpty()) {
+            return
+        }
+        TagTranslationTable.batchInsert(rows, shouldReturnGeneratedValues = false) { row ->
+            this[TagTranslationTable.ownerId] = row.tagId
+            this[TagTranslationTable.localeCode] = row.localeCode
+            this[TagTranslationTable.text] = row.text
+            this[TagTranslationTable.createdAt] = row.timestamp
+            this[TagTranslationTable.updatedAt] = row.timestamp
+        }
+    }
+
+    /**
      * Gives each collection its own tag, so a shipped shelf arrives categorised rather than anonymous
      * and the card's icon has something to derive from before the user has touched anything.
      */
@@ -191,6 +270,22 @@ internal object CollectionSeed {
     private data class LabelLink(
         val collectionId: Long,
         val tagId: Long,
+    )
+
+    private data class TranslationRow(
+        val collectionId: Long,
+        val localeCode: String,
+        val name: String,
+        val description: String?,
+        val timestamp: OffsetDateTime,
+    )
+
+    /** [TagTranslationTable] carries one column of prose, so it needs no description of its own. */
+    private data class TagTranslationRow(
+        val tagId: Long,
+        val localeCode: String,
+        val text: String,
+        val timestamp: OffsetDateTime,
     )
 
     private data class MembershipLink(

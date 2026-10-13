@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import com.azkar.i18n.ENGLISH
+import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.theme.AzkarTheme
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
@@ -72,11 +73,11 @@ private fun converse(body: SkikoComposeUiTest.() -> Unit): EditorReported {
                     environment =
                         CollectionEditorEnvironment(
                             covers = null,
-                            availableTagNames = listOf(MORNING, "sleep"),
+                            availableTags = listOf(MORNING, "sleep").map(TagOption::of),
                             onPickCover = { _ -> null },
                         ),
                     onDismiss = { reported.dismissed = true },
-                    onConfirm = { _, description, tagNames, _ ->
+                    onConfirm = { _, description, tagNames, _, _ ->
                         reported.description = description
                         reported.tags = tagNames
                         reported.confirmations += tagNames

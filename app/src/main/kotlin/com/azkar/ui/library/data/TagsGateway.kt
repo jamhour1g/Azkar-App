@@ -5,6 +5,7 @@ import com.azkar.domain.model.TagSummary
 import com.azkar.domain.model.TagUsage
 import com.azkar.domain.service.TagService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.util.Locale
 
 private val logger = KotlinLogging.logger {}
 
@@ -38,8 +39,15 @@ interface TagGateway {
      * four sentences either way. Two types would have been two exhaustive `when`s in the screen that
      * happen to be written out identically, which is how the two would drift apart the first time a
      * fifth answer was needed for one of them.
+     *
+     * [translations] are the other-language names for the same tag, keyed by the language each is
+     * written in. Optional: a tag with none reads the same everywhere, which is a legitimate tag.
      */
-    suspend fun create(name: String): TagSaveResult
+    suspend fun create(
+        name: String,
+        translations: Map<Locale, String> = emptyMap(),
+        nameLocale: Locale = Locale.ENGLISH,
+    ): TagSaveResult
 
     /**
      * Renames the tag identified by [id], reporting what happened rather than only throwing.
@@ -48,10 +56,15 @@ interface TagGateway {
      * that arrives as an exception has to be recognised by its type to become a sentence. Doing that
      * translation here means the screen asks a question and gets an answer, and the one place that
      * knows the domain's exception types is the layer that is allowed to import them.
+     *
+     * The name check covers [translations] as well as the name itself, so a tag cannot be renamed out
+     * from under another tag by claiming a word another tag already answers to.
      */
     suspend fun rename(
         id: Long,
         newName: String,
+        translations: Map<Locale, String>? = null,
+        nameLocale: Locale? = null,
     ): TagSaveResult
 
     /**
@@ -135,9 +148,13 @@ class DomainTagsGateway(
      * Reading the domain's guard as a value here rather than adding a second check in the screen is
      * what keeps the screen and the domain from disagreeing about what a tag is allowed to be called.
      */
-    override suspend fun create(name: String): TagSaveResult =
+    override suspend fun create(
+        name: String,
+        translations: Map<Locale, String>,
+        nameLocale: Locale,
+    ): TagSaveResult =
         try {
-            tags.create(name)
+            tags.create(name, translations, nameLocale)
             TagSaveResult.Saved
         } catch (taken: TagNameTakenException) {
             logger.debug { "Tag '${taken.name}' could not be added: the name is already in use" }
@@ -150,9 +167,11 @@ class DomainTagsGateway(
     override suspend fun rename(
         id: Long,
         newName: String,
+        translations: Map<Locale, String>?,
+        nameLocale: Locale?,
     ): TagSaveResult =
         try {
-            tags.rename(id, newName)
+            tags.rename(id, newName, translations, nameLocale)
             TagSaveResult.Saved
         } catch (taken: TagNameTakenException) {
             logger.debug { "Rename of tag $id rejected: the name '${taken.name}' is already in use" }

@@ -227,7 +227,20 @@ private fun EntryProviderScope<AzkarDestination>.tagsEntry(
         val scope = rememberCoroutineScope()
         val catalogue = library.catalogue
         val gateway = library.tagsGateway
-        val tags = remember(gateway, scope) { TagsState(scope, gateway, catalogue::tagsChanged) }
+        // The locale is read here rather than captured so the whole entry — and the state it holds —
+        // is rebuilt under the new language, the same way `key(state.locale)` rebuilds the tree. A
+        // state remembered across a language switch would keep sorting by the name the list was
+        // ordered in when it was created, which is the one artefact a language switch cannot show.
+        val locale = AzkarTheme.locale
+        val tags =
+            remember(gateway, scope, locale) {
+                TagsState(
+                    scope = scope,
+                    gateway = gateway,
+                    onTagsChanged = catalogue::tagsChanged,
+                    labelOf = { it.displayName(locale) },
+                )
+            }
         TagsScreen(
             state = tags,
             onBack = navigator::back,

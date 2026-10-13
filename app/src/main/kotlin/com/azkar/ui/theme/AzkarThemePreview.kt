@@ -21,7 +21,7 @@ import java.util.Locale
  * makes each preview say what it is actually showing.
  *
  * Direction follows from [uiLocale] rather than from a `CompositionLocal`: [AzkarTheme] computes
- * `LocalLayoutDirection` from `uiLocale.isArabic` on every pass, so overriding
+ * `LocalLayoutDirection` from the configured locale profile on every pass, so overriding
  * `LocalLayoutDirection` underneath it would be silently undone. Passing an Arabic locale is the only
  * way to see the RTL layout this app actually ships.
  *

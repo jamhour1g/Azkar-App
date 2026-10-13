@@ -3,6 +3,7 @@ package com.azkar.ui.library
 import com.azkar.data.storage.CoverStorage
 import com.azkar.domain.model.CollectionKind
 import com.azkar.domain.model.CollectionReminder
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
@@ -43,7 +44,8 @@ internal val LaterFixtureInstant: Instant = Instant.parse("2026-02-20T19:30:00Z"
 internal fun tag(
     id: Long?,
     name: String,
-): Tag = TagImpl(id = id, name = name, createdAt = FixtureInstant)
+    translations: Map<Locale, String> = emptyMap(),
+): Tag = TagImpl(id = id, name = name, createdAt = FixtureInstant, translations = translations)
 
 /**
  * A remembrance with an English and an Arabic translation, so a test can assert that the search box
@@ -95,6 +97,7 @@ internal fun officialCollection(
     updatedAt: Instant? = FixtureInstant,
     lastOpenedAt: Instant? = null,
     homePinnedAt: Instant? = null,
+    translations: Map<Locale, LocalizedPair> = emptyMap(),
     isFavorite: Boolean = false,
 ): RemembranceCollection =
     RemembranceCollectionImpl(
@@ -112,6 +115,7 @@ internal fun officialCollection(
         homePinnedAt = homePinnedAt,
         isFavorite = isFavorite,
         members = members,
+        translations = translations,
     )
 
 /** A collection the user made: custom, unpinned until they say otherwise, and owning its own membership. */
@@ -127,11 +131,14 @@ internal fun customCollection(
     updatedAt: Instant? = FixtureInstant,
     lastOpenedAt: Instant? = null,
     homePinnedAt: Instant? = null,
+    translations: Map<Locale, LocalizedPair> = emptyMap(),
     isFavorite: Boolean = false,
+    nameLocale: Locale = Locale.ENGLISH,
 ): RemembranceCollection =
     RemembranceCollectionImpl(
         id = id,
         name = name,
+        nameLocale = nameLocale,
         description = description,
         kind = CollectionKind.CUSTOM,
         iconKey = iconKey,
@@ -144,6 +151,7 @@ internal fun customCollection(
         homePinnedAt = homePinnedAt,
         isFavorite = isFavorite,
         members = members,
+        translations = translations,
     )
 
 /**
@@ -156,6 +164,7 @@ internal fun customCollection(
  */
 private fun RemembranceCollection.copyWith(
     name: String = this.name,
+    nameLocale: Locale = this.nameLocale,
     description: String? = this.description,
     coverImagePath: String? = this.coverImagePath,
     tags: Set<Tag> = this.tags,
@@ -165,10 +174,12 @@ private fun RemembranceCollection.copyWith(
     homePinnedAt: Instant? = this.homePinnedAt,
     isFavorite: Boolean = this.isFavorite,
     members: List<Remembrance> = this.members,
+    translations: Map<Locale, LocalizedPair> = this.translations,
 ): RemembranceCollection =
     RemembranceCollectionImpl(
         id = id,
         name = name,
+        nameLocale = nameLocale,
         description = description,
         kind = kind,
         iconKey = iconKey,
@@ -181,6 +192,7 @@ private fun RemembranceCollection.copyWith(
         homePinnedAt = homePinnedAt,
         isFavorite = isFavorite,
         members = members,
+        translations = translations,
     )
 
 /**
@@ -191,8 +203,8 @@ private fun RemembranceCollection.copyWith(
  * invented one would let a filter assertion pass against an id no such label would ever have. A test
  * that needs specific ids sets [officialCollection]'s or [customCollection]'s `tags` directly.
  */
-private fun Collection<String>.toFixtureTags(): Set<Tag> =
-    mapNotNull { name -> name.trim().takeIf(String::isNotEmpty)?.let { TagImpl(name = it) } }.toSet()
+private fun Collection<String>.toFixtureTags(nameLocale: Locale = Locale.ENGLISH): Set<Tag> =
+    mapNotNull { name -> name.trim().takeIf(String::isNotEmpty)?.let { TagImpl(name = it, nameLocale = nameLocale) } }.toSet()
 
 /** An in-memory [CollectionsGateway] with the same semantics as the Exposed one behind it.
  *
@@ -331,15 +343,19 @@ internal class FakeCollectionsGateway(
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>,
+        nameLocale: Locale,
     ): RemembranceCollection {
         checkNotFailing()
         val created =
             customCollection(
                 id = nextId++,
                 name = name,
+                nameLocale = nameLocale,
                 description = description,
                 coverImagePath = coverImagePath,
-                tags = tagNames.toFixtureTags(),
+                tags = tagNames.toFixtureTags(nameLocale),
+                translations = translations,
             )
         collections = collections + created
         return created
@@ -351,15 +367,20 @@ internal class FakeCollectionsGateway(
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>?,
+        nameLocale: Locale?,
+        tagLocale: Locale?,
     ): RemembranceCollection =
         replace(
             id = id,
             change = {
                 it.copyWith(
                     name = name,
+                    nameLocale = nameLocale ?: it.nameLocale,
                     description = description,
                     coverImagePath = coverImagePath,
-                    tags = tagNames.toFixtureTags(),
+                    tags = tagNames.toFixtureTags(tagLocale ?: nameLocale ?: Locale.ENGLISH),
+                    translations = translations ?: it.translations,
                 )
             },
         )
@@ -393,6 +414,7 @@ internal class FakeCollectionsGateway(
     override suspend fun duplicateCollection(
         id: Long,
         newName: String,
+        nameLocale: Locale,
     ): RemembranceCollection {
         checkNotFailing()
         val source = requireNotNull(collections.findById(id)) { "No collection $id to duplicate" }
@@ -400,6 +422,7 @@ internal class FakeCollectionsGateway(
             customCollection(
                 id = nextId++,
                 name = newName,
+                nameLocale = nameLocale,
                 members = source.members,
                 description = source.description,
                 iconKey = source.iconKey,

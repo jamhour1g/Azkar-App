@@ -1,6 +1,7 @@
 package com.azkar.domain.model
 
 import java.time.Instant
+import java.util.Locale
 
 /**
  * A tag as the management screen needs to see it: the row, plus how many things are hanging off it.
@@ -33,12 +34,23 @@ data class TagSummary(
     val collectionCount: Int,
     val remembranceCount: Int,
     val deletedAt: Instant?,
+    val translations: Map<Locale, String> = emptyMap(),
+    val nameLocale: Locale = Locale.ENGLISH,
 ) {
     init {
         require(name.isNotBlank()) { "A tag summary needs a name" }
         require(collectionCount >= 0) { "A tag cannot be carried by $collectionCount collections" }
         require(remembranceCount >= 0) { "A tag cannot be carried by $remembranceCount remembrances" }
     }
+
+    /**
+     * The name to draw when the interface is in [locale].
+     *
+     * The same resolver a [Tag] uses, for the same reason: this screen and the shelf's chip row draw
+     * the same tags, and one of them answering "morning" while the other answered "أذكار الصباح"
+     * because only this one read the table would be worse than either answer.
+     */
+    fun displayName(locale: Locale): String = translations.displayTagName(locale, name)
 
     /**
      * Whether this tag is out of circulation and can be brought back.

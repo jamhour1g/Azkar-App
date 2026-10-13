@@ -6,6 +6,7 @@ import com.azkar.domain.model.TagSummary
 import com.azkar.domain.model.TagUsage
 import com.azkar.domain.model.impl.TagImpl
 import com.azkar.domain.repo.TagRepository
+import java.util.Locale
 
 /**
  * The application's entry point for everything the UI does with tags.
@@ -16,6 +17,10 @@ import com.azkar.domain.repo.TagRepository
  * operations where the domain has a rule the database merely enforces — `tag.name` is unique, but
  * "somebody else already holds this name" is a statement about the user's edit, and by the time the
  * driver raises it there is nothing left to attach it to.
+ *
+ * "This name" is read wider than `tag.name`. A translated tag is known by two words, and a reader
+ * typing the one on screen has to be stopped for the tag that already answers to it — otherwise the
+ * translation buys nothing but a second tag called the same thing. See [findClash].
  */
 class TagService(
     private val repository: TagRepository,
@@ -44,17 +49,29 @@ class TagService(
      * Renaming a tag onto the name it already has is not a conflict and succeeds: the lookup that
      * detects the clash ignores the tag being renamed, and returning early when the folded names match
      * means an editor the user opened and confirmed without typing is not reported as an error.
+     *
+     * Every translation this rename carries is checked too, against every other tag, for the reason
+     * [findClash] gives. A rename that would make this tag answer to a word another tag already answers
+     * to is refused, so the check has to cover what the tag is being *called* as well as what it is
+     * being stored as.
      */
     suspend fun rename(
         id: Long,
         newName: String,
+        translations: Map<Locale, String>? = null,
+        nameLocale: Locale? = null,
     ): Tag =
         transactions.run {
-            val renamed = TagImpl(id = id, name = newName)
-            val clash = repository.findByNameIgnoreCase(renamed.name)
-            if (clash != null && clash.id != id) {
-                throw TagNameTakenException(renamed.name)
-            }
+            val current = repository.findById(id) ?: throw IllegalStateException("Tag $id does not exist")
+            val wording = translations ?: current.translations
+            val renamed =
+                TagImpl(
+                    id = id,
+                    name = newName,
+                    nameLocale = nameLocale ?: current.nameLocale,
+                    translations = wording,
+                )
+            findClash(renamed, ignoring = id)?.let { throw TagNameTakenException(it) }
             repository.save(renamed)
         }
 
@@ -74,14 +91,48 @@ class TagService(
      * here — a tag with no name is not a tag, and every path that builds one should have to answer for
      * it.
      */
-    suspend fun create(name: String): Tag =
+    suspend fun create(
+        name: String,
+        translations: Map<Locale, String> = emptyMap(),
+        nameLocale: Locale = Locale.ENGLISH,
+    ): Tag =
         transactions.run {
-            val created = TagImpl(name = name)
-            if (repository.findByNameIgnoreCase(created.name) != null) {
-                throw TagNameTakenException(created.name)
-            }
+            val created = TagImpl(name = name, nameLocale = nameLocale, translations = translations)
+            findClash(created, ignoring = null)?.let { throw TagNameTakenException(it) }
             repository.save(created)
         }
+
+    /**
+     * The name that is already taken, or `null` when this tag's is free.
+     *
+     * Checks the stored name and every translation against every other live tag, and answers with the
+     * *word that was taken* rather than with the tag's stored name — so a user who typed "أذكار
+     * الصباح" and was refused is told that name is taken, which is the name they can see on the chip
+     * they are trying to attach it to.
+     *
+     * [ignoring] is the tag being renamed, so that renaming a tag without touching it is not a clash
+     * with itself. Every translation is checked even against that tag, because a tag that translates
+     * to the same word twice is a different problem from one that is merely unchanged.
+     */
+    private suspend fun findClash(
+        candidate: Tag,
+        ignoring: Long?,
+    ): String? {
+        val names =
+            buildList {
+                add(candidate.name)
+                candidate.translations.values.forEach { text ->
+                    if (text.isNotBlank()) add(text.trim())
+                }
+            }
+        for (word in names) {
+            val byName = repository.findByNameIgnoreCase(word)
+            if (byName != null && byName.id != ignoring) return word
+            val byTranslation = repository.findByTranslationIgnoreCase(word)
+            if (byTranslation != null && byTranslation.id != ignoring) return word
+        }
+        return null
+    }
 
     /** Returns the live tag identified by [id], or `null` when [id] is `null`, unknown or deleted. */
     suspend fun findById(id: Long?): Tag? = repository.findById(id)

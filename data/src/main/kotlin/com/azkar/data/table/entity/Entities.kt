@@ -4,12 +4,14 @@ import com.azkar.data.table.CollectionMemberTable
 import com.azkar.data.table.CollectionReminderTable
 import com.azkar.data.table.CollectionTable
 import com.azkar.data.table.CollectionTagTable
+import com.azkar.data.table.CollectionTranslationTable
 import com.azkar.data.table.ExplanationTranslationTable
 import com.azkar.data.table.RecitationProgressTable
 import com.azkar.data.table.RemembranceTable
 import com.azkar.data.table.RemembranceTagTable
 import com.azkar.data.table.RemembranceTranslationTable
 import com.azkar.data.table.TagTable
+import com.azkar.data.table.TagTranslationTable
 import com.azkar.domain.model.CollectionKind
 import com.azkar.domain.model.HadithGrade
 import com.azkar.domain.model.ReminderCadence
@@ -46,6 +48,8 @@ class TagEntity(
 
     var name: String by TagTable.name
 
+    var nameLocaleCode: String by TagTable.nameLocaleCode
+
     var createdAt: OffsetDateTime by TagTable.createdAt
 
     var updatedAt: OffsetDateTime by TagTable.updatedAt
@@ -72,16 +76,17 @@ class RemembranceEntity(
 }
 
 /**
- * What [RemembranceTranslationEntity] and [ExplanationTranslationEntity] have in common.
+ * What [RemembranceTranslationEntity], [ExplanationTranslationEntity] and [TagTranslationEntity]
+ * have in common.
  *
  * Not a superclass, and deliberately so: it cannot be one. `EntityClass<E>` needs `E` to be an
- * `Entity<E>`, and the two classes below are `Entity<RemembranceTranslationEntity>` and
- * `Entity<ExplanationTranslationEntity>` respectively — a shared abstract `LongEntity` base would
- * have to declare itself the entity type, which it is not.
+ * `Entity<E>`, and the classes below are `Entity<RemembranceTranslationEntity>`,
+ * `Entity<ExplanationTranslationEntity>` and `Entity<TagTranslationEntity>` respectively — a shared
+ * abstract `LongEntity` base would have to declare itself the entity type, which it is not.
  *
  * An interface is the one shape that works, and it is enough: the loader and the writer need to
- * read a text's locale, body and parent and to reconcile those without caring which of the two
- * tables a row is in.
+ * read a text's locale, body and parent and to reconcile those without caring which of the tables
+ * a row is in.
  */
 internal interface LocalizedText {
     /**
@@ -90,11 +95,19 @@ internal interface LocalizedText {
      * Spelled out rather than inherited: `Entity<ID>` already declares `id`, and a second
      * declaration of the same name in an interface the class also implements would be an accidental
      * override of a member the class gets from its superclass. Renaming it costs one line per entity
-     * and keeps the mapper generic over both tables.
+     * and keeps the mapper generic over every table.
      */
     val rowId: Long
 
-    var remembranceId: Long
+    /**
+     * The row this text belongs to.
+     *
+     * Named for the role rather than for the table it points at, because the same declaration now
+     * covers three tables pointing at three different parents — and a writer handed this interface
+     * has to be able to ask "which row of mine is this" without knowing which table it was reading.
+     * Each entity answers it with its own table's column, which is what `by` does here.
+     */
+    var ownerId: Long
 
     var localeCode: String
 
@@ -114,7 +127,7 @@ class RemembranceTranslationEntity(
 
     override val rowId: Long get() = id.value
 
-    override var remembranceId: Long by RemembranceTranslationTable.remembranceId
+    override var ownerId: Long by RemembranceTranslationTable.ownerId
 
     override var localeCode: String by RemembranceTranslationTable.localeCode
 
@@ -134,7 +147,7 @@ class ExplanationTranslationEntity(
 
     override val rowId: Long get() = id.value
 
-    override var remembranceId: Long by ExplanationTranslationTable.remembranceId
+    override var ownerId: Long by ExplanationTranslationTable.ownerId
 
     override var localeCode: String by ExplanationTranslationTable.localeCode
 
@@ -143,6 +156,32 @@ class ExplanationTranslationEntity(
     override var createdAt: OffsetDateTime by ExplanationTranslationTable.createdAt
 
     override var updatedAt: OffsetDateTime by ExplanationTranslationTable.updatedAt
+}
+
+/**
+ * A label's wording in one locale. Structurally identical to the above, against a different parent.
+ *
+ * Separate rather than a generic entity over all three tables, because an entity class is bound to
+ * one table's columns and one `EntityClass`, and a union of three would need every read to cast
+ * from `LocalizedText` back to whichever table produced it.
+ */
+class TagTranslationEntity(
+    id: EntityID<Long>,
+) : LongEntity(id),
+    LocalizedText {
+    companion object : LongEntityClass<TagTranslationEntity>(TagTranslationTable)
+
+    override val rowId: Long get() = id.value
+
+    override var ownerId: Long by TagTranslationTable.ownerId
+
+    override var localeCode: String by TagTranslationTable.localeCode
+
+    override var text: String by TagTranslationTable.text
+
+    override var createdAt: OffsetDateTime by TagTranslationTable.createdAt
+
+    override var updatedAt: OffsetDateTime by TagTranslationTable.updatedAt
 }
 
 /** One row of the remembrances-to-tags link. The pair *is* the identity. */
@@ -172,6 +211,8 @@ class CollectionEntity(
 
     var name: String by CollectionTable.name
 
+    var nameLocaleCode: String by CollectionTable.nameLocaleCode
+
     var description: String? by CollectionTable.description
 
     var kind: CollectionKind by CollectionTable.kind
@@ -191,6 +232,32 @@ class CollectionEntity(
     var createdAt: OffsetDateTime by CollectionTable.createdAt
 
     var updatedAt: OffsetDateTime by CollectionTable.updatedAt
+}
+
+/**
+ * A shelf's name and description in one locale.
+ *
+ * Not a [LocalizedText] even though it is the same idea against a different parent: that interface
+ * promises a single `text`, and this row carries two pieces of prose. A shelf card draws both at
+ * once, so a name with no description beside it is a row that reads half-translated — which is an
+ * ordinary state here, and one the reader handles rather than the writer.
+ */
+class CollectionTranslationEntity(
+    id: EntityID<Long>,
+) : LongEntity(id) {
+    companion object : LongEntityClass<CollectionTranslationEntity>(CollectionTranslationTable)
+
+    var collectionId: Long by CollectionTranslationTable.collectionId
+
+    var localeCode: String by CollectionTranslationTable.localeCode
+
+    var name: String by CollectionTranslationTable.name
+
+    var description: String? by CollectionTranslationTable.description
+
+    var createdAt: OffsetDateTime by CollectionTranslationTable.createdAt
+
+    var updatedAt: OffsetDateTime by CollectionTranslationTable.updatedAt
 }
 
 /** One member of one collection, at one position in its display order. */

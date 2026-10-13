@@ -218,6 +218,7 @@ private fun LabelChips(
     modifier: Modifier = Modifier,
 ) {
     val labels = state.shelfLabels
+    val locale = AzkarTheme.locale
     val scroll = rememberScrollState()
     val scope = rememberCoroutineScope()
     // `maxValue` is only known after the row has been measured once, which is why the chevrons are
@@ -260,11 +261,13 @@ private fun LabelChips(
             labels.forEach { label ->
                 val id = label.id
                 AzkarFilterChip(
-                    text = label.name,
+                    text = label.displayName(locale),
                     selected = state.labelFilter != null && state.labelFilter == id,
                     onClick = {
                         state.labelFilter = if (state.labelFilter == id) null else id
                     },
+                    // The mark is read from the stored name, not from the one the chip shows: the chip
+                    // says a label in the reader's language, the mark says which label it is.
                     leadingIcon = iconForCollection(CollectionPresenter.iconKeyFor(label.name)),
                 )
             }

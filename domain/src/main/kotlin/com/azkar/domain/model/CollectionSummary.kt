@@ -1,6 +1,7 @@
 package com.azkar.domain.model
 
 import java.time.Instant
+import java.util.Locale
 
 /**
  * A collection as a list of them needs it: what to write on the card, and how big it is.
@@ -22,6 +23,13 @@ import java.time.Instant
  * [coverImagePath] is carried so a rail card can paint the same picture the shelf card does.
  * Resolving it means reading and decoding a file, which is exactly the cost this type exists to
  * avoid — so it is read here and decoded only by the cards that actually draw it.
+ *
+ * [translations] rides along for the same reason [name] does: a rail card draws a collection's name
+ * just as the shelf card does, and reading it from the row it is reading would mean the one card
+ * type this projection exists to keep cheap is the one that has to load the library. It is the second
+ * statement this projection costs, and it is worth stating that it costs one — the obvious design,
+ * joining the translations onto the parent query, would put the translation rows back into every rail
+ * read regardless of how few collections were asked for.
  */
 data class CollectionSummary(
     val id: Long,
@@ -31,9 +39,24 @@ data class CollectionSummary(
     val coverImagePath: String?,
     val memberCount: Int,
     val homePinnedAt: Instant?,
+    val translations: Map<Locale, LocalizedPair> = emptyMap(),
+    val nameLocale: Locale = Locale.ENGLISH,
 ) {
     init {
         require(id > 0L) { "A summary must belong to a real collection" }
         require(memberCount >= 0) { "Member count cannot be negative, was $memberCount" }
     }
+
+    /** The name to draw when the interface is in [locale]. See [RemembranceCollection.displayName]. */
+    fun displayName(locale: Locale): String = translations.displayName(locale, name)
+
+    /**
+     * The prose to draw when the interface is in [locale], or `null` when this language has none.
+     *
+     * Null rather than the canonical prose, and the same rule as
+     * [RemembranceCollection.displayDescription]: a translated name above untranslated prose reads
+     * as one unedited mistake, while an absent line reads as the line not having been written yet.
+     */
+    fun displayDescription(locale: Locale): String? =
+        translations.displayDescription(locale, description.ifBlank { null })
 }

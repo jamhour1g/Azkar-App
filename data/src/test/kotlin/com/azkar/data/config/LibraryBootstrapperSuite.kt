@@ -14,6 +14,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.nio.file.Files
+import java.util.Locale
 
 /**
  * The bootstrap is the installation's one-shot, and these tests keep it honest: a fresh home gets
@@ -76,6 +77,32 @@ val LibraryBootstrapperSuite by testSuite("Library bootstrapper") {
             assertThat(row[CollectionTable.name]).isEqualTo("Favorites")
             assertThat(row[CollectionTable.kind].name).isEqualTo("CUSTOM")
         }
+    }
+
+    test("the favourites shelf is created in every shipped language, not just English") {
+        val database = TestDatabase.bootstrapWithH2()
+        val seedState = InMemorySeedState()
+        val transactions = ExposedTransactionRunner(database)
+        val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
+
+        LibraryBootstrapper(
+            transactions = transactions,
+            seedState = seedState,
+            collectionService = CollectionService(collections, transactions),
+            collections = collections,
+            covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
+        ).bootstrap()
+
+        // The shelf is not part of the shipped dataset — it holds whatever this machine's user has
+        // starred — but nobody typed its name either, so it is shipped content and ships in both
+        // languages. Without this the home rail shows one English word in an Arabic app.
+        val shelf =
+            requireNotNull(collections.findById(requireNotNull(seedState.favoritesCollectionId()))) {
+                "The bootstrapper did not create the favourites shelf"
+            }
+        assertThat(shelf.displayName(Locale.forLanguageTag("ar"))).isEqualTo("المفضّلة")
+        assertThat(shelf.displayDescription(Locale.forLanguageTag("ar")))
+            .isEqualTo("الأذكار التي حفظتها بنجمة")
     }
 
     test("a second run does not rewrite the dataset") {

@@ -284,6 +284,10 @@ private fun CountBadge(
  *
  * The count beside the name because it is what tells the two apart at a glance — two collections
  * named the same way are rare, and where they happen the number is the difference.
+ *
+ * The name is the one this reader can read rather than the one the database stores: a collection
+ * that has been given an Arabic name says it in Arabic here, because a list the reader is about to
+ * agree to a deletion on is not the place to make them read someone else's label.
  */
 @Composable
 private fun CollectionUsageRow(
@@ -292,6 +296,7 @@ private fun CollectionUsageRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = AzkarTheme.colors
+    val locale = AzkarTheme.locale
     Row(
         modifier =
             modifier
@@ -308,7 +313,7 @@ private fun CollectionUsageRow(
         )
         Spacer(Modifier.width(ROW_GAP))
         Text(
-            text = summary.name,
+            text = summary.displayName(locale),
             color = colors.textPrimary,
             fontSize = PANEL_BODY_SP,
             maxLines = 1,

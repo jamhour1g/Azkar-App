@@ -1,5 +1,7 @@
 package com.azkar.data.seed
 
+import com.azkar.domain.model.LocalizedPair
+
 /**
  * The collections the application ships, and the tag whose remembrances each one is seeded with.
  *
@@ -16,8 +18,17 @@ package com.azkar.data.seed
  *
  * Nothing here is editable by the user at runtime and nothing here runs twice. [CollectionSeed] is a
  * one-shot bootstrap, not a migration step; see [LibraryBootstrapper].
+ *
+ * The wording in other languages lives here rather than in the compose resources because these are
+ * rows in a database that a reader has to be able to see in their own language, not text a
+ * composition resolves: a shelf card holding `أذكار الصباح` is reading a stored row, not drawing a
+ * localised string.
  */
 internal object OfficialCollectionCatalogue {
+    /** BCP-47 tags, spelled here rather than derived so this file and the tag vocabulary cannot disagree. */
+    private const val ENGLISH = "en"
+    private const val ARABIC = "ar"
+
     data class Entry(
         /**
          * The tag this collection is seeded from, or `null` when it is not seeded from a tag.
@@ -29,6 +40,25 @@ internal object OfficialCollectionCatalogue {
         val name: String,
         val description: String,
         val iconKey: String,
+        /**
+         * The same shelf under other names, keyed by BCP-47 language tag.
+         *
+         * `name` above is the *canonical* spelling: it is what the row stores, what a rename
+         * collides with, and what the collection is still called when no translation matches. That
+         * makes it a key rather than a fallback nobody reaches for — the last thing to do would be to
+         * ship the Arabic as the fallback and quietly change what a user's own English-typed
+         * collection is called.
+         *
+         * The description is carried here beside its name rather than looked up separately because a
+         * shelf's card draws both together. A translation with a name and no description is allowed
+         * (see [com.azkar.domain.model.LocalizedPair]) but it is a half-translated card, and the
+         * reader is in a better position to judge that than a rule would be.
+         *
+         * Both languages are written out rather than generated, because this file is the reviewable
+         * one. A reader who wants to check what a shelf is called in Arabic should be able to open a
+         * single file and find it, rather than follow a key into another.
+         */
+        val translations: Map<String, LocalizedPair>,
     )
 
     /**
@@ -38,18 +68,139 @@ internal object OfficialCollectionCatalogue {
      */
     val entries: List<Entry> =
         listOf(
-            Entry("Morning", "Morning Azkar", "Remembrance for the start of the day", "sunrise"),
-            Entry("Evening", "Evening Azkar", "Remembrance for the end of the day", "sunset"),
-            Entry("Morning & Evening", "Morning & Evening", "Remembrance recited at both ends of the day", "sun"),
-            Entry("Prayer", "After Prayer", "Remembrance said once the prayer is finished", "mosque"),
-            Entry("Travel", "Travel", "Remembrance for setting out and arriving", "compass"),
-            Entry("Home & Family", "Home & Family", "Remembrance for the home and those in it", "home"),
-            Entry("Food & Drink", "Food & Drink", "Remembrance before and after eating", "khatim"),
-            Entry("Nature", "Nature", "Remembrance for rain, wind, sun and sky", "nature"),
-            Entry("Good Etiquette", "Good Etiquette", "Remembrance for how to treat people", "people"),
-            Entry("Praising Allah", "Praising Allah", "Remembrance that glorifies the Creator", "star"),
-            Entry("Joy & Distress", "Joy & Distress", "Remembrance for times of ease and hardship", "heart"),
-            Entry("Sickness & Death", "Sickness & Death", "Remembrance for illness, recovery and loss", "heart"),
-            Entry("Hajj & Umrah", "Hajj & Umrah", "Remembrance for the pilgrimage", "khatim"),
+            entry(
+                tagName = "Morning",
+                name = "Morning Azkar",
+                description = "Remembrance for the start of the day",
+                iconKey = "sunrise",
+                arabicName = "أذكار الصباح",
+                arabicDescription = "أذكار لبداية اليوم",
+            ),
+            entry(
+                tagName = "Evening",
+                name = "Evening Azkar",
+                description = "Remembrance for the end of the day",
+                iconKey = "sunset",
+                arabicName = "أذكار المساء",
+                arabicDescription = "أذكار لنهاية اليوم",
+            ),
+            entry(
+                tagName = "Morning & Evening",
+                name = "Morning & Evening",
+                description = "Remembrance recited at both ends of the day",
+                iconKey = "sun",
+                arabicName = "أذكار الصباح والمساء",
+                arabicDescription = "أذكار تُقال في أول اليوم وآخره",
+            ),
+            entry(
+                tagName = "Prayer",
+                name = "After Prayer",
+                description = "Remembrance said once the prayer is finished",
+                iconKey = "mosque",
+                arabicName = "أذكار بعد الصلاة",
+                arabicDescription = "أذكار تُقال بعد انتهاء الصلاة",
+            ),
+            entry(
+                tagName = "Travel",
+                name = "Travel",
+                description = "Remembrance for setting out and arriving",
+                iconKey = "compass",
+                arabicName = "أذكار السفر",
+                arabicDescription = "أذكار عند الخروج والوصول",
+            ),
+            entry(
+                tagName = "Home & Family",
+                name = "Home & Family",
+                description = "Remembrance for the home and those in it",
+                iconKey = "home",
+                arabicName = "البيت والأسرة",
+                arabicDescription = "أذكار البيت وأهله",
+            ),
+            entry(
+                tagName = "Food & Drink",
+                name = "Food & Drink",
+                description = "Remembrance before and after eating",
+                iconKey = "khatim",
+                arabicName = "الطعام والشراب",
+                arabicDescription = "أذكار قبل الطعام وبعده",
+            ),
+            entry(
+                tagName = "Nature",
+                name = "Nature",
+                description = "Remembrance for rain, wind, sun and sky",
+                iconKey = "nature",
+                arabicName = "الطبيعة",
+                arabicDescription = "أذكار المطر والرياح والشمس والسماء",
+            ),
+            entry(
+                tagName = "Good Etiquette",
+                name = "Good Etiquette",
+                description = "Remembrance for how to treat people",
+                iconKey = "people",
+                arabicName = "حسن الأدب",
+                arabicDescription = "أذكار في معاملة الناس",
+            ),
+            entry(
+                tagName = "Praising Allah",
+                name = "Praising Allah",
+                description = "Remembrance that glorifies the Creator",
+                iconKey = "star",
+                arabicName = "الثناء على الله",
+                arabicDescription = "أذكار في الثناء على الخالق",
+            ),
+            entry(
+                tagName = "Joy & Distress",
+                name = "Joy & Distress",
+                description = "Remembrance for times of ease and hardship",
+                iconKey = "heart",
+                arabicName = "الفرح والهمّ",
+                arabicDescription = "أذكار في وقت الفرج والهم",
+            ),
+            entry(
+                tagName = "Sickness & Death",
+                name = "Sickness & Death",
+                description = "Remembrance for illness, recovery and loss",
+                iconKey = "heart",
+                arabicName = "المرض والموت",
+                arabicDescription = "أذكار المرض والشفاء والفقد",
+            ),
+            entry(
+                tagName = "Hajj & Umrah",
+                name = "Hajj & Umrah",
+                description = "Remembrance for the pilgrimage",
+                iconKey = "khatim",
+                arabicName = "الحجّ والعمرة",
+                arabicDescription = "أذكار الحج والعمرة",
+            ),
+        )
+
+    /**
+     * Builds an entry whose canonical spelling is English, with English registered as a translation too.
+     *
+     * The English translation row is written on purpose rather than left implicit. Two reasons, and
+     * the second is the one that decides it: the row is what makes a collection added by an *import*
+     * and a collection this catalogue seeded resolve identically — a reader asking "which rows carry
+     * English?" should not get two different answers depending on where a shelf came from — and it is
+     * what lets a later release translate the canonical name into a language the seed originally
+     * shipped in without that being a schema change.
+     */
+    private fun entry(
+        tagName: String?,
+        name: String,
+        description: String,
+        iconKey: String,
+        arabicName: String,
+        arabicDescription: String,
+    ): Entry =
+        Entry(
+            tagName = tagName,
+            name = name,
+            description = description,
+            iconKey = iconKey,
+            translations =
+                mapOf(
+                    ENGLISH to LocalizedPair(name = name, description = description),
+                    ARABIC to LocalizedPair(name = arabicName, description = arabicDescription),
+                ),
         )
 }

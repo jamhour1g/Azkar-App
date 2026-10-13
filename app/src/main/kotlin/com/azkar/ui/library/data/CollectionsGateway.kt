@@ -4,6 +4,7 @@ import com.azkar.data.config.LibraryBootstrapper
 import com.azkar.data.storage.CoverStorage
 import com.azkar.domain.model.CollectionReminder
 import com.azkar.domain.model.CollectionSummary
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.RecitationSummary
 import com.azkar.domain.model.Remembrance
@@ -400,6 +401,8 @@ interface CollectionsGateway :
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair> = emptyMap(),
+        nameLocale: Locale = Locale.ENGLISH,
     ): RemembranceCollection
 
     /**
@@ -416,6 +419,9 @@ interface CollectionsGateway :
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>? = null,
+        nameLocale: Locale? = null,
+        tagLocale: Locale? = null,
     ): RemembranceCollection
 
     /**
@@ -450,6 +456,7 @@ interface CollectionsGateway :
     suspend fun duplicateCollection(
         id: Long,
         newName: String,
+        nameLocale: Locale = Locale.ENGLISH,
     ): RemembranceCollection
 
     /** Deletes a collection, and the cover image it owned if it had one. */
@@ -587,12 +594,16 @@ class DomainCollectionsGateway(
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>,
+        nameLocale: Locale,
     ): RemembranceCollection =
         collectionService.create(
             name = name,
             description = description,
             coverImagePath = coverImagePath,
-            tags = tagNames.toTags(),
+            translations = translations,
+            nameLocale = nameLocale,
+            tags = tagNames.toTags(nameLocale),
         )
 
     override suspend fun editCollection(
@@ -601,10 +612,22 @@ class DomainCollectionsGateway(
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>?,
+        nameLocale: Locale?,
+        tagLocale: Locale?,
     ): RemembranceCollection {
         val previousCover = collectionService.findById(id)?.coverImagePath
-        collectionService.rename(id, name = name, description = description)
-        collectionService.setTags(id, tagNames.toTags())
+        collectionService.rename(
+            id,
+            name = name,
+            description = description,
+            translations = translations,
+            nameLocale = nameLocale,
+        )
+        collectionService.setTags(
+            id,
+            tagNames.toTags(tagLocale ?: nameLocale ?: Locale.ENGLISH),
+        )
         collectionService.setCoverImage(id, coverImagePath)
         releaseReplacedCover(previousCover, coverImagePath)
         return collectionService.findById(id)
@@ -636,7 +659,8 @@ class DomainCollectionsGateway(
     override suspend fun duplicateCollection(
         id: Long,
         newName: String,
-    ): RemembranceCollection = collectionService.duplicate(id, newName = newName)
+        nameLocale: Locale,
+    ): RemembranceCollection = collectionService.duplicate(id, newName = newName, nameLocale = nameLocale)
 
     /**
      * Deletes a collection and the cover image it owned.
@@ -722,11 +746,18 @@ class DomainCollectionsGateway(
                             description = step.transfer.description,
                             iconKey = step.transfer.iconKey,
                             coverImagePath = step.transfer.restoreCoverInto(covers),
-                            tags = step.transfer.tagNames.toTags(),
+                            tags = step.transfer.tagNames.toTags(step.transfer.nameLanguage()),
+                            translations = step.transfer.pairs(),
+                            nameLocale = step.transfer.nameLanguage(),
                         )
                     membersAdded += collection.id?.let { collectionService.addMembers(it, step.memberIds) } ?: 0
                 }
-                is ImportPlan.Merge -> membersAdded += collectionService.addMembers(step.collectionId, step.memberIds)
+                is ImportPlan.Merge -> {
+                    // Fill-only, for the reason `applyTranslations` gives: the local shelf is the user's
+                    // and a shared document matched on name alone has no standing to retranslate it.
+                    collectionService.applyTranslations(step.collectionId, step.translations)
+                    membersAdded += collectionService.addMembers(step.collectionId, step.memberIds)
+                }
                 is ImportPlan.SkipOfficial -> Unit
             }
         }
@@ -920,8 +951,8 @@ class DomainReminderGateway(
  * Blank entries are dropped here rather than left for the tag repository, which would fail on them:
  * an empty chip in the editor is an absent chip, and the user did not type one.
  */
-private fun Collection<String>.toTags(): Set<Tag> =
-    map { TagImpl(name = it) }
+private fun Collection<String>.toTags(nameLocale: Locale): Set<Tag> =
+    map { TagImpl(name = it, nameLocale = nameLocale) }
         .filter { it.name.isNotBlank() }
         .toSet()
 

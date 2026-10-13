@@ -56,13 +56,17 @@ object TestDatabase {
         listOf(
             // Progress points at both a collection and a remembrance, so it has to go before either,
             // and so does a reminder, which points only at the collection. A membership row likewise
-            // points at a remembrance, so the parent cannot be deleted out from under it.
+            // points at a remembrance, so the parent cannot be deleted out from under it. A translation
+            // points at the thing it names for the same reason: listing the parent without its
+            // translations would leave a foreign key pointing at nothing and fail the whole reset.
             "recitation_progress",
             "collection_reminder",
             "collection_remembrance",
             "collection_tag",
+            "collection_translation",
             "collection",
             "remembrance_tag",
+            "tag_translation",
             "tag",
             "explanation_translation",
             "remembrance_translation",
@@ -70,5 +74,13 @@ object TestDatabase {
         )
 
     private val IDENTITY_COLUMNS =
-        listOf("tag", "explanation_translation", "remembrance_translation", "remembrance", "collection")
+        listOf(
+            "tag",
+            "tag_translation",
+            "explanation_translation",
+            "remembrance_translation",
+            "remembrance",
+            "collection",
+            "collection_translation",
+        )
 }

@@ -10,6 +10,7 @@ import com.azkar.domain.model.Tag
 import com.azkar.domain.model.TagSummary
 import com.azkar.domain.model.impl.TagImpl
 import java.time.DayOfWeek
+import java.util.Locale
 
 // Entity -> domain. Three extensions, one per entity whose fields are the whole of a domain value.
 //
@@ -23,7 +24,18 @@ import java.time.DayOfWeek
 
 // `tag` — one label. Stored folded, and it comes back out folded, which is the invariant the unique
 // index on `tag.name` rests on (see `TagTable.name`).
-internal fun TagEntity.toTag(): Tag = TagImpl(id = id.value, name = name, createdAt = createdAt.toInstant())
+//
+// The translations ride in as an argument for the same reason the counts do below: they are a second
+// table, and a mapper that went back for them itself would be issuing a statement per row of whatever
+// list it is mapping.
+internal fun TagEntity.toTag(translations: Map<Locale, String> = emptyMap()): Tag =
+    TagImpl(
+        id = id.value,
+        name = name,
+        nameLocale = Locale.forLanguageTag(nameLocaleCode),
+        createdAt = createdAt.toInstant(),
+        translations = translations,
+    )
 
 /**
  * `tag` — one label, with what is hanging off it.
@@ -35,19 +47,23 @@ internal fun TagEntity.toTag(): Tag = TagImpl(id = id.value, name = name, create
  *
  * The counts are arguments rather than another query here, because they come from the join tables and
  * a mapper that went back for them would be issuing a statement per row of the list it is mapping.
+ * The translations are arguments for the same reason, one table over.
  */
 internal fun TagEntity.toSummary(
     collectionCount: Int,
     remembranceCount: Int,
+    translations: Map<Locale, String> = emptyMap(),
 ): TagSummary =
     TagSummary(
         id = id.value,
         name = name,
+        nameLocale = Locale.forLanguageTag(nameLocaleCode),
         createdAt = createdAt.toInstant(),
         updatedAt = updatedAt.toInstant(),
         collectionCount = collectionCount,
         remembranceCount = remembranceCount,
         deletedAt = deletedAt?.toInstant(),
+        translations = translations,
     )
 
 /**

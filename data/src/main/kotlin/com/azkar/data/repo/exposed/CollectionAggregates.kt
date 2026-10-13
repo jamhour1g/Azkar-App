@@ -11,6 +11,7 @@ import com.azkar.data.table.entity.CollectionEntity
 import com.azkar.data.table.entity.RemembranceEntity
 import com.azkar.data.table.entity.TagEntity
 import com.azkar.domain.model.CollectionSummary
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
@@ -20,6 +21,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import java.util.Locale
 
 /**
  * Turns a page of collection rows into the two shapes a shelf actually draws: whole aggregates, or
@@ -53,10 +55,12 @@ internal object CollectionAggregates {
         if (this.isEmpty()) {
             return emptyList()
         }
-        val rows = this.map { it.toCollectionRow() }
+        val ids = this.map { it.id.value }
+        val translations = translationsByCollection(ids)
+        val rows = this.map { it.toCollectionRow(translations = translations[it.id.value].orEmpty()) }
         val memberIds = rows.membersByCollection()
         val aggregates = loadAggregates(memberIds.values.flatten().distinct())
-        val tags = tagsByCollection(this.map { it.id.value })
+        val tags = tagsByCollection(ids)
 
         return rows.map { parent ->
             parent.toCollection(
@@ -82,13 +86,20 @@ internal object CollectionAggregates {
      * "12 passages" above a shelf holding eleven is the kind of bug that survives a long time because
      * it looks like nothing at all. Sharing the one function makes that impossible, and the ids cost
      * nothing next to the aggregates they stand in for.
+     *
+     * The wording is the one thing this read had no cheap answer for, and it now pays for a second
+     * statement to get it. That is the price of a shelf that can be read in two languages: a name in
+     * the wrong one is not a degraded name, it is the wrong label for the shelf, and the alternative
+     * — resolving it per card at the point of drawing — would put a query in a composable.
      */
     fun Iterable<CollectionEntity>.summaries(): List<CollectionSummary> {
         val rows = this.toList()
         if (rows.isEmpty()) {
             return emptyList()
         }
-        val collectionRows = rows.map { it.toCollectionRow() }
+        val ids = rows.map { it.id.value }
+        val translations = translationsByCollection(ids)
+        val collectionRows = rows.map { it.toCollectionRow(translations = translations[it.id.value].orEmpty()) }
         val counts = collectionRows.membersByCollection().mapValues { (_, memberIds) -> memberIds.size }
 
         return collectionRows
@@ -136,16 +147,31 @@ internal object CollectionAggregates {
         if (ids.isEmpty()) {
             return emptyMap()
         }
-        return CollectionTagTable
-            .innerJoin(TagTable)
-            .select(CollectionTagTable.collectionId, TagTable.id, TagTable.name, TagTable.createdAt)
-            .where { (CollectionTagTable.collectionId inList ids) and (TagTable.deletedAt eq null) }
-            .orderBy(TagTable.id to SortOrder.ASC)
-            .groupBy(
-                { it[CollectionTagTable.collectionId].value },
-                { TagEntity.wrapRow(it).toTag() },
-            )
+        // The join is asked first and its rows carry the tag ids, so the one statement that fetches the
+        // labels is also what says which labels to fetch wording for. Asking the link table separately
+        // would read the same rows twice to save a list comprehension.
+        val joined =
+            CollectionTagTable
+                .innerJoin(TagTable)
+                .select(CollectionTagTable.collectionId, TagTable.id, TagTable.name, TagTable.createdAt)
+                .where { (CollectionTagTable.collectionId inList ids) and (TagTable.deletedAt eq null) }
+                .orderBy(TagTable.id to SortOrder.ASC)
+                .map { it to TagEntity.wrapRow(it) }
+        val translations = LibraryTranslations.tagTranslations(joined.map { it.second.id.value }.distinct())
+        return joined.groupBy({ it.first[CollectionTagTable.collectionId].value }) { (_, tag) ->
+            tag.toTag(translations[tag.id.value].orEmpty())
+        }
     }
+
+    /**
+     * The stored wording of the collections among [ids].
+     *
+     * A private alias rather than the call spelled out twice, so the shape of "one statement for the
+     * whole page" has one name here and a reader does not have to check whether the two entry points
+     * are reading the same thing.
+     */
+    private fun translationsByCollection(ids: List<Long>): Map<Long, Map<Locale, LocalizedPair>> =
+        LibraryTranslations.collectionTranslations(ids)
 
     /** The whole aggregate for each of [ids], indexed by id for order-preserving reads. */
     private fun loadAggregates(ids: List<Long>): Map<Long, Remembrance> {
@@ -160,10 +186,11 @@ internal object CollectionAggregates {
             .toMap()
     }
 
-    private fun CollectionEntity.toCollectionRow() =
+    private fun CollectionEntity.toCollectionRow(translations: Map<Locale, LocalizedPair>) =
         CollectionRow(
             id = id.value,
             name = name,
+            nameLocale = Locale.forLanguageTag(nameLocaleCode),
             description = description,
             kind = kind,
             iconKey = iconKey,
@@ -174,17 +201,20 @@ internal object CollectionAggregates {
             lastOpenedAt = lastOpenedAt?.toInstant(),
             homePinnedAt = homePinnedAt?.toInstant(),
             isFavorite = isFavorite,
+            translations = translations,
         )
 
     private fun CollectionRow.toSummary(memberCount: Int) =
         CollectionSummary(
             id = id,
             name = name,
+            nameLocale = nameLocale,
             description = description.orEmpty(),
             iconKey = iconKey.orEmpty(),
             coverImagePath = coverImagePath,
             memberCount = memberCount,
             homePinnedAt = homePinnedAt,
+            translations = translations,
         )
 }
 

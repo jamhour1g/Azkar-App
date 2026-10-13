@@ -52,11 +52,13 @@ import org.jetbrains.exposed.v1.javatime.timestampWithTimeZone
 val ALL_TABLES: Set<Table> =
     setOf(
         TagTable,
+        TagTranslationTable,
         RemembranceTable,
         RemembranceTranslationTable,
         ExplanationTranslationTable,
         RemembranceTagTable,
         CollectionTable,
+        CollectionTranslationTable,
         CollectionMemberTable,
         CollectionTagTable,
         RecitationProgressTable,
@@ -123,6 +125,9 @@ object TagTable : TimestampedIdTable("tag") {
      */
     val name = varchar("name", MAX_NAME_LENGTH)
 
+    /** BCP-47 language tag for the canonical label; direction and script do not identify a language. */
+    val nameLocaleCode = varchar("name_locale_code", 64).default("en")
+
     /**
      * When this tag was taken out of circulation, or `null` while it is still in use.
      *
@@ -180,10 +185,11 @@ object RemembranceTable : TimestampedIdTable("remembrance") {
 }
 
 // `remembrance_translation` and `explanation_translation` — a remembrance's own words, and the
-// commentary on them, each rendered in one locale.
+// commentary on them, each rendered in one locale. `tag_translation` — a label's own wording, in
+// one locale — is the same shape against a different parent.
 //
-// The two hold the same thing about the same parent and differ only in what the text is for, so
-// they are one table twice. Everything below is therefore declared once, against
+// All three hold the same thing about the same kind of parent and differ only in what they hang
+// off, so they are one table three times. Everything below is therefore declared once, against
 // [LocalizedTextTable], which also gives the loader and the writer a single type to be handed
 // instead of a handwritten view over five columns.
 //
@@ -196,21 +202,36 @@ open class LocalizedTextTable(
     // `uq_rt__…` and `uq_et__…` the names they have always been, which is what an existing
     // database and its tests already refer to.
     indexPrefix: String,
+    // The foreign key column and the table it points at, supplied together because the two cannot
+    // come apart: a column named after one parent and constrained to another is a table that lies.
+    //
+    // Named rather than inferred so that `remembrance_id` stays spelled the way every installed
+    // database already spells it. Deriving the column name from the owner table would work for the
+    // two tables that exist today and quietly produce a rename for the third, and the migration
+    // utility only ever emits CREATE — a renamed column would be an ADD on a table that already has
+    // the old one, so the constraint would land twice rather than move.
+    ownerColumnName: String,
+    owner: IdTable<Long>,
 ) : TimestampedIdTable(name) {
     override val id = long("id").autoIncrement().entityId()
 
     override val primaryKey = PrimaryKey(id)
 
-    val remembranceId =
-        long("remembrance_id")
-            .references(RemembranceTable.id, onDelete = ReferenceOption.CASCADE)
+    // The stem the three index names are built from, taken off the column name rather than being
+    // passed again: `remembrance_id` yields `remembrance`, which is what `uq_rt__remembrance_locale`
+    // and `idx_rt__by_remembrance` have always been called.
+    private val ownerStem = ownerColumnName.removeSuffix("_id")
+
+    val ownerId =
+        long(ownerColumnName)
+            .references(owner.id, onDelete = ReferenceOption.CASCADE)
     val localeCode = varchar("locale_code", MAX_LOCALE_LENGTH)
     val text = varchar("text", MAX_TEXT_LENGTH)
 
     init {
         // One text per locale, and the lookups that read them back are all by one of the two.
-        uniqueIndex("uq_${indexPrefix}__remembrance_locale", remembranceId, localeCode)
-        index("idx_${indexPrefix}__by_remembrance", isUnique = false, remembranceId)
+        uniqueIndex("uq_${indexPrefix}__${ownerStem}_locale", ownerId, localeCode)
+        index("idx_${indexPrefix}__by_$ownerStem", isUnique = false, ownerId)
         index("idx_${indexPrefix}__by_locale", isUnique = false, localeCode)
 
         check("ck_${indexPrefix}__text_not_blank") { text.charLength() greater 0 }
@@ -218,10 +239,24 @@ open class LocalizedTextTable(
 }
 
 @Suppress("ExposedReference")
-object RemembranceTranslationTable : LocalizedTextTable("remembrance_translation", "rt")
+object
+RemembranceTranslationTable :
+    LocalizedTextTable("remembrance_translation", "rt", "remembrance_id", RemembranceTable)
 
 @Suppress("ExposedReference")
-object ExplanationTranslationTable : LocalizedTextTable("explanation_translation", "et")
+object
+ExplanationTranslationTable :
+    LocalizedTextTable("explanation_translation", "et", "remembrance_id", RemembranceTable)
+
+// `tag_translation` — a label's wording in one locale.
+//
+// Same shape as a remembrance's translations and for the same reason: the shipped tags are named in
+// English because that is what the dataset ships, and a name that cannot be rendered in the
+// language the app is in looks unfinished everywhere it appears. The folded `tag.name` stays the
+// canonical value — the unique index is built on it and the avatar colour is hashed from it — so
+// this table is a display layer over it rather than a replacement for it.
+@Suppress("ExposedReference")
+object TagTranslationTable : LocalizedTextTable("tag_translation", "tt", "tag_id", TagTable)
 
 // `remembrance_tag` — composite-key join table between remembrances and tags.
 object RemembranceTagTable : TimestampedCompositeIdTable("remembrance_tag") {
@@ -275,6 +310,9 @@ object CollectionTable : TimestampedIdTable("collection") {
 
     val name = varchar("name", MAX_NAME_LENGTH)
 
+    /** BCP-47 language tag for the canonical name, stored separately from its text. */
+    val nameLocaleCode = varchar("name_locale_code", 64).default("en")
+
     val description = varchar("description", MAX_TEXT_LENGTH).nullable()
 
     val kind = enumerationByName<CollectionKind>("kind", MAX_ENUM_LENGTH)
@@ -312,6 +350,41 @@ object CollectionTable : TimestampedIdTable("collection") {
         // The hub's default sort is "recently updated", and a user's own shelves are the rows
         // that move; either way the scan starts here.
         index("idx_collection__by_kind", isUnique = false, kind)
+    }
+}
+
+// `collection_translation` — a shelf's name and description in one locale.
+//
+// Not a [LocalizedTextTable] because a collection has two pieces of prose rather than one, and two
+// tables joined only by locale would make every read a self-join to put back together what one row
+// already holds. The reminder is the reason the description is nullable: a translation is added
+// because somebody asked for the name in another language, and asking for the name is not asking
+// for prose, so a name with nothing behind it is an ordinary row rather than a half-finished one.
+//
+// `collection.name` and `collection.description` remain the canonical values and are never emptied
+// to make room for these — the same reason `tag.name` stays folded: the unique index, the
+// search, the sort and the rename check are all built on them.
+object CollectionTranslationTable : TimestampedIdTable("collection_translation") {
+    override val id = long("id").autoIncrement().entityId()
+
+    override val primaryKey = PrimaryKey(id)
+
+    val collectionId =
+        long("collection_id")
+            .references(CollectionTable.id, onDelete = ReferenceOption.CASCADE)
+    val localeCode = varchar("locale_code", MAX_LOCALE_LENGTH)
+    val name = varchar("name", MAX_NAME_LENGTH)
+    val description = varchar("description", MAX_TEXT_LENGTH).nullable()
+
+    init {
+        // One pair per locale, and the reader looks every locale up by this pair.
+        uniqueIndex("uq_ct__collection_locale", collectionId, localeCode)
+        index("idx_ct__by_collection", isUnique = false, collectionId)
+        index("idx_ct__by_locale", isUnique = false, localeCode)
+
+        // The name is what the shelf card draws, so a blank one would render as an empty row. The
+        // description is free to be absent; the name is not.
+        check("ck_ct__name_not_blank") { name.charLength() greater 0 }
     }
 }
 

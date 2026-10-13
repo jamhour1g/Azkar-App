@@ -8,7 +8,7 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.azkar.i18n.isArabic
+import com.azkar.i18n.usesArabicTypeface
 import java.util.Locale
 import androidx.compose.ui.text.platform.Font as DesktopFont
 
@@ -202,7 +202,7 @@ private val AmiriTypography = azkarTypography(AmiriFamily, arabic = true)
  * the JavaFX `Amiri, Noto Naskh Arabic, serif` stack it replaces did. Chain [AmiriFamily] onto
  * [InterFamily] to change that.
  */
-fun azkarTypography(uiLocale: Locale): Typography = if (uiLocale.isArabic) AmiriTypography else InterTypography
+fun azkarTypography(uiLocale: Locale): Typography = if (uiLocale.usesArabicTypeface) AmiriTypography else InterTypography
 
 /** Gap/spacing tokens lifted from the JavaFX padding + spacing values in the FXML files. */
 object AzkarSpacing {

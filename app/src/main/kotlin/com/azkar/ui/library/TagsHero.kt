@@ -51,7 +51,7 @@ import com.azkar.generated.resources.tagsStatRemembrances
 import com.azkar.generated.resources.tagsStatTags
 import com.azkar.generated.resources.tagsSubtitle
 import com.azkar.generated.resources.tagsTitle
-import com.azkar.i18n.isArabic
+import com.azkar.i18n.usesArabicTypeface
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarSurfaceCard
 import com.azkar.ui.components.KhatimPattern
@@ -103,7 +103,7 @@ internal fun TagsHero(
     val colors = AzkarTheme.colors
     // Read once here rather than inside the layout, so that the height the band is given and the
     // arithmetic that justifies it are two names apart and can only disagree by being edited apart.
-    val height = if (AzkarTheme.locale.isArabic) HERO_HEIGHT_ARABIC else HERO_HEIGHT_LATIN
+    val height = if (AzkarTheme.locale.usesArabicTypeface) HERO_HEIGHT_ARABIC else HERO_HEIGHT_LATIN
     AzkarSurfaceCard(
         modifier = modifier.fillMaxWidth().height(height),
         shape = RoundedCornerShape(HERO_SHAPE),

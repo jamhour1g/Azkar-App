@@ -38,7 +38,11 @@ private class FakeTagGateway(
 
     override suspend fun fetchDeleted(): List<TagSummary> = deleted
 
-    override suspend fun create(name: String): TagSaveResult {
+    override suspend fun create(
+        name: String,
+        translations: Map<Locale, String>,
+        nameLocale: Locale,
+    ): TagSaveResult {
         lastCreated = name
         return if (name.lowercase() in refusedNames) TagSaveResult.NameTaken else TagSaveResult.Saved
     }
@@ -46,6 +50,8 @@ private class FakeTagGateway(
     override suspend fun rename(
         id: Long,
         newName: String,
+        translations: Map<Locale, String>?,
+        nameLocale: Locale?,
     ): TagSaveResult {
         lastRenamedTo = newName
         return if (newName.lowercase() in refusedNames) TagSaveResult.NameTaken else TagSaveResult.Saved
@@ -540,11 +546,17 @@ val TagsStateSuite by testSuite("The tag vocabulary") {
 
                 override suspend fun fetchDeleted(): List<TagSummary> = error("no database")
 
-                override suspend fun create(name: String): TagSaveResult = TagSaveResult.Saved
+                override suspend fun create(
+                    name: String,
+                    translations: Map<Locale, String>,
+                    nameLocale: Locale,
+                ): TagSaveResult = TagSaveResult.Saved
 
                 override suspend fun rename(
                     id: Long,
                     newName: String,
+                    translations: Map<Locale, String>?,
+                    nameLocale: Locale?,
                 ): TagSaveResult = TagSaveResult.Saved
 
                 override suspend fun softDelete(id: Long) = Unit
@@ -686,5 +698,114 @@ val TagsStateSuite by testSuite("The tag vocabulary") {
 
         assertThat(store.restored).isEqualTo(1L)
         assertThat(told).isEqualTo(1)
+    }
+}
+
+/**
+ * Sorting and searching a tag list whose rows carry translations.
+ *
+ * The tag list is the one place in the library where a translated row is most visible, because a tag
+ * is a short label and a short label that stays in the wrong language reads as a bug rather than as
+ * an untranslated name. Both rules below are the same rules the untagged list follows — the query
+ * reaches the words on screen, and the name sort orders by them — and both have to be handed the
+ * display name explicitly, because the stored name is folded lower-case and is the tag's *identity*
+ * rather than its label.
+ */
+val TranslatedTagsSuite by testSuite("A tag list reads in the language on screen") {
+    val arabic = Locale.forLanguageTag("ar")
+    val english = Locale.ENGLISH
+
+    /** A tag as the vocabulary stores it: folded, plus whatever wording has been added for it. */
+    fun summary(
+        id: Long,
+        name: String,
+        translations: Map<Locale, String> = emptyMap(),
+    ) = TagSummary(
+        id = id,
+        name = name,
+        createdAt = FixtureInstant,
+        updatedAt = FixtureInstant,
+        collectionCount = 1,
+        remembranceCount = 1,
+        translations = translations,
+        deletedAt = null,
+    )
+
+    /** The label the Arabic interface would draw, which is what the list is sorted and searched by. */
+    val arabicLabel: (TagSummary) -> String = { it.displayName(arabic) }
+
+    val morning = summary(1L, "morning", mapOf(arabic to "أذكار الصباح", english to "Morning Azkar"))
+    val evening = summary(2L, "evening", mapOf(arabic to "أذكار المساء", english to "Evening Azkar"))
+    val travel = summary(3L, "travel", mapOf(arabic to "أذكار السفر", english to "Travel Azkar"))
+    val untouch = summary(4L, "untouched")
+
+    val tags = listOf(morning, evening, travel, untouch)
+
+    testSuite("sorting by name") {
+        test("the shelf is ordered by the words on screen, not by the stored slugs") {
+            // Stored alphabetically the order is evening, morning, travel. In Arabic it is
+            // السفر, الصباح, المساء — a different shelf, and the one the reader is actually on.
+            // That order is by code point (س U+0633 < ص U+0635 < م U+0645), with Latin first because
+            // it too sorts below them; a dictionary order would put المساء first.
+            assertThat(sortedTags(tags, TagSort.NAME_ASC, arabicLabel).map { arabicLabel(it) })
+                .containsExactly("Untouched", "أذكار السفر", "أذكار الصباح", "أذكار المساء")
+        }
+
+        test("the reverse sort is the reverse of the same order") {
+            assertThat(sortedTags(tags, TagSort.NAME_DESC, arabicLabel).map { arabicLabel(it) })
+                .containsExactly("أذكار المساء", "أذكار الصباح", "أذكار السفر", "Untouched")
+        }
+
+        test("an untranslated tag keeps its stored name in a translated list") {
+            // Latin sorts below Arabic by code point, so the one tag with no wording leads — not
+            // because it comes first in Arabic, which it does not, but because it is the only row
+            // still reading in the language its name was typed in.
+            val ordered = sortedTags(tags, TagSort.NAME_ASC, arabicLabel)
+
+            assertThat(ordered.first().name).isEqualTo("untouched")
+            assertThat(ordered.first().displayName(arabic)).isEqualTo("Untouched")
+        }
+    }
+
+    testSuite("sorting by something other than name") {
+        test("the tiebreaker is the label, so equal counts still read alphabetically on screen") {
+            // Every row here carries the same counts, so the only thing ordering them is the name.
+            val ordered = sortedTags(listOf(morning, evening, travel), TagSort.MOST_USED, arabicLabel)
+
+            assertThat(ordered.map { arabicLabel(it) })
+                .containsExactly("أذكار السفر", "أذكار الصباح", "أذكار المساء")
+        }
+    }
+
+    testSuite("searching") {
+        test("the Arabic label is found from the Arabic interface") {
+            assertThat(filterTags(tags, "الصباح", arabicLabel).map { it.name }).containsExactly("morning")
+        }
+
+        test("the stored name is still found, so a search typed in the other language works too") {
+            assertThat(filterTags(tags, "morning", arabicLabel).map { it.name }).containsExactly("morning")
+        }
+
+        test("a query that straddles the label and the stored name does not match") {
+            // "أذكارmorning" matches neither word and must not be found by concatenating the two.
+            assertThat(filterTags(tags, "أذكارmorning", arabicLabel)).isEmpty()
+        }
+
+        test("a word the label repeats is not treated as two matches") {
+            // Joining the label and the stored name must not turn "morning" into a doubled string
+            // that would then match a query a user did not type.
+            assertThat(filterTags(tags, "morningmorning", arabicLabel)).isEmpty()
+        }
+
+        test("an empty query returns the whole list rather than nothing") {
+            assertThat(filterTags(tags, "   ", arabicLabel)).isEqualTo(tags)
+        }
+    }
+
+    test("the default label is the stored name, so an untagged caller is unaffected") {
+        // Every other caller of these functions predates translations and passes no label; if the
+        // default silently changed, the shelf would reorder itself for anyone not opting in.
+        assertThat(sortedTags(tags, TagSort.NAME_ASC).map { it.name })
+            .containsExactly("evening", "morning", "travel", "untouched")
     }
 }

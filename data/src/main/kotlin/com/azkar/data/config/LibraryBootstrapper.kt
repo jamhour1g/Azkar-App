@@ -4,6 +4,7 @@ import com.azkar.data.seed.CollectionSeed
 import com.azkar.data.seed.SeedDataLoader
 import com.azkar.data.storage.CoverStorage
 import com.azkar.data.table.RemembranceTable
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.repo.CollectionRepository
 import com.azkar.domain.repo.LibrarySeedState
 import com.azkar.domain.service.CollectionService
@@ -12,6 +13,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import java.util.Locale
 
 private val logger = KotlinLogging.logger {}
 
@@ -128,6 +130,10 @@ class LibraryBootstrapper(
      * holds whatever the user has starred on this machine, which is a different thing on every
      * machine, and it grows after the dataset has been written.
      *
+     * [FAVORITES_TRANSLATIONS] because "not part of the dataset" is about whose contents it holds, not
+     * about whether it is shipped content. Nobody typed this name, and it ships in two languages all
+     * the same, because the alternative is a home rail with one English word on it in an Arabic app.
+     *
      * The guard is the stored id rather than a lookup by name, so a collection the user has renamed
      * is still recognised as the one the stars go into.
      */
@@ -140,6 +146,7 @@ class LibraryBootstrapper(
                 name = FAVORITES_NAME,
                 description = FAVORITES_DESCRIPTION,
                 iconKey = FAVORITES_ICON_KEY,
+                translations = FAVORITES_TRANSLATIONS,
             )
         val id = checkNotNull(created.id) { "A just-created collection must have an id" }
         seedState.setFavoritesCollectionId(id)
@@ -160,5 +167,11 @@ class LibraryBootstrapper(
         const val FAVORITES_NAME = "Favorites"
         const val FAVORITES_DESCRIPTION = "The remembrances you have starred"
         const val FAVORITES_ICON_KEY = "star"
+
+        val FAVORITES_TRANSLATIONS =
+            mapOf(
+                Locale.forLanguageTag("en") to LocalizedPair(FAVORITES_NAME, FAVORITES_DESCRIPTION),
+                Locale.forLanguageTag("ar") to LocalizedPair("المفضّلة", "الأذكار التي حفظتها بنجمة"),
+            )
     }
 }

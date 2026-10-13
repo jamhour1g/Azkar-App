@@ -47,6 +47,7 @@ import com.azkar.ui.library.CollectionDetailState
 import com.azkar.ui.library.data.TransferFormat
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.model.RemembranceTile
+import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.preview.PREVIEW_COLLECTION_ID
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewCatalogue
@@ -654,7 +655,7 @@ private fun headerActions(
         onBack = onBack,
         onEdit = { dialogs.editor = CollectionEditorDraft.edit(it) },
         onDuplicate = { target, newName ->
-            dialogs.editor = CollectionEditorDraft.duplicate(collection = target, newName = newName)
+            dialogs.editor = CollectionEditorDraft.duplicate(collection = target, newName = newName, nameLocale = AzkarTheme.locale)
         },
         onTogglePin = {
             if (collection != null) {
@@ -854,11 +855,11 @@ private fun DetailEditorHost(
         environment =
             CollectionEditorEnvironment(
                 covers = collections.covers,
-                availableTagNames = collections.shelfTags.map { it.name },
+                availableTags = collections.shelfTags.map { TagOption.of(it, AzkarTheme.locale) },
                 onPickCover = { title -> collections.pickCoverImage(title) },
             ),
         onDismiss = onDismiss,
-        onConfirm = { name, description, tagNames, coverImagePath ->
+        onConfirm = { name, description, tagNames, coverImagePath, translations ->
             onDismiss()
             when (draft.mode) {
                 // A collection is only created from the shelf, so the editor here never opens in this
@@ -872,6 +873,9 @@ private fun DetailEditorHost(
                         description = description,
                         tagNames = tagNames,
                         coverImagePath = coverImagePath,
+                        translations = translations,
+                        nameLocale = draft.nameLocale,
+                        tagLocale = AzkarTheme.locale,
                     )
 
                 // Only the name travels: a duplicate starts clean, and inheriting the cover would
@@ -880,6 +884,7 @@ private fun DetailEditorHost(
                     collections.duplicateCollection(
                         id = draft.collectionId,
                         newName = name,
+                        nameLocale = draft.nameLocale,
                     )
             }
         },

@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -55,14 +56,17 @@ import com.azkar.generated.resources.collectionsDialogTagsNewPlaceholder
 import com.azkar.generated.resources.collectionsDialogTagsNone
 import com.azkar.generated.resources.collectionsDialogTagsSearchPlaceholder
 import com.azkar.generated.resources.collectionsSelectionCount
+import com.azkar.i18n.textDirectionOf
 import com.azkar.ui.components.AzkarFilterChip
 import com.azkar.ui.components.AzkarOutlinedField
 import com.azkar.ui.components.BorderedStateBox
 import com.azkar.ui.components.IconActionButton
 import com.azkar.ui.components.PrimaryButton
 import com.azkar.ui.components.pressableClick
+import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
+import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -81,14 +85,14 @@ import org.jetbrains.compose.resources.stringResource
  * out — folded away by itself, it would hide the only control that can add a tag the library has never
  * heard of, which is the entire purpose of this panel on an empty library.
  *
- * @param availableTagNames every tag the library uses. Sorted and de-duplicated by the catalogue, so
+ * @param availableTags every tag the library uses. Sorted and de-duplicated by the catalogue, so
  * this panel never sorts and never reorders a chip under the pointer while someone is reaching for it.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun CollectionTagPickerPanel(
     draft: CollectionEditorDraft,
-    availableTagNames: List<String>,
+    availableTags: List<TagOption>,
     modifier: Modifier = Modifier,
 ) {
     var expanded by rememberSaveable { mutableStateOf(true) }
@@ -111,7 +115,7 @@ internal fun CollectionTagPickerPanel(
                 Spacer(Modifier.height(TAG_GROUP_GAP))
                 TagChips(
                     draft = draft,
-                    names = draft.tagOptions(availableTagNames),
+                    options = draft.tagOptions(availableTags),
                     onToggleCreating = { creating = !creating },
                 )
                 if (creating) {
@@ -137,6 +141,7 @@ private fun TagSearchRow(
     onToggleExpanded: () -> Unit,
 ) {
     val colors = AzkarTheme.colors
+    val ambient = if (isRtlLayout()) LayoutDirection.Rtl else LayoutDirection.Ltr
     Row(verticalAlignment = Alignment.CenterVertically) {
         AzkarOutlinedField(
             value = draft.tagQuery,
@@ -144,6 +149,7 @@ private fun TagSearchRow(
             placeholder = stringResource(Res.string.collectionsDialogTagsSearchPlaceholder),
             leadingIcon = Icons.Outlined.Search,
             modifier = Modifier.weight(1f),
+            textDirection = textDirectionOf(draft.tagQuery, ambient),
             trailingContent = {
                 Text(
                     text =
@@ -182,16 +188,20 @@ private fun TagSearchRow(
  * Wrapped rather than scrolled, because a horizontal strip of tags hides the fact that the tag someone
  * wanted is two rows down, and a picker that cannot show all of its answers is not a picker. The dashed
  * chip is last so that the row it opens sits directly under the row it controls.
+ *
+ * A chip says the tag's name in the reader's language and means the tag by its stored one — see
+ * [TagOption]. That split is why this takes options rather than strings: a list of names could only
+ * ever have meant one of the two, and the wrong one of those silently creates a duplicate tag.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TagChips(
     draft: CollectionEditorDraft,
-    names: List<String>,
+    options: List<TagOption>,
     onToggleCreating: () -> Unit,
 ) {
     val colors = AzkarTheme.colors
-    if (names.isEmpty()) {
+    if (options.isEmpty()) {
         Text(
             text = stringResource(Res.string.collectionsDialogTagsNone),
             color = colors.textSecondary,
@@ -206,12 +216,15 @@ private fun TagChips(
         horizontalArrangement = Arrangement.spacedBy(TAG_CHIP_GAP),
         verticalArrangement = Arrangement.spacedBy(TAG_CHIP_GAP),
     ) {
-        names.forEach { name ->
-            val selected = draft.isTagSelected(name)
+        options.forEach { option ->
+            // Selection and the saved value are both the stored name. The chip's text is what the
+            // reader can read instead, and the two are only the same string when the tag has no
+            // translation of its own.
+            val selected = draft.isTagSelected(option.value)
             AzkarFilterChip(
-                text = name,
+                text = option.label,
                 selected = selected,
-                onClick = { draft.toggleTag(name) },
+                onClick = { draft.toggleTag(option.value) },
                 leadingIcon = Icons.Filled.Check.takeIf { selected },
             )
         }
@@ -263,10 +276,20 @@ private fun CreateTagChip(onClick: () -> Unit) {
  * add it — and stacking the three parts would make the dialog taller for no gain. It is capped and
  * allowed to wrap rather than pushing the field off the panel, because the field is the part that
  * matters.
+ *
+ * Deliberately one field with no translations attached, and the reason is worth stating because it is
+ * the only authoring surface in the app that has none: this row does not create a tag. It buffers a
+ * name onto [CollectionEditorDraft.tags], and the row itself appears later as a side effect of saving
+ * the collection, through `ExposedTagRepository.findOrCreateId`. Carrying translations would mean
+ * turning that list into something with a translation per entry and threading a second concept through
+ * `CollectionService.setTags` and `ExposedCollectionRepository.replaceTags` for one shortcut field.
+ * A tag's translations are edited in one place — the tag name dialog on the tags screen — and a tag
+ * made here can be translated there.
  */
 @Composable
 private fun NewTagRow(draft: CollectionEditorDraft) {
     val colors = AzkarTheme.colors
+    val ambient = if (isRtlLayout()) LayoutDirection.Rtl else LayoutDirection.Ltr
     Row(verticalAlignment = Alignment.CenterVertically) {
         Row(
             modifier = Modifier.widthIn(max = NEW_TAG_LABEL_MAX_WIDTH),
@@ -293,6 +316,7 @@ private fun NewTagRow(draft: CollectionEditorDraft) {
             onValueChange = draft::updateNewTagName,
             placeholder = stringResource(Res.string.collectionsDialogTagsNewPlaceholder),
             modifier = Modifier.weight(1f),
+            textDirection = textDirectionOf(draft.newTagName, ambient),
         )
         Spacer(Modifier.width(TAG_ROW_GAP))
         PrimaryButton(
@@ -349,7 +373,7 @@ private fun CollectionTagPickerPanelPreview() {
         draft.toggleTag("sleep")
         CollectionTagPickerPanel(
             draft = draft,
-            availableTagNames = listOf("morning", "sleep", "travel", "after prayer", "commute"),
+            availableTags = listOf("morning", "sleep", "travel", "after prayer", "commute").map(TagOption::of),
             modifier = Modifier.width(520.dp),
         )
     }

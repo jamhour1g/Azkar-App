@@ -1,5 +1,6 @@
 package com.azkar.ui.library.data
 
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import kotlinx.serialization.SerialName
@@ -7,6 +8,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.util.Locale
 
 /**
  * The shape of a collection moving between machines, in both the machine and the human format.
@@ -67,11 +69,68 @@ data class TransferCollection(
      */
     val coverImageBase64: String? = null,
     val members: List<TransferMember> = emptyList(),
+    /**
+     * The collection's name and description in every language but the one it was typed in, keyed by
+     * BCP-47 language tag.
+     *
+     * Carried because a shelf's name is the one piece of prose a shared document cannot lose: the
+     * collection is identified by what it is called, so a document that carried only the canonical
+     * name would import a shelf whose name silently disagreed with the one it came from — and would
+     * do it without a warning, because nothing about the payload would be malformed.
+     *
+     * Empty rather than absent, so a document written before translations existed decodes into
+     * exactly the value it would have decoded into anyway and imports as it always did.
+     *
+     * Only the JSON format carries this. The line format exists to be read and edited by a person,
+     * and per-language name pairs would double the width of every line for a document whose whole
+     * reason to exist is being legible in a text editor.
+     */
+    val translations: Map<String, TransferTranslation> = emptyMap(),
+    /** BCP-47 language tag of [name], kept explicit rather than inferred from its writing direction. */
+    val nameLocale: String = "en",
 ) {
     init {
         require(name.isNotBlank()) { "A transferred collection must have a name" }
     }
 }
+
+/**
+ * A collection's wording in one language, as it travels.
+ *
+ * The flat shape rather than [LocalizedPair] because the wire format is written to be read by a
+ * person and by other tools, and a type named after the domain makes the document a contract with
+ * this app rather than a description of its contents. `description` is nullable for the same reason
+ * it is nullable in the domain: a translator asked for the name is not being asked for prose.
+ */
+@Serializable
+data class TransferTranslation(
+    val name: String,
+    val description: String? = null,
+) {
+    init {
+        require(name.isNotBlank()) { "A transferred translation must have a name" }
+    }
+}
+
+/**
+ * The wording this document carries, in the shape the domain speaks.
+ *
+ * Parsed here rather than at the point of use because a malformed tag is a property of the *document*
+ * — the sender wrote something that is not a language — and there is one right place to decide that
+ * such a document is not worth refusing outright. A tag that will not parse comes back as [Locale.ROOT],
+ * whose `toLanguageTag()` is `und`, and is dropped below rather than stored as a language nobody can
+ * select.
+ */
+internal fun TransferCollection.pairs(): Map<Locale, LocalizedPair> =
+    translations
+        .mapNotNull { (tag, pair) ->
+            val locale = Locale.forLanguageTag(tag)
+            if (locale.toLanguageTag() == "und") null else locale to LocalizedPair(pair.name, pair.description)
+        }.toMap()
+
+/** The language of the canonical name, defaulting old or malformed documents to English. */
+internal fun TransferCollection.nameLanguage(): Locale =
+    Locale.forLanguageTag(nameLocale).takeIf { it.toLanguageTag() != "und" } ?: Locale.ENGLISH
 
 /** One passage, as it is matched against the catalogue on the way back in. */
 @Serializable
@@ -180,6 +239,7 @@ object CollectionTransfer {
             appendLine("$FORMAT_ID $FORMAT_VERSION")
             collections.forEach { collection ->
                 appendLine("@collection ${escape(collection.name)}")
+                appendLine("@language ${escape(collection.nameLocale)}")
                 collection.description?.let { appendLine("@description ${escape(it)}") }
                 collection.iconKey?.let { appendLine("@icon ${escape(it)}") }
                 if (collection.tagNames.isNotEmpty()) {
@@ -233,6 +293,7 @@ object CollectionTransfer {
     private fun parseCollections(lines: List<String>): List<TransferCollection> {
         val collections = mutableListOf<TransferCollection>()
         var name: String? = null
+        var nameLocale = "en"
         var description: String? = null
         var iconKey: String? = null
         var tagNames = emptyList<String>()
@@ -243,6 +304,7 @@ object CollectionTransfer {
             collections +=
                 TransferCollection(
                     name = current,
+                    nameLocale = nameLocale,
                     description = description,
                     iconKey = iconKey,
                     tagNames = tagNames,
@@ -258,6 +320,7 @@ object CollectionTransfer {
                 body.startsWith("collection ") -> {
                     flush()
                     name = unescape(body.removePrefix("collection ").trim())
+                    nameLocale = "en"
                     description = null
                     iconKey = null
                     tagNames = emptyList()
@@ -265,6 +328,7 @@ object CollectionTransfer {
                 }
 
                 body.startsWith("description ") -> description = unescape(body.removePrefix("description ").trim())
+                body.startsWith("language ") -> nameLocale = unescape(body.removePrefix("language ").trim())
                 body.startsWith("icon ") -> iconKey = unescape(body.removePrefix("icon ").trim())
                 body.startsWith("tags ") ->
                     tagNames =
@@ -406,6 +470,7 @@ object CollectionExport {
     ): TransferCollection =
         TransferCollection(
             name = collection.name,
+            nameLocale = collection.nameLocale.toLanguageTag(),
             description = collection.description,
             iconKey = collection.iconKey,
             tagNames = collection.tags.map { it.name }.sortedWith(String.CASE_INSENSITIVE_ORDER),
@@ -414,7 +479,21 @@ object CollectionExport {
                 collection.members
                     .filter { it.id != null }
                     .map { member -> TransferMember(textOf(member), member.source) },
+            translations = collection.exportTranslations(),
         )
+
+    /**
+     * The stored translations, re-keyed by language tag and with blanks dropped.
+     *
+     * Filtering rather than passing through is what keeps the document honest about what it says: a
+     * blank name would be rejected by [TransferTranslation]'s own guard on the way in, and a blank
+     * description would import as a description that is somehow empty rather than as none at all.
+     */
+    private fun RemembranceCollection.exportTranslations(): Map<String, TransferTranslation> =
+        translations
+            .filterValues { it.name.isNotBlank() }
+            .mapKeys { (locale, _) -> locale.toLanguageTag() }
+            .mapValues { (_, pair) -> TransferTranslation(name = pair.name, description = pair.description) }
 
     /** Builds the transfer form of every collection in [collections], in the order given. */
     fun exportOf(

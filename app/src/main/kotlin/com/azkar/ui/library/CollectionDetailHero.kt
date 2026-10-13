@@ -50,7 +50,7 @@ import com.azkar.generated.resources.collectionsMemberCount
 import com.azkar.generated.resources.hero_day
 import com.azkar.generated.resources.hero_night
 import com.azkar.generated.resources.libraryActionMore
-import com.azkar.i18n.isArabic
+import com.azkar.i18n.usesArabicTypeface
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarMenuItem
@@ -108,7 +108,7 @@ internal fun CollectionDetailHero(
     val shape = RoundedCornerShape(HERO_SHAPE)
     // Read once here rather than inside the layout, so that the height the band is given and the
     // arithmetic that justifies it are two names apart and can only disagree by being edited apart.
-    val height = if (AzkarTheme.locale.isArabic) HERO_HEIGHT_ARABIC else HERO_HEIGHT_LATIN
+    val height = if (AzkarTheme.locale.usesArabicTypeface) HERO_HEIGHT_ARABIC else HERO_HEIGHT_LATIN
 
     Box(
         modifier =

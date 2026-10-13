@@ -4,7 +4,6 @@ import com.azkar.data.mapping.LocalizedTextRow
 import com.azkar.data.mapping.RemembranceMapper.toRemembrance
 import com.azkar.data.mapping.toTag
 import com.azkar.data.table.ExplanationTranslationTable
-import com.azkar.data.table.LocalizedTextTable
 import com.azkar.data.table.RemembranceTagTable
 import com.azkar.data.table.RemembranceTranslationTable
 import com.azkar.data.table.TagTable
@@ -51,11 +50,11 @@ internal object RemembranceAggregates {
         val ids = map { it.id.value }
         val translations =
             localizedTexts(
-                RemembranceTranslationEntity.find { RemembranceTranslationTable.remembranceId inList ids },
+                RemembranceTranslationEntity.find { RemembranceTranslationTable.ownerId inList ids },
             )
         val explanations =
             localizedTexts(
-                ExplanationTranslationEntity.find { ExplanationTranslationTable.remembranceId inList ids },
+                ExplanationTranslationEntity.find { ExplanationTranslationTable.ownerId inList ids },
             )
         val tags = tagsByRemembrance(ids)
         return map { entity ->
@@ -90,7 +89,7 @@ internal object RemembranceAggregates {
         val ids = rows.map { it.id.value }
         val texts =
             localizedTexts(
-                RemembranceTranslationEntity.find { RemembranceTranslationTable.remembranceId inList ids },
+                RemembranceTranslationEntity.find { RemembranceTranslationTable.ownerId inList ids },
             )
         return rows.map { entity ->
             val id = entity.id.value
@@ -103,19 +102,6 @@ internal object RemembranceAggregates {
     }
 
     /**
-     * The locale codes one remembrance already has a row for in the given translation table.
-     *
-     * Takes the table rather than an entity class because both translation tables answer this
-     * identically and the writer reconciling one of them does not care which it is.
-     */
-    fun LocalizedTextTable.existingLocales(id: Long): Set<String> =
-        this
-            .selectAll()
-            .where { remembranceId eq id }
-            .map { it[localeCode] }
-            .toSet()
-
-    /**
      * The text rows of one translation table, grouped by remembrance and then by locale.
      *
      * One query per table for the whole page, not one per parent: this is the statement that would
@@ -123,7 +109,7 @@ internal object RemembranceAggregates {
      */
     private fun localizedTexts(rows: Iterable<LocalizedText>): Map<Long, Map<Locale, LocalizedTextRow>> =
         rows
-            .groupBy { it.remembranceId }
+            .groupBy { it.ownerId }
             .mapValues { (_, texts) ->
                 texts.associate { text ->
                     Locale.forLanguageTag(text.localeCode) to
@@ -151,12 +137,18 @@ internal object RemembranceAggregates {
         if (ids.isEmpty()) {
             return emptyMap()
         }
-        return (RemembranceTagTable innerJoin TagTable)
-            .selectAll()
-            .where { (RemembranceTagTable.remembranceId inList ids) and (TagTable.deletedAt eq null) }
-            .groupBy(
-                { it[RemembranceTagTable.remembranceId].value },
-                { TagEntity.wrapRow(it).toTag() },
-            ).mapValues { (_, tags) -> tags.toSet() }
+        // Asked once and materialised, because the label wording is a second statement that has to
+        // know which labels the join produced — the ids the join returns are the only place that
+        // question is answered without reading it twice.
+        val joined =
+            (RemembranceTagTable innerJoin TagTable)
+                .selectAll()
+                .where { (RemembranceTagTable.remembranceId inList ids) and (TagTable.deletedAt eq null) }
+                .map { it to TagEntity.wrapRow(it) }
+        val translations = LibraryTranslations.tagTranslations(joined.map { it.second.id.value }.distinct())
+        return joined
+            .groupBy({ it.first[RemembranceTagTable.remembranceId].value }) { (_, tag) ->
+                tag.toTag(translations[tag.id.value].orEmpty())
+            }.mapValues { (_, tags) -> tags.toSet() }
     }
 }

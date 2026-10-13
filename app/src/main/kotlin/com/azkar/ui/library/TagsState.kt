@@ -12,6 +12,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 private val logger = KotlinLogging.logger {}
 
@@ -90,9 +91,14 @@ data class TagStats(
  * the shelf's mutations do: the host owns the toast, and a notice key survives a language switch
  * where a formatted string would not.
  *
- * @param onTagsChanged called after every successful write, so the shelf can drop its cached copy of
- * the tag names it draws its label chips from. Without it a tag deleted here would keep appearing as
- * a chip on the shelf until the whole library was read again.
+* @param onTagsChanged called after every successful write, so the shelf can drop its cached copy of
+ *  the tag names it draws its label chips from. Without it a tag deleted here would keep appearing as
+ *  a chip on the shelf until the whole library was read again.
+ * @param labelOf the name a tag goes by in the language the reader is using, which is what the search
+ *  and the sort work on. Taken as a function rather than a [Locale] so this class needs no resource
+ *  environment to build, which is what lets it be tested against two tags and no database. Defaults to
+ *  the stored name, which is right for a tag with no translations and is the honest answer for a
+ *  caller that has not said which language it is sorting in.
  */
 @Stable
 @Suppress("TooManyFunctions")
@@ -100,6 +106,7 @@ class TagsState(
     private val scope: CoroutineScope,
     private val gateway: TagGateway,
     private val onTagsChanged: () -> Unit,
+    private val labelOf: (TagSummary) -> String = { it.name },
 ) {
     /** Whether the first read is still under way. Distinguishes "loading" from "the user has none". */
     var loading: Boolean by mutableStateOf(true)
@@ -163,12 +170,13 @@ class TagsState(
             if (lookingAtDeleted) {
                 emptyList()
             } else {
-                sortedTags(scopedTags(filterTags(tags, query), scopeFilter), sort)
+                sortedTags(scopedTags(filterTags(tags, query, labelOf), scopeFilter), sort, labelOf)
             }
 
     /** The deleted tags the search leaves standing — empty unless they are what the list is showing. */
     val visibleDeleted: List<TagSummary>
-        get() = if (lookingAtDeleted) sortedTags(filterTags(deleted, query), sort) else emptyList()
+        get() =
+            if (lookingAtDeleted) sortedTags(filterTags(deleted, query, labelOf), sort, labelOf) else emptyList()
 
     /** Everything the list is drawing, live rows first, as one sequence for the footer to count. */
     val rows: List<TagSummary> get() = visibleTags + visibleDeleted
@@ -335,9 +343,17 @@ class TagsState(
      * dialog with a field and a button, and "that name is taken" belongs under that field rather than
      * in a toast that arrives after the dialog has closed. `null` means the write failed outright,
      * which has already been announced and needs no answer of its own.
+     *
+     * [translations] are the other-language names typed alongside [name]. They are optional in every
+     * sense: a tag with none is a complete tag that reads the same in every language, which is a
+     * legitimate thing to have.
      */
-    suspend fun create(name: String): TagSaveResult? {
-        val result = attempt("create the tag '$name'") { gateway.create(name) } ?: return null
+    suspend fun create(
+        name: String,
+        translations: Map<Locale, String> = emptyMap(),
+        nameLocale: Locale = Locale.ENGLISH,
+    ): TagSaveResult? {
+        val result = attempt("create the tag '$name'") { gateway.create(name, translations, nameLocale) } ?: return null
         if (result == TagSaveResult.Saved) {
             refresh(announce = null)
             onTagsChanged()
@@ -349,8 +365,11 @@ class TagsState(
     suspend fun rename(
         id: Long,
         newName: String,
+        translations: Map<Locale, String>? = null,
+        nameLocale: Locale? = null,
     ): TagSaveResult? {
-        val result = attempt("rename tag id=$id to '$newName'") { gateway.rename(id, newName) } ?: return null
+        val result =
+            attempt("rename tag id=$id to '$newName'") { gateway.rename(id, newName, translations, nameLocale) } ?: return null
         if (result == TagSaveResult.Saved) {
             refresh(announce = CollectionNoticeKey.TAG_RENAMED)
             onTagsChanged()
@@ -421,6 +440,11 @@ class TagsState(
  * reason the tag picker searches in memory: both lists are bounded by how many labels one person has
  * typed, and the row the user is narrowing by is a row the screen is already holding.
  *
+ * Matched against [labelOf] rather than the stored name, because the reader is searching for a word
+ * they can see on the row and not for the word the row was filed under. The stored name is still
+ * searched — a reader who knows the tag by the name it is stored as is just as likely — and the
+ * distinction only exists for a tag that has both, which is a tag that has been translated.
+ *
  * Free of the gateway on purpose. Everything here is a filter over two lists, so it can be tested
  * against lists of two tags without a database, a fake, or a coroutine — which is also why it is a
  * top-level function and not a method on [TagsState].
@@ -428,10 +452,27 @@ class TagsState(
 internal fun filterTags(
     tags: List<TagSummary>,
     query: String,
+    labelOf: (TagSummary) -> String = { it.name },
 ): List<TagSummary> {
     val needle = query.trim()
     if (needle.isEmpty()) return tags
-    return tags.filter { it.name.contains(needle, ignoreCase = true) }
+    return tags.filter { searchableText(it, labelOf).contains(needle, ignoreCase = true) }
+}
+
+/**
+ * Both of a tag's names, joined, so one containment test covers either.
+ *
+ * The separator is a space rather than nothing so a query cannot match by straddling the two names —
+ * "rn gEve" is not how anyone searches, and a false positive there is a row that looks like a match
+ * and is not. Duplicated names cost one redundant scan of a string and nothing else.
+ */
+private fun searchableText(
+    tag: TagSummary,
+    labelOf: (TagSummary) -> String,
+): String {
+    val label = labelOf(tag)
+    val stored = tag.name
+    return if (label.equals(stored, ignoreCase = true)) label else "$label $stored"
 }
 
 /**
@@ -459,18 +500,27 @@ internal fun scopedTags(
  * A tag with no creation date sorts to the bottom of [TagSort.NEWEST] rather than to 1970 in the
  * middle of the list, because "added recently" is a claim about rows that were added and a tag that
  * was never stamped is not one of them.
+ *
+ * Broken on the *shown* name rather than the stored one, which is the whole point: an alphabetically
+ * sorted list a reader cannot read alphabetically is not sorted, and the tiebreaker is what decides
+ * the order of every list sorted by anything else as well. [labelOf] defaults to the stored name so
+ * that a caller which has not said which language it is sorting in gets the old behaviour rather than
+ * a silent default nobody chose.
  */
 internal fun sortedTags(
     tags: List<TagSummary>,
     sort: TagSort,
-): List<TagSummary> =
-    when (sort) {
-        TagSort.NAME_ASC -> tags.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
-        TagSort.NAME_DESC -> tags.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER) { it.name })
-        TagSort.MOST_USED -> tags.sortedWith(byUsageDescending().thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
-        TagSort.LEAST_USED -> tags.sortedWith(byUsageAscending().thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
-        TagSort.NEWEST -> tags.sortedWith(byNewestFirst().thenBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+    labelOf: (TagSummary) -> String = { it.name },
+): List<TagSummary> {
+    val byName = compareBy(String.CASE_INSENSITIVE_ORDER, labelOf)
+    return when (sort) {
+        TagSort.NAME_ASC -> tags.sortedWith(byName)
+        TagSort.NAME_DESC -> tags.sortedWith(compareByDescending(String.CASE_INSENSITIVE_ORDER, labelOf))
+        TagSort.MOST_USED -> tags.sortedWith(byUsageDescending().thenBy(String.CASE_INSENSITIVE_ORDER, labelOf))
+        TagSort.LEAST_USED -> tags.sortedWith(byUsageAscending().thenBy(String.CASE_INSENSITIVE_ORDER, labelOf))
+        TagSort.NEWEST -> tags.sortedWith(byNewestFirst().thenBy(String.CASE_INSENSITIVE_ORDER, labelOf))
     }
+}
 
 private fun byUsageDescending(): Comparator<TagSummary> = compareByDescending { it.usageCount }
 

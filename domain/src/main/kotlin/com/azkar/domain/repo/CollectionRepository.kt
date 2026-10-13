@@ -2,6 +2,7 @@ package com.azkar.domain.repo
 
 import com.azkar.domain.model.CollectionSummary
 import com.azkar.domain.model.RemembranceCollection
+import com.azkar.domain.model.Tag
 
 /**
  * The port through which collections are stored and retrieved.
@@ -78,15 +79,14 @@ interface CollectionRepository :
     )
 
     /**
-     * Replaces the collection's labels with exactly [tagNames], folding each and dropping blanks.
+     * Replaces the collection's labels with exactly [tags], folding names and dropping blanks.
      *
-     * Names rather than identifiers because the tag rows are resolved and created by the storage
-     * layer: a caller naming a tag the library has never seen should not have to know that this
-     * means a row gets created first.
+     * The row identifiers remain a storage concern; passing [Tag] also preserves the language of a
+     * newly typed label when storage has to create its row.
      */
     suspend fun setTags(
         collectionId: Long,
-        tagNames: Collection<String>,
+        tags: Collection<Tag>,
     )
 
     /** Records that the collection identified by [id] was opened just now. */

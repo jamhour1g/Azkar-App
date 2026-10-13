@@ -115,7 +115,7 @@ internal object SeedDataLoader {
     ) {
         val localized = rows.localized(remembranceIds, SeedRow::arabic, SeedRow::english)
         RemembranceTranslationTable.batchInsert(localized) { row ->
-            this[RemembranceTranslationTable.remembranceId] = row.remembranceId
+            this[RemembranceTranslationTable.ownerId] = row.remembranceId
             this[RemembranceTranslationTable.localeCode] = row.localeCode
             this[RemembranceTranslationTable.text] = row.text
         }
@@ -128,7 +128,7 @@ internal object SeedDataLoader {
         ExplanationTranslationTable.batchInsert(
             rows.localized(remembranceIds, SeedRow::explanationArabic, SeedRow::explanationEnglish),
         ) { row ->
-            this[ExplanationTranslationTable.remembranceId] = row.remembranceId
+            this[ExplanationTranslationTable.ownerId] = row.remembranceId
             this[ExplanationTranslationTable.localeCode] = row.localeCode
             this[ExplanationTranslationTable.text] = row.text
         }

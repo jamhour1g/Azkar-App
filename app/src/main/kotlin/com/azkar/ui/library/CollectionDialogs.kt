@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.HorizontalDivider
@@ -43,9 +44,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionsActionCancel
@@ -78,9 +81,18 @@ import com.azkar.generated.resources.collectionsDialogNamePlaceholder
 import com.azkar.generated.resources.collectionsDialogNameRequired
 import com.azkar.generated.resources.collectionsDialogStepCover
 import com.azkar.generated.resources.collectionsDialogStepDetails
+import com.azkar.generated.resources.contentPrimaryLanguage
 import com.azkar.generated.resources.collectionsDialogStepProgress
 import com.azkar.generated.resources.collectionsDialogStepTags
+import com.azkar.generated.resources.contentLanguageNote
+import com.azkar.generated.resources.contentTranslationAdd
+import com.azkar.generated.resources.contentTranslationFor
+import com.azkar.generated.resources.contentTranslationRemove
+import com.azkar.i18n.displayNameIn
+import com.azkar.i18n.isSameLanguageAs
+import com.azkar.i18n.textDirectionOf
 import com.azkar.ui.components.AzkarDialogSurface
+import com.azkar.ui.components.AzkarFilterChip
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarOutlinedField
 import com.azkar.ui.components.BorderedStateBox
@@ -88,12 +100,18 @@ import com.azkar.ui.components.IconActionButton
 import com.azkar.ui.components.PrimaryButton
 import com.azkar.ui.components.SecondaryButton
 import com.azkar.ui.library.data.CollectionPresenter
+import com.azkar.ui.library.model.TagOption
+import com.azkar.ui.library.model.TranslationEntry
+import com.azkar.ui.library.model.missingLanguages
+import com.azkar.ui.library.model.survivingRename
 import com.azkar.ui.theme.AzkarColors
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
+import com.azkar.ui.theme.isRtlLayout
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import java.util.Locale
 
 /**
  * One page of the editor, in the order the user is walked through them.
@@ -154,6 +172,18 @@ enum class CollectionEditorMode {
 
     /** Whether this mode edits anything beyond the name. See [DUPLICATE] for why it might not. */
     val editsDetails: Boolean
+        get() = this != DUPLICATE
+
+    /**
+     * Whether this mode can give the collection a name in more than one language.
+     *
+     * False only for [DUPLICATE], and for a different reason than [editsDetails]: a duplicate does get
+     * a description — the source's — and so translations would be in the same position, except that the
+     * mode's whole job is to produce a second copy of a thing the user is *not* looking at. Offering a
+     * row of language blocks under a name they just accepted would be asking them to translate a
+     * collection they have not read.
+     */
+    val editsTranslations: Boolean
         get() = this != DUPLICATE
 
     val titleResource: StringResource
@@ -228,14 +258,47 @@ class CollectionEditorDraft private constructor(
     val mode: CollectionEditorMode,
     val collectionId: Long,
     initialName: String,
+    val nameLocale: Locale,
     initialDescription: String,
     initialTags: List<String>,
     initialCoverImagePath: String?,
+    initialTranslations: List<TranslationEntry>,
 ) {
     var name: String by mutableStateOf(initialName)
         private set
 
+    /**
+     * The name this draft was opened with, which is not the name it will be saved under.
+     *
+     * Held rather than recomputed because the editor prefills its translation boxes from the saved
+     * collection, and a rename has to be able to tell a box the user has since rewritten from one they
+     * have merely left sitting there. See [submittedTranslations].
+     */
+    private val openedWith = initialName
+
+    /**
+     * The wording this draft was opened with, kept whole because [submittedTranslations] has to be
+     * able to tell a box the user rewrote from one they did not.
+     */
+    private val openedTranslations: List<TranslationEntry> = initialTranslations
+
     var description: String by mutableStateOf(initialDescription)
+        private set
+
+    /**
+     * The collection's name and description in every language other than the one [name] is written in.
+     *
+     * A list of [TranslationEntry] rather than a map because the editor adds languages one at a time
+     * and a half-typed one has to have somewhere to live before it has anything to say; a map keyed by
+     * locale could hold a blank value just as well, but a list makes "the languages this collection
+     * has" the thing being iterated, and that is what the chips and the blocks both ask.
+     *
+     * Deliberately *not* including the language [name] itself. The base fields are the version in
+     * whatever language the user typed them in, which is the app's language in every normal case, and
+     * a second copy of the same language would be a field the user fills in only to have it shadowed
+     * by the one above it.
+     */
+    var translations: List<TranslationEntry> by mutableStateOf(initialTranslations)
         private set
 
     /**
@@ -298,6 +361,36 @@ class CollectionEditorDraft private constructor(
      */
     val submittedTagNames: List<String> get() = tags
 
+    /**
+     * The translations as storage should receive them, one [LocalizedPair] per language that says
+     * something.
+     *
+     * The blank ones are dropped here rather than refused on the way in because an empty language is
+     * the normal state of one someone has just clicked "add a translation" for and has not filled in
+     * yet — treating that as an error would put a red note under a field the user has not finished
+     * writing. What storage receives is therefore exactly what the user wrote, and a language they
+     * abandoned leaves no trace at all.
+     *
+     * Empty is a legitimate answer and means something: it replaces whatever translations the
+     * collection had. Removing the last one through this editor is how a collection goes back to
+     * reading in one language.
+     */
+    val submittedTranslations: Map<Locale, LocalizedPair>
+        get() =
+            translations
+                .survivingRename(
+                    renamedFrom = openedWith,
+                    renamedTo = name,
+                    opened = openedTranslations,
+                ).filterNot { it.isBlank }
+                .associate { entry ->
+                    entry.locale to
+                        LocalizedPair(
+                            name = entry.name.trim(),
+                            description = entry.description?.trim()?.ifEmpty { null },
+                        )
+                }
+
     /** Whether [addTag] would do something, which is what the "Add tag" button's enabled state is. */
     val newTagAcceptable: Boolean
         get() {
@@ -332,6 +425,65 @@ class CollectionEditorDraft private constructor(
         coverImagePath = path
     }
 
+    /**
+     * Whether [locale] already has a version open, which is what decides whether its chip is offered
+     * and whether an entry can be added at all.
+     *
+     * Compared by language rather than by tag so an Arabic entry added as `ar` is not offered a second
+     * time as `ar-EG`. Two entries for the same language would resolve to the same row on the way back
+     * in, and whichever lost would take the other's text with it.
+     */
+    fun hasTranslationFor(locale: Locale): Boolean = translations.any { it.locale.isSameLanguageAs(locale) }
+
+    /**
+     * Opens a version in [locale], or reports that it did not.
+     *
+     * Refused rather than silently ignored when [locale] already has one, for the same reason
+     * [hasTranslationFor] compares by language: the second entry would replace the first on save, and
+     * the user would have typed a version into a field that was never going to keep it.
+     */
+    fun addTranslation(locale: Locale): Boolean {
+        if (hasTranslationFor(locale)) {
+            return false
+        }
+        translations = translations + TranslationEntry(locale = locale)
+        return true
+    }
+
+    fun updateTranslationName(
+        locale: Locale,
+        value: String,
+    ) {
+        translations = translations.map { entry -> entry.replacing(locale) { it.copy(name = value) } }
+    }
+
+    fun updateTranslationDescription(
+        locale: Locale,
+        value: String,
+    ) {
+        translations = translations.map { entry -> entry.replacing(locale) { it.copy(description = value) } }
+    }
+
+    /**
+     * Closes the version in [locale].
+     *
+     * Removes it from the draft rather than blanking it, because those are different outcomes: a blank
+     * entry is a version nobody finished, and this is a version the user looked at and decided against.
+     * The difference is invisible until they reopen the dialog, which is exactly when it matters.
+     */
+    fun removeTranslation(locale: Locale) {
+        translations = translations.filterNot { it.locale.isSameLanguageAs(locale) }
+    }
+
+    /** The entry in [locale] as it stands, for the block that draws it. */
+    fun translationFor(locale: Locale): TranslationEntry? =
+        translations.firstOrNull { it.locale.isSameLanguageAs(locale) }
+
+    private fun TranslationEntry.replacing(
+        locale: Locale,
+        change: (TranslationEntry) -> TranslationEntry,
+    ): TranslationEntry = if (locale.isSameLanguageAs(this.locale)) change(this) else this
+
     fun isTagSelected(name: String): Boolean = tags.any { it.equals(name, ignoreCase = true) }
 
     /** Adds [name] if it is not already carried, drops it if it is. What a chip press does. */
@@ -365,24 +517,40 @@ class CollectionEditorDraft private constructor(
     }
 
     /**
-     * The names the picker should draw: everything the library uses, plus anything chosen here that
+     * The options the picker should draw: everything the library uses, plus anything chosen here that
      * storage has not heard of yet, filtered by [tagQuery].
      *
      * A chosen tag is never filtered out, whether it matches the query or not, because a chip that
      * vanishes the moment someone starts typing is a chip they cannot then take off. The tags chosen
      * here rather than picked from the library are folded in for the same reason: a tag the user has
      * just created has no row anywhere yet, so without this it would have no chip to show as chosen.
+     *
+     * The query is matched against the label *and* the value, which is what makes the box useful in
+     * both directions: a reader typing "morning" finds the chip that reads "أذكار الصباح", and one
+     * typing the Arabic finds it too. Matching the label alone would have made the stored names
+     * unsearchable once the shipped ones were translated.
      */
-    fun tagOptions(available: List<String>): List<String> {
+    fun tagOptions(available: List<TagOption>): List<TagOption> {
         val unheard =
-            tags.filter { chosen -> available.none { it.equals(chosen, ignoreCase = true) } }
-        val names = (available + unheard).distinctBy { it.lowercase() }
+            tags
+                .filter { chosen -> available.none { it.value.equals(chosen, ignoreCase = true) } }
+                .map(TagOption::of)
+        val options = (available + unheard).distinctBy { it.value.lowercase() }
         val query = tagQuery.trim()
         if (query.isEmpty()) {
-            return names
+            return options
         }
-        return names.filter { it.contains(query, ignoreCase = true) || isTagSelected(it) }
+        return options.filter { it.matches(query) || isTagSelected(it.value) }
     }
+
+    /**
+     * Whether a query could be looking for this tag.
+     *
+     * Both names because [label] is what the user can read and [value] is what the tag is called in
+     * the rows this picker saves against; a reader who knows the tag by either should find it.
+     */
+    private fun TagOption.matches(query: String): Boolean =
+        label.contains(query, ignoreCase = true) || value.contains(query, ignoreCase = true)
 
     /** The confirm button's click handler. Reports whether the dialog may close. */
     fun submit(): Boolean {
@@ -397,14 +565,16 @@ class CollectionEditorDraft private constructor(
         /** Only read for [CollectionEditorMode.EDIT] and [CollectionEditorMode.DUPLICATE]. */
         const val NO_COLLECTION_ID = -1L
 
-        fun create(): CollectionEditorDraft =
+        fun create(nameLocale: Locale = Locale.ENGLISH): CollectionEditorDraft =
             CollectionEditorDraft(
                 mode = CollectionEditorMode.CREATE,
                 collectionId = NO_COLLECTION_ID,
                 initialName = "",
+                nameLocale = nameLocale,
                 initialDescription = "",
                 initialTags = emptyList(),
                 initialCoverImagePath = null,
+                initialTranslations = emptyList(),
             )
 
         /**
@@ -419,6 +589,7 @@ class CollectionEditorDraft private constructor(
                 mode = CollectionEditorMode.EDIT,
                 collectionId = requireId(collection),
                 initialName = collection.name,
+                nameLocale = collection.nameLocale,
                 initialDescription = collection.description.orEmpty(),
                 // Sorted rather than in the set's own order for the same reason the chips are: a
                 // hash-ordered set would reorder the chips every time the user opened the dialog.
@@ -427,6 +598,7 @@ class CollectionEditorDraft private constructor(
                         .map { it.name }
                         .sortedWith(String.CASE_INSENSITIVE_ORDER),
                 initialCoverImagePath = collection.coverImagePath,
+                initialTranslations = collection.entries(),
             )
 
         /**
@@ -436,20 +608,41 @@ class CollectionEditorDraft private constructor(
         fun duplicate(
             collection: RemembranceCollection,
             newName: String,
+            nameLocale: Locale = Locale.ENGLISH,
         ): CollectionEditorDraft =
             CollectionEditorDraft(
                 mode = CollectionEditorMode.DUPLICATE,
                 collectionId = requireId(collection),
                 initialName = newName,
+                nameLocale = nameLocale,
                 initialDescription = "",
                 initialTags = emptyList(),
                 initialCoverImagePath = null,
+                // Empty even though the source has some. A duplicate is a new collection with a new
+                // name, and inheriting the source's other languages would leave translations that
+                // describe a passage the user is not editing and cannot see.
+                initialTranslations = emptyList(),
             )
 
         private fun requireId(collection: RemembranceCollection): Long =
             requireNotNull(collection.id) { "A persisted collection came back without an identifier" }
     }
 }
+
+/**
+ * The collection's translations as editable entries, in a fixed order.
+ *
+ * Sorted by language rather than kept in the map's iteration order, because two opens of the same
+ * collection should draw the same blocks in the same places — a set ordering that changed between
+ * opens would put the Arabic version above the French one one day and below it the next. Blanks are
+ * skipped: storage should not be holding one, but a translation with no name has nothing to show
+ * and no way to be corrected from here.
+ */
+private fun RemembranceCollection.entries(): List<TranslationEntry> =
+    translations.entries
+        .filter { pair -> pair.value.name.isNotBlank() }
+        .sortedBy { it.key.language }
+        .map { (locale, pair) -> TranslationEntry(locale = locale, name = pair.name, description = pair.description) }
 
 /**
  * Everything the editor needs from the world around it, as one value.
@@ -465,7 +658,7 @@ internal class CollectionEditorEnvironment(
     /** Decoded cover pictures, so a cover already chosen previews itself. `null` before storage is up. */
     val covers: CollectionCoverCache?,
     /** Every tag the library uses, offered as chips. */
-    val availableTagNames: List<String>,
+    val availableTags: List<TagOption>,
     /**
      * Opens the file chooser, captioned with the [title] it is given, and returns the name of the copy
      * the app made, or `null` if the user backed out. A parameter rather than a file dialog this file
@@ -500,7 +693,13 @@ internal fun CollectionEditorDialog(
     draft: CollectionEditorDraft,
     environment: CollectionEditorEnvironment,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, description: String?, tagNames: List<String>, coverImagePath: String?) -> Unit,
+    onConfirm: (
+        name: String,
+        description: String?,
+        tagNames: List<String>,
+        coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>,
+    ) -> Unit,
 ) {
     val colors = AzkarTheme.colors
     val steps = draft.mode.steps
@@ -572,7 +771,13 @@ private fun editorNavigation(
     onBack: () -> Unit,
     onNext: () -> Unit,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, description: String?, tagNames: List<String>, coverImagePath: String?) -> Unit,
+    onConfirm: (
+        name: String,
+        description: String?,
+        tagNames: List<String>,
+        coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>,
+    ) -> Unit,
 ) = CollectionEditorNavigation(
     onBack = onBack,
     onNext = { if (draft.submit()) onNext() },
@@ -584,6 +789,7 @@ private fun editorNavigation(
                 draft.submittedDescription,
                 draft.submittedTagNames,
                 draft.coverImagePath,
+                draft.submittedTranslations,
             )
         }
     },
@@ -609,12 +815,16 @@ private fun CollectionEditorStepBody(
                 Spacer(Modifier.height(FIELD_GAP))
                 CollectionDescriptionField(draft = draft)
             }
+            if (draft.mode.editsTranslations) {
+                Spacer(Modifier.height(FIELD_GAP))
+                CollectionTranslationSection(draft = draft)
+            }
         }
 
         CollectionEditorStep.TAGS ->
             CollectionTagPickerPanel(
                 draft = draft,
-                availableTagNames = environment.availableTagNames,
+                availableTags = environment.availableTags,
             )
 
         CollectionEditorStep.COVER ->
@@ -788,12 +998,25 @@ private fun CollectionEditorHeader(
 @Composable
 private fun CollectionNameField(draft: CollectionEditorDraft) {
     val colors = AzkarTheme.colors
+    // The ambient direction, used only while the field is still empty — see [textDirectionOf].
+    val ambient = if (isRtlLayout()) LayoutDirection.Rtl else LayoutDirection.Ltr
     FieldLabel(text = stringResource(Res.string.collectionsDialogNameLabel), required = true)
+    Text(
+        text = stringResource(
+            Res.string.contentPrimaryLanguage,
+            draft.nameLocale.displayNameIn(AzkarTheme.locale),
+        ),
+        color = colors.textSecondary,
+        fontSize = HINT_SP,
+    )
+    Spacer(Modifier.height(SMALL_GAP))
     AzkarOutlinedField(
         value = draft.name,
         onValueChange = draft::updateName,
         placeholder = stringResource(Res.string.collectionsDialogNamePlaceholder),
         modifier = Modifier.fillMaxWidth(),
+        // What the user is about to type decides the direction, not what the app is written in.
+        textDirection = textDirectionOf(draft.name, ambient),
     )
     if (draft.nameRejected) {
         Text(
@@ -825,6 +1048,7 @@ private fun CollectionNameField(draft: CollectionEditorDraft) {
 @Composable
 private fun CollectionDescriptionField(draft: CollectionEditorDraft) {
     val colors = AzkarTheme.colors
+    val ambient = if (isRtlLayout()) LayoutDirection.Rtl else LayoutDirection.Ltr
     FieldLabel(text = stringResource(Res.string.collectionsDialogDescriptionLabel))
     Box(modifier = Modifier.fillMaxWidth()) {
         AzkarOutlinedField(
@@ -837,6 +1061,7 @@ private fun CollectionDescriptionField(draft: CollectionEditorDraft) {
             singleLine = false,
             minHeight = DESCRIPTION_FIELD_HEIGHT,
             maxLines = DESCRIPTION_LINES,
+            textDirection = textDirectionOf(draft.description, ambient),
         )
         Text(
             text =
@@ -852,6 +1077,127 @@ private fun CollectionDescriptionField(draft: CollectionEditorDraft) {
                 Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = DESCRIPTION_COUNT_INSET, bottom = DESCRIPTION_COUNT_BOTTOM_INSET),
+        )
+    }
+}
+
+/**
+ * The other languages this collection can be named in.
+ *
+ * A collapsed row of language chips until one is pressed, then a block per language. The alternative —
+ * a field per shipped language, always — would put two boxes in front of every user to say that one of
+ * them, usually, says nothing they need, and a form whose optional parts are all visible teaches people
+ * to ignore them.
+ *
+ * The languages offered are the shipped ones minus the two this panel cannot add: the language the name
+ * above is already written in — which is *not* the language the screen is in, once the interface has
+ * been switched under a name that stayed put — and any language that already has a block, because there
+ * is one field per language by design. Both exclusions are made here rather than in the draft so the
+ * draft still refuses a duplicate — the UI hiding a chip is a convenience, not a guarantee.
+ *
+ * The note above it is the honest half of this: naming a collection in one language does not translate
+ * it, and without saying so the first thing a user discovers is that their Arabic collection read "Sleep"
+ * in the Arabic interface. It is drawn once, for the base fields, rather than per block — the blocks
+ * answer their own question by existing.
+ */
+@Composable
+private fun CollectionTranslationSection(draft: CollectionEditorDraft) {
+    val locale = AzkarTheme.locale
+    // What is already written, not what the screen is in — see [missingLanguages]. The description is
+    // consulted second so a name that is blank but a sentence that is not still counts.
+    val offered =
+        missingLanguages(
+            name = draft.name.ifBlank { draft.description },
+            existing = draft.translations,
+            uiLocale = locale,
+            nameLocale = draft.nameLocale,
+        )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        FieldLabel(text = stringResource(Res.string.contentTranslationAdd))
+        Text(
+            text = stringResource(Res.string.contentLanguageNote),
+            color = AzkarTheme.colors.textSecondary,
+            fontSize = HINT_SP,
+            modifier = Modifier.padding(top = LABEL_GAP),
+        )
+        if (offered.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = BLOCK_GAP),
+                horizontalArrangement = Arrangement.spacedBy(TRANSLATION_CHIP_GAP),
+            ) {
+                offered.forEach { candidate ->
+                    AzkarFilterChip(
+                        text = candidate.displayNameIn(locale),
+                        selected = false,
+                        onClick = { draft.addTranslation(candidate) },
+                        leadingIcon = Icons.Filled.Add,
+                    )
+                }
+            }
+        }
+        draft.translations.forEach { entry ->
+            Spacer(Modifier.height(TRANSLATION_BLOCK_GAP))
+            CollectionTranslationBlock(draft = draft, entry = entry)
+        }
+    }
+}
+
+/**
+ * One language's name and description, with the button that takes it away.
+ *
+ * Titled by the language rather than by "Translation", because a list of identically-titled boxes is a
+ * list the user has to read the contents of to tell apart, and the one thing they need to tell apart
+ * first is which language each box is for. The endonym is what makes that readable to someone who does
+ * not read the interface language — the same reason the language switcher names its options by
+ * endonym, and for the same reason it is not translated here: "العربية" is the word for Arabic in every
+ * language the app ships, while a translated label would only be readable to people who already read
+ * the interface.
+ *
+ * Both fields point their direction at what has been typed, for the reason [CollectionNameField]
+ * does. A translation is the one place in this app where the text is *certainly* in another language,
+ * so the hint is never going to be a guess the caller has to make.
+ */
+@Composable
+private fun CollectionTranslationBlock(
+    draft: CollectionEditorDraft,
+    entry: TranslationEntry,
+) {
+    val locale = AzkarTheme.locale
+    val ambient = if (isRtlLayout()) LayoutDirection.Rtl else LayoutDirection.Ltr
+    val spoken = entry.locale.displayNameIn(locale)
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(Res.string.contentTranslationFor, spoken),
+                color = AzkarTheme.colors.textPrimary,
+                fontSize = LABEL_SP,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            IconActionButton(
+                icon = Icons.Filled.Close,
+                contentDescription = stringResource(Res.string.contentTranslationRemove),
+                onClick = { draft.removeTranslation(entry.locale) },
+                iconSize = TRANSLATION_REMOVE_GLYPH,
+                tint = AzkarTheme.colors.textSecondary,
+            )
+        }
+        AzkarOutlinedField(
+            value = entry.name,
+            onValueChange = { draft.updateTranslationName(entry.locale, it) },
+            placeholder = spoken,
+            modifier = Modifier.fillMaxWidth().padding(top = LABEL_GAP),
+            textDirection = textDirectionOf(entry.name, ambient),
+        )
+        AzkarOutlinedField(
+            value = entry.description.orEmpty(),
+            onValueChange = { draft.updateTranslationDescription(entry.locale, it.take(DESCRIPTION_LIMIT)) },
+            placeholder = stringResource(Res.string.collectionsDialogDescriptionPlaceholder),
+            modifier = Modifier.fillMaxWidth().padding(top = LABEL_GAP),
+            singleLine = false,
+            minHeight = DESCRIPTION_FIELD_HEIGHT,
+            maxLines = DESCRIPTION_LINES,
+            textDirection = textDirectionOf(entry.description, ambient),
         )
     }
 }
@@ -1166,7 +1512,7 @@ private fun CollectionEditorDetailsPreview() {
             draft = draft,
             environment = previewEditorEnvironment(),
             onDismiss = {},
-            onConfirm = { _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _ -> },
         )
     }
 }
@@ -1182,7 +1528,7 @@ private fun CollectionEditorTagsPreview() {
             draft = draft,
             environment = previewEditorEnvironment(),
             onDismiss = {},
-            onConfirm = { _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _ -> },
         )
     }
 }
@@ -1195,7 +1541,7 @@ private fun CollectionEditorCoverPreview() {
             draft = CollectionEditorDraft.create(),
             environment = previewEditorEnvironment(),
             onDismiss = {},
-            onConfirm = { _, _, _, _ -> },
+            onConfirm = { _, _, _, _, _ -> },
         )
     }
 }
@@ -1209,7 +1555,7 @@ private fun CollectionEditorCoverPreview() {
 private fun previewEditorEnvironment() =
     CollectionEditorEnvironment(
         covers = null,
-        availableTagNames = listOf("morning", "sleep", "travel", "after prayer"),
+        availableTags = listOf("morning", "sleep", "travel", "after prayer").map(TagOption::of),
         onPickCover = { null },
     )
 
@@ -1387,5 +1733,28 @@ private val COVER_GAP = 12.dp
 
 /** Both lines of the cover's status, which is a heading and a sentence rather than two captions. */
 private val COVER_STATUS_SP = 12.sp
+
+/**
+ * The gap between the language chips and the note above them, and between two chips.
+ *
+ * Wider than [FIELD_GAP] because the chips are a row of choices rather than a stack of fields, and a row
+ * that hugs its label reads as a caption to the label rather than as a set of things to press.
+ */
+private val TRANSLATION_CHIP_GAP = 10.dp
+
+/**
+ * The gap above one language's block.
+ *
+ * Larger than any gap inside the dialog. A translation block is a separate thing being said about the
+ * same collection, and at [FIELD_GAP] apart the fields would run together into one long form — which is
+ * exactly the reading this is trying not to encourage.
+ */
+private val TRANSLATION_BLOCK_GAP = 24.dp
+
+/** The note explaining that one name does not become two languages by itself. */
+private val HINT_SP = 11.sp
+
+/** Small enough to sit beside the block's title without competing with the field under it. */
+private val TRANSLATION_REMOVE_GLYPH = 14.dp
 
 private val COVER_HINT_SP = 11.sp

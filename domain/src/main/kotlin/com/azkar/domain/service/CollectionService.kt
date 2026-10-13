@@ -3,11 +3,13 @@ package com.azkar.domain.service
 import com.azkar.domain.exception.CollectionNotFoundException
 import com.azkar.domain.model.CollectionKind
 import com.azkar.domain.model.CollectionSummary
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.domain.model.renamed
 import com.azkar.domain.repo.CollectionRepository
+import java.util.Locale
 
 /**
  * The application's entry point for everything the UI does with collections.
@@ -72,36 +74,92 @@ class CollectionService(
         iconKey: String? = null,
         coverImagePath: String? = null,
         tags: Set<Tag> = emptySet(),
+        translations: Map<Locale, LocalizedPair> = emptyMap(),
+        nameLocale: Locale = Locale.ENGLISH,
     ): RemembranceCollection =
         transactions.run {
             val created =
                 repository.save(
                     RemembranceCollectionImpl(
                         name = name,
+                        nameLocale = nameLocale,
                         description = description,
                         iconKey = iconKey,
                         coverImagePath = coverImagePath,
                         tags = tags,
+                        translations = translations,
                     ),
                 )
             if (tags.isEmpty()) {
                 created
             } else {
                 val id = checkNotNull(created.id) { "A just-created collection must have an id" }
-                repository.setTags(id, tags.map { it.name })
+                repository.setTags(id, tags)
                 repository.findById(id)
                     ?: throw CollectionNotFoundException(id)
             }
         }
 
-    /** Renames and redescribes the collection identified by [id]. */
+    /**
+     * Renames and redescribes the collection identified by [id].
+     *
+     * [translations] is threaded through rather than edited separately because a name and its
+     * translations are one thing: a shelf whose canonical name changed but whose Arabic did not is not a
+     * half-finished edit, it is a shelf that now claims to be called something its own translation does
+     * not agree with. See [renamed] for why the default keeps what is there.
+     */
     suspend fun rename(
         id: Long,
         name: String,
         description: String? = null,
+        translations: Map<Locale, LocalizedPair>? = null,
+        nameLocale: Locale? = null,
     ): RemembranceCollection =
         transactions.run {
-            repository.save(require(id).renamed(name = name, description = description))
+            val current = require(id)
+            repository.save(
+                current.renamed(
+                    name = name,
+                    description = description,
+                    // Defaulted at the *service* rather than at `renamed` because this layer knows what
+                    // the caller almost always means: an editor that opened the canonical name and did
+                    // not touch the translations has not asked to delete them.
+                    translations = translations ?: current.translations,
+                    nameLocale = nameLocale ?: current.nameLocale,
+                ),
+            )
+        }
+
+    /**
+     * Gives [id] wording in the languages it has none for, and touches nothing else.
+     *
+     * Merge rather than replace, and that is the entire difference from [rename]. A shared document
+     * that happens to name a shelf this machine already has is not asking to retranslate it — the local
+     * shelf is the user's own, and they may have named it in a second language themselves. So an
+     * import fills what is missing and leaves every language that already has an answer exactly as it
+     * was.
+     *
+     * Returns the collection unchanged when [translations] adds nothing, so the caller pays no write
+     * and no timestamp for a document that carried no new language.
+     */
+    suspend fun applyTranslations(
+        id: Long,
+        translations: Map<Locale, LocalizedPair>,
+    ): RemembranceCollection =
+        transactions.run {
+            val current = require(id)
+            val missing = translations.filterKeys { it !in current.translations }
+            if (missing.isEmpty()) {
+                current
+            } else {
+                repository.save(
+                    current.renamed(
+                        name = current.name,
+                        description = current.description,
+                        translations = current.translations + missing,
+                    ),
+                )
+            }
         }
 
     /**
@@ -118,6 +176,7 @@ class CollectionService(
     suspend fun duplicate(
         id: Long,
         newName: String,
+        nameLocale: Locale = Locale.ENGLISH,
     ): RemembranceCollection =
         transactions.run {
             val source = require(id)
@@ -125,6 +184,7 @@ class CollectionService(
                 repository.save(
                     RemembranceCollectionImpl(
                         name = newName,
+                        nameLocale = nameLocale,
                         description = source.description,
                         iconKey = source.iconKey,
                         tags = source.tags,
@@ -214,7 +274,7 @@ class CollectionService(
         transactions.run {
             val collection = require(id)
             if (collection.tags != tags) {
-                repository.setTags(id, tags.map { it.name })
+                repository.setTags(id, tags)
             }
         }
     }

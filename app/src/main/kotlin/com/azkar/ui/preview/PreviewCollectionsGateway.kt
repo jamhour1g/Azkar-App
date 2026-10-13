@@ -1,5 +1,6 @@
 package com.azkar.ui.preview
 
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
@@ -13,6 +14,7 @@ import com.azkar.ui.library.model.CollectionsSnapshot
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.Instant
+import java.util.Locale
 
 /**
  * An in-memory [CollectionsGateway] for previews that need a whole screen rather than one card.
@@ -63,6 +65,8 @@ internal class PreviewCollectionsGateway(
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>,
+        nameLocale: Locale,
     ): RemembranceCollection =
         requireNotNull(collections.firstOrNull()) { "a preview cannot invent a collection to return" }
 
@@ -72,6 +76,9 @@ internal class PreviewCollectionsGateway(
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>?,
+        nameLocale: Locale?,
+        tagLocale: Locale?,
     ): RemembranceCollection = find(id)
 
     override suspend fun setCollectionPinned(
@@ -87,6 +94,7 @@ internal class PreviewCollectionsGateway(
     override suspend fun duplicateCollection(
         id: Long,
         newName: String,
+        nameLocale: Locale,
     ): RemembranceCollection = find(id)
 
     override suspend fun deleteCollection(id: Long) = Unit

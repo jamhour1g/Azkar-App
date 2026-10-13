@@ -234,7 +234,7 @@ private fun TagDialogs(
             initialName = "",
             confirmLabel = stringResource(Res.string.tagsActionNew),
             note = stringResource(Res.string.tagsDialogNewHint),
-            onSubmit = state::create,
+            onSubmit = { name, translations -> state.create(name, translations, AzkarTheme.locale) },
             onDismiss = targets::closeName,
         )
     }
@@ -242,11 +242,16 @@ private fun TagDialogs(
     targets.renaming?.let { tag ->
         TagNameDialog(
             title = stringResource(Res.string.tagsDialogRenameTitle),
+            // The stored name, not the one on screen. The field below is filled with it, so the
+            // "Currently: X" line and the field it sits over have to be reading the same word or one
+            // of them is describing a tag that does not exist.
             initialName = tag.name,
             confirmLabel = stringResource(Res.string.tagsActionSave),
             subtitle = stringResource(Res.string.tagsDialogRenameCurrent, tag.name),
             note = stringResource(Res.string.tagsDialogRenameNote),
-            onSubmit = { name -> state.rename(tag.id, name) },
+            initialTranslations = tag.translationEntries(),
+            initialNameLocale = tag.nameLocale,
+            onSubmit = { name, translations -> state.rename(tag.id, name, translations, tag.nameLocale) },
             onDismiss = targets::closeName,
         )
     }
@@ -419,6 +424,7 @@ private fun TagRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = AzkarTheme.colors
+    val locale = AzkarTheme.locale
     Row(
         modifier =
             modifier
@@ -430,7 +436,7 @@ private fun TagRow(
         Spacer(Modifier.width(ROW_GAP))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = tag.name,
+                text = tag.displayName(locale),
                 color = colors.textPrimary,
                 fontSize = ROW_NAME_SP,
                 fontWeight = FontWeight.SemiBold,
@@ -486,6 +492,12 @@ private fun TagRow(
  * so a colour taken from the row's position would repaint every tag below it each time one is deleted
  * or reordered; hashing the name means a tag is the same square on every read, in every sort, and in
  * every session — which is the only property a colour can have here without becoming a second meaning.
+ *
+ * Both of them read `tag.name`, the stored name, rather than the name the row shows beside it. That
+ * is the whole reason a tag keeps two: the stored name is the tag's identity — it is what the unique
+ * index is built on and what a rename collides against — so a mark drawn from the reader's language
+ * would repaint itself the moment somebody switched language, and a tag with two names would become
+ * two colours. The row next to it is for reading; this one is for recognition.
  */
 @Composable
 private fun TagAvatar(
@@ -663,6 +675,7 @@ private fun DeletedTagRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = AzkarTheme.colors
+    val locale = AzkarTheme.locale
     Row(
         modifier =
             modifier
@@ -673,7 +686,7 @@ private fun DeletedTagRow(
         TagAvatar(tag)
         Spacer(Modifier.width(SMALL_GAP))
         Text(
-            text = tag.name,
+            text = tag.displayName(locale),
             color = colors.textSecondary,
             fontSize = ROW_NAME_SP,
             maxLines = 1,

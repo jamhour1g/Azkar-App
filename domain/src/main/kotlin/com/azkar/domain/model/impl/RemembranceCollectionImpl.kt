@@ -1,10 +1,12 @@
 package com.azkar.domain.model.impl
 
 import com.azkar.domain.model.CollectionKind
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
 import java.time.Instant
+import java.util.Locale
 
 /**
  * The default immutable implementation of [RemembranceCollection].
@@ -17,6 +19,7 @@ import java.time.Instant
 data class RemembranceCollectionImpl private constructor(
     override val id: Long?,
     override val name: String,
+    override val nameLocale: Locale,
     override val description: String?,
     override val kind: CollectionKind,
     override val iconKey: String?,
@@ -29,6 +32,7 @@ data class RemembranceCollectionImpl private constructor(
     override val homePinnedAt: Instant?,
     override val isFavorite: Boolean,
     override val members: List<Remembrance>,
+    override val translations: Map<Locale, LocalizedPair>,
 ) : RemembranceCollection {
     init {
         require(name.isNotBlank()) { "Collection name must not be blank" }
@@ -42,6 +46,10 @@ data class RemembranceCollectionImpl private constructor(
          * Every optional text field is trimmed and blank-normalized through the same helper, so a
          * cover that points at nothing and a cover that points at an empty name cannot be told apart
          * by whichever caller remembered to check.
+         *
+         * [translations] is copied rather than aliased for the same reason [tags] and [members] are:
+         * a caller building a collection out of a draft holds a map it may still be editing, and a
+         * collection that reflected a later edit to it would have changed without being saved.
          */
         operator fun invoke(
             id: Long? = null,
@@ -58,10 +66,13 @@ data class RemembranceCollectionImpl private constructor(
             homePinnedAt: Instant? = null,
             isFavorite: Boolean = false,
             members: List<Remembrance> = emptyList(),
+            translations: Map<Locale, LocalizedPair> = emptyMap(),
+            nameLocale: Locale = Locale.ENGLISH,
         ): RemembranceCollectionImpl =
             RemembranceCollectionImpl(
                 id = id,
                 name = name.trim(),
+                nameLocale = nameLocale,
                 description = description.trimmedOrNull(),
                 kind = kind,
                 iconKey = iconKey.trimmedOrNull(),
@@ -74,6 +85,7 @@ data class RemembranceCollectionImpl private constructor(
                 homePinnedAt = homePinnedAt,
                 isFavorite = isFavorite,
                 members = members.toList(),
+                translations = translations.toMap(),
             )
     }
 }

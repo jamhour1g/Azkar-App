@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.style.Style
 import androidx.compose.foundation.style.styleable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.MoreVert
@@ -80,12 +81,15 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.azkar.i18n.textDirectionOf
 import com.azkar.ui.theme.AzkarColors
 import com.azkar.ui.theme.AzkarExpressive
 import com.azkar.ui.theme.AzkarMotion
@@ -1418,6 +1422,31 @@ fun AzkarOutlinedField(
      * corner of the field without landing on the last line of the text it is counting.
      */
     maxLines: Int = Int.MAX_VALUE,
+    /**
+     * Which way the text inside this field should read, overriding the direction the interface would
+     * otherwise give it.
+     *
+     * The interface's direction is the right one for anything the app wrote, and wrong for anything
+     * the user wrote: a person with an English interface who names a collection in Arabic wants the
+     * caret on the right and the text growing leftwards, and without this they get an Arabic name
+     * trailing off the right edge of a left-to-right field. See [textDirectionOf] for how the answer
+     * is worked out.
+     *
+     * Left null — which is what every field holding no user-authored text passes — the field keeps
+     * whatever `AzkarTheme` set, so the override reaches only the fields that ask for it. It is
+     * carried on the [TextStyle] rather than by wrapping the field in a `LocalLayoutDirection`, because
+     * the theme provides that locally and any value a caller supplied around the field would be
+     * silently discarded on the way down ([AzkarThemePreview] records the same trap for previews).
+     */
+    textDirection: LayoutDirection? = null,
+    /**
+     * Keyboard configuration for fields that need one — a different input type, or an action key.
+     *
+     * Passed straight through rather than given parameters of its own, because every one of those
+     * would be one more thing this component had to know about keyboards to keep in step with
+     * Compose. Null leaves Material's own defaults, which is what all but one field wants.
+     */
+    keyboardOptions: KeyboardOptions? = null,
 ) {
     val colors = AzkarTheme.colors
     OutlinedTextField(
@@ -1426,7 +1455,13 @@ fun AzkarOutlinedField(
         modifier = modifier.heightIn(min = minHeight),
         singleLine = singleLine,
         maxLines = maxLines,
-        textStyle = TextStyle(color = colors.textPrimary, fontSize = fontSize),
+        keyboardOptions = keyboardOptions ?: KeyboardOptions.Default,
+        textStyle =
+            TextStyle(
+                color = colors.textPrimary,
+                fontSize = fontSize,
+                textDirection = textDirection.toTextDirection(),
+            ),
         placeholder = { Text(text = placeholder, fontSize = fontSize) },
         leadingIcon =
             leadingIcon?.let {
@@ -1457,6 +1492,21 @@ fun AzkarOutlinedField(
             ),
     )
 }
+
+/**
+ * This direction as the one a [TextStyle] carries, with `null` becoming [TextDirection.Content].
+ *
+ * `Content` is the meaningful null: it defers to whatever layout direction is already in effect,
+ * which is what a field with no override wants. Keeping this conversion to one place means the rest
+ * of the app can talk in [LayoutDirection] — the vocabulary [LocalLayoutDirection] and
+ * [isRtlLayout] already use — without every caller having to know there are two similar enums.
+ */
+private fun LayoutDirection?.toTextDirection(): TextDirection =
+    when (this) {
+        LayoutDirection.Ltr -> TextDirection.Ltr
+        LayoutDirection.Rtl -> TextDirection.Rtl
+        null -> TextDirection.Content
+    }
 
 @Composable
 private fun FieldHint(

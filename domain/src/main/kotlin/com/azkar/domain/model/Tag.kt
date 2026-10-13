@@ -1,6 +1,7 @@
 package com.azkar.domain.model
 
 import java.time.Instant
+import java.util.Locale
 
 /**
  * Represents a tag that can be associated with a [Remembrance].
@@ -21,11 +22,37 @@ interface Tag {
      * Always folded to lower case by [TagImpl], which is what makes two tags named the same word
      * the same tag however either was spelled. Presentation capitalises it again; nothing should
      * have to guess which form it is holding.
+     *
+     * This is the tag's *identity*, not its caption: it is what `uq_tag__name` is built on, what a
+     * rename collides against and what a tag's avatar colour and glyph are hashed from. Keeping it
+     * independent of [translations] is what stops a tag changing colour, or colliding with a
+     * different tag, because somebody read the library in another language.
      */
     val name: String
 
+    /** Language the canonical [name] was entered in; independent of its script and display direction. */
+    val nameLocale: Locale
+
+    /**
+     * The name as written in each language it has been given in, for the tags that ship with the app.
+     *
+     * Empty for every tag a user created, which is the ordinary case rather than a missing one: one
+     * person typing one label has one language, and the label is already in it. See
+     * [RemembranceCollection.translations] for the convention.
+     */
+    val translations: Map<Locale, String>
+
     /** When this tag was first introduced or recorded in the system, or `null` when unknown. */
     val createdAt: Instant?
+
+    /**
+     * The name to draw when the interface is in [locale].
+     *
+     * Unlike a collection, this capitalises the fallback: [name] is folded for the unique index, and
+     * a folded fallback would be the only lowercase word in a column of capitalised ones. A tag that
+     * does have a translation is drawn exactly as it was written, because nothing folded it.
+     */
+    fun displayName(locale: Locale): String = translations.displayTagName(locale, name)
 
     companion object {
         /**

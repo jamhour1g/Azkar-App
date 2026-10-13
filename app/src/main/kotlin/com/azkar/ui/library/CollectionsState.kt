@@ -4,6 +4,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
@@ -96,8 +97,18 @@ class CollectionsState(
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair> = emptyMap(),
         onCreated: (Long) -> Unit,
-    ) = catalogue.createCollection(name, description, tagNames, coverImagePath, onCreated)
+        nameLocale: Locale = Locale.ENGLISH,
+    ) = catalogue.createCollection(
+        name = name,
+        description = description,
+        tagNames = tagNames,
+        coverImagePath = coverImagePath,
+        translations = translations,
+        onCreated = onCreated,
+        nameLocale = nameLocale,
+    )
 
     fun editCollection(
         id: Long,
@@ -105,14 +116,18 @@ class CollectionsState(
         description: String?,
         tagNames: Collection<String>,
         coverImagePath: String?,
-    ) = catalogue.editCollection(id, name, description, tagNames, coverImagePath)
+        translations: Map<Locale, LocalizedPair>? = null,
+        nameLocale: Locale? = null,
+        tagLocale: Locale? = null,
+    ) = catalogue.editCollection(id, name, description, tagNames, coverImagePath, translations, nameLocale, tagLocale)
 
     fun deleteCollection(id: Long) = catalogue.deleteCollection(id)
 
     fun duplicateCollection(
         id: Long,
         newName: String,
-    ) = catalogue.duplicateCollection(id, newName)
+        nameLocale: Locale = Locale.ENGLISH,
+    ) = catalogue.duplicateCollection(id, newName, nameLocale)
 
     /** Decodes and caches collection covers for the cards and the editor preview to draw. */
     val covers: CollectionCoverCache get() = catalogue.covers
@@ -176,6 +191,9 @@ class CollectionsState(
                 sort = sort,
                 recitedCounts = catalogue.recitedCounts,
                 tagIds = labelFilter?.let { setOf(it) }.orEmpty(),
+                // The name the sort breaks its ties on has to be the one on the cards, or a shelf
+                // sorted by anything else orders rows by a name nobody is reading.
+                uiLocale = uiLocale,
             )
 
     val shelfTiles: List<CollectionTile>

@@ -1,6 +1,7 @@
 package com.azkar.domain.model
 
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
+import java.util.Locale
 
 /*
  * Rebuilding helpers for [RemembranceCollection].
@@ -20,11 +21,22 @@ import com.azkar.domain.model.impl.RemembranceCollectionImpl
  * its own, so a new one cannot be left behind.
  */
 
-/** A copy of this collection under a new [name] and [description]. */
+/**
+ * A copy of this collection under a new [name] and [description].
+ *
+ * [translations] defaults to the receiver's and has to: a rename is how a shelf is *given* a name in
+ * another language, so the editor cannot express "rename this" without also being able to say "and
+ * while you are there, call it that in Arabic". Passing an empty map is the one way to say "drop every
+ * translation", and it is spelled the way it is spelled rather than inferred from a null, because a
+ * caller that forgets the argument should keep what is there rather than silently delete it.
+ */
 fun RemembranceCollection.renamed(
     name: String,
     description: String? = this.description,
-): RemembranceCollection = rebuilt(name = name, description = description)
+    translations: Map<Locale, LocalizedPair> = this.translations,
+    nameLocale: Locale = this.nameLocale,
+): RemembranceCollection =
+    rebuilt(name = name, description = description, translations = translations, nameLocale = nameLocale)
 
 /** A copy of this collection pointing at a different cover picture, or at none. */
 fun RemembranceCollection.withCoverImage(coverImagePath: String?): RemembranceCollection =
@@ -91,14 +103,17 @@ fun RemembranceCollection.withMembers(remembers: List<Remembrance>): Remembrance
  */
 private fun RemembranceCollection.rebuilt(
     name: String = this.name,
+    nameLocale: Locale = this.nameLocale,
     description: String? = this.description,
     coverImagePath: String? = this.coverImagePath,
     tags: Set<Tag> = this.tags,
     members: List<Remembrance> = this.members,
+    translations: Map<Locale, LocalizedPair> = this.translations,
 ): RemembranceCollection =
     RemembranceCollectionImpl(
         id = id,
         name = name,
+        nameLocale = nameLocale,
         description = description,
         kind = kind,
         iconKey = iconKey,
@@ -111,4 +126,5 @@ private fun RemembranceCollection.rebuilt(
         homePinnedAt = homePinnedAt,
         isFavorite = isFavorite,
         members = members,
+        translations = translations,
     )

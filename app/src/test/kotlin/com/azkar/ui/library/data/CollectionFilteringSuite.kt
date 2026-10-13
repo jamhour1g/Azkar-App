@@ -1,6 +1,8 @@
 package com.azkar.ui.library.data
 
 import com.azkar.domain.model.CollectionKind
+import com.azkar.domain.model.LocalizedPair
+import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.ui.library.FixtureInstant
 import com.azkar.ui.library.LaterFixtureInstant
@@ -12,6 +14,7 @@ import com.azkar.ui.library.remembrance
 import com.azkar.ui.library.tag
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
+import java.util.Locale
 
 /**
  * Which collections the hub shows, in what order, and what its search box reaches.
@@ -817,5 +820,143 @@ val CollectionFilteringSuite by testSuite("Narrowing, ordering and searching the
     test("an empty shelf counts nothing") {
         assertThat(membershipCountsOf(emptyList()).collectionsIn(1L)).isZero()
         assertThat(MembershipCounts.EMPTY.collectionsIn(1L)).isZero()
+    }
+}
+
+/**
+ * Searching and sorting a shelf that has been translated.
+ *
+ * These are the same two rules as above — the query reaches the words on the card, and the name sort
+ * puts them in order — applied to a shelf whose words differ by language. They need pinning because
+ * the obvious implementation reads one string, and the translations are a map beside it: a query for
+ * "أذكار" would find nothing, and a name sort would order the shelf by whatever language it happened
+ * to be typed in. Both look correct in English and fail silently in Arabic.
+ *
+ * The rule is that a translated row is reachable in *every* language, not only in its own. Someone
+ * reading the English interface still searches for the Arabic word they remember off a card, and
+ * someone reading the Arabic one still pastes the English name a colleague sent them.
+ */
+val TranslatedShelfSuite by testSuite("Searching and sorting a shelf that has been translated") {
+    val arabic = Locale.forLanguageTag("ar")
+    val english = Locale.ENGLISH
+
+    val morningReminder = remembrance(id = 1L, text = "Whoever says good morning")
+    val eveningReminder = remembrance(id = 2L, text = "Whoever says good evening")
+
+    val morning =
+        officialCollection(
+            id = 10L,
+            name = "Morning Azkar",
+            description = "Remembrance for the start of the day",
+            members = listOf(morningReminder),
+            translations =
+                mapOf(
+                    english to LocalizedPair("Morning Azkar", "Remembrance for the start of the day"),
+                    arabic to LocalizedPair("أذكار الصباح", "أذكار لبداية اليوم"),
+                ),
+        )
+    val evening =
+        officialCollection(
+            id = 11L,
+            name = "Evening Azkar",
+            description = "Remembrance for the end of the day",
+            members = listOf(eveningReminder),
+            translations =
+                mapOf(
+                    english to LocalizedPair("Evening Azkar", "Remembrance for the end of the day"),
+                    arabic to LocalizedPair("أذكار المساء", "أذكار لنهاية اليوم"),
+                ),
+        )
+
+    /** The shelf as it would be shown to a reader in [locale]. */
+    fun searchedIn(
+        locale: Locale,
+        query: String,
+        among: List<RemembranceCollection> = listOf(morning, evening),
+    ) = CollectionFiltering.shelf(
+        collections = among,
+        scope = CollectionScope.ALL,
+        query = query,
+        sort = CollectionSort.NAME,
+        uiLocale = locale,
+    )
+
+    test("the Arabic name is found while reading in English") {
+        assertThat(searchedIn(english, "أذكار الصباح").map { it.name })
+            .containsExactly("Morning Azkar")
+    }
+
+    test("the English name is found while reading in Arabic") {
+        assertThat(searchedIn(arabic, "morning").map { it.name })
+            .containsExactly("Morning Azkar")
+    }
+
+    test("a translated sentence is reached as well as a translated name") {
+        assertThat(searchedIn(english, "لبداية").map { it.name })
+            .containsExactly("Morning Azkar")
+    }
+
+    test("a word shared by both rows matches both, rather than the one that happens to be first") {
+        // Both Arabic names open with أذكار. A matcher that stopped at the first hit would show one
+        // shelf and look like it had found the right one.
+        assertThat(searchedIn(arabic, "أذكار")).hasSize(2)
+    }
+
+    test("a query still finds nothing when neither language carries it") {
+        assertThat(searchedIn(arabic, "أذكار الغروب")).isEmpty()
+    }
+
+    test("sorting by name orders the shelf the way the reader will see it") {
+        // The order asserted below is the order Arabic sorts in *by code point*, which is what
+        // String.CASE_INSENSITIVE_ORDER gives: ا ل س < ا ل ص < ا ل م because س is U+0633, ص U+0635
+        // and م U+0645. It is not dictionary order, and an Arabic reader would say so. This is a
+        // pre-existing property of every string list in the app rather than something the shelf
+        // introduced, so it is pinned here as what it is rather than asserted as what it should be.
+
+        val ordered =
+            CollectionFiltering.shelf(
+                collections = listOf(morning, evening),
+                scope = CollectionScope.ALL,
+                query = "",
+                sort = CollectionSort.NAME,
+                uiLocale = arabic,
+            )
+
+        // أذكار المساء sorts before أذكار الصباح alphabetically, which is the opposite of the order
+        // the English names give. A sort that read the stored name would silently disagree with the
+        // shelf the user is looking at.
+        assertThat(ordered.map { it.name }).containsExactly("Morning Azkar", "Evening Azkar")
+    }
+
+    test("a shelf of translated and untranslated collections still sorts without a tie") {
+        val mine = customCollection(id = 30L, name = "أذكار الفجر")
+
+        val ordered =
+            CollectionFiltering.shelf(
+                collections = listOf(morning, mine),
+                scope = CollectionScope.ALL,
+                query = "",
+                sort = CollectionSort.NAME,
+                uiLocale = arabic,
+            )
+
+        // الفجر sorts *after* الصباح by code point (ف is U+0641, ص is U+0635), so the translated row
+        // leads and the untranslated one follows — on words, not on the stored slugs, which would
+        // have put "morning" (م) before "أذكار الفجر" for no reason a reader of either can see.
+        assertThat(ordered.map { it.name }).containsExactly("Morning Azkar", "أذكار الفجر")
+    }
+
+    test("a search group is headed by the name the reader sees, not the stored one") {
+        val groups =
+            CollectionFiltering.groupSearchResults(
+                collections = listOf(morning),
+                remembrances = listOf(morningReminder),
+                query = "ذكر",
+                uiLocale = arabic,
+            )
+
+        // The query reaches the member's Arabic text (ذكر 1); the heading above the hits must then be
+        // in the same language, or the result reads as a hit inside a collection the user cannot read.
+        assertThat(groups.single().collectionName).isEqualTo("أذكار الصباح")
     }
 }

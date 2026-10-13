@@ -88,6 +88,7 @@ object CollectionFiltering {
         categoryId: Long? = null,
         recitedCounts: Map<Long, Int> = emptyMap(),
         tagIds: Set<Long> = emptySet(),
+        uiLocale: Locale = Locale.getDefault(),
     ): List<RemembranceCollection> {
         val normalized = query.trim().lowercase(Locale.ROOT)
         val inScope =
@@ -126,7 +127,7 @@ object CollectionFiltering {
         if (scope == CollectionScope.PINNED) {
             // Everything left is pinned, so the "pinned first" half of the comparator has nothing to
             // do and the chosen sort alone decides the order.
-            return narrowed.sortedWith(comparatorFor(sort, recitedCounts = recitedCounts))
+            return narrowed.sortedWith(comparatorFor(sort, recitedCounts = recitedCounts, uiLocale = uiLocale))
         }
         // Starred collections deliberately do not get that shortcut. One can be starred and unpinned,
         // and the shelf's standing promise is that pinned collections come first whatever the scope
@@ -135,7 +136,7 @@ object CollectionFiltering {
         // The two halves are sorted separately and then concatenated. Sorting the concatenation
         // would be a single pass over a mixed list, and any comparator that does not also order by
         // `isPinned` would interleave the two halves again.
-        val comparator = comparatorFor(sort, pinnedFirst = false, recitedCounts = recitedCounts)
+        val comparator = comparatorFor(sort, pinnedFirst = false, recitedCounts = recitedCounts, uiLocale = uiLocale)
         return narrowed.filter { it.isPinned }.sortedWith(comparator) +
             narrowed.filterNot { it.isPinned }.sortedWith(comparator)
     }
@@ -156,18 +157,40 @@ object CollectionFiltering {
     }
 
     /**
-     * Matches a collection by name or description.
+     * Matches a collection by name or description, in every language it is written in.
      *
      * Matching the description too is deliberate: a user who cannot remember whether they wrote
      * "for the car" in a name or a description should not have to know which.
+     *
+     * Searching every locale rather than the UI's is the same rule [matchesRemembrance] follows and
+     * for the same reason: a collection whose Arabic name is on screen has an English name too, and
+     * a reader who knows it by either should be able to type it. The stored name is always searched
+     * as well, so a collection with no translations behaves exactly as it did before.
      */
     fun matchesQuery(
         collection: RemembranceCollection,
         normalizedQuery: String,
     ): Boolean {
         if (normalizedQuery.isEmpty()) return true
-        return collection.name.lowercase(Locale.ROOT).contains(normalizedQuery) ||
-            collection.description?.lowercase(Locale.ROOT)?.contains(normalizedQuery) == true
+        return searchableCollectionText(collection).contains(normalizedQuery)
+    }
+
+    /**
+     * Everything a collection can be found by, folded to one string.
+     *
+     * The stored name and description come first and every translation follows, so a collection with
+     * no translations produces exactly the two strings it always did. Joins are single spaces so a
+     * query cannot match by straddling a boundary between two fields.
+     */
+    private fun searchableCollectionText(collection: RemembranceCollection): String {
+        val parts = ArrayList<String>(2 + collection.translations.size * 2)
+        parts += collection.name
+        collection.description?.takeIf { it.isNotBlank() }?.let(parts::add)
+        for (pair in collection.translations.values) {
+            parts += pair.name
+            pair.description?.takeIf { it.isNotBlank() }?.let(parts::add)
+        }
+        return parts.joinToString(" ").lowercase(Locale.ROOT)
     }
 
     /**
@@ -176,6 +199,13 @@ object CollectionFiltering {
      * Every comparator falls back to the collection name so that two collections with the same
      * count, or edited in the same millisecond, do not swap places between two loads of the same
      * data.
+     *
+     * That fallback name is the one the reader sees. Sorting by the stored name would put an Arabic
+     * shelf in an order that reads as arbitrary to somebody reading Arabic, and the name is the
+     * tiebreaker for every sort rather than only [CollectionSort.NAME] — so an order decided by the
+     * wrong one is an order decided by the wrong one whichever sort was chosen. [uiLocale] defaults
+     * to the JVM default, which `LocaleStore.activateLocale` has already pointed at the active
+     * language by the time this runs.
      *
      * [recitedCounts] is only read by [CollectionSort.PROGRESS], and defaults to empty so that the
      * three orders that have no use for it do not have to be handed a figure they ignore. An empty
@@ -187,10 +217,12 @@ object CollectionFiltering {
         sort: CollectionSort,
         pinnedFirst: Boolean = true,
         recitedCounts: Map<Long, Int> = emptyMap(),
+        uiLocale: Locale = Locale.getDefault(),
     ): Comparator<RemembranceCollection> {
         val byName =
-            compareBy(String.CASE_INSENSITIVE_ORDER, RemembranceCollection::name)
-                .thenBy { it.id ?: Long.MIN_VALUE }
+            compareBy<RemembranceCollection, String>(String.CASE_INSENSITIVE_ORDER) {
+                it.displayName(uiLocale)
+            }.thenBy { it.id ?: Long.MIN_VALUE }
         return when (sort) {
             CollectionSort.NAME -> byName
             CollectionSort.MOST_ITEMS -> compareByDescending<RemembranceCollection> { it.members.size }.then(byName)
@@ -258,6 +290,7 @@ object CollectionFiltering {
         collections: List<RemembranceCollection>,
         remembrances: List<Remembrance>,
         query: String,
+        uiLocale: Locale = Locale.getDefault(),
     ): List<SearchGroup> {
         val normalized = query.trim().lowercase(Locale.ROOT)
         if (normalized.isEmpty()) return emptyList()
@@ -266,7 +299,9 @@ object CollectionFiltering {
             collections.mapNotNull { collection ->
                 val id = collection.id ?: return@mapNotNull null
                 val hits = collection.members.mapNotNull { byId[it.id] }.filter { matchesRemembrance(it, normalized) }
-                if (hits.isEmpty()) null else SearchGroup(id, collection.name, hits)
+                // The heading names the collection the reader will land in, so it is the name that
+                // collection will be known by when they get there.
+                if (hits.isEmpty()) null else SearchGroup(id, collection.displayName(uiLocale), hits)
             }
         return groups
     }
@@ -276,7 +311,9 @@ object CollectionFiltering {
      *
      * Every locale is searched, not just the UI's: a user typing "forgiveness" in an Arabic window
      * still expects to find the remembrance they saw labelled in English last week, and the
-     * translation text is the only thing the tile would have shown them.
+     * translation text is the only thing the tile would have shown them. A remembrance's labels are
+     * searched the same way, and for the same reason — the tag it is filed under is on screen in the
+     * reader's language even though it is filed under the one that was seeded.
      */
     fun matchesRemembrance(
         remembrance: Remembrance,
@@ -284,7 +321,10 @@ object CollectionFiltering {
     ): Boolean =
         normalizedQuery.isEmpty() ||
             remembrance.source?.lowercase(Locale.ROOT)?.contains(normalizedQuery) == true ||
-            remembrance.tags.any { it.name.lowercase(Locale.ROOT).contains(normalizedQuery) } ||
+            remembrance.tags.any { tag ->
+                tag.translations.values.any { it.lowercase(Locale.ROOT).contains(normalizedQuery) } ||
+                    tag.name.lowercase(Locale.ROOT).contains(normalizedQuery)
+            } ||
             remembrance.translations.values.any { translations ->
                 translations.translationPair.text
                     .lowercase(Locale.ROOT)

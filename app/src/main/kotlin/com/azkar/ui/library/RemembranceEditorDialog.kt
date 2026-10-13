@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -91,6 +92,7 @@ internal fun RemembranceEditorDialog(
                     label = stringResource(Res.string.remembranceEditorArabicLabel),
                     placeholder = stringResource(Res.string.remembranceEditorArabicPlaceholder),
                     minHeight = EDITOR_ARABIC_HEIGHT,
+                    direction = LayoutDirection.Rtl,
                 )
                 if (draft.arabicRejected) {
                     ValidationNote(stringResource(Res.string.remembranceEditorArabicRequired))
@@ -102,6 +104,7 @@ internal fun RemembranceEditorDialog(
                     label = stringResource(Res.string.remembranceEditorEnglishLabel),
                     placeholder = stringResource(Res.string.remembranceEditorEnglishPlaceholder),
                     minHeight = EDITOR_ENGLISH_HEIGHT,
+                    direction = LayoutDirection.Ltr,
                 )
                 Text(
                     text = stringResource(Res.string.remembranceEditorTranslationHelp),
@@ -156,9 +159,14 @@ private fun EditorButtons(
 /**
  * One labelled box, and the label above it.
  *
- * A pair because the two boxes differ only in their draft slot and their height: splitting them into
- * two near-identical composables would mean the placeholder, the multiline setting and the width had
- * to be kept in step by hand, and there is nothing in either that the other should not have.
+* A pair because the two boxes differ only in their draft slot and their height: splitting them into
+ * 2 near-identical composables would mean the placeholder, the multiline setting and the width had
+ *  to be kept in step by hand, and there is nothing in either that the other should not have.
+ *
+ * [direction] is a parameter rather than something inferred from [value] because these two boxes are
+ * the one pair in the app whose language is known before anything is typed: one holds Arabic and one
+ * holds English. Inferring would get an empty box wrong, and a box nobody has typed into is exactly
+ * when the caret has to be in the right place — which is the whole point of the setting.
  */
 @Composable
 private fun EditorField(
@@ -167,6 +175,7 @@ private fun EditorField(
     label: String,
     placeholder: String,
     minHeight: Dp,
+    direction: LayoutDirection,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -178,6 +187,7 @@ private fun EditorField(
             modifier = Modifier.fillMaxWidth(),
             singleLine = false,
             minHeight = minHeight,
+            textDirection = direction,
         )
     }
 }
