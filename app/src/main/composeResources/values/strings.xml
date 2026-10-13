@@ -379,6 +379,8 @@
     <string name="tagsActionRename">Rename</string>
     <string name="tagsActionDelete">Delete</string>
     <string name="tagsActionRestore">Restore</string>
+    <string name="tagsActionMore">More</string>
+    <string name="tagsActionSave">Save</string>
     <string name="tagsSearchPlaceholder">Search tags</string>
     <string name="tagsShowDeleted">Deleted</string>
     <!-- The three figures in the band. They answer "how much of the library is named?" rather than
@@ -412,7 +414,7 @@
     <string name="tagsPageNext">Next page</string>
     <!-- The drill-down. Titled after the tag so the panel says which question is being answered
          even once the list below it has been read. -->
-    <string name="tagsUsageTitle">Where &quot;%1$s&quot; is used</string>
+    <string name="tagsUsageTitle">Where this tag is used</string>
     <string name="tagsUsageCollectionsTitle">Collections</string>
     <string name="tagsUsageRemembrancesTitle">Remembrances</string>
     <string name="tagsUsageEmpty">Nothing carries this tag yet.</string>
@@ -429,6 +431,8 @@
     <string name="tagsEmptyDeletedHint">Tags you remove are kept here, so you can put one back.</string>
     <string name="tagsDialogNewTitle">New tag</string>
     <string name="tagsDialogRenameTitle">Rename tag</string>
+    <string name="tagsDialogRenameCurrent">Currently %1$s</string>
+    <string name="tagsDialogNewHint">Labels group collections and remembrances. Names are folded, so case does not matter.</string>
     <string name="tagsDialogNameLabel">Name</string>
     <string name="tagsDialogNamePlaceholder">e.g. morning</string>
     <string name="tagsDialogNameRequired">A tag needs a name.</string>
@@ -436,7 +440,9 @@
     <!-- The counts are stated in the sentence rather than left to the row: a confirmation is where a
          user decides whether deleting is safe, and the figures are the decision. -->
     <string name="tagsDialogDeleteTitle">Delete this tag?</string>
-    <string name="tagsDialogDeleteBody">%1$s will come off %2$s and %3$s. It stays on this screen so you can put it back.</string>
+    <string name="tagsDialogDeleteBody">%1$s will come off %2$s and %3$s.</string>
+    <string name="tagsDialogDeleteNote">Nothing is lost. The tag stays here so you can put it back.</string>
+    <string name="tagsUsageCount">%1$d</string>
 
     <plurals name="tagsUsageCollections">
         <item quantity="one">%1$d collection</item>

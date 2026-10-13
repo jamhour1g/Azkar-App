@@ -1,5 +1,6 @@
 package com.azkar.ui.library
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,13 +11,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,11 +34,14 @@ import com.azkar.domain.model.TagUsage
 import com.azkar.domain.model.TagUsageRemembrance
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionsMemberCount
+import com.azkar.generated.resources.tagsUsageCollections
 import com.azkar.generated.resources.tagsUsageCollectionsTitle
+import com.azkar.generated.resources.tagsUsageCount
 import com.azkar.generated.resources.tagsUsageEmpty
 import com.azkar.generated.resources.tagsUsageLoading
 import com.azkar.generated.resources.tagsUsageNoText
 import com.azkar.generated.resources.tagsUsageOpenHint
+import com.azkar.generated.resources.tagsUsageRemembrances
 import com.azkar.generated.resources.tagsUsageRemembrancesTitle
 import com.azkar.generated.resources.tagsUsageTitle
 import com.azkar.ui.components.AzkarDialogSurface
@@ -106,28 +114,51 @@ private fun TagUsageDialog(
     Dialog(onDismissRequest = onDismiss) {
         AzkarDialogSurface(modifier = Modifier.widthIn(min = PANEL_MIN_WIDTH, max = PANEL_MAX_WIDTH)) {
             Column {
-                Text(
-                    text =
-                        if (usage != null) {
-                            stringResource(Res.string.tagsUsageTitle, usage.tag.name)
-                        } else {
-                            stringResource(Res.string.tagsUsageLoading)
-                        },
-                    color = AzkarTheme.colors.textPrimary,
-                    fontSize = PANEL_TITLE_SP,
-                    fontWeight = FontWeight.Bold,
-                )
                 if (usage != null) {
+                    TagDialogHeader(
+                        markName = usage.tag.name,
+                        title = stringResource(Res.string.tagsUsageTitle),
+                        subtitle = usageSubtitle(usage),
+                    )
                     UsageBody(
                         usage = usage,
                         onOpenCollection = onOpenCollection,
                         onOpenRemembrance = onOpenRemembrance,
+                    )
+                } else {
+                    Text(
+                        text = stringResource(Res.string.tagsUsageLoading),
+                        color = AzkarTheme.colors.textPrimary,
+                        fontSize = PANEL_TITLE_SP,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             }
         }
     }
 }
+
+/**
+ * The header's second line: how much of the vocabulary this one tag reaches.
+ *
+ * The two counts rather than the name, because the name is already in the mark beside them and a
+ * third printing of it would be the panel saying the same thing twice. This is the same sentence the
+ * row it was opened from carries, which is the point — the panel is a longer answer to a question
+ * the row answered in six words.
+ */
+@Composable
+private fun usageSubtitle(usage: TagUsage): String =
+    pluralStringResource(
+        Res.plurals.tagsUsageCollections,
+        usage.tag.collectionCount,
+        usage.tag.collectionCount,
+    ) +
+        " · " +
+        pluralStringResource(
+            Res.plurals.tagsUsageRemembrances,
+            usage.tag.remembranceCount,
+            usage.tag.remembranceCount,
+        )
 
 /**
  * The two lists, or the one sentence saying there is nothing.
@@ -148,23 +179,29 @@ private fun UsageBody(
             text = stringResource(Res.string.tagsUsageEmpty),
             color = AzkarTheme.colors.textSecondary,
             fontSize = PANEL_BODY_SP,
-            modifier = Modifier.padding(top = ROW_GAP),
+            modifier = Modifier.padding(top = BODY_GAP),
         )
         return
     }
     Column(
         modifier =
             Modifier
-                .padding(top = ROW_GAP)
+                .padding(top = BODY_GAP)
                 .heightIn(max = PANEL_LIST_HEIGHT)
                 .verticalScroll(rememberScrollState()),
     ) {
-        UsageSection(title = stringResource(Res.string.tagsUsageCollectionsTitle)) {
+        UsageSection(
+            title = stringResource(Res.string.tagsUsageCollectionsTitle),
+            count = usage.collections.size,
+        ) {
             usage.collections.forEach { summary ->
                 CollectionUsageRow(summary = summary, onOpen = { onOpenCollection(summary.id) })
             }
         }
-        UsageSection(title = stringResource(Res.string.tagsUsageRemembrancesTitle)) {
+        UsageSection(
+            title = stringResource(Res.string.tagsUsageRemembrancesTitle),
+            count = usage.remembrances.size,
+        ) {
             usage.remembrances.forEach { row ->
                 RemembranceUsageRow(row = row, onOpen = { onOpenRemembrance(row.id) })
             }
@@ -179,29 +216,67 @@ private fun UsageBody(
 }
 
 /**
- * One titled group of rows.
+ * One titled group of rows, with how many there are.
  *
  * The rule above the second group rather than between every row: the group titles are what make the
  * two kinds separable at a glance, and a hairline per row inside a list of fifty passages would be
  * fifty more lines to read past.
+ *
+ * The count is beside the title rather than in it because fifty is the number that changes the
+ * decision — it is the difference between "these two" and "this is everything" — and a title that
+ * grows with its own contents moves the rows under it every time a tag is added to.
  */
 @Composable
 private fun UsageSection(
     title: String,
+    count: Int,
     content: @Composable () -> Unit,
 ) {
     val colors = AzkarTheme.colors
     Column(modifier = Modifier.fillMaxWidth()) {
         HorizontalDivider(color = colors.border)
-        Text(
-            text = title,
-            color = colors.textSecondary,
-            fontSize = PANEL_HINT_SP,
-            fontWeight = FontWeight.SemiBold,
+        Row(
             modifier = Modifier.padding(top = SECTION_PADDING, bottom = SECTION_PADDING / 2),
-        )
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                color = colors.textSecondary,
+                fontSize = PANEL_HINT_SP,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.width(COUNT_GAP))
+            CountBadge(count = count)
+        }
         content()
     }
+}
+
+/**
+ * How many rows are under this title.
+ *
+ * A filled pill rather than a bare number because the number sits in the title's own line with
+ * nothing around it, where a lone "54" reads as a fragment of the title rather than as a count of
+ * the rows below it. [tagsUsageCount] exists so the figure is formatted through the resource layer
+ * rather than concatenated into the title's locale.
+ */
+@Composable
+private fun CountBadge(
+    count: Int,
+    modifier: Modifier = Modifier,
+) {
+    val colors = AzkarTheme.colors
+    Text(
+        text = stringResource(Res.string.tagsUsageCount, count),
+        color = colors.primaryStrong,
+        fontSize = PANEL_HINT_SP,
+        fontWeight = FontWeight.SemiBold,
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(BADGE_SHAPE))
+                .background(colors.artPillSurface)
+                .padding(horizontal = BADGE_PADDING_X, vertical = BADGE_PADDING_Y),
+    )
 }
 
 /**
@@ -264,6 +339,11 @@ private fun CollectionUsageRow(
  * order applies here as everywhere else the app shows a passage; the only thing decided here is what
  * to print when it found nothing at all, which is a sentence about the row rather than about the
  * text and so belongs with the rest of the panel's words.
+ *
+ * The leading glyph is the same column a collection row starts in, and that is the only reason it is
+ * here. Without it the two sections were one list indented differently — a passage's text ran to the
+ * panel's edge while a collection's name started a glyph in — which read as though the collections
+ * belonged to a different panel from the passages they were listed beside.
  */
 @Composable
 private fun RemembranceUsageRow(
@@ -281,6 +361,13 @@ private fun RemembranceUsageRow(
                 .padding(vertical = ROW_PADDING),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
+            contentDescription = null,
+            tint = colors.textSecondary,
+            modifier = Modifier.size(ROW_GLYPH),
+        )
+        Spacer(Modifier.width(ROW_GAP))
         Text(
             text = text,
             color = colors.textPrimary,
@@ -375,6 +462,11 @@ private fun previewUsage(): TagUsage =
             ),
     )
 
+private val BODY_GAP = 14.dp
+private val COUNT_GAP = 8.dp
+private val BADGE_SHAPE = 8.dp
+private val BADGE_PADDING_X = 7.dp
+private val BADGE_PADDING_Y = 2.dp
 private val ROW_GAP = 12.dp
 private val ROW_GLYPH = 16.dp
 private val ROW_PADDING = 8.dp

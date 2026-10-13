@@ -48,11 +48,16 @@ import com.azkar.domain.model.TagSummary
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionsToastTitle
 import com.azkar.generated.resources.tagsActionDelete
+import com.azkar.generated.resources.tagsActionMore
+import com.azkar.generated.resources.tagsActionNew
 import com.azkar.generated.resources.tagsActionRename
 import com.azkar.generated.resources.tagsActionRestore
+import com.azkar.generated.resources.tagsActionSave
 import com.azkar.generated.resources.tagsActionViewUsage
 import com.azkar.generated.resources.tagsDeletedTitle
+import com.azkar.generated.resources.tagsDialogNewHint
 import com.azkar.generated.resources.tagsDialogNewTitle
+import com.azkar.generated.resources.tagsDialogRenameCurrent
 import com.azkar.generated.resources.tagsDialogRenameNote
 import com.azkar.generated.resources.tagsDialogRenameTitle
 import com.azkar.generated.resources.tagsEmptyDeletedHint
@@ -227,6 +232,8 @@ private fun TagDialogs(
         TagNameDialog(
             title = stringResource(Res.string.tagsDialogNewTitle),
             initialName = "",
+            confirmLabel = stringResource(Res.string.tagsActionNew),
+            note = stringResource(Res.string.tagsDialogNewHint),
             onSubmit = state::create,
             onDismiss = targets::closeName,
         )
@@ -236,6 +243,8 @@ private fun TagDialogs(
         TagNameDialog(
             title = stringResource(Res.string.tagsDialogRenameTitle),
             initialName = tag.name,
+            confirmLabel = stringResource(Res.string.tagsActionSave),
+            subtitle = stringResource(Res.string.tagsDialogRenameCurrent, tag.name),
             note = stringResource(Res.string.tagsDialogRenameNote),
             onSubmit = { name -> state.rename(tag.id, name) },
             onDismiss = targets::closeName,
@@ -447,16 +456,15 @@ private fun TagRow(
             onClick = onRename,
             tint = colors.textSecondary,
         )
+        // Rename is the pencil beside this and is not repeated here. It used to be, and the row
+        // carried two controls that opened the same dialog — which reads as one of them being
+        // broken rather than as the choice being offered twice. What is left in here is the action
+        // that has no glyph out here: a menu of one is a button that happens to open a list.
         AzkarOverflowMenu(
             icon = Icons.Filled.MoreVert,
-            contentDescription = stringResource(Res.string.tagsActionRename),
+            contentDescription = stringResource(Res.string.tagsActionMore),
             items =
                 listOf(
-                    AzkarMenuItem(
-                        label = stringResource(Res.string.tagsActionRename),
-                        onClick = onRename,
-                        icon = Icons.Filled.Edit,
-                    ),
                     AzkarMenuItem(
                         label = stringResource(Res.string.tagsActionDelete),
                         onClick = onDelete,
@@ -510,9 +518,13 @@ private fun TagAvatar(
  * with the theme instead of sitting on it as a stain. [mosaicBrush] is the rule being followed — the
  * same material at several tints, keyed on an id so the choice is stable, and never a hue the theme
  * has not already chosen for something else.
+ *
+ * `internal` rather than private because the tag dialogs and the usage panel put the same tile beside
+ * their titles. A mark drawn from a different rule would be the one place on the screen that did not
+ * look like the tag it was about.
  */
 @Composable
-private fun tagAvatarBrush(name: String): Brush {
+internal fun tagAvatarBrush(name: String): Brush {
     val colors = AzkarTheme.colors
     return when (tagAvatarSlot(name, AVATAR_SLOTS)) {
         0 -> Brush.linearGradient(listOf(colors.azkarCardStart, colors.azkarCardEnd))

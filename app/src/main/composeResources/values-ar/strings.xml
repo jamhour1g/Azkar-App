@@ -391,6 +391,8 @@
     <string name="tagsActionRename">إعادة تسمية</string>
     <string name="tagsActionDelete">حذف</string>
     <string name="tagsActionRestore">استعادة</string>
+    <string name="tagsActionMore">المزيد</string>
+    <string name="tagsActionSave">حفظ</string>
     <string name="tagsSearchPlaceholder">ابحث في الوسوم</string>
     <string name="tagsShowDeleted">المحذوف</string>
     <string name="tagsStatCollections">%1$d مستخدمة في المجموعات</string>
@@ -411,7 +413,7 @@
     <string name="tagsPageLabel">%1$d / %2$d</string>
     <string name="tagsPagePrevious">الصفحة السابقة</string>
     <string name="tagsPageNext">الصفحة التالية</string>
-    <string name="tagsUsageTitle">مواضع استخدام &quot;%1$s&quot;</string>
+    <string name="tagsUsageTitle">مواضع استخدام هذا الوسم</string>
     <string name="tagsUsageCollectionsTitle">المجموعات</string>
     <string name="tagsUsageRemembrancesTitle">الأذكار</string>
     <string name="tagsUsageEmpty">لا يحمل هذا الوسم شيء بعد.</string>
@@ -428,12 +430,16 @@
     <string name="tagsEmptyDeletedHint">الوسوم التي تحذفها تبقى هنا، حتى تستطيع إعادة أحدها.</string>
     <string name="tagsDialogNewTitle">وسم جديد</string>
     <string name="tagsDialogRenameTitle">إعادة تسمية الوسم</string>
+    <string name="tagsDialogRenameCurrent">الحالي %1$s</string>
+    <string name="tagsDialogNewHint">التسميات تجمع المجموعات والأذكار، وتُصغَّر الأحرف فلا يهم اختلاف الحالة.</string>
     <string name="tagsDialogNameLabel">الاسم</string>
     <string name="tagsDialogNamePlaceholder">مثال: الصباح</string>
     <string name="tagsDialogNameRequired">الوسم يحتاج اسمًا.</string>
     <string name="tagsDialogNameTaken">يوجد وسم آخر بهذا الاسم.</string>
     <string name="tagsDialogDeleteTitle">حذف هذا الوسم؟</string>
-    <string name="tagsDialogDeleteBody">سيُزال %1$s من %2$s و%3$s. سيبقى في هذه الشاشة لتستعيده.</string>
+    <string name="tagsDialogDeleteBody">سيُزال %1$s من %2$s و%3$s.</string>
+    <string name="tagsDialogDeleteNote">لا شيء يضيع؛ يبقى الوسم هنا لتستعيده.</string>
+    <string name="tagsUsageCount">%1$d</string>
 
     <plurals name="tagsUsageCollections">
         <item quantity="zero">لا مجموعات</item>
