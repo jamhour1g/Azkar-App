@@ -51,6 +51,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.job
 import org.assertj.core.api.Assertions.assertThat
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -213,7 +214,8 @@ private fun collectionCard(name: String): SemanticsMatcher =
  *
  * The container is torn down in a `finally`. A test that leaves Koin running leaks that state into
  * every suite that happens to run after it, which is the kind of failure that only shows up on a full
- * run and never in isolation.
+ * run and never in isolation. The teardown is ordered, though: the scratch directory outlives the
+ * store's cancellation rather than racing it, and the `finally` says why.
  *
  * It is a top-level function rather than one declared inside `testSuite { }` because Kotlin does not
  * allow a `private` local function, and a helper local to the suite body could not be.
@@ -232,10 +234,23 @@ private fun withHomeContainer(block: () -> Unit) {
         }
         block()
     } finally {
+        // The scratch directory is removed only once the store's own work has actually stopped,
+        // rather than straight after asking it to. `cancel()` returns at once; the DataStore reading
+        // this file on its IO scope keeps running for a moment afterwards. Unlinking the file under a
+        // store that is still reading it makes `changes` fail, and `changes` answers a failure by
+        // emitting an empty snapshot — a write into the Compose state `HomeScreen` reads, on a
+        // thread that is not the one composing it, arriving as the composition is being torn down.
+        // That is the intermittent *"Unsupported concurrent change during composition"* this test used
+        // to fail with, and it is why the two steps are joined rather than merely sequenced:
+        // `cancel` followed by `delete` is a race that mostly wins, and `invokeOnCompletion` is what
+        // makes it deterministic without blocking the test thread on a join.
+        val storeJob = storeScope.coroutineContext.job
+        storeJob.invokeOnCompletion {
+            runCatching { Files.list(directory).forEach { it.deleteIfExists() } }
+            runCatching { directory.deleteIfExists() }
+        }
         stopKoin()
         storeScope.cancel()
-        runCatching { Files.list(directory).forEach { it.deleteIfExists() } }
-        runCatching { directory.deleteIfExists() }
     }
 }
 
