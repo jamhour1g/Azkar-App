@@ -6,6 +6,13 @@
     <string name="yourCompanion">رفيقك الروحي</string>
     <string name="azkarLibrary">مكتبة الاذكار</string>
     <string name="home">الرئيسية</string>
+    <string name="reminderManagerTitle">التذكيرات</string>
+    <string name="reminderManagerSubtitle">أنشئ قائمة موحدة للمجموعات والأذكار الفردية، وأدر تنبيهات الصلاة.</string>
+    <!-- Tray menu -->
+    <string name="trayMenuOpen">فتح الأذكار</string>
+    <string name="trayMenuPause">إيقاف التذكيرات مؤقتًا</string>
+    <string name="trayMenuResume">استئناف التذكيرات</string>
+    <string name="trayMenuQuit">خروج</string>
     <!-- Main Content -->
     <string name="greetingTitle">السلام عليكم</string>
     <string name="greetingDate">14 ذو الحجة 1445 هـ</string>
@@ -25,7 +32,7 @@
     <string name="todayPrayerTimes">مواقيت الصلاة اليوم</string>
     <string name="nextPrayerIn">متبقي على الصلاة:</string>
     <string name="nextPrayerLabel">الصلاة القادمة</string>
-    <string name="prayerTimesLocation">مواقيت الصلاة لرام الله، فلسطين</string>
+    <string name="prayerTimesLocation">مواقيت الصلاة في %1$s</string>
     <string name="prayerTimeRemaining">02:15:30</string>
     <string name="prayerNotification">تنبيهات الصلوات</string>
     <string name="prayerNotificationsShort">التنبيهات</string>
@@ -502,4 +509,18 @@
         <item quantity="many">%1$d وسمًا معروضًا</item>
         <item quantity="other">%1$d وسم معروض</item>
     </plurals>
+
+    <string name="notificationDismiss">إخفاء</string>
+    <string name="notificationPresentationTitle">المظهر</string>
+    <string name="notificationPresentationSubtitle">كيف يظهر التذكير عندما لا تكون نافذة التطبيق في المقدمة.</string>
+    <string name="notificationChannelSystem">أرسِل أيضًا إلى سطح المكتب</string>
+    <string name="notificationChannelSystemNote">معطّل افتراضيًا، لأن سطح المكتب يرسمه بأسلوبه الخاص. فعّله فقط إذا أردت رؤية التذكير في مركز الإشعارات أيضًا.</string>
+    <string name="notificationDuration">يظهر على الشاشة %1$d ثانية</string>
+    <string name="notificationPlacement">الموضع</string>
+    <string name="notificationPlacementTopStart">أعلى اليسار</string>
+    <string name="notificationPlacementTopEnd">أعلى اليمين</string>
+    <string name="notificationPlacementBottomStart">أسفل اليسار</string>
+    <string name="notificationPlacementBottomEnd">أسفل اليمين</string>
+    <string name="notificationStackSize">اعرض %1$d في آن واحد</string>
+    <string name="notificationOverlayPolicy">تتراكم التذكيرات في الزاوية التي تختارها، الأحدث الأقرب إلى الزاوية. ويحلّ التذكير الجديد محل الأقدم عند بلوغ الحد، ولا يتكرر التذكير المطابق الموجود على الشاشة.</string>
 </resources>

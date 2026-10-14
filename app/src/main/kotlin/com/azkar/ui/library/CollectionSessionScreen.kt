@@ -18,10 +18,8 @@ import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -51,7 +49,6 @@ import com.azkar.ui.components.AzkarMenuItem
 import com.azkar.ui.components.PrimaryButton
 import com.azkar.ui.components.SecondaryButton
 import com.azkar.ui.library.CollectionSessionState
-import com.azkar.ui.library.SessionDialogState
 import com.azkar.ui.preview.PREVIEW_COLLECTION_ID
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewCatalogue
@@ -64,8 +61,6 @@ import com.azkar.ui.theme.isRtlLayout
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
-import java.time.LocalDateTime
-import java.time.ZoneId
 
 /**
  * One passage at a time, with the rest of the collection behind it.
@@ -92,18 +87,14 @@ fun CollectionSessionScreen(
     onBack: () -> Unit,
     onOpenRemembrance: (Long) -> Unit,
     showToast: ShowToast,
+    onManageReminders: (Long) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val catalogue = session.catalogue
-    val dialogs = remember { SessionDialogState() }
 
     LaunchedEffect(Unit) { catalogue.loadLabels() }
     LaunchedEffect(catalogue) { catalogue.loadData() }
     LaunchedEffect(session.collectionId) { session.loadProgress() }
-    // Asked for here for the same reason the detail page asks: the band's bell reads the schedule, and
-    // a schedule nobody has loaded reads as "you have not set one".
-    LaunchedEffect(Unit) { session.reminders.load() }
-
     // Resolved here rather than inside the effect: a `LaunchedEffect` body is not a composable
     // context, and the message itself is only known once the notice has fired.
     val toastTitle = stringResource(Res.string.collectionsToastTitle)
@@ -113,13 +104,11 @@ fun CollectionSessionScreen(
         showToast(toastTitle, getString(key.messageResource), key.priority)
     }
 
-    SessionDialogs(session = session, dialogs = dialogs)
-
     CollectionSessionContent(
         session = session,
-        dialogs = dialogs,
         onBack = onBack,
         onOpenRemembrance = onOpenRemembrance,
+        onManageReminders = onManageReminders,
         showToast = showToast,
         modifier = modifier,
     )
@@ -143,130 +132,15 @@ fun rememberCollectionSessionState(
     }
 
 /**
- * Which of the session's two dialogs is open.
- *
- * A holder rather than two loose locals for the same reason the detail page keeps its dialog state in
- * one place: both are raised from the band's controls — which sit at the far end of the screen from the
- * read dialog that opens from the passage — and answered in one block, and a flag left behind in the
- * wrong place is a dialog that reappears on the next passage.
- *
- * `internal` rather than `private` because [CollectionSessionContent] takes one, and the preview
- * that renders that pane has to be able to hand it over.
- */
-@Stable
-internal class SessionDialogState {
-    /** The schedule being written, or `null` when the reminder editor is closed. */
-    var reminderDraft by mutableStateOf<ReminderDraft?>(null)
-
-    /** Whether dropping the schedule is waiting to be confirmed. */
-    var pendingReminderRemoval by mutableStateOf(false)
-}
-
-/**
- * The reminder editor and its removal confirmation, both raised from the band's bell.
- *
- * The bell is the only mention of reminders on this page, so the editor it opens is the only place a
- * schedule can be written, paused or dropped from here — which is exactly why the pause switch moved
- * into it rather than onto the card the band replaced.
- */
-@Composable
-private fun SessionDialogs(
-    session: CollectionSessionState,
-    dialogs: SessionDialogState,
-) {
-    val collection = session.collection ?: return
-    val reminders = session.reminders
-    val stored = session.reminder?.reminder
-
-    dialogs.reminderDraft?.let { draft ->
-        CollectionReminderDialog(
-            draft = draft,
-            collectionName = collection.name,
-            isExisting = stored != null,
-            isEnabled = stored?.enabled != false,
-            callbacks = reminderEditorCallbacks(session, dialogs, reminders, collection.name, collection.members.size),
-        )
-    }
-
-    if (dialogs.pendingReminderRemoval && stored != null) {
-        ConfirmReminderRemovalDialog(
-            onDismiss = { dialogs.pendingReminderRemoval = false },
-            onConfirm = {
-                dialogs.pendingReminderRemoval = false
-                reminders.remove(
-                    collectionId = session.collectionId,
-                    onSuccess = {
-                        session.catalogue.onNotice = CollectionNotice.Message(CollectionNoticeKey.REMINDER_REMOVED)
-                    },
-                    onFailure = { session.catalogue.onNotice = CollectionNotice.Message(CollectionNoticeKey.FAILED) },
-                )
-            },
-        )
-    }
-}
-
-/**
- * What the editor's four controls do on this session.
- *
- * Its own function because it is four callbacks written out in full, each of them the same shape:
- * change the draft, do the write, report what happened. Read side by side in the dialog's own
- * signature they pushed [SessionDialogs] past the point where the *second* dialog could be found in
- * it at all.
- */
-private fun reminderEditorCallbacks(
-    session: CollectionSessionState,
-    dialogs: SessionDialogState,
-    reminders: CollectionReminderState,
-    collectionName: String,
-    memberCount: Int,
-): ReminderEditorCallbacks =
-    ReminderEditorCallbacks(
-        onSave = { cadence, minuteOfDay, dayOfWeek ->
-            dialogs.reminderDraft = null
-            reminders.save(
-                collectionId = session.collectionId,
-                cadence = cadence,
-                minuteOfDay = minuteOfDay,
-                dayOfWeek = dayOfWeek,
-                collectionName = collectionName,
-                memberCount = memberCount,
-                onSuccess = {
-                    session.catalogue.onNotice = CollectionNotice.Message(CollectionNoticeKey.REMINDER_SAVED)
-                },
-                onFailure = {
-                    session.catalogue.onNotice = CollectionNotice.Message(CollectionNoticeKey.FAILED)
-                },
-            )
-        },
-        onRemove = {
-            dialogs.reminderDraft = null
-            dialogs.pendingReminderRemoval = true
-        },
-        onDismiss = { dialogs.reminderDraft = null },
-        // The dialog stays open: the switch has already moved and the state has already
-        // said what it thinks happened, and a dialog that shut itself the moment a toggle
-        // was touched would hide the one thing worth checking, which is whether it stuck.
-        onToggleEnabled = { enabled ->
-            reminders.setEnabled(
-                collectionId = session.collectionId,
-                enabled = enabled,
-                onFailure = {
-                    session.catalogue.onNotice = CollectionNotice.Message(CollectionNoticeKey.FAILED)
-                },
-            )
-        },
-    )
-
-/**
  * `internal` rather than `private` so a `@Preview` can render the session pane directly, the way
  * the screenshot harness does, without the shell's navigation around it.
  */
 @Composable
 internal fun CollectionSessionContent(
     session: CollectionSessionState,
-    dialogs: SessionDialogState,
     onBack: () -> Unit,
     onOpenRemembrance: (Long) -> Unit,
+    onManageReminders: (Long) -> Unit,
     showToast: ShowToast,
     modifier: Modifier = Modifier,
 ) {
@@ -315,9 +189,9 @@ internal fun CollectionSessionContent(
             else ->
                 SessionReading(
                     session = session,
-                    dialogs = dialogs,
                     onBack = onBack,
                     onOpenRemembrance = onOpenRemembrance,
+                    onManageReminders = onManageReminders,
                     showToast = showToast,
                 )
         }
@@ -331,9 +205,9 @@ private fun CollectionSessionContentPreview() {
         val catalogue = rememberPreviewCatalogue()
         CollectionSessionContent(
             session = CollectionSessionState(catalogue, PREVIEW_COLLECTION_ID, previewReminders()),
-            dialogs = remember { SessionDialogState() },
             onBack = {},
             onOpenRemembrance = {},
+            onManageReminders = {},
             showToast = { _, _, _ -> },
         )
     }
@@ -353,9 +227,9 @@ private fun CollectionSessionContentPreview() {
 @Composable
 private fun SessionReading(
     session: CollectionSessionState,
-    dialogs: SessionDialogState,
     onBack: () -> Unit,
     onOpenRemembrance: (Long) -> Unit,
+    onManageReminders: (Long) -> Unit,
     showToast: ShowToast,
 ) {
     val collection = session.collection ?: return
@@ -372,13 +246,13 @@ private fun SessionReading(
             collection = collection,
             publisher = session.publisherLabel(),
             stats = session.stats,
-            reminder = sessionHeroReminder(session),
+            reminder = CollectionHeroReminder.None,
             actions =
                 SessionHeroActions(
                     onBack = onBack,
                     onNext = session::complete,
                     onToggleFavorite = { session.setFavorite(!collection.isFavorite) },
-                    onEditReminder = { dialogs.reminderDraft = sessionReminderDraft(session) },
+                    onEditReminder = { onManageReminders(session.collectionId) },
                     menuItems = sessionOverflowItems(session, onOpenRemembrance),
                 ),
         )
@@ -535,54 +409,6 @@ private fun CollectionSessionState.publisherLabel(): String =
         ?.source
         ?.let(::remembranceSourceLabel)
         .orEmpty()
-
-/**
- * What the band's bell says about this collection's schedule, in the same three words the detail
- * page's bell uses.
- *
- * Asked for rather than passed in because the answer needs three separate reads, and the paused case
- * has to be settled before the next firing is asked for at all: a schedule that is switched off has no
- * next firing, so the same `null` would otherwise report a reminder the user just paused as one that
- * was never set.
- */
-@Composable
-private fun sessionHeroReminder(session: CollectionSessionState): CollectionHeroReminder {
-    val reminder = session.reminder?.reminder
-    val zone = ZoneId.systemDefault()
-    val now = remember(zone) { LocalDateTime.now(zone) }
-    return when {
-        reminder == null -> CollectionHeroReminder.None
-        !reminder.enabled -> CollectionHeroReminder.Paused
-        else -> sessionHeroReminderAt(session, now)
-    }
-}
-
-/**
- * The one case left after [sessionHeroReminder] has ruled out "never set" and "switched off": a
- * schedule that is set, is on, and has a moment coming round.
- *
- * Split out so the next firing is asked for only once the two states that cannot have one are already
- * behind us, which is the whole reason the branch order matters.
- */
-@Composable
-private fun sessionHeroReminderAt(
-    session: CollectionSessionState,
-    now: LocalDateTime,
-): CollectionHeroReminder {
-    val next = session.nextReminderAt(now)
-    return next
-        ?.let { CollectionHeroReminder.At(formatReminderTime(it.hour * 60 + it.minute, AzkarTheme.locale)) }
-        ?: CollectionHeroReminder.None
-}
-
-/**
- * The schedule the editor opens on: the stored one, or a fresh daily slot when there is none.
- *
- * A function rather than a call at each of the two places the bell can be pressed from, so "edit" and
- * "set" cannot disagree about what an absent schedule should start as.
- */
-private fun sessionReminderDraft(session: CollectionSessionState): ReminderDraft =
-    session.reminder?.reminder?.let(ReminderDraft::of) ?: ReminderDraft.create()
 
 /**
  * The band's overflow: the things about this session that are not about the collection.

@@ -35,11 +35,13 @@ class ThemePreferenceStore(
      * [com.azkar.i18n.LocaleStore.readAndActivate]. The palette is applied by `AzkarTheme` at composition time, so a
      * stored dark preference has to be known before the first frame; waiting for it inside the tree
      * would show one palette and then repaint into another.
+     *
+     * No `runCatching` of its own: [SettingsStore] already answers a failed read with an empty
+     * snapshot, so there is nothing left to absorb. The wrapper this used to carry meant that the
+     * two ways of reading a setting disagreed about failures, and this one could not tell an
+     * unreadable store from a missing value.
      */
-    suspend fun read(): ThemePreference =
-        runCatching { settings.read(key) }
-            .getOrNull()
-            .themePreferenceOrSystemTheme()
+    suspend fun read(): ThemePreference = settings.read(key).themePreferenceOrSystemTheme()
 
     /** Stores [preference] for the next run. Fire and forget: a lost write costs one theme choice. */
     fun persist(preference: ThemePreference) {

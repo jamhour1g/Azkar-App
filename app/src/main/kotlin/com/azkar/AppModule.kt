@@ -14,7 +14,29 @@ import com.azkar.ui.library.data.DomainCollectionsGateway
 import com.azkar.ui.library.data.DomainReminderGateway
 import com.azkar.ui.library.data.DomainTagsGateway
 import com.azkar.ui.library.data.TagGateway
+import com.azkar.ui.notifications.LocationDetector
+import com.azkar.ui.notifications.NotificationActionRouter
+import com.azkar.ui.notifications.NotificationPreferencesRepository
+import com.azkar.ui.notifications.NotificationRuntime
+import com.azkar.ui.notifications.StartupRegistration
+import com.azkar.ui.notifications.presentation.NotificationDispatcher
+import com.azkar.ui.notifications.presentation.NotificationPublisher
+import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
+import com.azkar.ui.notifications.presentation.SystemNotificationPresenter
+import com.azkar.ui.shell.NativeReminderNotifier
+import com.azkar.ui.shell.ReminderNotifier
 import com.azkar.ui.shell.ThemePreferenceStore
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.serialization.json.Json
+import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
@@ -38,19 +60,73 @@ import org.koin.dsl.module
  * by the library shelf and as a `CollectionHomeGateway` by the home dashboard, and both have to be
  * the same object, or a mutation made on one screen would not be visible from the other.
  *
- * [com.azkar.ui.shell.ReminderNotifier] is deliberately absent. `SystemTrayReminderNotifier` needs
- * `AzkarNavigator.showCollection`, and a navigator only exists once a composition does — so the
- * notifier's lifetime is the window's, not the process's, and asking the container for it at startup
- * would have to invent the dependency rather than resolve it.
+ * The notification stack is built here too, and that is the point of it being here rather than in
+ * [Main]. The scheduler, the dispatcher, the overlay's state machine and the OS channel are all
+ * window-independent — a reminder has to fire whether or not anything is on screen — so none of them
+ * belongs to a composition, and constructing them at the root would mean every one of them had to be
+ * re-created by whatever composition happened to start first. The only genuinely window-owned
+ * collaborators, the tray icon and the overlay's borderless frame, stay in `Main` and reach this
+ * graph for everything they do not own.
  *
- * Nothing here has to be closed when the window shuts. Koin 4 does not release `AutoCloseable`
- * values on its own, and nothing here is one that matters: the settings store's work is committed to
- * disk by the time a click returns, and the database pool is owned by `DatabaseWarmUp`, which is
- * where it was before the container existed.
+ * Koin 4 does not release `AutoCloseable` values on its own. [Main] cancels
+ * `notificationScope` and closes the shared Ktor client during explicit process shutdown; the
+ * database pool is owned by `DatabaseWarmUp`.
  */
 val appModule =
     module {
         single { SettingsStore.create() }
+
+        // A single configured Ktor client is shared by the best-effort location lookup. Keeping the
+        // engine in the graph gives the app one owner to close on explicit Quit and makes the HTTP
+        // boundary injectable in tests.
+        single {
+            HttpClient(CIO) {
+                install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+                install(HttpTimeout) {
+                    connectTimeoutMillis = 5_000
+                    requestTimeoutMillis = 8_000
+                    socketTimeoutMillis = 8_000
+                }
+                expectSuccess = false
+            }
+        }
+        single { LocationDetector(get()) }
+        single { NotificationPreferencesRepository(get()) }
+        single { NotificationActionRouter() }
+        single { StartupRegistration() }
+        single<CoroutineDispatcher>(named("notificationDispatcher")) { notificationDispatcher() }
+
+        // The notification stack. The scope is owned here rather than in `Main` because both the
+        // scheduler's tick loop and the overlay's expiry loops have to survive the window being
+        // hidden, and a scope created inside the application composition would not.
+        single<CoroutineScope>(named("notificationScope")) {
+            CoroutineScope(SupervisorJob() + notificationDispatcher())
+        }
+        // Registered under the seam rather than `bind` from its own class: the OS channel is only
+        // ever reached as the system presenter's collaborator, and asking for the implementation by
+        // name would be a way to start talking to it that skips the dispatcher's policy.
+        single<ReminderNotifier> {
+            val router = get<NotificationActionRouter>()
+            NativeReminderNotifier(onAction = router::dispatch)
+        }
+        single { SystemNotificationPresenter(get()) }
+        single {
+            OverlayNotificationPresenter(
+                scope = get(named("notificationScope")),
+                settings = get<NotificationPreferencesRepository>().presentation,
+            )
+        }
+        single<NotificationPublisher> {
+            NotificationDispatcher(
+                // Named rather than inferred: the parameter is the `NotificationPresenter` seam, and
+                // a parameterless `get()` would ask the container for the interface nothing is
+                // registered under.
+                overlay = get<OverlayNotificationPresenter>(),
+                system = get(),
+                settings = get<NotificationPreferencesRepository>().presentation,
+            )
+        }
+        single { NotificationRuntime(get(), get(), get(), get()) }
 
         single { ThemePreferenceStore(get()) }
 
@@ -77,3 +153,6 @@ val appModule =
         // and no collection screen should be able to do by accident. One dependency, so no bag.
         single<TagGateway> { DomainTagsGateway(get()) }
     }
+
+@Suppress("InjectDispatcher")
+private fun notificationDispatcher(): CoroutineDispatcher = Dispatchers.IO

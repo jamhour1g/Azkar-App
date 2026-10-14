@@ -1,38 +1,37 @@
 package com.azkar.ui.home
 
+import androidx.compose.runtime.snapshotFlow
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import com.azkar.settings.FakePreferencesDataStore
 import com.azkar.settings.SettingsStore
+import com.azkar.settings.copyForNextLaunch
+import com.azkar.settings.withInMemorySettings
+import com.azkar.settings.withSettingsFile
 import de.infix.testBalloon.framework.core.testSuite
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.assertj.core.api.Assertions.assertThat
-import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.io.path.deleteIfExists
+import java.io.IOException
 
 /**
- * The notification switches, against a real DataStore on a real file.
- *
- * Each test gets its own file and its own store, so nothing is shared and nothing reaches the
- * developer's actual settings. The store is collected by a real [CoroutineScope] on [Dispatchers.IO];
- * `runTest` only suspends while awaiting a snapshot and does not control that file-backed IO.
+ * The notification switches, against the settings store.
  *
  * The bug this suite exists for was a local `val flags` in the old `loadPersistedSettings` that
  * shadowed the backing store, leaving it empty until a switch was touched. It then held exactly one
  * entry, and the master switch — derived from `flags.values.any { it }` — turned itself off as soon
  * as that single bell was turned off, while the other four were still on.
+ *
+ * Most of this runs against the in-memory store rather than a real file, which it did not used to.
+ * None of these tests is asking whether a byte reached the disk — they are asking how the master
+ * switch and five rows relate to each other — and paying for file IO to ask that bought three
+ * problems at once: a scratch directory and a scope per test, a busy-poll for the write to land, and
+ * no way to write a test whose store fails. Only the last test here genuinely needs a file, because
+ * only it is about durability.
  */
 val NotificationSettingsSuite by testSuite("The notification switches") {
     test("a fresh install starts with every bell on and the master switch on") {
-        withSettings { state ->
-            state.awaitFlags()
-
+        withSwitches { state, _ ->
             assertThat(state.flags).hasSize(PrayerKey.entries.size)
             assertThat(state.flags.values).containsOnly(true)
             assertThat(state.globalEnabled).isTrue()
@@ -40,8 +39,7 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
     }
 
     test("turning one bell off leaves the master switch on while the others are on") {
-        withSettings { state ->
-            state.awaitFlags()
+        withSwitches { state, _ ->
             state.onPrayerToggled(PrayerKey.FAJR, false)
             state.awaitFlags { it[PrayerKey.FAJR] == false }
 
@@ -51,8 +49,7 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
     }
 
     test("turning the last bell off turns the master switch off") {
-        withSettings { state ->
-            state.awaitFlags()
+        withSwitches { state, _ ->
             PrayerKey.entries.forEach { state.onPrayerToggled(it, false) }
             state.awaitFlags { flags -> flags.values.none { it } }
 
@@ -61,10 +58,10 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
     }
 
     test("turning a bell back on turns the master switch back on") {
-        withSettings { state ->
-            state.awaitFlags()
+        withSwitches { state, _ ->
             PrayerKey.entries.forEach { state.onPrayerToggled(it, false) }
             state.awaitFlags { flags -> flags.values.none { it } }
+
             state.onPrayerToggled(PrayerKey.ISHA, true)
             state.awaitFlags { it[PrayerKey.ISHA] == true }
 
@@ -73,8 +70,7 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
     }
 
     test("the master switch off turns every bell off, and re-enabling it restores them all") {
-        withSettings { state ->
-            state.awaitFlags()
+        withSwitches { state, _ ->
             state.onGlobalToggleChanged(false)
             state.awaitFlags { flags -> flags.values.none { it } }
             assertThat(state.globalEnabled).isFalse()
@@ -85,93 +81,100 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
         }
     }
 
+    test("the master switch is not stored, so a half-open one cannot survive a restart") {
+        withSwitches { state, dataStore ->
+            state.onGlobalToggleChanged(false)
+            state.awaitFlags { flags -> flags.values.none { it } }
+
+            // Only the five bells are ever written, so the master switch is derived on read and the
+            // two can never disagree about what was stored.
+            assertThat(
+                dataStore.stored
+                    .asMap()
+                    .keys
+                    .map { it.name },
+            ).containsExactlyInAnyOrderElementsOf(PrayerKey.entries.map { "prayer.${it.id}.enabled" })
+        }
+    }
+
+    test("a failed write leaves the stored switches alone rather than half applied") {
+        withSwitches { state, dataStore ->
+            state.onPrayerToggled(PrayerKey.ASR, false)
+            state.awaitFlags { it[PrayerKey.ASR] == false }
+
+            dataStore.writeFailure = IOException("the disk went away")
+            state.onGlobalToggleChanged(true)
+
+            // The master switch mirrors five rows in one transaction, so a write that cannot be
+            // committed must leave every row as it was. DataStore commits atomically, which is what
+            // makes "half applied" a state this store cannot reach.
+            assertThat(dataStore.stored[storedFlagKey(PrayerKey.ASR)]).isFalse()
+
+            // And the failed transaction added nothing. FAJR was never written in the first place —
+            // an unset key reads as "on" — so five rows in the file here would mean the transaction
+            // landed and the failure was swallowed somewhere else entirely.
+            assertThat(dataStore.stored[storedFlagKey(PrayerKey.FAJR)]).isNull()
+            assertThat(
+                dataStore.stored
+                    .asMap()
+                    .keys
+                    .map { it.name },
+            ).containsExactly("prayer.${PrayerKey.ASR.id}.enabled")
+
+            // And the rendered rows do not move either. Nothing here writes optimistically, so a
+            // failed write leaves the screen agreeing with the file instead of showing a switch that
+            // was never stored.
+            assertThat(state.flags[PrayerKey.FAJR]).isTrue()
+        }
+    }
+
     test("a bell reaches the file, and a fresh store reads it back out of a copy") {
         withSettingsFile { file, scope ->
-            val first = NotificationSettingsState(SettingsStore.create(file, scope), scope)
+            val store = SettingsStore.create(file, scope)
+            val first = NotificationSettingsState(store, scope)
             scope.launch { first.observe() }
             first.awaitFlags()
+
             first.onPrayerToggled(PrayerKey.ASR, false)
-            first.awaitFlags { it[PrayerKey.ASR] == false }
+
+            // Waiting on the store's own emission rather than on the file existing. This is the
+            // replacement for an `awaitFile` helper whose claim — "the file is there, so the write
+            // landed" — was wrong: existence proves *some* commit happened, not the one just made,
+            // and the suite only passed because the toggle under test happened to be the first write
+            // ever made to that file. DataStore re-emits only after committing, so waiting for the
+            // value is waiting for the disk.
+            store.changes.first { it[storedFlagKey(PrayerKey.ASR)] == false }
 
             // DataStore allows one instance per file per process, so the round trip goes through a
             // copy: a store built on the copy parses what was actually written to disk, which is
             // the thing a second run of the app would read.
-            val copy = file.resolveSibling("copy.preferences_pb")
-            Files.copy(file, copy)
+            val stored = SettingsStore.create(copyForNextLaunch(file), scope).changes.first()
 
-            runTest {
-                val stored = SettingsStore.create(copy, scope).changes.first()
-                assertThat(stored[storedFlagKey(PrayerKey.ASR)]).isFalse()
-                assertThat(stored[storedFlagKey(PrayerKey.ISHA)]).isNull()
-            }
-        }
-    }
-
-    test("the master switch is not stored, so a half-open one cannot survive a restart") {
-        withSettingsFile { file, scope ->
-            val state = NotificationSettingsState(SettingsStore.create(file, scope), scope)
-            scope.launch { state.observe() }
-            state.awaitFlags()
-            state.onGlobalToggleChanged(false)
-            state.awaitFlags { flags -> flags.values.none { it } }
-            assertThat(state.globalEnabled).isFalse()
-
-            val copy = file.resolveSibling("copy.preferences_pb")
-            Files.copy(file, copy)
-            runTest {
-                val stored = SettingsStore.create(copy, scope).changes.first()
-
-                // Master off with a bell still on used to be reachable, and then persisted as-is. The
-                // master switch is derived now, so only the five bells are ever written.
-                assertThat(stored.asMap().keys.map { it.name })
-                    .containsExactlyInAnyOrderElementsOf(PrayerKey.entries.map { "prayer.${it.id}.enabled" })
-            }
+            assertThat(stored[storedFlagKey(PrayerKey.ASR)]).isFalse()
+            assertThat(stored[storedFlagKey(PrayerKey.ISHA)]).isNull()
         }
     }
 }
 
-/**
- * Runs [block] against a state on a fresh file, cancelling the scope and deleting the file after.
- */
-private inline fun withSettings(block: (NotificationSettingsState) -> Unit) =
-    withSettingsFile { file, scope ->
-        val state = NotificationSettingsState(SettingsStore.create(file, scope), scope)
+/** Runs [block] against switches on the in-memory store, observing from the start. */
+private inline fun withSwitches(block: (NotificationSettingsState, FakePreferencesDataStore) -> Unit) =
+    withInMemorySettings { scope, store, dataStore ->
+        val state = NotificationSettingsState(store, scope)
         scope.launch { state.observe() }
-        block(state)
+        block(state, dataStore)
     }
-
-/**
- * Runs [block] against a fresh file and a scope, for the tests that open a second store over the
- * same file to stand in for the next run of the app.
- */
-private inline fun withSettingsFile(block: (Path, CoroutineScope) -> Unit) {
-    val directory = Files.createTempDirectory("azkar-settings")
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    try {
-        block(directory.resolve("settings.preferences_pb"), scope)
-    } finally {
-        scope.cancel()
-        runCatching { Files.list(directory).forEach { it.deleteIfExists() } }
-        runCatching { directory.deleteIfExists() }
-    }
-}
 
 /**
  * Suspends until [state] has observed a complete snapshot satisfying [matches], then returns it.
  *
- * The store emits asynchronously, so asserting straight after a toggle would race the file write.
- * The timeout keeps a regression here failing rather than hanging.
+ * [snapshotFlow] rather than the polling loop this replaced. That loop re-read a `mutableStateOf` on
+ * a timer, which is both a busy-wait and a way of writing the same assertion twice — a snapshot is
+ * only ever emitted when the state it reads actually changes, so the wait ends on the change itself.
+ * The timeout is kept: without it a state that never settles hangs the run instead of failing it.
  */
 private suspend fun NotificationSettingsState.awaitFlags(
     matches: (Map<PrayerKey, Boolean>) -> Boolean = { true },
-): Map<PrayerKey, Boolean> {
-    val deadline = System.currentTimeMillis() + TIMEOUT_MILLIS
-    while (System.currentTimeMillis() < deadline) {
-        if (flags.size == PrayerKey.entries.size && matches(flags)) return flags
-        delay(POLL_INTERVAL_MILLIS)
-    }
-    throw AssertionError("Timed out waiting for the flags to settle; last seen was $flags")
-}
+): Map<PrayerKey, Boolean> = withTimeout(TIMEOUT_MILLIS) { snapshotFlow { flags }.first(matches) }
 
 /**
  * The on-disk key for a prayer's switch.
@@ -182,4 +185,3 @@ private suspend fun NotificationSettingsState.awaitFlags(
 private fun storedFlagKey(key: PrayerKey) = booleanPreferencesKey("prayer.${key.id}.enabled")
 
 private const val TIMEOUT_MILLIS = 5_000L
-private const val POLL_INTERVAL_MILLIS = 10L

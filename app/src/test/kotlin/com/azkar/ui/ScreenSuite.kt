@@ -26,6 +26,7 @@ import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.azkar.settings.SettingsStore
+import com.azkar.settings.deleteDirectoryWhenIdle
 import com.azkar.ui.home.HomeGateway
 import com.azkar.ui.home.HomeScreen
 import com.azkar.ui.library.CollectionDetailScreen
@@ -35,6 +36,7 @@ import com.azkar.ui.library.RemembranceReaderScreen
 import com.azkar.ui.library.rememberCollectionDetailState
 import com.azkar.ui.library.rememberCollectionSessionState
 import com.azkar.ui.library.rememberRemembranceReaderState
+import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.preview.PREVIEW_COLLECTION_ID
 import com.azkar.ui.preview.PreviewHomeGateway
 import com.azkar.ui.preview.previewAzkarAppState
@@ -51,14 +53,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.job
 import org.assertj.core.api.Assertions.assertThat
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
 import java.nio.file.Files
 import java.util.Locale
-import kotlin.io.path.deleteIfExists
 
 /**
  * The window the screens are laid out in.
@@ -228,6 +228,7 @@ private fun withHomeContainer(block: () -> Unit) {
             modules(
                 module {
                     single { SettingsStore.create(directory.resolve("settings.preferences_pb"), storeScope) }
+                    single { NotificationPreferencesRepository(get()) }
                     single<HomeGateway> { PreviewHomeGateway() }
                 },
             )
@@ -241,14 +242,10 @@ private fun withHomeContainer(block: () -> Unit) {
         // emitting an empty snapshot — a write into the Compose state `HomeScreen` reads, on a
         // thread that is not the one composing it, arriving as the composition is being torn down.
         // That is the intermittent *"Unsupported concurrent change during composition"* this test used
-        // to fail with, and it is why the two steps are joined rather than merely sequenced:
-        // `cancel` followed by `delete` is a race that mostly wins, and `invokeOnCompletion` is what
-        // makes it deterministic without blocking the test thread on a join.
-        val storeJob = storeScope.coroutineContext.job
-        storeJob.invokeOnCompletion {
-            runCatching { Files.list(directory).forEach { it.deleteIfExists() } }
-            runCatching { directory.deleteIfExists() }
-        }
+        // to fail with. The fix is the shared `deleteDirectoryWhenIdle`, not a private third copy of
+        // it: `cancel` followed by `delete` is a race that mostly wins, and `invokeOnCompletion` is
+        // what makes it deterministic without blocking the test thread on a join.
+        storeScope.deleteDirectoryWhenIdle(directory)
         stopKoin()
         storeScope.cancel()
     }

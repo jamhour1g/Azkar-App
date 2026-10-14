@@ -30,9 +30,19 @@ import com.azkar.ui.library.data.DomainCollectionsGateway
 import com.azkar.ui.library.data.DomainReminderGateway
 import com.azkar.ui.library.data.DomainTagsGateway
 import com.azkar.ui.library.data.TagGateway
+import com.azkar.ui.notifications.LocationDetector
+import com.azkar.ui.notifications.NotificationActionRouter
+import com.azkar.ui.notifications.NotificationPreferencesRepository
+import com.azkar.ui.notifications.NotificationRuntime
+import com.azkar.ui.notifications.StartupRegistration
+import com.azkar.ui.notifications.presentation.NotificationPublisher
+import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
+import com.azkar.ui.notifications.presentation.SystemNotificationPresenter
 import com.azkar.ui.shell.ReminderNotifier
 import com.azkar.ui.shell.ThemePreferenceStore
 import de.infix.testBalloon.framework.core.testSuite
+import io.ktor.client.HttpClient
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -57,8 +67,9 @@ import kotlin.reflect.KClass
  * how to build, and what is worth asserting here is shape rather than behaviour: that every
  * definition resolves under the name a screen asks for, that the `bind` really does yield one object
  * under two names, that the adapters cannot be reached past the seam they are registered under, and
- * that the notifier stays out. Each of those is invisible to a resolution test alone, and each would
- * otherwise surface as a crash on the first window rather than as a failing test.
+ * that the whole notification stack resolves without a composition existing. Each of those is
+ * invisible to a resolution test alone, and each would otherwise surface as a crash on the first
+ * window rather than as a failing test.
  *
  * The definitions are resolved over stubbed storage because the module, not the adapters, is what is
  * under test. `:app` could not use a real database in any case: `com.azkar.data` declares Exposed
@@ -83,6 +94,24 @@ val AppModuleSuite by testSuite("AppModule") {
                     koin.get<TagGateway>(),
                     koin.get<ThemePreferenceStore>(),
                     koin.get<LocaleStore>(),
+                    koin.get<HttpClient>(),
+                    koin.get<LocationDetector>(),
+                    koin.get<NotificationPreferencesRepository>(),
+                    koin.get<NotificationActionRouter>(),
+                    koin.get<StartupRegistration>(),
+                    koin.get<ReminderNotifier>(),
+                    koin.get<NotificationPublisher>(),
+                    koin.get<NotificationRuntime>(),
+                    koin.get<OverlayNotificationPresenter>(),
+                    koin.get<SystemNotificationPresenter>(),
+                    koin.get<CoroutineDispatcher>(
+                        org.koin.core.qualifier
+                            .named("notificationDispatcher"),
+                    ),
+                    koin.get<CoroutineScope>(
+                        org.koin.core.qualifier
+                            .named("notificationScope"),
+                    ),
                 ),
             ).doesNotContainNull()
         }
@@ -94,6 +123,9 @@ val AppModuleSuite by testSuite("AppModule") {
             assertThat(koin.get<CollectionReminderGateway>()).isSameAs(koin.get<CollectionReminderGateway>())
             assertThat(koin.get<CollectionsGateway>()).isSameAs(koin.get<CollectionsGateway>())
             assertThat(koin.get<TagGateway>()).isSameAs(koin.get<TagGateway>())
+            assertThat(koin.get<HttpClient>()).isSameAs(koin.get<HttpClient>())
+            assertThat(koin.get<NotificationPreferencesRepository>())
+                .isSameAs(koin.get<NotificationPreferencesRepository>())
         }
 
         test("the library shelf and the home rail share one collections gateway") { graph ->
@@ -125,7 +157,7 @@ val AppModuleSuite by testSuite("AppModule") {
             assertThat(koin.getOrNull<DomainTagsGateway>()).isNull()
         }
 
-        test("the module registers its seams and nothing else") {
+        test("the module registers its app services and UI seams") {
             assertThat(registeredTypes())
                 .containsExactlyInAnyOrder(
                     SettingsStore::class,
@@ -136,15 +168,40 @@ val AppModuleSuite by testSuite("AppModule") {
                     CollectionsGateway::class,
                     HomeGateway::class,
                     TagGateway::class,
+                    HttpClient::class,
+                    LocationDetector::class,
+                    NotificationPreferencesRepository::class,
+                    NotificationActionRouter::class,
+                    StartupRegistration::class,
+                    ReminderNotifier::class,
+                    NotificationPublisher::class,
+                    NotificationRuntime::class,
+                    OverlayNotificationPresenter::class,
+                    SystemNotificationPresenter::class,
+                    CoroutineDispatcher::class,
+                    CoroutineScope::class,
                 )
         }
 
-        test("the reminder notifier stays out of the container") {
-            // `AppModule` says why: `SystemTrayReminderNotifier` needs an `AzkarNavigator`, and a
-            // navigator only exists once a composition does. Registering the notifier here would mean
-            // inventing that dependency at startup rather than resolving it, so the composition owns
-            // it — and this is the test that notices if that decision is quietly reversed.
-            assertThat(registers(ReminderNotifier::class)).isFalse()
+        test("the notification stack is a single, and it is in the container") { graph ->
+            val koin = graph.koin
+            // The overlay window is a composition, but everything that decides *whether* to show
+            // something is not: the scheduler, the dispatcher and the presenter stack have to exist
+            // before any window does, because the state the tray leaves the app in is "no window at
+            // all" and a reminder still has to arrive there. So the container owns them, and this is
+            // the assertion that they are built once — a second overlay presenter would be a second
+            // stack, and a second runtime would be a second scheduler.
+            assertThat(registers(ReminderNotifier::class)).isTrue()
+            assertThat(koin.get<NotificationPublisher>())
+                .isSameAs(koin.get<NotificationPublisher>())
+            assertThat(koin.get<OverlayNotificationPresenter>())
+                .isSameAs(koin.get<OverlayNotificationPresenter>())
+            assertThat(koin.get<SystemNotificationPresenter>())
+                .isSameAs(koin.get<SystemNotificationPresenter>())
+            assertThat(koin.get<NotificationRuntime>()).isSameAs(koin.get<NotificationRuntime>())
+            // And the notifier itself is reachable only as the system-presenter's collaborator, so
+            // no screen can start talking to the OS channel without going through the dispatcher.
+            assertThat(koin.get<ReminderNotifier>()).isSameAs(koin.get<ReminderNotifier>())
         }
     }
 }
@@ -184,6 +241,16 @@ private class StubbedGraph private constructor(
     private val settingsDirectory: Path,
 ) {
     fun close() {
+        // The notification scope outlives the fixture block for the same reason the settings scope
+        // does, and it holds the presenter's expiry jobs, so it is cancelled rather than leaked.
+        runCatching {
+            koin
+                .get<CoroutineScope>(
+                    org.koin.core.qualifier
+                        .named("notificationScope"),
+                ).cancel()
+        }
+        runCatching { koin.get<HttpClient>().close() }
         stopKoin()
         settingsScope.cancel()
         runCatching { Files.list(settingsDirectory).forEach { it.deleteIfExists() } }

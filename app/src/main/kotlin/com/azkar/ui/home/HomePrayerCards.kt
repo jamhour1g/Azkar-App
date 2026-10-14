@@ -120,6 +120,7 @@ private fun prayerAccent(key: PrayerKey): PrayerAccent =
 fun PrayerTimesCard(
     rows: List<PrayerRowState>,
     countdown: CountdownState,
+    locationLabel: String = "Ramallah, Palestine",
     notificationsEnabled: Boolean,
     onGlobalToggle: (Boolean) -> Unit,
     onNotificationToggled: (PrayerKey, Boolean) -> Unit,
@@ -135,12 +136,14 @@ fun PrayerTimesCard(
                 if (maxWidth < HEADER_INLINE_MIN_WIDTH) {
                     StackedPrayerCardHeader(
                         countdown = countdown,
+                        locationLabel = locationLabel,
                         notificationsEnabled = notificationsEnabled,
                         onGlobalToggle = onGlobalToggle,
                     )
                 } else {
                     InlinePrayerCardHeader(
                         countdown = countdown,
+                        locationLabel = locationLabel,
                         notificationsEnabled = notificationsEnabled,
                         onGlobalToggle = onGlobalToggle,
                     )
@@ -197,7 +200,10 @@ private fun PrayerTimesCardPreview() {
  * and both layouts need it to be the part that gives way rather than the controls beside it.
  */
 @Composable
-private fun PrayerCardTitle(modifier: Modifier = Modifier) {
+private fun PrayerCardTitle(
+    locationLabel: String,
+    modifier: Modifier = Modifier,
+) {
     val colors = AzkarTheme.colors
     Column(modifier = modifier) {
         Text(
@@ -209,7 +215,7 @@ private fun PrayerCardTitle(modifier: Modifier = Modifier) {
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = stringResource(Res.string.prayerTimesLocation),
+            text = stringResource(Res.string.prayerTimesLocation, locationLabel),
             color = colors.textSecondary,
             fontSize = 12.sp,
             maxLines = 1,
@@ -232,6 +238,7 @@ private fun PrayerCardTitle(modifier: Modifier = Modifier) {
 @Composable
 private fun InlinePrayerCardHeader(
     countdown: CountdownState,
+    locationLabel: String,
     notificationsEnabled: Boolean,
     onGlobalToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -242,7 +249,7 @@ private fun InlinePrayerCardHeader(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         SectionBadge(icon = AzkarIcons.Mosque)
-        PrayerCardTitle(modifier = Modifier.weight(1f))
+        PrayerCardTitle(locationLabel = locationLabel, modifier = Modifier.weight(1f))
         AllNotificationsButton(
             enabled = notificationsEnabled,
             onToggle = { onGlobalToggle(!notificationsEnabled) },
@@ -262,6 +269,7 @@ private fun InlinePrayerCardHeader(
 @Composable
 private fun StackedPrayerCardHeader(
     countdown: CountdownState,
+    locationLabel: String,
     notificationsEnabled: Boolean,
     onGlobalToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -276,7 +284,7 @@ private fun StackedPrayerCardHeader(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SectionBadge(icon = AzkarIcons.Mosque)
-            PrayerCardTitle(modifier = Modifier.weight(1f))
+            PrayerCardTitle(locationLabel = locationLabel, modifier = Modifier.weight(1f))
         }
         Row(
             modifier = Modifier.fillMaxWidth(),

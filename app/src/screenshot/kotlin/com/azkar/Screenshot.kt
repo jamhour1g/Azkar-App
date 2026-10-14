@@ -34,6 +34,9 @@ import com.azkar.ui.library.model.CollectionMemberView
 import com.azkar.ui.library.rememberCollectionDetailState
 import com.azkar.ui.library.rememberCollectionSessionState
 import com.azkar.ui.library.rememberRemembranceReaderState
+import com.azkar.ui.notifications.NotificationAction
+import com.azkar.ui.notifications.presentation.NotificationCard
+import com.azkar.ui.notifications.presentation.PresentedNotice
 import com.azkar.ui.preview.previewRailCards
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.shell.AzkarApp
@@ -190,6 +193,7 @@ private const val SCREENSHOT_MEMBER_VIEW = "azkar.screenshot.memberView"
 private const val SCREEN_COLLECTION_SESSION = "collection-session"
 private const val SCREEN_REMEMBRANCE = "remembrance"
 private const val SCREEN_HOME_RAIL = "home-rail"
+private const val SCREEN_NOTIFICATIONS = "notifications"
 
 @Composable
 private fun ScreenshotContent(
@@ -308,7 +312,40 @@ private fun ScreenshotScreen(
                 catalogue = catalogue,
             )
 
+        // The overlay is the only surface whose whole job is to be looked at, so it is the one that
+        // most needs a picture: a card that lost the theme would still pass every assertion that
+        // only asks whether text was drawn, and would look like an unstyled rectangle in practice.
+        SCREEN_NOTIFICATIONS -> NotificationStackShot()
+
         else -> error("Unknown screenshot target \"$screen\"")
+    }
+}
+
+/** Three cards at once, which is the stack cap and the layout that has to hold. */
+@Composable
+private fun NotificationStackShot() {
+    Column(
+        modifier = Modifier.width(380.dp).padding(AzkarSpacing.screenPaddingHorizontal),
+        verticalArrangement = Arrangement.spacedBy(AzkarSpacing.dashboard),
+    ) {
+        listOf(
+            "Fajr is due" to "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
+            "After Fajr" to "Say it once, slowly, and mean it.",
+            "Asr is due in 20 minutes" to "Reminder queued from your morning collection.",
+        ).forEachIndexed { index, (title, message) ->
+            NotificationCard(
+                item =
+                    PresentedNotice(
+                        id = index.toLong(),
+                        title = title,
+                        message = message,
+                        action = NotificationAction.Remembrance(index.toLong()),
+                    ),
+                onOpen = {},
+                onDismiss = {},
+                onPauseChanged = {},
+            )
+        }
     }
 }
 

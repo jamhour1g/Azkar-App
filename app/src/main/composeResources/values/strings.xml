@@ -6,6 +6,13 @@
     <string name="yourCompanion">Your Spiritual Companion</string>
     <string name="azkarLibrary">Azkar Library</string>
     <string name="home">Home</string>
+    <string name="reminderManagerTitle">Reminders</string>
+    <string name="reminderManagerSubtitle">Build one queue for collections and individual remembrances, and manage prayer alerts.</string>
+    <!-- Tray menu -->
+    <string name="trayMenuOpen">Open Azkar</string>
+    <string name="trayMenuPause">Pause reminders</string>
+    <string name="trayMenuResume">Resume reminders</string>
+    <string name="trayMenuQuit">Quit</string>
     <!-- Main Content -->
     <string name="greetingTitle">Assalamu Alaikum</string>
     <string name="greetingDate">14 Dhu al-Hijjah 1445 AH | 20 June 2024</string>
@@ -25,7 +32,7 @@
     <string name="todayPrayerTimes">Today's Prayer Times</string>
     <string name="nextPrayerIn">Next prayer in:</string>
     <string name="nextPrayerLabel">Next prayer</string>
-    <string name="prayerTimesLocation">Prayer times for Ramallah, Palestine</string>
+    <string name="prayerTimesLocation">Prayer times for %1$s</string>
     <string name="prayerTimeRemaining">2h 15m 30s</string>
     <string name="prayerNotification">All Prayer Notifications</string>
     <string name="prayerNotificationsShort">Notifications</string>
@@ -489,4 +496,18 @@
         <item quantity="one">Showing %1$d tag</item>
         <item quantity="other">Showing %1$d tags</item>
     </plurals>
+
+    <string name="notificationDismiss">Dismiss</string>
+    <string name="notificationPresentationTitle">Appearance</string>
+    <string name="notificationPresentationSubtitle">How a reminder is shown when the app window is not in front.</string>
+    <string name="notificationChannelSystem">Also send to the desktop</string>
+    <string name="notificationChannelSystemNote">Off by default: the desktop draws its own style. Turn it on only if you want the reminder in the notification centre too.</string>
+    <string name="notificationDuration">On screen for %1$d seconds</string>
+    <string name="notificationPlacement">Position</string>
+    <string name="notificationPlacementTopStart">Top left</string>
+    <string name="notificationPlacementTopEnd">Top right</string>
+    <string name="notificationPlacementBottomStart">Bottom left</string>
+    <string name="notificationPlacementBottomEnd">Bottom right</string>
+    <string name="notificationStackSize">Show up to %1$d at once</string>
+    <string name="notificationOverlayPolicy">Reminders stack in the corner you pick, newest nearest the corner. A new reminder replaces the oldest once the limit is reached, and an identical reminder already on screen is not repeated.</string>
 </resources>

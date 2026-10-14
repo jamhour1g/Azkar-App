@@ -66,8 +66,6 @@ import com.azkar.ui.theme.AzkarThemePreview
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
-import java.time.LocalDateTime
-import java.time.ZoneId
 import java.util.Locale
 
 /**
@@ -98,6 +96,7 @@ fun CollectionDetailScreen(
     onStartSession: (Long) -> Unit,
     onOpenRemembrance: (Long) -> Unit,
     showToast: ShowToast,
+    onManageReminders: (Long) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     CollectionDetailContent(
@@ -108,6 +107,7 @@ fun CollectionDetailScreen(
                 onBack = onBack,
                 onStartSession = onStartSession,
                 onOpenRemembrance = onOpenRemembrance,
+                onManageReminders = onManageReminders,
             ),
         showToast = showToast,
         modifier = modifier,
@@ -166,7 +166,7 @@ internal fun CollectionRegion(
         collection = collection,
         memberCount = detail.memberCount,
         stats = detail.stats,
-        reminder = heroReminder(detail),
+        reminder = CollectionHeroReminder.None,
         actions =
             CollectionHeroActions(
                 onBack = navigation.onBack,
@@ -181,7 +181,7 @@ internal fun CollectionRegion(
                         detail.remembranceDraft ?: RemembranceCreateDraft(ARABIC_LOCALE)
                 },
                 onTogglePin = title.onTogglePin,
-                onEditReminder = { dialogs.reminderDraft = reminderDraftFor(detail) },
+                onEditReminder = { navigation.onManageReminders(detail.collectionId) },
                 menuItems =
                     detailMenuItems(
                         collection = collection,
@@ -273,78 +273,17 @@ private fun CollectionDetailContentPreview() {
         CollectionDetailContent(
             collections = catalogue,
             detail = CollectionDetailState(catalogue, PREVIEW_COLLECTION_ID, reminders),
-            navigation = DetailNavigation(onBack = {}, onStartSession = {}, onOpenRemembrance = {}),
+            navigation =
+                DetailNavigation(
+                    onBack = {},
+                    onStartSession = {},
+                    onOpenRemembrance = {},
+                    onManageReminders = {},
+                ),
             showToast = { _, _, _ -> },
         )
     }
 }
-
-/**
- * The schedule being edited, or a blank one when there is none yet.
- *
- * Read here rather than at the bell's call site, so that what the editor opens from is one function
- * and not a decision repeated: a pill that opened an *add* form for a collection that already had a
- * schedule would quietly replace it.
- */
-private fun reminderDraftFor(detail: CollectionDetailState): ReminderDraft =
-    detail.reminder?.reminder?.let(ReminderDraft::of) ?: ReminderDraft.create()
-
-/**
- * What the band's bell says about this collection's schedule.
- *
- * Asked for rather than passed in because the answer needs three separate reads — whether a row exists,
- * whether that row is switched on, and what time comes round next — and collapsing them into a nullable
- * string here would throw away the one distinction the bell exists to make.
- *
- * The paused case has to be asked for *before* the next firing, because a schedule that is switched
- * off has no next firing at all: the same `null` the store hands back would otherwise report a paused
- * reminder as one that was never set, and the user's own switch would appear to have done nothing until
- * they went looking for it.
- *
- * A schedule that is switched on and still names no moment is not a state the store can reach — the
- * arithmetic only declines to answer for a schedule that is off — so the branch is a guess about an
- * impossible input. It guesses [CollectionHeroReminder.None] rather than
- * [CollectionHeroReminder.Paused] because a bell offering to set a reminder asks the user for
- * something, whereas a bell claiming "paused" states a fact they would have to go and check.
- */
-@Composable
-private fun heroReminder(detail: CollectionDetailState): CollectionHeroReminder {
-    val zone = reminderZone()
-    val now = remember(zone) { LocalDateTime.now(zone) }
-    val reminder = detail.reminder?.reminder
-    return when {
-        reminder == null -> CollectionHeroReminder.None
-        !reminder.enabled -> CollectionHeroReminder.Paused
-        else -> heroReminderAt(detail, now)
-    }
-}
-
-/**
- * The one case left after [heroReminder] has ruled out "never set" and "switched off": a schedule that
- * is set, is on, and has a moment coming round.
- *
- * Split out so the next firing is asked for only once the two states that cannot have one are already
- * behind us, which is the whole reason the branch order matters.
- */
-@Composable
-private fun heroReminderAt(
-    detail: CollectionDetailState,
-    now: LocalDateTime,
-): CollectionHeroReminder {
-    val next = detail.nextReminderAt(now)
-    return next
-        ?.let { CollectionHeroReminder.At(formatReminderTime(it.hour * 60 + it.minute, AzkarTheme.locale)) }
-        ?: CollectionHeroReminder.None
-}
-
-/**
- * The zone every schedule is judged in.
- *
- * One function rather than `ZoneId.systemDefault()` written at each call site, because a reminder
- * store and the page reading it have to agree on what "six o'clock" means, and two reads of the system
- * default that disagree is exactly how that stops being true.
- */
-private fun reminderZone(): ZoneId = ZoneId.systemDefault()
 
 /**
  * Everything this page has to do while it is on screen, gathered so the body reads as layout rather
@@ -364,7 +303,6 @@ private fun DetailEffects(
     LaunchedEffect(Unit) { collections.loadLabels() }
     LaunchedEffect(collections) { collections.loadData() }
     LaunchedEffect(detail.collectionId) { detail.loadProgress() }
-    LaunchedEffect(Unit) { detail.loadReminder() }
 
     LaunchedEffect(collections.onNotice) {
         val key = (collections.onNotice as? CollectionNotice.Message)?.key ?: return@LaunchedEffect
@@ -931,6 +869,7 @@ internal data class DetailNavigation(
     val onBack: () -> Unit,
     val onStartSession: (Long) -> Unit,
     val onOpenRemembrance: (Long) -> Unit,
+    val onManageReminders: (Long) -> Unit,
 )
 
 /** What one member tile can be asked to do. */

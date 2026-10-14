@@ -2,16 +2,13 @@ package com.azkar.i18n
 
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.azkar.settings.SettingsStore
+import com.azkar.settings.copyForNextLaunch
+import com.azkar.settings.withSettingsFile
 import de.infix.testBalloon.framework.core.testSuite
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import org.assertj.core.api.Assertions.assertThat
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
-import kotlin.io.path.deleteIfExists
 
 /**
  * The stored language, against a real DataStore on a real file.
@@ -26,12 +23,13 @@ import kotlin.io.path.deleteIfExists
  * landed on disk.
  *
  * Each test gets its own file and its own store, so nothing reaches the developer's real settings.
- * The scope is a real [CoroutineScope] on [Dispatchers.IO] rather than a `runTest` one: the value
- * under test arrives through file IO, and virtual time would not advance it.
+ * The scope is the shared [withSettingsFile] one — a real [CoroutineScope] on
+ * [kotlinx.coroutines.Dispatchers.IO] rather than a `runTest` one, because the value under test
+ * arrives through file IO and virtual time would not advance it.
  */
 val LocaleStoreSuite by testSuite("The stored language") {
     test("a fresh install falls back") {
-        withLocaleFile { file, scope ->
+        withSettingsFile { file, scope ->
             // The fallback is stated rather than inherited, because production derives it from the
             // machine's default locale and a test asserting on the machine it runs on is a test that
             // passes on the author's laptop and fails on CI.
@@ -42,19 +40,18 @@ val LocaleStoreSuite by testSuite("The stored language") {
     }
 
     test("a stored language is what the next run opens with") {
-        withLocaleFile { file, scope ->
+        withSettingsFile { file, scope ->
             val store = localeStore(file, scope)
             store.persistAndAwait(ARABIC)
 
-            val copy = file.resolveSibling("copy.preferences_pb")
-            Files.copy(file, copy)
-
-            assertThat(localeStore(copy, scope).read()).isEqualTo(ARABIC)
+            // No waiting here: `edit` returns once DataStore has committed the file, so the copy
+            // cannot race the write.
+            assertThat(localeStore(copyForNextLaunch(file), scope).read()).isEqualTo(ARABIC)
         }
     }
 
     test("a stored language round-trips a region the app never offers") {
-        withLocaleFile { file, scope ->
+        withSettingsFile { file, scope ->
             val store = localeStore(file, scope)
             // `en-GB` is not in [supportedLocales], so it can only reach the file by being written
             // directly. It is still a legal tag, and refusing it would throw away a stored value a
@@ -62,15 +59,12 @@ val LocaleStoreSuite by testSuite("The stored language") {
             val british = Locale.forLanguageTag("en-GB")
             store.persistAndAwait(british)
 
-            val copy = file.resolveSibling("copy.preferences_pb")
-            Files.copy(file, copy)
-
-            assertThat(localeStore(copy, scope).read()).isEqualTo(british)
+            assertThat(localeStore(copyForNextLaunch(file), scope).read()).isEqualTo(british)
         }
     }
 
     test("a malformed tag falls back rather than launching in a language with no translations") {
-        withLocaleFile { file, scope ->
+        withSettingsFile { file, scope ->
             val store = localeStore(file, scope, fallback = ENGLISH)
             // `Locale.forLanguageTag` answers `und` for anything it cannot parse. Accepting that
             // would render the app undetermined, which is the same as no translations at all.
@@ -81,7 +75,7 @@ val LocaleStoreSuite by testSuite("The stored language") {
     }
 
     test("an empty tag falls back") {
-        withLocaleFile { file, scope ->
+        withSettingsFile { file, scope ->
             val store = localeStore(file, scope, fallback = ENGLISH)
             // An empty string round-trips through `Locale.forLanguageTag` to ROOT, which has no
             // translations, so a blank write has to be treated as "nothing stored".
@@ -92,7 +86,7 @@ val LocaleStoreSuite by testSuite("The stored language") {
     }
 
     test("readAndActivate is the only thing that moves the JVM default") {
-        withLocaleFile { file, scope ->
+        withSettingsFile { file, scope ->
             val original = Locale.getDefault()
             try {
                 val store = localeStore(file, scope)
@@ -140,21 +134,3 @@ private fun localeStore(
     scope: CoroutineScope,
     fallback: Locale = ENGLISH,
 ): LocaleStore = LocaleStore(SettingsStore.create(file, scope), fallback)
-
-/**
- * Runs [block] against a fresh file and a scope, cancelling the scope and deleting the file after.
- *
- * The same shape as the theme store's and the notification switches' fixtures, so a reader has one
- * temp-file idiom to know.
- */
-private inline fun withLocaleFile(block: (Path, CoroutineScope) -> Unit) {
-    val directory = Files.createTempDirectory("azkar-locale")
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    try {
-        block(directory.resolve("settings.preferences_pb"), scope)
-    } finally {
-        scope.cancel()
-        runCatching { Files.list(directory).forEach { it.deleteIfExists() } }
-        runCatching { directory.deleteIfExists() }
-    }
-}

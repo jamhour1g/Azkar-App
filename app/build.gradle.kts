@@ -75,6 +75,25 @@ dependencies {
     implementation(libs.org.jetbrains.kotlinx.kotlinx.serialization.json)
     implementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.core)
     implementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.swing)
+    implementation(libs.io.ktor.ktor.client.core)
+    implementation(libs.io.ktor.ktor.client.cio)
+    implementation(libs.io.ktor.ktor.client.content.negotiation)
+    implementation(libs.io.ktor.ktor.serialization.kotlinx.json)
+
+    // Desktop tray and desktop notifications. The tray is a Compose composable and so is declared
+    // in `Main.kt` rather than built here; the notifications are ordinary objects the process
+    // scheduler calls from its own coroutine. Both are native per platform, which is the whole
+    // point of dropping the hand-rolled AWT tray: the JDK draws the same menu everywhere and has
+    // no way to announce a reminder through an icon it does not own.
+    //
+    // Both reach the OS through JNA and D-Bus rather than through the JDK, so the packaging tasks
+    // below are the only thing that has to care: `packageDeb`/`packageMsi`/`packageDmg` ship a
+    // plain jar and a JVM, and nothing here shrinks or rewrites bytecode. If an uber-jar task is
+    // ever added it will need the library's documented keep rules (`com.sun.jna.**` and
+    // `dev.nucleusframework.composenativetray.**`) -- JNA resolves its native functions by
+    // reflection at call time, so a shrinking build would break the tray silently at runtime.
+    implementation(libs.dev.nucleusframework.compose.native.tray)
+    implementation(libs.dev.nucleusframework.nucleus.notification.common)
 
     // App settings (locale, notification switches). DataStore replaces `java.util.prefs`: it is
     // transactional, it survives a crash mid-write, and it exposes `Flow` reads, so the UI can

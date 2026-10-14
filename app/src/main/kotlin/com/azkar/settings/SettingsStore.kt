@@ -2,6 +2,7 @@ package com.azkar.settings
 
 import androidx.compose.runtime.Stable
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -50,20 +51,14 @@ class SettingsStore(
     /**
      * Every stored value, on load and again after each committed write.
      *
-     * A read failure degrades to an empty snapshot rather than propagating: the alternative is a
-     * settings problem taking down the window, and every caller already has a sensible default for
-     * a value that is missing. The emptied snapshot flows on, so the next successful write
-     * reconciles the state on its own.
+     * Read failures are answered by [degradingToEmpty], the same policy [read] applies, so the two
+     * ways of asking this store a question cannot disagree about what a failure means.
      */
     val changes: Flow<Preferences> =
-        dataStore.data
-            .catch { failure ->
-                logger.error(failure) { "Unable to read the stored settings" }
-                emit(emptyPreferences())
-            }.distinctUntilChanged()
+        dataStore.data.degradingToEmpty().distinctUntilChanged()
 
     /** The stored value of [key], suspending until the store has been read once. */
-    suspend fun <T> read(key: Preferences.Key<T>): T? = dataStore.data.first()[key]
+    suspend fun <T> read(key: Preferences.Key<T>): T? = dataStore.data.degradingToEmpty().first()[key]
 
     /**
      * Applies [block] to the stored values as a single transaction.
@@ -75,6 +70,9 @@ class SettingsStore(
      * logged with the key, the only fact that says what was lost, and left to be corrected by the
      * next [changes] emission. DataStore commits atomically, so unlike the `java.util.prefs` flush
      * it replaces, a failure here cannot leave a partially applied setting behind.
+     *
+     * Swallows the failure deliberately, unlike [degradingToEmpty]: a caller awaiting this has
+     * usually already repainted, and there is nothing useful it could do with the exception.
      */
     suspend fun edit(block: MutablePreferences.() -> Unit) {
         runCatching { dataStore.edit(block) }
@@ -82,12 +80,18 @@ class SettingsStore(
     }
 
     companion object {
-        private val SETTINGS_FILE: Path =
-            Path.of(
-                System.getProperty("user.home"),
-                ".azkar",
-                "settings.preferences_pb",
-            )
+        /**
+         * Names the system property that redirects the settings directory.
+         *
+         * A `val` initialiser read `user.home` the moment this class was first loaded, which meant
+         * the path was fixed before anything could ask for a different one. Resolving it per call
+         * instead means the harness that does not own a `user.home` — a CI worker, a container, a
+         * test that wants its own scratch directory — has a way to say so.
+         */
+        const val SETTINGS_HOME_PROPERTY: String = "azkar.settings.home"
+
+        private const val DIRECTORY = ".azkar"
+        private const val FILE_NAME = "settings.preferences_pb"
 
         /**
          * Builds a store over [file], defaulting to the app's own settings file.
@@ -105,19 +109,39 @@ class SettingsStore(
          * `create` is the only way in.
          */
         fun create(
-            file: Path = SETTINGS_FILE,
+            file: Path = settingsFile(),
             scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
         ): SettingsStore {
             createDirectory(file)
             return SettingsStore(
                 dataStore =
                     PreferenceDataStoreFactory.create(
+                        // DataStore's default throws `CorruptionException` on a file it cannot
+                        // parse, and keeps throwing: without this the store is permanently
+                        // unreadable. Replacing the file with an empty one costs the settings and
+                        // keeps the app usable, which is the trade every caller of `degradingToEmpty`
+                        // is already making by hand for the IO half of the same failure.
+                        corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
                         scope = scope,
                         produceFile = { file.toFile() },
                     ),
                 scope = scope,
             )
         }
+
+        /**
+         * The app's settings file: [SETTINGS_HOME_PROPERTY] when it is set, `~/.azkar` otherwise.
+         *
+         * A function rather than a `val` so the property is read when the path is asked for, not
+         * when the class happens to load, and so no test can be surprised by a path that was
+         * resolved from the developer's own home directory before the test got a say.
+         */
+        private fun settingsFile(): Path =
+            Path.of(
+                System.getProperty(SETTINGS_HOME_PROPERTY)
+                    ?: Path.of(System.getProperty("user.home"), DIRECTORY).toString(),
+                FILE_NAME,
+            )
 
         /**
          * Creates the settings directory, or fails the way the data layer's own config does.
@@ -138,3 +162,30 @@ class SettingsStore(
         }
     }
 }
+
+/**
+ * Answers a read that failed on IO with an empty snapshot, and lets anything else through.
+ *
+ * A settings problem must not take down the window, and every caller already has a sensible default
+ * for a value that is missing, so degrading is the right answer. The emptied snapshot flows on, so
+ * the next successful write reconciles the state on its own.
+ *
+ * Only [IOException] degrades. The documented DataStore idiom is the same, and the reason matters:
+ * swallowing everything turns a defect in a caller's decoding into "your settings reset themselves",
+ * which is both wrong and very hard to trace. An exception that is not an IO failure is a bug, and
+ * a bug should arrive in the test run rather than as a silently empty store.
+ *
+ * This lives on the flow rather than on either of the two callers because it used to be written on
+ * only one of them. [SettingsStore.changes] degraded and [SettingsStore.read] did not, so each
+ * consumer had to wrap its own read — and which of them protected a given call depended on which
+ * API that consumer happened to reach for.
+ */
+private fun Flow<Preferences>.degradingToEmpty(): Flow<Preferences> =
+    catch { failure ->
+        if (failure is IOException) {
+            logger.error(failure) { "Unable to read the stored settings" }
+            emit(emptyPreferences())
+        } else {
+            throw failure
+        }
+    }

@@ -228,6 +228,23 @@ object AzkarIcons {
                     strokeLineJoin = StrokeJoin.Round,
                 )
             }.build()
+
+    /**
+     * The dismiss affordance, drawn as a pair of crossed strokes rather than a filled glyph.
+     *
+     * Same reason as every other icon here: no colour of its own, so the one `tint` it is given is
+     * the whole of its appearance. It also has to sit at 14dp inside the notification overlay's
+     * corner, where a filled shape at that size closes up into a blob — a stroked cross keeps the
+     * gap between its arms at any size the card is ever drawn.
+     */
+    val Close: ImageVector =
+        outline(
+            "Azkar.Close",
+            listOf(
+                Stroke(CLOSE_PATH_A, 2f),
+                Stroke(CLOSE_PATH_B, 2f),
+            ),
+        )
 }
 
 /** One stroked sub-path of an outline icon, plus the width that particular path uses. */
@@ -332,6 +349,10 @@ private const val CHEVRON_PATH = "m9 6 6 6-6 6"
 
 /** The same chevron walked the other way, for [AzkarIcons.ChevronStart]. */
 private const val CHEVRON_BACK_PATH = "m15 6-6 6 6 6"
+
+/** The two arms of [AzkarIcons.Close], each a single diagonal. */
+private const val CLOSE_PATH_A = "M6 6 18 18"
+private const val CLOSE_PATH_B = "M18 6 6 18"
 
 private fun outline(
     name: String,

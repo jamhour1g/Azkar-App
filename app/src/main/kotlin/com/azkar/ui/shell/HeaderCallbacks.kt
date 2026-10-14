@@ -14,5 +14,6 @@ package com.azkar.ui.shell
 class HeaderCallbacks(
     val onHome: () -> Unit,
     val onLibrary: () -> Unit,
+    val onNotifications: () -> Unit = {},
     val onSettings: () -> Unit,
 )

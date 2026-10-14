@@ -7,14 +7,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.nextPrayerLabel
+import com.azkar.ui.notifications.PrayerLocationSettings
+import com.azkar.ui.notifications.PrayerTimeCalculator
 import org.jetbrains.compose.resources.getString
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeFormatterBuilder
-import java.time.format.TextStyle
-import java.time.temporal.ChronoField
 import java.util.Locale
 
 /** The five fixed prayers, in the order `PrayerTimesController.bindPrayerRows` inserted them. */
@@ -66,19 +66,10 @@ private val EMPTY_SNAPSHOT = PrayerTimesSnapshot(rows = emptyList(), countdown =
  */
 class PrayerTimesModel(
     private val uiLocale: Locale,
+    private val location: PrayerLocationSettings,
 ) {
-    private val localizedBundleTimeFormatter = twelveHourFormatter(uiLocale)
-    private val englishBundleTimeFormatter = twelveHourFormatter(Locale.ENGLISH)
     private val timeFormatter12 = DateTimeFormatter.ofPattern("hh:mm a", uiLocale)
     private val timeFormatter24 = DateTimeFormatter.ofPattern("HH:mm")
-
-    /** Declared before [load] because the parsing that does uses it. */
-    private val timeParsers =
-        listOf(
-            localizedBundleTimeFormatter,
-            englishBundleTimeFormatter,
-            timeFormatter24,
-        )
 
     /**
      * Empty until [load] has resolved the localized prayer names and times.
@@ -96,7 +87,8 @@ class PrayerTimesModel(
     private var nextPrayerLabel: String = ""
 
     /**
-     * Resolves the localized names, display times and display values.
+     * Resolves localized prayer names. Times are calculated from the current location whenever a
+     * snapshot is requested, so a location or calculation-method change takes effect immediately.
      *
      * Idempotent, so it is safe for the two [PrayerTimesState] entry points to both call it
      * without coordinating.
@@ -106,14 +98,9 @@ class PrayerTimesModel(
         nextPrayerLabel = getString(Res.string.nextPrayerLabel)
         prayers =
             PrayerKey.entries.map { key ->
-                val displayTime = key.displayTime()
-                val displayValue = key.value()
                 ParsedPrayer(
                     key = key,
                     name = key.name(),
-                    displayTime = displayTime,
-                    displayValue = displayValue,
-                    time = parsePrayerTime(displayTime, displayValue),
                 )
             }
     }
@@ -121,15 +108,17 @@ class PrayerTimesModel(
     /** Resolves the next upcoming prayer and formats the whole table for [now]. */
     fun snapshot(now: LocalDateTime): PrayerTimesSnapshot {
         if (prayers.isEmpty()) return EMPTY_SNAPSHOT
-        val next = computeNextPrayer(now)
+        val calculatedTimes = PrayerTimeCalculator.calculate(now.toLocalDate(), location)
+        val next = computeNextPrayer(now, calculatedTimes)
         val rows =
             prayers.map { prayer ->
                 val isNext = prayer.key == next.prayer.key
+                val time = calculatedTimes.getValue(prayer.key)
                 PrayerRowState(
                     key = prayer.key,
                     name = prayer.name,
-                    timeLabel = if (isNext) nextPrayerLabel else formatTime(prayer.time),
-                    value = prayer.displayValue,
+                    timeLabel = if (isNext) nextPrayerLabel else formatTime(time),
+                    value = timeFormatter24.format(time),
                     isNext = isNext,
                     notificationsEnabled = false,
                 )
@@ -140,10 +129,13 @@ class PrayerTimesModel(
         )
     }
 
-    private fun computeNextPrayer(now: LocalDateTime): NextPrayer {
+    private fun computeNextPrayer(
+        now: LocalDateTime,
+        calculatedTimes: Map<PrayerKey, LocalTime>,
+    ): NextPrayer {
         val moments =
             prayers.flatMap { prayer ->
-                val today = LocalDateTime.of(now.toLocalDate(), prayer.time)
+                val today = LocalDateTime.of(now.toLocalDate(), calculatedTimes.getValue(prayer.key))
                 listOf(today to prayer, today.plusDays(1) to prayer)
             }
         val nearest =
@@ -153,19 +145,6 @@ class PrayerTimesModel(
                 ?: moments.first()
         return NextPrayer(nearest.second, Duration.between(now, nearest.first))
     }
-
-    private fun parsePrayerTime(vararg candidates: String): LocalTime =
-        candidates
-            .asSequence()
-            .filter { it.isNotBlank() }
-            .filterNot { it.equals(nextPrayerLabel, ignoreCase = true) }
-            .mapNotNull(::parseWithAnyFormatter)
-            .firstOrNull() ?: LocalTime.MIDNIGHT
-
-    private fun parseWithAnyFormatter(candidate: String): LocalTime? =
-        timeParsers.firstNotNullOfOrNull { formatter ->
-            runCatching { LocalTime.parse(candidate, formatter) }.getOrNull()
-        }
 
     private fun formatTime(time: LocalTime): String = timeFormatter12.format(time)
 
@@ -183,27 +162,12 @@ class PrayerTimesModel(
     private data class ParsedPrayer(
         val key: PrayerKey,
         val name: String,
-        val displayTime: String,
-        val displayValue: String,
-        val time: LocalTime,
     )
 
     private data class NextPrayer(
         val prayer: ParsedPrayer,
         val remaining: Duration,
     )
-
-    private companion object {
-        fun twelveHourFormatter(locale: Locale): DateTimeFormatter =
-            DateTimeFormatterBuilder()
-                .parseCaseInsensitive()
-                .appendValue(ChronoField.CLOCK_HOUR_OF_AMPM)
-                .appendLiteral(':')
-                .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
-                .appendLiteral(' ')
-                .appendText(ChronoField.AMPM_OF_DAY, TextStyle.SHORT)
-                .toFormatter(locale)
-    }
 }
 
 /** The full table plus the countdown, the two things the home screen renders. */
@@ -223,8 +187,9 @@ data class PrayerTimesSnapshot(
 @Stable
 class PrayerTimesState(
     uiLocale: Locale,
+    val location: PrayerLocationSettings = PrayerLocationSettings(),
 ) {
-    private val model = PrayerTimesModel(uiLocale)
+    private val model = PrayerTimesModel(uiLocale, location)
     private var loaded: Boolean = false
 
     var snapshot: PrayerTimesSnapshot by mutableStateOf(EMPTY_SNAPSHOT)
@@ -264,7 +229,7 @@ class PrayerTimesState(
         running = false
     }
 
-    fun tick(now: LocalDateTime = LocalDateTime.now()) {
+    fun tick(now: LocalDateTime = LocalDateTime.now(ZoneId.of(location.zoneId))) {
         val fresh = model.snapshot(now)
         snapshot =
             if (notificationFlags.isEmpty()) {

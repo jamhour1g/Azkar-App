@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -32,11 +33,15 @@ import com.azkar.ui.library.data.TagGateway
 import com.azkar.ui.library.rememberCollectionDetailState
 import com.azkar.ui.library.rememberCollectionSessionState
 import com.azkar.ui.library.rememberRemembranceReaderState
+import com.azkar.ui.notifications.NotificationAction
+import com.azkar.ui.notifications.NotificationActionRouter
+import com.azkar.ui.notifications.ReminderManagerScreen
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.LocalWindowSizeClass
 import com.azkar.ui.theme.isRtlLayout
 import com.azkar.ui.theme.rememberSystemTheme
 import com.azkar.ui.theme.windowSizeClassFor
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
@@ -57,16 +62,11 @@ import org.koin.compose.koinInject
  * locale from scratch. `activateLocale` is what actually sets the default locale.
  */
 @Composable
-fun AzkarApp(state: AzkarAppState = rememberAzkarAppState()) {
-    // Read from the desktop rather than from `isSystemInDarkTheme()`, which reports light on every
-    // Linux setup — see `SystemTheme` for what Skiko's lookup needs and does not find.
-    val systemTheme = rememberSystemTheme()
-    val darkTheme =
-        when (state.themePreference) {
-            ThemePreference.SYSTEM -> systemTheme.isDark
-            ThemePreference.LIGHT -> false
-            ThemePreference.DARK -> true
-        }
+fun AzkarApp(
+    state: AzkarAppState = rememberAzkarAppState(),
+    actionRouter: NotificationActionRouter? = null,
+) {
+    val darkTheme = rememberAzkarDarkTheme(state.themePreference)
     val toastController = rememberToastController(state)
     val showToast = toastController::show
     // Remembered *outside* the locale key below: a `remember` inside it would be discarded every
@@ -75,7 +75,6 @@ fun AzkarApp(state: AzkarAppState = rememberAzkarAppState()) {
     // Also outside the locale key, and for a second reason: the schedules and which ones are owed
     // belong to the app rather than to a language, so a language switch must not re-arm a reminder
     // that has already been announced, nor drop the badges for the ones that are waiting.
-    val notifier = remember(navigator) { SystemTrayReminderNotifier(navigator::showCollection) }
     val reminderScope = rememberCoroutineScope()
     // Both halves of the shelf come out of the container rather than being built here, so the
     // reminder ticker and the catalogue read and write through one gateway instead of two
@@ -92,11 +91,13 @@ fun AzkarApp(state: AzkarAppState = rememberAzkarAppState()) {
     // language switch must not make fourteen collections decode the same fourteen files again.
     val coverStorage = koinInject<CoverStorage>()
     val covers = remember(coverStorage) { CollectionCoverCache(coverStorage) }
-    val reminders = remember(reminderScope, notifier) { CollectionReminderState(reminderScope, reminderGateway) }
+    val reminders = remember(reminderScope, reminderGateway) { CollectionReminderState(reminderScope, reminderGateway) }
     // Inside the locale key, because it is the locale that decides: the rows behind this holder are
     // language-free, but the strings the shelf renders them as are not, so switching language has to
     // rebuild the presenter even though the read itself could be kept.
     val catalogue = remember(state.locale) { CollectionsCatalogue(reminderScope, state.locale, gateway, covers) }
+
+    RouteNotificationActions(actionRouter, navigator, reminderScope)
 
     AzkarTheme(darkTheme = darkTheme, uiLocale = state.locale) {
         key(state.locale) {
@@ -117,6 +118,7 @@ fun AzkarApp(state: AzkarAppState = rememberAzkarAppState()) {
                                     HeaderCallbacks(
                                         onHome = navigator::showHome,
                                         onLibrary = navigator::showLibrary,
+                                        onNotifications = { navigator.showNotifications() },
                                         onSettings = navigator::showSettings,
                                     ),
                             )
@@ -130,8 +132,46 @@ fun AzkarApp(state: AzkarAppState = rememberAzkarAppState()) {
                         }
 
                         ToastHost(state)
-                        ReminderTicker(reminders = reminders, notifier = notifier, showToast = showToast)
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The palette the app is currently drawing in, from the stored preference and the desktop's answer.
+ *
+ * Its own composable rather than an inline `when` because the notification overlay window is a
+ * * *separate* window that draws the same theme, and two copies of this decision would be two places
+ * for them to disagree — the failure being a reminder card rendered in the light palette over a dark
+ * desktop, or in the wrong language entirely.
+ *
+ * Read from the desktop rather than from `isSystemInDarkTheme()`, which reports light on every Linux
+ * setup — see `SystemTheme` for what Skiko's lookup needs and does not find.
+ */
+@Composable
+fun rememberAzkarDarkTheme(preference: ThemePreference): Boolean {
+    val systemTheme = rememberSystemTheme()
+    return when (preference) {
+        ThemePreference.SYSTEM -> systemTheme.isDark
+        ThemePreference.LIGHT -> false
+        ThemePreference.DARK -> true
+    }
+}
+
+@Composable
+private fun RouteNotificationActions(
+    actionRouter: NotificationActionRouter?,
+    navigator: AzkarNavigator,
+    scope: kotlinx.coroutines.CoroutineScope,
+) {
+    SideEffect {
+        actionRouter?.setNavigator { action ->
+            scope.launch {
+                when (action) {
+                    is NotificationAction.Remembrance -> navigator.showRemembrance(action.id)
+                    NotificationAction.PrayerTimes, NotificationAction.OpenApp -> navigator.showHome()
                 }
             }
         }
@@ -198,6 +238,9 @@ private fun ColumnScope.AzkarContent(
                         showToast = showToast,
                         catalogue = catalogue,
                     )
+                }
+                entry<AzkarDestination.Notifications> { destination ->
+                    ReminderManagerScreen(initialCollectionId = destination.initialCollectionId)
                 }
                 collectionEntries(navigator, showToast, reminders, catalogue)
                 tagsEntry(navigator, showToast, library)
@@ -295,6 +338,7 @@ private fun EntryProviderScope<AzkarDestination>.collectionEntries(
             onStartSession = navigator::showSession,
             onOpenRemembrance = navigator::showRemembrance,
             showToast = showToast,
+            onManageReminders = navigator::showNotifications,
         )
     }
     entry<AzkarDestination.CollectionSession> { destination ->
@@ -304,6 +348,7 @@ private fun EntryProviderScope<AzkarDestination>.collectionEntries(
             onBack = navigator::back,
             onOpenRemembrance = navigator::showRemembrance,
             showToast = showToast,
+            onManageReminders = navigator::showNotifications,
         )
     }
 }

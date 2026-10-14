@@ -2,15 +2,12 @@ package com.azkar.ui.shell
 
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.azkar.settings.SettingsStore
+import com.azkar.settings.copyForNextLaunch
+import com.azkar.settings.withSettingsFile
 import de.infix.testBalloon.framework.core.testSuite
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import org.assertj.core.api.Assertions.assertThat
-import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.io.path.deleteIfExists
 
 /**
  * The stored colour preference, against a real DataStore on a real file.
@@ -22,12 +19,13 @@ import kotlin.io.path.deleteIfExists
  * actually landed on disk.
  *
  * Each test gets its own file and its own store, so nothing reaches the developer's real settings.
- * The scope is a real [CoroutineScope] on [Dispatchers.IO] rather than a `runTest` one: the value
- * under test arrives through file IO, and virtual time would not advance it.
+ * The scope is the shared [withSettingsFile] one — a real [CoroutineScope] on
+ * [kotlinx.coroutines.Dispatchers.IO] rather than a `runTest` one, because the value under test
+ * arrives through file IO and virtual time would not advance it.
  */
 val ThemePreferenceStoreSuite by testSuite("The stored colour preference") {
     test("a fresh install follows the system") {
-        withThemeFile { file, scope ->
+        withSettingsFile { file, scope ->
             val store = themePreferences(file, scope)
 
             assertThat(store.read()).isEqualTo(ThemePreference.SYSTEM)
@@ -35,19 +33,21 @@ val ThemePreferenceStoreSuite by testSuite("The stored colour preference") {
     }
 
     test("a stored preference is what the next run opens with") {
-        withThemeFile { file, scope ->
+        withSettingsFile { file, scope ->
             val store = themePreferences(file, scope)
             store.persistAndAwait(ThemePreference.DARK)
 
-            val copy = file.resolveSibling("copy.preferences_pb")
-            Files.copy(file, copy)
+            // No waiting here: `edit` returns once DataStore has committed the file, so the copy
+            // cannot race the write. [persistAndAwait] exists precisely so this suite never has to
+            // guess.
+            val nextLaunch = themePreferences(copyForNextLaunch(file), scope)
 
-            assertThat(themePreferences(copy, scope).read()).isEqualTo(ThemePreference.DARK)
+            assertThat(nextLaunch.read()).isEqualTo(ThemePreference.DARK)
         }
     }
 
     test("a name this build does not know falls back to following the system") {
-        withThemeFile { file, scope ->
+        withSettingsFile { file, scope ->
             val store = themePreferences(file, scope)
             // Seeded under the production key rather than through [ThemePreferenceStore.persist],
             // because no preference this build has can produce a name it does not know.
@@ -73,20 +73,3 @@ private fun themePreferences(
     file: Path,
     scope: CoroutineScope,
 ): ThemePreferenceStore = ThemePreferenceStore(SettingsStore.create(file, scope))
-
-/**
- * Runs [block] against a fresh file and a scope, cancelling the scope and deleting the file after.
- *
- * The same shape as the notification switches' fixture, so a reader has one temp-file idiom to know.
- */
-private inline fun withThemeFile(block: (Path, CoroutineScope) -> Unit) {
-    val directory = Files.createTempDirectory("azkar-theme")
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    try {
-        block(directory.resolve("settings.preferences_pb"), scope)
-    } finally {
-        scope.cancel()
-        runCatching { Files.list(directory).forEach { it.deleteIfExists() } }
-        runCatching { directory.deleteIfExists() }
-    }
-}

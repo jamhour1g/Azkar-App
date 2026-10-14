@@ -21,6 +21,25 @@ jetbrains-coroutines = "1.11.0"
 # document, and hand-rolling a JSON parser is not a thing worth doing: escaping, unicode
 # and malformed input are all places to get it wrong.
 jetbrains-serialization = "1.9.0"
+ktor = "3.3.3"
+# Desktop system tray. `composenativetray` draws the tray icon and the native context menu from
+# Compose and hands them to the real OS mechanism per platform -- `NSStatusItem` on macOS,
+# `Shell_NotifyIcon` on Windows, `StatusNotifierItem` over D-Bus on Linux -- which is what the JDK
+# tray cannot do: it renders the Windows 95-era AWT menu on every platform and takes no part in
+# Compose state, so anything reactive about the menu had to be hand-rebuilt. Only the core
+# artifact is declared: it carries `Tray` and the menu DSL and drops straight into Compose
+# Desktop's `application { }`. The sibling `-app` artifact adds `TrayApp` (a tray-anchored popup
+# window) and pulls in the Nucleus windowing backend for it, which this app has no use for.
+compose-native-tray = "2.1.7"
+# Desktop notifications, shipped by the same authors as a standalone module. The tray artifact
+# deliberately covers only the icon and menu, so without this a due reminder has nowhere to be
+# announced once the window is hidden -- and AWT's `TrayIcon.displayMessage` cannot fill the gap
+# once the tray icon itself belongs to ComposeNativeTray, since two tray entries for one app is
+# worse than none. This sends real OS notifications instead: UserNotifications on macOS, WinRT
+# toasts on Windows, and freedesktop notifications over D-Bus on Linux. Pinned to the same 2.5.x
+# line as the tray's own notification docs; it depends on `nucleus.core-runtime` but not on the
+# windowing backend, so it stands alone next to Compose Desktop's `application { }`.
+nucleus-notification = "2.5.18"
 # detekt is the Kotlin/Compose static-analysis gate; it replaces SpotBugs.
 detekt = "2.0.0-alpha.5"
 # Compose Multiplatform versions its Material 3 / extended-icons artifacts independently
@@ -97,6 +116,12 @@ org-jetbrains-compose-components-resources = { module = "org.jetbrains.compose.c
 org-jetbrains-compose-ui-test = { module = "org.jetbrains.compose.ui:ui-test", version.ref = "jetbrains-compose" }
 org-jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "jetbrains-compose" }
 org-jetbrains-kotlinx-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "jetbrains-serialization" }
+io-ktor-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+io-ktor-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+io-ktor-ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+io-ktor-ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+dev-nucleusframework-compose-native-tray = { module = "dev.nucleusframework:composenativetray", version.ref = "compose-native-tray" }
+dev-nucleusframework-nucleus-notification-common = { module = "dev.nucleusframework:nucleus.notification-common", version.ref = "nucleus-notification" }
 org-jetbrains-kotlinx-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "jetbrains-coroutines" }
 # Jetpack DataStore, the `common`/`jvm` artifact. `-core` is the variant without the Android
 # dependencies, which is the one a desktop-only build can use; `datastore-preferences` itself

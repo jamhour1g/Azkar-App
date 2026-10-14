@@ -35,11 +35,12 @@ class LocaleStore(
      *
      * Does not activate anything. Reading is the question "what was chosen"; activating is a
      * separate decision that only [readAndActivate] and [activateLocale] make.
+     *
+     * No `runCatching` of its own, for the same reason [com.azkar.ui.shell.ThemePreferenceStore.read]
+     * does not carry one: [SettingsStore] answers a failed read with an empty snapshot already, and
+     * a wrapper here would make a missing value and an unreadable store look the same.
      */
-    suspend fun read(): Locale =
-        runCatching { settings.read(key) }
-            .getOrNull()
-            .localeOrNull() ?: fallback
+    suspend fun read(): Locale = settings.read(key).localeOrNull() ?: fallback
 
     /**
      * Resolves the language, falls back, and points Compose at the result.

@@ -1,7 +1,15 @@
 package com.azkar
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -20,16 +28,34 @@ import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.title
 import com.azkar.i18n.LocaleStore
 import com.azkar.ui.components.AzkarIcons
+import com.azkar.ui.notifications.NotificationAction
+import com.azkar.ui.notifications.NotificationActionRouter
+import com.azkar.ui.notifications.NotificationNotice
+import com.azkar.ui.notifications.NotificationPreferencesRepository
+import com.azkar.ui.notifications.NotificationRuntime
+import com.azkar.ui.notifications.presentation.NotificationOverlayWindow
+import com.azkar.ui.notifications.presentation.NotificationPublisher
+import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
 import com.azkar.ui.shell.AzkarApp
+import com.azkar.ui.shell.AzkarAppState
+import com.azkar.ui.shell.ReminderTray
 import com.azkar.ui.shell.ThemePreferenceStore
 import com.azkar.ui.shell.rememberAzkarAppState
+import com.azkar.ui.shell.rememberAzkarDarkTheme
+import com.azkar.ui.shell.trayAvailable
 import com.azkar.ui.theme.DEFAULT_WINDOW_HEIGHT
 import com.azkar.ui.theme.DEFAULT_WINDOW_WIDTH
 import com.azkar.ui.theme.windowSizeFor
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.ktor.client.HttpClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
+import org.koin.core.qualifier.named
 import org.koin.mp.KoinPlatform
 import java.awt.Toolkit
 import java.util.Locale
@@ -37,110 +63,275 @@ import java.util.Locale
 private val logger = KotlinLogging.logger {}
 
 /**
+ * `--overlay-poc`, the manual overlay verification harness.
+ *
+ * The overlay's behaviour is only half testable: the presenter is unit-tested, but "is it actually
+ * above that other window", "does it sit on the right screen", "does typing still reach the game"
+ * and "does a hover really freeze the timer" are questions about a window manager, and no assertion
+ * about them is worth writing. This flag exists so they can be answered by eye in one run:
+ *
+ * ```
+ * azkar --overlay-poc            # start hidden and fire six cards, then leave the app up
+ * ```
+ *
+ * It deliberately does *not* start [NotificationRuntime], so the queue cannot add a card of its own
+ * and confuse what is being observed, and it publishes through the dispatcher rather than
+ * straight into the presenter, so the native channel behaves exactly as it would in normal use.
+ */
+private const val OVERLAY_PROOF_OF_CONSENT_FLAG = "--overlay-poc"
+
+/**
  * Compose Multiplatform replacement for `com.azkar.Launcher` + `com.azkar.Home`.
  *
  * The JavaFX application warmed the database ([DatabaseManager.warmUp], which creates the schema
  * and opens the connection pool) off the UI thread before showing the stage and closed it again in
- * `stop()`. The Compose entry point keeps that contract — [DatabaseWarmUp] runs the warm-up in a
- * coroutine scope it owns, so nothing outlives the window; the stage built from `main_screen.fxml`
- * is now a single [Window] hosting [AzkarApp].
+ * `stop()`. The Compose entry point keeps that contract — [DatabaseWarmUp] runs the warm-up before
+ * showing the window, while the notification runtime and data stores live until the explicit tray
+ * Quit action shuts the process down.
  */
-suspend fun main() {
+suspend fun main(args: Array<String>) {
     logger.info { "Starting Azkar" }
+    startKoin { modules(dataModule, appModule) }
+    val koin = KoinPlatform.getKoin()
+    val startup = prepareDesktopStartup(koin)
+    runDesktopApplication(args, koin, startup)
+}
 
-    // Before anything else can ask for a dependency. Everything below resolves out of the container
-    // — the settings store included — and Koin 4 resolves lazily, so nothing here opens the database
-    // until a screen actually reads from it.
-    startKoin {
-        modules(dataModule, appModule)
+private data class DesktopStartup(
+    val databaseWarmUp: DatabaseWarmUp,
+    val themePreference: com.azkar.ui.shell.ThemePreference,
+)
+
+private suspend fun prepareDesktopStartup(koin: org.koin.core.Koin): DesktopStartup {
+    koin.get<LocaleStore>().readAndActivate()
+    val warmUp = DatabaseWarmUp().apply { start() }
+    val theme = koin.get<ThemePreferenceStore>().read()
+    registerComposeGraphics()
+    return DesktopStartup(warmUp, theme)
+}
+
+/** Register Skiko before `rememberVectorPainter` builds the system-window icon. */
+@OptIn(InternalComposeUiApi::class)
+private fun registerComposeGraphics() {
+    registerSkikoComposeImplementation()
+}
+
+private fun runDesktopApplication(
+    args: Array<String>,
+    koin: org.koin.core.Koin,
+    startup: DesktopStartup,
+) {
+    application {
+        DesktopApplicationRoot(args, koin, startup) { exitApplication() }
+    }
+}
+
+@Composable
+private fun DesktopApplicationRoot(
+    args: Array<String>,
+    koin: org.koin.core.Koin,
+    startup: DesktopStartup,
+    exitApplication: () -> Unit,
+) {
+    var windowVisible by remember { mutableStateOf(true) }
+    lateinit var quitAction: () -> Unit
+    val composeScope = rememberCoroutineScope()
+    val actionRouter = remember { koin.get<NotificationActionRouter>() }
+    // A notification activation, a tray click and an overlay card all arrive on somebody else's
+    // thread, so showing the window is handed to the composition's scope rather than written from
+    // there. The router runs this half before the navigation half, so a reminder that arrives before
+    // the tree has ever composed still brings the window up.
+    val showWindow: () -> Unit = { composeScope.launch { windowVisible = true } }
+    SideEffect { actionRouter.setBeforeNavigate { showWindow() } }
+
+    // One state for the whole application: the main tree and the overlay window are two separate
+    // windows, and two state holders would mean two theme preferences and two locales, so the
+    // overlay would stop looking like the app the moment either of them changed.
+    val appState = rememberAzkarAppState(initialThemePreference = startup.themePreference)
+
+    val preferences = remember { koin.get<NotificationPreferencesRepository>() }
+    // Only the queue's on/off flag is read here, and only so the tray menu can say which of "pause"
+    // and "resume" it is offering. It is a `by` rather than a subscription because the tray is a
+    // menu that is built when it opens: nothing in it is on screen to be wrong about for long.
+    val queue by preferences.queue.collectAsState()
+    val runtime = remember { koin.get<NotificationRuntime>() }
+    val dispatcher = koin.get<NotificationPublisher>()
+    val overlay = koin.get<OverlayNotificationPresenter>()
+    val notificationScope = koin.get<CoroutineScope>(named("notificationScope"))
+    val trayAvailable = trayAvailable()
+    val proofOfConcept = OVERLAY_PROOF_OF_CONSENT_FLAG in args
+    LaunchedEffect(runtime, proofOfConcept) {
+        // Not in the harness: a card the scheduler picked on its own would be indistinguishable from
+        // one the harness fired, and the point of the run is to know exactly what is on screen.
+        if (!proofOfConcept) runtime.start(notificationScope)
+    }
+    quitAction = {
+        shutdown(
+            koin = koin,
+            databaseWarmUp = startup.databaseWarmUp,
+            notificationScope = notificationScope,
+            dispatcher = dispatcher,
+            exitApplication = exitApplication,
+        )
+    }
+    LaunchedEffect(trayAvailable, proofOfConcept) {
+        // The harness starts hidden whatever the tray says: "a reminder with no window at all" is
+        // the state being verified, and a tray icon would be the only other surface on screen.
+        windowVisible = if (proofOfConcept) false else !("--start-hidden" in args && trayAvailable)
     }
 
-    val koin = KoinPlatform.getKoin()
+    // The overlay is its own window, created once and hidden when there is nothing to say. It is
+    // composed beside the main window rather than inside it, so a reminder still arrives while the
+    // app has no visible surface at all — which is the state the tray leaves it in.
+    NotificationOverlayHost(appState, preferences, overlay, actionRouter)
 
-    /**
-     * Must precede everything that reads a resource: this resolves the stored language and installs
-     * it as the JVM default, which is what Compose resources resolve against. The resolved locale
-     * is not kept here either: [com.azkar.ui.shell.AzkarAppState] starts from `Locale.getDefault()`,
-     * so the value this installs is already where the tree reads it from.
-     */
-    koin.get<LocaleStore>().readAndActivate()
+    if (proofOfConcept) {
+        OverlayProofOfConcept(dispatcher)
+    }
 
-    val warmUp = DatabaseWarmUp().apply { start() }
-
-    /**
-     * Resolved before the window opens: the palette is applied by [com.azkar.ui.theme.AzkarTheme] while the tree is
-     * built, so a stored dark preference has to be in hand before the first frame or the app opens
-     * light and repaints. The same blocking trade as the locale read above.
-     */
-    val startupTheme = koin.get<ThemePreferenceStore>().read()
-
-    /**
-     * Must precede the first composition, and the window icon is what makes that non-negotiable.
-     *
-     * Compose 1.13 stopped letting [androidx.compose.ui.graphics.Path] talk to Skiko directly and
-     * routed every platform primitive — `Path`, `Canvas`, `Paint`, text measurement — through
-     * `PlatformGraphicsRegistry`, which the Skiko implementation registers into from
-     * `ComposeContainer`'s constructor. That constructor runs when a window is realised, but
-     * `icon = rememberVectorPainter(AzkarIcons.Brand)` is an argument to `Window(...)`: Kotlin
-     * evaluates arguments before it calls, and `rememberVectorPainter` builds its `PathComponent`s
-     * on the spot. The window icon was therefore the first thing in the process to ask for a
-     * platform graphics implementation and it lost the race with its own window, dying on launch
-     * with `IllegalStateException: No Compose UI graphics implementation is registered`.
-     *
-     * Doing it here is the same work `ComposeContainer` was a moment away from doing anyway, and
-     * the call is idempotent, so the container's own registration on construction is now a
-     * no-op re-registration rather than the load-bearing one. [InternalComposeUiApi] is opted into
-     * because this is Compose's own entry point with no public equivalent — the public alternative
-     * is a window icon built without vectors, which would mean rasterising the brand mark just to
-     * work around a startup-ordering hazard.
-     */
-    @OptIn(InternalComposeUiApi::class)
-    registerSkikoComposeImplementation()
-
-    application {
-        // The window is sized from the screen it opens on rather than from a fixed number, so it
-        // fills a laptop properly and does not open off the edge of a small display. `density` is
-        // read from the same composition the window state is measured in, which is the only way to
-        // convert AWT's pixel screen size into the dp space `rememberWindowState` expects.
-        val screen = screenSizeInDp(LocalDensity.current)
-        val windowState =
-            rememberWindowState(
-                size =
-                    screen?.let { windowSizeFor(it.width, it.height) }
-                        ?: DpSize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT),
-                position = WindowPosition(Alignment.Center),
-            )
-        // The shell state is built here rather than inside `Window` because the window title is a
-        // `Window` parameter and the language is the one thing `applyLocale` changes at runtime. A
-        // title resolved inside the window's own composition would have been built from the launch
-        // locale and never revisited, so the title bar would have stayed English while the rest of
-        // the app switched.
-        val state = rememberAzkarAppState(initialThemePreference = startupTheme)
-        // The window manager keeps the title bar. Drawing our own meant undecorating the window,
-        // which cost the edge snapping and the desktop's own button layout — trading a cosmetic
-        // mismatch for real behaviour. System decorations are worth the grey strip.
-        Window(
-            onCloseRequest = {
-                warmUp.close()
-                // Nothing here needs releasing — Koin 4 does not close what it creates, and the only
-                // closeable the app owns is the pool, which `DatabaseWarmUp.stop()` has just shut.
-                // Stopping the container is still right: it drops the definitions so a second launch
-                // in the same process starts from a clean graph rather than the stale one.
-                stopKoin()
-                logger.info { "Azkar is shutting down" }
-                exitApplication()
+    if (trayAvailable) {
+        // Remembered on the last published action, so clicking the icon opens whatever was last
+        // announced — and so the tray icon is not re-rendered on every recomposition of anything.
+        val latestAction = dispatcher.latestAction
+        val openLatest = remember(latestAction) { { actionRouter.dispatch(latestAction) } }
+        ReminderTray(
+            primaryAction = openLatest,
+            onOpenApp = showWindow,
+            remindersPaused = !queue.enabled,
+            onToggleReminders = {
+                composeScope.launch { preferences.updateQueue { it.copy(enabled = !it.enabled) } }
             },
-            state = windowState,
-            title = windowTitle(state.locale),
-            // The taskbar entry, the alt-tab row and the title bar all read this, so it is drawn
-            // from the same vector the header lockup uses rather than from a rasterised copy: one
-            // mark, and it stays right at whatever size the platform asks for. The packaged
-            // installers cannot do this — jpackage takes an image file, not draw commands — so
-            // `assets/icons` holds the same mark rasterised for the three desktop formats.
-            icon = rememberVectorPainter(AzkarIcons.Brand),
-        ) {
-            AzkarApp(state = state)
+            onQuit = { quitAction() },
+        )
+    }
+
+    // Closing the window hides it whenever there is somewhere to bring it back from. Without a tray
+    // there is not, so the close is taken at face value and the app leaves — the alternative is a
+    // running process with no way to show or stop it, which is worse than not hiding at all.
+    fun hideOrQuit() {
+        if (trayAvailable) windowVisible = false else quitAction()
+    }
+    MainWindow(
+        visible = windowVisible,
+        onCloseRequest = ::hideOrQuit,
+        appState = appState,
+        actionRouter = actionRouter,
+    )
+}
+
+/**
+ * The one place the process is allowed to end, in the order that leaves nothing half-released.
+ *
+ * The scheduler's scope goes first so nothing new is scheduled while the rest is being torn down;
+ * the publisher next, so the overlay's stack and the OS channel both stop; then the database, the
+ * one HTTP client, and Koin itself. Anything that can fail during shutdown is inside a `runCatching`
+ * on purpose — a tray menu item that threw on the way out would leave the window gone and the
+ * process alive, which is the one state with no way back into it.
+ */
+private fun shutdown(
+    koin: org.koin.core.Koin,
+    databaseWarmUp: DatabaseWarmUp,
+    notificationScope: CoroutineScope,
+    dispatcher: NotificationPublisher,
+    exitApplication: () -> Unit,
+) {
+    notificationScope.cancel()
+    runCatching { dispatcher.dispose() }
+    databaseWarmUp.close()
+    runCatching { koin.get<HttpClient>().close() }
+    stopKoin()
+    logger.info { "Azkar is shutting down" }
+    exitApplication()
+}
+
+/**
+ * The notification overlay window, and the app state it has to be drawn with.
+ *
+ * The theme and language are read from the *same* [AzkarAppState] the main tree uses, which is why
+ * that state is created up here and passed down rather than being remembered inside `MainWindow`: a
+ * second instance would be a second theme preference and a second locale, and the overlay would
+ * drift away from the app the moment either was changed. It is also why the overlay window is not
+ * re-created when the theme changes — only its content is recomposed.
+ */
+@Composable
+private fun NotificationOverlayHost(
+    appState: AzkarAppState,
+    preferences: NotificationPreferencesRepository,
+    overlay: OverlayNotificationPresenter,
+    actionRouter: NotificationActionRouter,
+) {
+    val settings by preferences.presentation.collectAsState()
+    NotificationOverlayWindow(
+        presenter = overlay,
+        settings = settings,
+        darkTheme = rememberAzkarDarkTheme(appState.themePreference),
+        locale = appState.locale,
+        // Through the router rather than straight to the navigator, because the overlay window can be
+        // clicked before the main tree has ever composed — the autostart path is exactly that case.
+        onOpen = { action -> actionRouter.dispatch(action) },
+    )
+}
+
+/**
+ * Six cards, one every few seconds, for [OVERLAY_PROOF_OF_CONSENT_FLAG].
+ *
+ * The timing is chosen so the three things under test are all reachable in one run and are visible
+ * at the same moment: the stack cap (three arrive together and the fourth pushes the first out), the
+ * hover pause (leave the pointer on one card for ten seconds and it is still there afterwards), and
+ * the click routes (the first opens a prayer, the rest open a remembrance). Nothing here is
+ * localized: it is a developer harness read off a terminal, not a screen a user meets.
+ */
+@Composable
+private fun OverlayProofOfConcept(publisher: NotificationPublisher) {
+    LaunchedEffect(publisher) {
+        var index = 1
+        while (true) {
+            publisher.publish(
+                NotificationNotice(
+                    title = "Overlay card $index of $PROOF_OF_CONSENT_CARDS",
+                    message =
+                        "Hover to pause the timer, × to dismiss, tap the body to open Azkar. " +
+                            "It should sit above whatever you have open and never steal the keyboard.",
+                    action =
+                        if (index == 1) {
+                            NotificationAction.PrayerTimes
+                        } else {
+                            NotificationAction.Remembrance(index.toLong())
+                        },
+                ),
+            )
+            index += 1
+            delay(PROOF_OF_CONSENT_INTERVAL_MILLIS)
         }
+    }
+}
+
+private const val PROOF_OF_CONSENT_CARDS = 6
+private const val PROOF_OF_CONSENT_INTERVAL_MILLIS = 3_000L
+
+@Composable
+private fun MainWindow(
+    visible: Boolean,
+    onCloseRequest: () -> Unit,
+    appState: AzkarAppState,
+    actionRouter: NotificationActionRouter,
+) {
+    val screen = screenSizeInDp(LocalDensity.current)
+    val windowState =
+        rememberWindowState(
+            size =
+                screen?.let { windowSizeFor(it.width, it.height) }
+                    ?: DpSize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT),
+            position = WindowPosition(Alignment.Center),
+        )
+    Window(
+        onCloseRequest = onCloseRequest,
+        visible = visible,
+        state = windowState,
+        title = windowTitle(appState.locale),
+        icon = rememberVectorPainter(AzkarIcons.Brand),
+    ) {
+        AzkarApp(state = appState, actionRouter = actionRouter)
     }
 }
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +33,7 @@ import com.azkar.ui.home.HadithState
 import com.azkar.ui.home.NotificationSettingsState
 import com.azkar.ui.home.PrayerTimesState
 import com.azkar.ui.library.CollectionReminderState
+import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.preview.previewHadithState
 import com.azkar.ui.preview.previewRailCards
 import com.azkar.ui.preview.previewReminders
@@ -132,10 +134,12 @@ fun HomeScreen(
 ) {
     val uiLocale = AzkarTheme.locale
 
-    val prayerTimes = remember(uiLocale) { PrayerTimesState(uiLocale) }
     val favorites = remember(uiLocale) { FavoritesState(uiLocale) }
     val rail = remember { HomeRailState() }
     val store = koinInject<SettingsStore>()
+    val notificationPreferences = koinInject<NotificationPreferencesRepository>()
+    val prayerLocation by notificationPreferences.prayerLocation.collectAsState()
+    val prayerTimes = remember(uiLocale, prayerLocation) { PrayerTimesState(uiLocale, prayerLocation) }
     val notificationScope = rememberCoroutineScope()
     // Both of these come from the container: the settings switches observe the stored file, and the
     // home dashboard reads through the same gateway the library shelf writes through, so a
@@ -407,6 +411,7 @@ private fun HomeMainColumn(
         PrayerTimesCard(
             rows = snapshot.rows,
             countdown = snapshot.countdown,
+            locationLabel = inputs.prayerTimes.location.city,
             notificationsEnabled = inputs.notifications.globalEnabled,
             onGlobalToggle = inputs.notifications::onGlobalToggleChanged,
             onNotificationToggled = inputs.notifications::onPrayerToggled,

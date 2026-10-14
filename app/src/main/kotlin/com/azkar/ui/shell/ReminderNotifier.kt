@@ -1,47 +1,44 @@
 package com.azkar.ui.shell
 
-import java.awt.Color
-import java.awt.GraphicsEnvironment
-import java.awt.RenderingHints
-import java.awt.SystemTray
-import java.awt.image.BufferedImage
+import com.azkar.ui.notifications.NotificationAction
+import com.azkar.ui.notifications.NotificationNotice
+import dev.nucleusframework.notification.common.NotificationManager
+import dev.nucleusframework.notification.common.notification
+import io.github.oshai.kotlinlogging.KotlinLogging
 
-/**
- * One reminder coming round, as the notifier is handed it.
- *
- * The collection id travels with the text because the notification is actionable: clicking it has to
- * open the collection that came due, and a title and a line of prose cannot say which of four
- * collections they belong to.
- */
-data class ReminderNotice(
-    val title: String,
-    val message: String,
-    val collectionId: Long,
-)
+private val logger = KotlinLogging.logger {}
 
 /**
  * How a due reminder reaches the user when the app is not the window in front.
  *
  * Behind an interface for the same reason every other data seam in this app is: the tick fires from
- * a coroutine, and a test has to be able to assert that it fired without a system tray.
+ * a coroutine, and a test has to be able to assert that it fired without a desktop session.
+ *
+ * The tray icon and its menu are not this interface's business — they are Compose state and live in
+ * [ReminderTray]. What is here is the announcement itself, because that has to survive the window
+ * being hidden and so has to come from the process rather than from a composition.
  *
  * [show] is expected to be safe to call from any thread and is expected to do nothing at all rather
- * than throw when notifications cannot be shown. A reminder that cannot be announced is still worth
+ * than throw when a notification cannot be shown. A reminder that cannot be announced is still worth
  * recording as fired — the in-app toast is the other half of the delivery — so a notifier that
- * failed loudly would turn a missing desktop service into a crash on a background thread.
+ * failed loudly would turn a missing notification service into a crash on a background thread.
  */
 interface ReminderNotifier {
     /** Whether this machine can show anything at all. False means [show] is a no-op. */
     val isSupported: Boolean
 
     /** Announces [notice], or does nothing if it cannot. */
-    fun show(notice: ReminderNotice)
+    fun show(notice: NotificationNotice)
+
+    /** The action the most recent notice carried, for the tray icon's primary click. */
+    val latestAction: NotificationAction
 
     /**
      * Releases anything the notifier is holding outside this process's own objects.
      *
-     * A no-op for most, but a tray icon is visible for as long as it exists and outlives the window
-     * that registered it, so whatever creates one has to be able to take it back down.
+     * A no-op for most. A tray icon is visible for as long as it exists and outlives the window that
+     * registered it, but that one is now composition state and leaves with the composition that drew
+     * it, so the only thing left to release is whatever the notification backend cached.
      */
     fun dispose() = Unit
 }
@@ -55,142 +52,59 @@ interface ReminderNotifier {
 object SilentReminderNotifier : ReminderNotifier {
     override val isSupported: Boolean = false
 
-    override fun show(notice: ReminderNotice) = Unit
+    override val latestAction: NotificationAction = NotificationAction.OpenApp
+
+    override fun show(notice: NotificationNotice) = Unit
 }
 
 /**
- * Desktop notifications through the JDK's own system tray.
+ * Desktop notifications through the OS's own notification service.
  *
- * `java.awt.SystemTray` is the only notification route available without taking a dependency, and it
- * is the one the user asked for. It is unevenly supported: on Linux it needs a notification daemon
- * running, on macOS it needs the app to be bundled rather than run from a jar (jpackage does bundle
- * it), and on a machine with no display there is no tray at all. Rather than treat those as
- * failures, [tray] returns `null` and every call becomes a no-op — the in-app toast still fires, so
- * a reminder is never silently swallowed, and nothing about the schedule depends on it working.
+ * Each platform is answered natively rather than approximated: `UNUserNotificationCenter` on macOS,
+ * a WinRT toast on Windows, and an `org.freedesktop.Notifications` message over D-Bus on Linux.
+ * That is the same ground [ReminderTray] covers for the icon, and it is why this class has no
+ * drawing code in it — the tray artifact owns the icon, and an announcement has to come from
+ * whichever channel the OS actually surfaces to the user, which is not a tray icon's own tooltip.
  *
- * The icon is drawn here rather than loaded from the app's resources: AWT wants a `BufferedImage`
- * and Skia's resource loader produces something else. A flat tile with an open book on it is enough
- * to recognise in a crowded tray, and a tray icon nobody can identify is no worse than a wrong one.
- *
- * @param onOpenCollection called with the collection's id when the notification is clicked. The
- * tray icon itself carries a click listener as well, so the tray is a way back into the app even
- * for a notice that has already gone.
+ * Delivery is unevenly available: macOS drops notifications from an unbundled jar (jpackage does
+ * bundle the app, so the packaged build is the one that works), Linux needs a notification daemon,
+ * and a machine with no display has neither. [NotificationManager.isAvailable] answers for the
+ * common case and [isSupported] defers to it, so a missing service degrades to the in-app toast
+ * rather than to an exception on a scheduler thread.
  */
-class SystemTrayReminderNotifier(
-    private val onOpenCollection: (Long) -> Unit,
+class NativeReminderNotifier(
+    private val onAction: (NotificationAction) -> Unit,
 ) : ReminderNotifier {
-    private var icon: java.awt.TrayIcon? = null
-    private var unavailable = false
+    @Volatile
+    private var action: NotificationAction = NotificationAction.OpenApp
 
-    /**
-     * The collection the tray icon should open, or `null` when it should open nothing.
-     *
-     * Held in a field rather than captured in a listener because a listener per notification would
-     * stack up: after ten reminders a single click would open ten collections, and the first one to
-     * answer would be the oldest.
-     */
-    private var openRequest: Long? = null
+    override val latestAction: NotificationAction
+        get() = action
 
-    override val isSupported: Boolean
-        get() = !unavailable && tray() != null
-
-    /**
-     * Registers the tray icon the first time it is needed.
-     *
-     * Lazy because a tray icon is visible the whole time it exists, and the app has no reason to
-     * show one until a reminder actually comes round — or indeed to show one at all if nothing ever
-     * does. Once a failure has been seen, [unavailable] stops the retry: a tray that was not there
-     * a moment ago is not going to arrive inside a thirty-second tick.
-     */
-    private fun ensureIcon(): java.awt.TrayIcon? =
-        if (unavailable) {
-            null
-        } else {
-            icon ?: registerIcon()
-        }
-
-    /** One attempt at registering, with a failure remembered rather than retried. */
-    private fun registerIcon(): java.awt.TrayIcon? {
-        val tray = tray()
-        if (tray == null) {
-            unavailable = true
-            return null
-        }
-        return runCatching {
-            java.awt
-                .TrayIcon(brandIcon())
-                .apply {
-                    isImageAutoSize = true
-                    addActionListener { openRequest?.let(onOpenCollection) }
-                    tray.add(this)
-                }.also { icon = it }
-        }.getOrElse {
-            unavailable = true
-            null
-        }
-    }
-
-    override fun show(notice: ReminderNotice) {
-        openRequest = notice.collectionId
-        val target = ensureIcon() ?: return
+    override val isSupported: Boolean =
         runCatching {
-            target.displayMessage(
-                notice.title,
-                notice.message,
-                java.awt.TrayIcon.MessageType.INFO,
-            )
+            // Eager, because on Windows it is what registers the toast's app identity, and the
+            // first reminder of the session should not be the one that pays for it. Everywhere else
+            // this is a no-op and `send` would have initialized on its own anyway.
+            NotificationManager.initialize()
+            NotificationManager.isAvailable()
+        }.getOrDefault(false)
+
+    override fun show(notice: NotificationNotice) {
+        action = notice.action
+        if (!isSupported) return
+        runCatching {
+            notification(
+                title = notice.title,
+                message = notice.message,
+                onActivated = { onAction(notice.action) },
+            ).send()
+        }.onFailure {
+            logger.warn(it) { "Desktop notification could not be delivered" }
         }
     }
 
-    /**
-     * Takes the tray icon back out of the tray.
-     *
-     * Called when the window closes. A tray icon outlives its window by default, so without this a
-     * user who quit the app would be left with an icon that opens nothing.
-     */
     override fun dispose() {
-        openRequest = null
-        val shown = icon ?: return
-        icon = null
-        runCatching { SystemTray.getSystemTray().remove(shown) }
+        action = NotificationAction.OpenApp
     }
-
-    private companion object {
-        /**
-         * The tray, or `null` when this machine has none.
-         *
-         * `isHeadless` is checked first because `SystemTray` reaches for a display before it looks
-         * at anything else, and asking a headless JVM for one throws rather than answering.
-         */
-        fun tray(): SystemTray? =
-            if (GraphicsEnvironment.isHeadless()) {
-                null
-            } else {
-                runCatching { if (SystemTray.isSupported()) SystemTray.getSystemTray() else null }.getOrNull()
-            }
-    }
-}
-
-/**
- * The tray icon, drawn rather than loaded.
- *
- * A brand-coloured tile with an open book, which is the same mark the app's brand tile uses. The
- * light theme's primary is spelled out rather than read from the Compose theme because AWT cannot
- * see it, and a tray icon that changed with the app's theme would be a second thing to keep in step
- * for no gain in a 32-pixel square.
- */
-private fun brandIcon(): BufferedImage {
-    val image = BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB)
-    val paint = image.createGraphics()
-    try {
-        paint.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-        paint.color = Color(0x3B82F6)
-        paint.fillRoundRect(0, 0, 32, 32, 10, 10)
-        paint.color = Color.WHITE
-        paint.fillPolygon(intArrayOf(15, 15, 15, 3, 3), intArrayOf(9, 22, 15, 12, 22), 4)
-        paint.fillPolygon(intArrayOf(17, 17, 17, 29, 29), intArrayOf(9, 22, 15, 12, 22), 4)
-    } finally {
-        paint.dispose()
-    }
-    return image
 }
