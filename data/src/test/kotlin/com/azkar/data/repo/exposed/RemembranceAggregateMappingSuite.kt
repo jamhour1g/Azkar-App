@@ -16,10 +16,10 @@ import java.util.Locale
 /**
  * Round-trips a whole remembrance aggregate through the Exposed tables.
  *
- * A remembrance is not one row but five: the core record, a translation and an explanation per
+ * A remembrance is not one row but five: the core record, a translation and optional explanation per
  * locale, tag links, and an optional favorite. These tests walk that graph out to the database
- * and back to prove the reassembly holds — in particular that a locale present in only one of
- * the two translation tables is dropped rather than surfaced half-populated.
+ * and back to prove the reassembly holds — in particular that translations survive without their
+ * optional explanations, while orphaned explanations are discarded.
  */
 val RemembranceAggregateMappingSuite by testSuite("Remembrance aggregate mapping") {
     exposedRepositories {
@@ -49,6 +49,28 @@ val RemembranceAggregateMappingSuite by testSuite("Remembrance aggregate mapping
 
             assertThat(repositories.tags.findAll().map { it.name }).containsExactly("shared")
             assertThat(repositories.remembrances.findByTagNameIgnoreCase("Shared")).hasSize(2)
+        }
+
+        test("save(): a translation without an explanation survives the round trip") { repositories ->
+            val created =
+                RemembranceImpl(
+                    grade = HadithGrade.SAHIH,
+                    translations =
+                        mapOf(
+                            ENGLISH to Remembrance.Translations(pair(""), pair("Seek knowledge")),
+                            ARABIC to Remembrance.Translations(pair(""), pair("اطلبوا العلم")),
+                        ),
+                )
+
+            val saved = repositories.remembrances.save(created)
+            val english =
+                requireNotNull(repositories.remembrances.findById(requireNotNull(saved.id)))
+                    .translations
+                    .getValue(ENGLISH)
+
+            assertThat(english.translationPair.text).isEqualTo("Seek knowledge")
+            assertThat(english.explanationPair.text).isEmpty()
+            assertThat(english.explanationPair.id).isNull()
         }
 
         test("save(): re-saving with new text updates the row in place instead of adding one") { repositories ->
@@ -87,7 +109,7 @@ val RemembranceAggregateMappingSuite by testSuite("Remembrance aggregate mapping
             assertThat(repositories.remembrances.findFavorites().map { it.id }).doesNotContain(id)
         }
 
-        test("findById(): a locale with no counterpart is dropped, and the drop is reported") { repositories ->
+        test("findById(): a missing optional explanation leaves its translation intact") { repositories ->
             val saved = repositories.remembrances.save(remembrance(source = "Abu Huraira", extraLocale = true))
             val id = requireNotNull(saved.id)
 
@@ -101,22 +123,43 @@ val RemembranceAggregateMappingSuite by testSuite("Remembrance aggregate mapping
             val logs =
                 captureLogs(MAPPER_LOGGER) {
                     val reloaded = requireNotNull(repositories.remembrances.findById(id))
+                    assertThat(reloaded.translations).containsOnlyKeys(ENGLISH, ARABIC)
+                    assertThat(
+                        reloaded.translations
+                            .getValue(ARABIC)
+                            .translationPair.text,
+                    ).isEqualTo("ذكر")
+                    assertThat(
+                        reloaded.translations
+                            .getValue(ARABIC)
+                            .explanationPair.text,
+                    ).isEmpty()
+                }
+
+            assertThat(logs.messagesAt(Level.WARN)).isEmpty()
+        }
+
+        test("findById(): an explanation without a translation is dropped and reported") { repositories ->
+            val saved = repositories.remembrances.save(remembrance(source = "Abu Huraira"))
+            val id = requireNotNull(saved.id)
+            transaction(repositories.database) {
+                exec(
+                    "INSERT INTO explanation_translation (remembrance_id, locale_code, text) VALUES ($id,'fr','Explication')",
+                )
+            }
+
+            val logs =
+                captureLogs(MAPPER_LOGGER) {
+                    val reloaded = requireNotNull(repositories.remembrances.findById(id))
                     assertThat(reloaded.translations).containsOnlyKeys(ENGLISH)
                 }
 
-            assertThat(logs.messagesAt(Level.WARN)).containsExactly("Dropped locales missing counterpart")
-            // The payload is the only thing naming *which* locale and *which* row went wrong, so
-            // losing it would leave a warning that cannot be acted on. All three fields are always
-            // set, which is what distinguishes "nothing was dropped" from "the field was lost".
+            assertThat(logs.messagesAt(Level.WARN)).containsExactly("Dropped explanations without translation")
             assertThat(logs.payload.keys)
-                .describedAs("Every field the mapper sets, so a renamed key fails loudly")
-                .containsExactlyInAnyOrder("remembranceId", "droppedTranslations", "droppedExplanations")
+                .describedAs("The logger identifies the remembrance and orphaned locales")
+                .containsExactlyInAnyOrder("remembranceId", "droppedExplanations")
             assertThat(logs.payload["remembranceId"]).containsExactly(id.toString())
-            // A locale is named by the table it *survived* in, not the one it went missing from:
-            // Arabic lost its explanation, so it is the translation that had to be dropped, and the
-            // empty set is what the surviving side looks like.
-            assertThat(logs.payload["droppedTranslations"]).containsExactly("[ar]")
-            assertThat(logs.payload["droppedExplanations"]).containsExactly("[]")
+            assertThat(logs.payload["droppedExplanations"]).containsExactly("[fr]")
         }
     }
 }

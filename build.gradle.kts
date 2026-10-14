@@ -14,7 +14,11 @@
  */
 // Applied unversioned: `buildSrc` already puts Spotless on the build classpath, pinning it to
 // `com-diffplug-spotless` in the version catalog. This mirrors how `:app` applies the plugin.
-plugins { id("com.diffplug.spotless") }
+plugins {
+    id("com.diffplug.spotless")
+    alias(libs.plugins.org.jetbrains.compose) apply false
+    alias(libs.plugins.org.jetbrains.compose.hot.reload) apply false
+}
 
 // Spotless resolves the ktlint CLI from here, exactly as `azkar-common` does for every module.
 repositories { mavenCentral() }

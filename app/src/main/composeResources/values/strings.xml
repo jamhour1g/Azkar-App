@@ -108,7 +108,7 @@
     <string name="homeCollectionActionDone">Done</string>
     <string name="homeCollectionProgressFormat">%1$d of %2$d</string>
     <string name="collectionDragHandle">Drag to reorder</string>
-    <string name="collectionsActionAddMembers">Add Remembrances</string>
+    <string name="collectionsActionAddMembers">Add to Collection</string>
     <string name="collectionsActionBack">Back to Collections</string>
     <string name="collectionsEmptyTitle">No collections yet</string>
     <string name="collectionsEmptyHint">Make one to gather the azkar you come back to.</string>
@@ -142,6 +142,7 @@
     <string name="collectionsDialogTagsHint">Choose existing tags or create a new one.</string>
     <string name="collectionsDialogTagsSearchPlaceholder">Search tags…</string>
     <string name="collectionsDialogTagsCreate">Create tag</string>
+    <string name="collectionsDialogTagsClearAll">Clear all</string>
     <string name="collectionsDialogTagsNewLabel">Create new tag</string>
     <string name="collectionsDialogTagsNewPlaceholder">New tag name</string>
     <string name="collectionsDialogTagsNone">No tags yet. Create the first one.</string>
@@ -168,10 +169,39 @@
     <string name="collectionsActionAddTag">Add tag</string>
     <string name="collectionsActionCreateCollection">Create collection</string>
     <string name="collectionsActionSave">Save</string>
+    <string name="remembranceCreateActionOpen">Create Remembrance</string>
+    <string name="remembranceCreateActionConfirm">Create Remembrance</string>
+    <string name="remembranceCreateTitle">Create New Remembrance</string>
+    <string name="remembranceCreateStepText">Write the remembrance</string>
+    <string name="remembranceCreateStepTranslations">Add translations and explanations</string>
+    <string name="remembranceCreateStepTags">Choose tags to find it later</string>
+    <string name="remembranceCreateTextLabel">Remembrance text</string>
+    <string name="remembranceCreateTextPlaceholder">Write the remembrance in Arabic…</string>
+    <string name="remembranceCreateTextRequired">Enter the remembrance text to continue.</string>
+    <string name="remembranceCreateAdditionalInfo">Additional information</string>
+    <string name="remembranceCreateGradeLabel">Grade</string>
+    <string name="remembranceCreateGradeSahih">Sahih</string>
+    <string name="remembranceCreateGradeHasan">Hasan</string>
+    <string name="remembranceCreateGradeDaif">Da‘if</string>
+    <string name="remembranceCreateGradeUnspecified">Unspecified</string>
+    <string name="remembranceCreateSourceLabel">Source (optional)</string>
+    <string name="remembranceCreateSourcePlaceholder">Book, reference, or source…</string>
+    <string name="remembranceCreateTranslationHint">Translations and explanations are optional.</string>
+    <string name="remembranceCreateLanguagePlaceholder">Choose a language</string>
+    <string name="remembranceCreateLanguageUnavailable">No other supported languages are available.</string>
+    <string name="remembranceCreateTranslationAdd">Add Translation</string>
+    <string name="remembranceCreateTranslationLabel">Translation</string>
+    <string name="remembranceCreateTranslationPlaceholder">Write the translated remembrance…</string>
+    <string name="remembranceCreateTranslationRemove">Remove %1$s translation</string>
+    <string name="remembranceCreateExplanationLabel">Explanation</string>
+    <string name="remembranceCreateExplanationPlaceholder">Explain the meaning (optional)…</string>
     <string name="collectionsDuplicateNameSuffix">%1$s (copy)</string>
     <!-- Library: a collection's own page -->
     <string name="collectionDetailEmptyTitle">This collection is empty</string>
-    <string name="collectionDetailEmptyHint">Add the remembrances you want in it, or start from one of the collections Azkar ships with.</string>
+    <string name="collectionDetailEmptyHint">Create a remembrance or add existing ones to this collection.</string>
+    <string name="collectionDetailSearchHint">Search remembrances in this collection…</string>
+    <string name="collectionDetailSearchNoResultsTitle">No remembrances found</string>
+    <string name="collectionDetailSearchNoResultsHint">Try another word or clear your search.</string>
     <!-- The reader page. Its own "gone" copy because this is the one screen that can be pointed at a
          row the database no longer holds from four different places, and a message about a collection
          would be the wrong subject in front of someone who never asked about one. -->
@@ -181,8 +211,8 @@
     <string name="remembranceReaderMissingHint">It was deleted, or the library was reloaded without it.</string>
     <string name="collectionDetailMissingTitle">That collection is gone</string>
     <string name="collectionDetailMissingHint">It was deleted, or the shelf was reloaded without it.</string>
-    <string name="collectionDetailAddPickerTitle">Add Remembrances</string>
-    <string name="collectionDetailAddPickerHint">Tick everything you want and add it in one go.</string>
+    <string name="collectionDetailAddPickerTitle">Add to Collection</string>
+    <string name="collectionDetailAddPickerHint">Choose remembrances from your library to add here.</string>
     <string name="collectionDetailAddPickerEmpty">Nothing left to add — this collection already holds everything.</string>
     <string name="collectionDetailSelectAll">Select All</string>
     <string name="collectionDetailClearSelection">Clear</string>
@@ -190,6 +220,10 @@
     <string name="collectionDetailRemove">Remove</string>
     <string name="collectionDetailRemoveTitle">Remove From Collection?</string>
     <string name="collectionDetailRemoveBody">%1$d remembrances will leave this collection. They stay in the rest of your library.</string>
+    <string name="collectionDetailActionDeleteRemembrance">Delete remembrance</string>
+    <string name="collectionDetailDeleteRemembranceTitle">Delete this remembrance?</string>
+    <string name="collectionDetailDeleteRemembranceBody">This permanently deletes the remembrance and removes it from every collection. This cannot be undone.</string>
+    <string name="collectionDetailDeleteRemembrance">Delete Permanently</string>
     <!-- Library: one-shot outcomes -->
     <string name="collectionsNoticeCreated">Collection created.</string>
     <string name="collectionsNoticeEdited">Collection updated.</string>
@@ -198,6 +232,8 @@
     <string name="collectionsNoticePinned">Pinned to the top of the shelf.</string>
     <string name="collectionsNoticeUnpinned">Unpinned.</string>
     <string name="collectionsNoticeMembersAdded">Remembrances added.</string>
+    <string name="collectionsNoticeRemembranceCreated">Remembrance created.</string>
+    <string name="collectionsNoticeRemembranceDeleted">Remembrance deleted.</string>
     <string name="collectionsNoticeMembersRemoved">Remembrances removed.</string>
     <string name="collectionsNoticeFavoriteAdded">Added to favorites.</string>
     <string name="collectionsNoticeFavoriteRemoved">Removed from favorites.</string>

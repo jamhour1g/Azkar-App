@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.Remembrance
+import com.azkar.ui.library.data.CollectionFiltering
 import com.azkar.ui.library.data.CollectionReminderRow
 import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.library.data.findById
@@ -44,6 +45,10 @@ class CollectionDetailState(
     /** The collection being viewed, or `null` when its id is no longer on the shelf. */
     val collection get() = collections.allCollections.findById(collectionId)
 
+    val isUncategorized: Boolean get() = collections.uncategorizedCollectionId == collectionId
+
+    val isFavoritesCollection: Boolean get() = collections.favoritesCollectionId == collectionId
+
     /**
      * The shared shelf this page reads, handed back to whoever composes the page.
      *
@@ -63,6 +68,9 @@ class CollectionDetailState(
      * them outside [CollectionDetailDialogs].
      */
     val addPicker: CollectionDetailAddPicker = CollectionDetailAddPicker(collections, collectionId)
+
+    /** The in-progress remembrance form, or `null` while it is closed. */
+    var remembranceDraft: RemembranceCreateDraft? by mutableStateOf(null)
 
     // ---- removal -------------------------------------------------------------------------------
 
@@ -183,6 +191,14 @@ class CollectionDetailState(
     var memberView: CollectionMemberView by mutableStateOf(CollectionMemberView.GRID)
         internal set
 
+    /** Filters only this collection's members; the collection itself remains unchanged. */
+    var memberQuery: String by mutableStateOf("")
+        private set
+
+    fun onMemberQueryChanged(query: String) {
+        memberQuery = query
+    }
+
     fun setMemberSort(sort: CollectionMemberSort) {
         memberSort = sort
     }
@@ -196,10 +212,10 @@ class CollectionDetailState(
      *
      * "In order" is the one sort that means "the order you put them in", so it is the only one where
      * a drop survives the next re-read. Dragging while sorted by title or category would let the user
-     * put a tile somewhere and then watch it walk back on the following composition, which is worse
-     * than not offering the gesture at all.
+     * put a tile somewhere and then watch it walk back on the following composition. A search filter
+     * also disables dragging: its visible indices are not the source collection's indices.
      */
-    val canReorderMembers: Boolean get() = memberSort == CollectionMemberSort.SEQUENCE
+    val canReorderMembers: Boolean get() = memberSort == CollectionMemberSort.SEQUENCE && memberQuery.isBlank()
 
     /** Puts the member at [fromIndex] where [toIndex] was. Indices are positions in [memberTiles]. */
     fun moveMember(
@@ -248,7 +264,19 @@ class CollectionDetailState(
      * reading them in groups is not the same act as being shown only one group.
      */
     fun visibleMemberTiles(): List<RemembranceTile> {
-        val tiles = memberTiles()
+        val current = collection ?: return emptyList()
+        val query = memberQuery.trim().lowercase(Locale.ROOT)
+        val tiles =
+            current.members.mapIndexedNotNull { index, member ->
+                if (query.isNotEmpty() && !CollectionFiltering.matchesRemembrance(member, query)) {
+                    return@mapIndexedNotNull null
+                }
+                collections.presenter.toTile(
+                    remembrance = member,
+                    inCustomCollections = collections.membershipCounts.collectionsIn(member.id ?: -1L),
+                    position = index + 1,
+                )
+            }
         return when (memberSort) {
             CollectionMemberSort.SEQUENCE -> tiles
             CollectionMemberSort.TITLE -> tiles.sortedBy { it.primaryPreview.lowercase(Locale.ROOT) }

@@ -94,6 +94,7 @@ class LibraryBootstrapper(
             seedState.markSeeded()
         }
 
+        ensureUncategorizedShelf()
         sweepCovers()
     }
 
@@ -153,6 +154,23 @@ class LibraryBootstrapper(
         logger.info { "Created the starred-remembrances shelf as collection $id" }
     }
 
+    /** Ensures even an installation seeded by an older version has the untagged-remembrances shelf. */
+    private suspend fun ensureUncategorizedShelf() {
+        val storedId = seedState.uncategorizedCollectionId()
+        if (storedId != null && collectionService.findById(storedId) != null) return
+
+        val created =
+            collectionService.create(
+                name = UNCATEGORIZED_NAME,
+                description = UNCATEGORIZED_DESCRIPTION,
+                iconKey = UNCATEGORIZED_ICON_KEY,
+                translations = UNCATEGORIZED_TRANSLATIONS,
+            )
+        val id = checkNotNull(created.id) { "A just-created Uncategorized collection must have an id" }
+        seedState.setUncategorizedCollectionId(id)
+        logger.info { "Ensured the Uncategorized shelf as collection $id" }
+    }
+
     /**
      * Removes cover files no collection refers to.
      *
@@ -167,11 +185,20 @@ class LibraryBootstrapper(
         const val FAVORITES_NAME = "Favorites"
         const val FAVORITES_DESCRIPTION = "The remembrances you have starred"
         const val FAVORITES_ICON_KEY = "star"
+        const val UNCATEGORIZED_NAME = "Uncategorized"
+        const val UNCATEGORIZED_DESCRIPTION = "Remembrances without a category"
+        const val UNCATEGORIZED_ICON_KEY = "inbox"
 
         val FAVORITES_TRANSLATIONS =
             mapOf(
                 Locale.forLanguageTag("en") to LocalizedPair(FAVORITES_NAME, FAVORITES_DESCRIPTION),
                 Locale.forLanguageTag("ar") to LocalizedPair("المفضّلة", "الأذكار التي حفظتها بنجمة"),
+            )
+
+        val UNCATEGORIZED_TRANSLATIONS =
+            mapOf(
+                Locale.ENGLISH to LocalizedPair(UNCATEGORIZED_NAME, UNCATEGORIZED_DESCRIPTION),
+                Locale.forLanguageTag("ar") to LocalizedPair("غير مصنّف", "أذكار بلا تصنيف"),
             )
     }
 }

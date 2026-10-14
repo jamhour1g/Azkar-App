@@ -389,6 +389,9 @@ interface CollectionsGateway :
      */
     suspend fun saveRemembrance(remembrance: Remembrance): Remembrance
 
+    /** Permanently removes a remembrance and all of its collection memberships. */
+    suspend fun deleteRemembrance(id: Long)
+
     /**
      * Creates a collection and returns it.
      *
@@ -524,7 +527,29 @@ class DomainCollectionsGateway(
             remembranceService
                 .findAll()
                 .sortedByDescending { it.id ?: Long.MIN_VALUE }
-        val collections = collectionService.findAll()
+        val uncategorizedId =
+            checkNotNull(seedState.uncategorizedCollectionId()) {
+                "Bootstrap completed without recording the Uncategorized shelf"
+            }
+        var collections = collectionService.findAll()
+        val uncategorized =
+            checkNotNull(collections.firstOrNull { it.id == uncategorizedId }) {
+                "The recorded Uncategorized shelf $uncategorizedId is missing"
+            }
+        val expectedUncategorizedIds =
+            CollectionFiltering.uncategorizedRemembranceIds(
+                remembrances = remembrances,
+                collections = collections,
+                uncategorizedCollectionId = uncategorizedId,
+            )
+        val currentUncategorizedIds = uncategorized.members.mapNotNull { it.id }.toSet()
+        val removals = currentUncategorizedIds - expectedUncategorizedIds
+        val additions = expectedUncategorizedIds - currentUncategorizedIds
+        if (removals.isNotEmpty()) collectionService.removeMembers(uncategorizedId, removals.toList())
+        if (additions.isNotEmpty()) collectionService.addMembers(uncategorizedId, additions.toList())
+        if (removals.isNotEmpty() || additions.isNotEmpty()) {
+            collections = collectionService.findAll()
+        }
         // One grouped read of the progress table for every collection on the shelf, because
         // every card now draws how far through its collection the user is. Reading it one
         // collection at a time would be a query per card on the screen the app opens first.
@@ -537,6 +562,8 @@ class DomainCollectionsGateway(
             remembrances = remembrances,
             recitedCounts = recitedCounts,
             refreshedAt = Instant.now(),
+            favoritesCollectionId = seedState.favoritesCollectionId(),
+            uncategorizedCollectionId = uncategorizedId,
         )
     }
 
@@ -563,6 +590,10 @@ class DomainCollectionsGateway(
     }
 
     override suspend fun saveRemembrance(remembrance: Remembrance): Remembrance = remembranceService.save(remembrance)
+
+    override suspend fun deleteRemembrance(id: Long) {
+        remembranceService.deleteById(id)
+    }
 
     /**
      * Adds or removes [id] from the collection the stars are mirrored into.

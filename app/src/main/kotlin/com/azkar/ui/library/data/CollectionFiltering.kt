@@ -33,8 +33,11 @@ data class MembershipCounts(
 }
 
 /** Counts custom-collection membership across a whole shelf in one pass. */
-fun membershipCountsOf(collections: List<RemembranceCollection>): MembershipCounts {
-    val custom = collections.filter { it.kind == CollectionKind.CUSTOM }
+fun membershipCountsOf(
+    collections: List<RemembranceCollection>,
+    excludedCollectionId: Long? = null,
+): MembershipCounts {
+    val custom = collections.filter { it.kind == CollectionKind.CUSTOM && it.id != excludedCollectionId }
     val ids = custom.mapNotNull { it.id }.toSet()
     val counts = HashMap<Long, Int>()
     for (collection in custom) {
@@ -333,6 +336,34 @@ object CollectionFiltering {
                         .lowercase(Locale.ROOT)
                         .contains(normalizedQuery)
             }
+
+    /**
+     * The untagged remembrances with no membership outside the Uncategorized holding shelf.
+     *
+     * Favorites is deliberately an ordinary outside membership here: a starred remembrance stays in
+     * Favorites rather than being filed in Uncategorized, even if its mirror is temporarily missing.
+     * A remembrance in any other collection is already categorized by where it lives even if it has
+     * no tags.
+     */
+    fun uncategorizedRemembranceIds(
+        remembrances: List<Remembrance>,
+        collections: List<RemembranceCollection>,
+        uncategorizedCollectionId: Long,
+    ): Set<Long> {
+        val otherMemberships =
+            collections
+                .asSequence()
+                .filter { it.id != uncategorizedCollectionId }
+                .flatMap { it.members.asSequence() }
+                .mapNotNull { it.id }
+                .toSet()
+        return remembrances
+            .asSequence()
+            .filter { it.tags.isEmpty() && !it.isFavorite }
+            .mapNotNull { it.id }
+            .filterNot { it in otherMemberships }
+            .toSet()
+    }
 
     /**
      * The remembrances that may be added to [collection] — the catalogue minus its current members.

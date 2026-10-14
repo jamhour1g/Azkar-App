@@ -25,8 +25,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -57,6 +56,7 @@ import com.azkar.ui.shell.ShowToast
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.CardSize
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -114,6 +114,7 @@ internal fun CollectionsScreenContent(
     modifier: Modifier = Modifier,
 ) {
     val activeLocale = AzkarTheme.locale
+    val scope = rememberCoroutineScope()
     var editor by remember { mutableStateOf<CollectionEditorDraft?>(null) }
     var pendingDelete by remember { mutableStateOf<RemembranceCollection?>(null) }
 
@@ -125,7 +126,7 @@ internal fun CollectionsScreenContent(
 
     val toastTitle = stringResource(Res.string.collectionsToastTitle)
     val copiedLabel = stringResource(Res.string.libraryActionCopyCopied)
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
 
     ShelfEffects(state = state, showToast = showToast, toastTitle = toastTitle)
 
@@ -148,8 +149,10 @@ internal fun CollectionsScreenContent(
                 onDelete = { collection -> pendingDelete = collection },
                 onRead = onOpenRemembrance,
                 onCopy = { text ->
-                    clipboard.setText(AnnotatedString(text))
-                    showToast(toastTitle, copiedLabel, NotificationPriority.LOW)
+                    scope.launch {
+                        clipboard.setPlainText(text)
+                        showToast(toastTitle, copiedLabel, NotificationPriority.LOW)
+                    }
                 },
                 onManageTags = onManageTags,
             ),

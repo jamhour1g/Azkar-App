@@ -264,7 +264,7 @@ class ExposedRemembranceRepository(
         RemembranceEntity.findById(id)?.updateAndFlush { isFavorite = favorite }
     }
 
-    /** Brings both translation tables in line with the locales the domain object carries. */
+    /** Stores every translation and only the explanations that contain text. */
     private fun applyTranslations(
         id: Long,
         translations: Map<Locale, Remembrance.Translations>,
@@ -281,7 +281,10 @@ class ExposedRemembranceRepository(
             entityClass = ExplanationTranslationEntity,
             table = ExplanationTranslationTable,
             id = id,
-            desired = translations.textsByLocale { it.explanationPair.text },
+            desired =
+                translations
+                    .filterValues { it.explanationPair.text.isNotBlank() }
+                    .textsByLocale { it.explanationPair.text },
             now = now,
         )
     }

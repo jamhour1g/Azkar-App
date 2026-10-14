@@ -49,4 +49,10 @@ interface LibrarySeedState {
 
     /** Records which collection mirrors the user's stars, so its contents can be kept in step. */
     suspend fun setFavoritesCollectionId(collectionId: Long)
+
+    /** The system shelf that holds untagged remembrances with no other collection membership. */
+    suspend fun uncategorizedCollectionId(): Long?
+
+    /** Records the id of the system Uncategorized shelf. */
+    suspend fun setUncategorizedCollectionId(collectionId: Long)
 }

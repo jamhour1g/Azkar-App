@@ -12,6 +12,7 @@ import com.azkar.domain.model.Tag
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.domain.model.impl.RemembranceImpl
 import com.azkar.domain.model.impl.TagImpl
+import com.azkar.ui.library.data.CollectionFiltering
 import com.azkar.ui.library.data.CollectionImport
 import com.azkar.ui.library.data.CollectionReminderRow
 import com.azkar.ui.library.data.CollectionsGateway
@@ -204,7 +205,9 @@ private fun RemembranceCollection.copyWith(
  * that needs specific ids sets [officialCollection]'s or [customCollection]'s `tags` directly.
  */
 private fun Collection<String>.toFixtureTags(nameLocale: Locale = Locale.ENGLISH): Set<Tag> =
-    mapNotNull { name -> name.trim().takeIf(String::isNotEmpty)?.let { TagImpl(name = it, nameLocale = nameLocale) } }.toSet()
+    mapNotNull { name ->
+        name.trim().takeIf(String::isNotEmpty)?.let { TagImpl(name = it, nameLocale = nameLocale) }
+    }.toSet()
 
 /** An in-memory [CollectionsGateway] with the same semantics as the Exposed one behind it.
  *
@@ -228,12 +231,15 @@ internal class FakeCollectionsGateway(
      * deliberately does without — the one that stops mirroring the moment the user renames it.
      */
     favoritesCollectionId: Long? = null,
+    uncategorizedCollectionId: Long? = null,
 ) : CollectionsGateway {
     var collections: List<RemembranceCollection> = collections
 
     var remembrances: List<Remembrance> = remembrances
 
     var favoritesCollectionId: Long? = favoritesCollectionId
+
+    var uncategorizedCollectionId: Long? = uncategorizedCollectionId
 
     /** Progress per collection id, held the way the gateway serves it. Tests can seed it. */
     var progress: Map<Long, List<RecitationProgress>> = progress
@@ -299,6 +305,7 @@ internal class FakeCollectionsGateway(
     override suspend fun fetchSnapshot(): CollectionsSnapshot {
         checkNotFailing()
         snapshotReads++
+        reconcileUncategorizedMembers()
         // Read the shelf before waiting, so a parked read still serves the shelf as it was when it
         // was asked for. That is what makes the stale result a test can assert on.
         val snapshot =
@@ -308,6 +315,7 @@ internal class FakeCollectionsGateway(
                 recitedCounts = recitedCounts,
                 refreshedAt = FixtureInstant,
                 favoritesCollectionId = favoritesCollectionId,
+                uncategorizedCollectionId = uncategorizedCollectionId,
             )
         readGates[snapshotReads]?.await()
         return snapshot
@@ -320,22 +328,65 @@ internal class FakeCollectionsGateway(
         checkNotFailing()
         favoriteWrites += id to favorite
         remembrances = remembrances.map { if (it.id == id) it.withFavorite(favorite) else it }
+        val saved = remembrances.firstOrNull { it.id == id } ?: return
+        collections =
+            collections.map { collection ->
+                val updatedMembers = collection.members.map { member -> if (member.id == id) saved else member }
+                val withUpdatedMembers = collection.copyWith(members = updatedMembers)
+                when {
+                    collection.id != favoritesCollectionId -> withUpdatedMembers
+                    favorite && collection.members.none { it.id == id } ->
+                        withUpdatedMembers.copyWith(members = updatedMembers + saved)
+
+                    !favorite -> withUpdatedMembers.copyWith(members = updatedMembers.filterNot { it.id == id })
+                    else -> withUpdatedMembers
+                }
+            }
     }
 
     override suspend fun saveRemembrance(remembrance: Remembrance): Remembrance {
         checkNotFailing()
-        savedRemembrances += remembrance
-        remembrances = remembrances.map { if (it.id == remembrance.id) remembrance else it }
+        val saved =
+            if (remembrance.id == null) {
+                RemembranceImpl(
+                    id = nextId++,
+                    grade = remembrance.grade,
+                    isFavorite = remembrance.isFavorite,
+                    source = remembrance.source,
+                    createdAt = FixtureInstant,
+                    updatedAt = FixtureInstant,
+                    translations = remembrance.translations,
+                    tags = remembrance.tags,
+                )
+            } else {
+                remembrance
+            }
+        savedRemembrances += saved
+        remembrances =
+            if (remembrances.any { it.id == saved.id }) {
+                remembrances.map { if (it.id == saved.id) saved else it }
+            } else {
+                remembrances + saved
+            }
         // The members inside a collection are rebuilt from this table on every read, so a fake that
         // left them alone would hand the next snapshot the old words — and a reload that undid the
         // edit would look like a failed save rather than like a gateway that never wrote.
         collections =
             collections.map { collection ->
                 collection.copyWith(
-                    members = collection.members.map { if (it.id == remembrance.id) remembrance else it },
+                    members = collection.members.map { if (it.id == saved.id) saved else it },
                 )
             }
-        return remembrance
+        return saved
+    }
+
+    override suspend fun deleteRemembrance(id: Long) {
+        checkNotFailing()
+        remembrances = remembrances.filterNot { it.id == id }
+        collections =
+            collections.map { collection ->
+                collection.copyWith(members = collection.members.filterNot { it.id == id })
+            }
     }
 
     override suspend fun createCollection(
@@ -690,6 +741,20 @@ internal class FakeCollectionsGateway(
 
     private fun checkNotFailing() {
         failure?.let { throw it }
+    }
+
+    private fun reconcileUncategorizedMembers() {
+        val id = uncategorizedCollectionId ?: return
+        val expectedIds = CollectionFiltering.uncategorizedRemembranceIds(remembrances, collections, id)
+        val existing = collections.findById(id) ?: return
+        val currentIds = existing.members.mapNotNull { it.id }.toSet()
+        val members =
+            existing.members.filter { it.id in expectedIds } +
+                remembrances.filter { it.id in expectedIds && it.id !in currentIds }
+        collections =
+            collections.map { collection ->
+                if (collection.id == id) collection.copyWith(members = members) else collection
+            }
     }
 }
 

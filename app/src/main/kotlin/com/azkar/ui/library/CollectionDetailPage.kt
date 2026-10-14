@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -32,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionDetailSearchNoResultsHint
+import com.azkar.generated.resources.collectionDetailSearchNoResultsTitle
 import com.azkar.generated.resources.collectionsActionBack
 import com.azkar.ui.library.CollectionDetailState
 import com.azkar.ui.library.model.CollectionMemberView
@@ -148,14 +151,24 @@ private fun LazyGridScope.membersOrState(
 ) {
     when (val stage = detailStage(collections, row.detail)) {
         DetailStage.MEMBERS ->
-            itemsIndexed(row.tiles, key = { _, tile -> tile.id }) { index, tile ->
-                tileWithReorder(
-                    tile = tile,
-                    index = index,
-                    row = row,
-                    modifier = memberTileModifier(grid, tileWidth),
-                    asRow = !grid,
-                )
+            if (row.tiles.isEmpty() && row.detail.memberQuery.isNotBlank()) {
+                item(key = "collection-detail-search-empty", span = { GridItemSpan(maxLineSpan) }) {
+                    CollectionsEmptyState(
+                        title = stringResource(Res.string.collectionDetailSearchNoResultsTitle),
+                        hint = stringResource(Res.string.collectionDetailSearchNoResultsHint),
+                        modifier = Modifier.heightIn(min = DETAIL_EMPTY_STATE_MIN_HEIGHT).fillMaxWidth(),
+                    )
+                }
+            } else {
+                itemsIndexed(row.tiles, key = { _, tile -> tile.id }) { index, tile ->
+                    tileWithReorder(
+                        tile = tile,
+                        index = index,
+                        row = row,
+                        modifier = memberTileModifier(grid, tileWidth),
+                        asRow = !grid,
+                    )
+                }
             }
 
         else ->

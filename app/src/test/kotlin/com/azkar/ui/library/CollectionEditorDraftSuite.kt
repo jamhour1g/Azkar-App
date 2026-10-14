@@ -531,7 +531,8 @@ val MissingLanguagesSuite by testSuite("Which languages a name can still be writ
     }
 
     test("a name marked Arabic is missing English, whoever is asking") {
-        val offered = missingLanguages(name = "قبل النوم", existing = emptyList(), uiLocale = english, nameLocale = arabic)
+        val offered =
+            missingLanguages(name = "قبل النوم", existing = emptyList(), uiLocale = english, nameLocale = arabic)
 
         assertThat(offered.map { it.language }).containsExactly("en")
     }

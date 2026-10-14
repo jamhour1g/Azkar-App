@@ -3,15 +3,17 @@ package com.azkar.ui.library
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.runSkikoComposeUiTest
+import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.azkar.i18n.ARABIC
@@ -20,6 +22,8 @@ import com.azkar.ui.preview.previewCollection
 import com.azkar.ui.preview.previewCollectionHeroActions
 import com.azkar.ui.preview.previewCollectionStats
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.LocalWindowSizeClass
+import com.azkar.ui.theme.windowSizeClassFor
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
 import java.util.Locale
@@ -166,6 +170,29 @@ val HeroLayoutSuite by testSuite("the collection band holds its own copy") {
                     .describedAs("the height of the back link in $language")
                     .isEqualTo(HERO_PILL_HEIGHT.value)
             }
+        }
+    }
+
+    test("compact windows keep the add and create actions named") {
+        runSkikoComposeUiTest(size = Size(800f, 900f), density = Density(1f)) {
+            setContent {
+                AzkarTheme(darkTheme = true, uiLocale = ENGLISH) {
+                    CompositionLocalProvider(
+                        LocalWindowSizeClass provides windowSizeClassFor(width = 800.dp, height = 900.dp),
+                    ) {
+                        CollectionDetailHero(
+                            collection = previewCollection(),
+                            memberCount = 54,
+                            stats = previewCollectionStats(),
+                            reminder = CollectionHeroReminder.None,
+                            actions = previewCollectionHeroActions(),
+                        )
+                    }
+                }
+            }
+
+            onNodeWithContentDescription("Add to Collection").assertExists()
+            onNodeWithContentDescription("Create Remembrance").assertExists()
         }
     }
 }

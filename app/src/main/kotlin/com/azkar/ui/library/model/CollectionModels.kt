@@ -39,6 +39,7 @@ data class CollectionsSnapshot(
     val recitedCounts: Map<Long, Int>,
     val refreshedAt: Instant,
     val favoritesCollectionId: Long? = null,
+    val uncategorizedCollectionId: Long? = null,
 )
 
 /**

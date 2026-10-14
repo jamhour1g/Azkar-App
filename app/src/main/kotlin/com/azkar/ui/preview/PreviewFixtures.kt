@@ -630,6 +630,7 @@ internal fun previewCollectionHeroActions(): CollectionHeroActions =
     CollectionHeroActions(
         onBack = {},
         onAddMembers = {},
+        onCreateRemembrance = {},
         onTogglePin = {},
         onEditReminder = {},
         menuItems =
@@ -647,6 +648,7 @@ internal fun previewRemembranceTileActions(removable: Boolean = false): Remembra
         onToggleFavorite = {},
         onCopy = {},
         onRemoveFromCollection = if (removable) ({ }) else null,
+        onDelete = if (removable) ({ }) else null,
     )
 
 /**

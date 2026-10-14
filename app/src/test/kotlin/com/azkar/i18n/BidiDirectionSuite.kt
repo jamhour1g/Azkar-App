@@ -79,5 +79,4 @@ val BidiDirectionSuite by testSuite("Which way a typed name should be laid out")
             assertThat(textDirectionOf(null, LayoutDirection.Ltr)).isEqualTo(LayoutDirection.Ltr)
         }
     }
-
 }

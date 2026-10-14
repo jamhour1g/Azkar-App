@@ -1,8 +1,3 @@
-// The Compose Gradle plugin still marks its own dependency accessors experimental, which the
-// `compose.uiTest` accessor below needs. Scoped to this script because it is a Gradle-level flag
-// and the app's own source has its own opt-ins.
-@file:OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
@@ -17,6 +12,7 @@ plugins {
     // and unescaped Arabic live.
     id("org.jetbrains.kotlin.plugin.serialization")
     alias(libs.plugins.org.jetbrains.compose)
+    alias(libs.plugins.org.jetbrains.compose.hot.reload)
 }
 
 version = "0.1.0"
@@ -65,7 +61,7 @@ dependencies {
 
     // Compose Multiplatform (desktop only — the JVM target is the sole target)
     implementation(compose.desktop.currentOs)
-    implementation(compose.components.resources)
+    implementation(libs.org.jetbrains.compose.components.resources)
     implementation(libs.org.jetbrains.compose.material3)
     implementation(libs.org.jetbrains.compose.material.icons.extended)
     // `@Preview` / tooling annotations. `debugImplementation` of ui-tooling would
@@ -114,7 +110,7 @@ dependencies {
     // Compose UI tests, for the controls. `runComposeUiTest` renders off-screen and drives input
     // through `mainClock`, so the recomposition cost of a hover can be counted a frame at a time
     // instead of being guessed at from a profiler attached to a live desktop session.
-    testImplementation(compose.uiTest)
+    testImplementation(libs.org.jetbrains.compose.ui.test)
 }
 
 // Compose Multiplatform 1.12.x re-publishes the Compose runtime under
@@ -168,8 +164,8 @@ tasks.jar {
 //       -Pazkar.screenshot.memberView=list
 // ---------------------------------------------------------------------------
 
-val screenshot: SourceSet by
-    sourceSets.creating {
+val screenshot =
+    sourceSets.create("screenshot") {
         compileClasspath += sourceSets.main.get().compileClasspath + sourceSets.main.get().output
         runtimeClasspath += sourceSets.main.get().runtimeClasspath + sourceSets.main.get().output
     }
@@ -183,7 +179,8 @@ tasks.register<JavaExec>("runScreenshot") {
     description = "Rasterise a screen to a PNG (headless UI check)"
     mainClass.set("com.azkar.ScreenshotKt")
     classpath = screenshot.runtimeClasspath
-    jvmArgs("--enable-native-access=ALL-UNNAMED")
+    // Skiko needs JNI access; DataStore's bundled protobuf currently uses sun.misc.Unsafe on Java 25.
+    jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow")
     systemProperty(
         "azkar.screenshot.out",
         providers.gradleProperty("azkar.screenshot.out").getOrElse("build/screenshot.png"),
@@ -207,6 +204,11 @@ tasks.register<JavaExec>("runScreenshot") {
         systemProperty("azkar.screenshot.memberView", it)
     }
     dependsOn(tasks.named("screenshotClasses"))
+}
+
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    // Match the desktop runtime flags so UI and persistence tests do not emit JDK access warnings.
+    jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow")
 }
 
 // ---------------------------------------------------------------------------
@@ -236,7 +238,9 @@ compose.resources {
 compose.desktop {
     application {
         mainClass = "com.azkar.MainKt"
+        // Skiko needs JNI access; DataStore's bundled protobuf currently uses sun.misc.Unsafe on Java 25.
         jvmArgs += "--enable-native-access=ALL-UNNAMED"
+        jvmArgs += "--sun-misc-unsafe-memory-access=allow"
 
         nativeDistributions {
             // `AppImage` is deliberately excluded: it needs FUSE at runtime, which is

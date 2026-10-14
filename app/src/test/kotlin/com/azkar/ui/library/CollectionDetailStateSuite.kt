@@ -87,6 +87,54 @@ val CollectionDetailStateSuite by testSuite("The collection detail grid") {
         assertThat(detail.visibleMemberTiles().map { it.id }).containsExactly(1L, 3L, 2L)
     }
 
+    test("a trimmed case-insensitive query searches this collection and keeps collection positions") {
+        val detail =
+            detailWith(
+                members = listOf(1L, 2L, 3L),
+                texts = mapOf(1L to "First passage", 2L to "Evening prayer", 3L to "Third passage"),
+            )
+
+        detail.onMemberQueryChanged("  EVENING ")
+
+        assertThat(detail.visibleMemberTiles().map { it.id }).containsExactly(2L)
+        assertThat(detail.visibleMemberTiles().single().position).isEqualTo(2)
+        assertThat(detail.memberTiles().map { it.id }).containsExactly(1L, 2L, 3L)
+        assertThat(detail.memberCount).isEqualTo(3)
+    }
+
+    test("a query searches translations in another language") {
+        val detail = detailWith(members = listOf(1L, 2L))
+
+        detail.onMemberQueryChanged("ذكر 2")
+
+        assertThat(detail.visibleMemberTiles().map { it.id }).containsExactly(2L)
+    }
+
+    test("a query searches sources and tag names") {
+        val detail =
+            detailWith(
+                members = listOf(1L, 2L),
+                categories = mapOf(2L to listOf(MORNING)),
+                sources = mapOf(1L to "Collected Works", 2L to "Book of Supplications"),
+            )
+
+        detail.onMemberQueryChanged("book of supplications")
+        assertThat(detail.visibleMemberTiles().map { it.id }).containsExactly(2L)
+
+        detail.onMemberQueryChanged("morning")
+        assertThat(detail.visibleMemberTiles().map { it.id }).containsExactly(2L)
+    }
+
+    test("a query with no matches hides tiles without making the collection itself empty") {
+        val detail = detailWith(members = listOf(1L, 2L))
+
+        detail.onMemberQueryChanged("no such remembrance")
+
+        assertThat(detail.visibleMemberTiles()).isEmpty()
+        assertThat(detail.memberTiles()).hasSize(2)
+        assertThat(detail.memberCount).isEqualTo(2)
+    }
+
     test("the grid and list toggles only change how the same members are drawn") {
         val detail = detailWith(members = listOf(1L, 2L, 3L))
 
@@ -137,13 +185,14 @@ private fun detailWith(
     members: List<Long>,
     categories: Map<Long, List<String>> = emptyMap(),
     texts: Map<Long, String> = emptyMap(),
+    sources: Map<Long, String?> = emptyMap(),
 ): CollectionDetailState {
     val remembrances =
         members.map { id ->
             remembrance(
                 id = id,
                 text = texts[id] ?: "Remembrance $id",
-                source = "Muslim Data Azkars",
+                source = sources[id] ?: "Muslim Data Azkars",
                 tags = categories[id].orEmpty().map { tag(it.hashCode().toLong(), it) }.toSet(),
             )
         }

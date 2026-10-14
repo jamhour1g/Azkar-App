@@ -487,10 +487,14 @@ private fun CollectionTile.overflowItems(
     state: CollectionsState,
     callbacks: ShelfCallbacks,
     collection: RemembranceCollection,
-): List<AzkarMenuItem> =
-    identityItems(callbacks, collection) +
+): List<AzkarMenuItem> {
+    val id = collection.id
+    val isUncategorized = id == state.catalogue.uncategorizedCollectionId
+    val isProtectedFromDeletion = isUncategorized || id == state.catalogue.favoritesCollectionId
+    return identityItems(callbacks, collection, isUncategorized) +
         preferenceItems(state, collection) +
-        destructiveItems(callbacks, collection)
+        destructiveItems(callbacks, collection, isProtectedFromDeletion)
+}
 
 /**
  * What the tile *is*: opening it, and changing or copying what it contains.
@@ -503,6 +507,7 @@ private fun CollectionTile.overflowItems(
 private fun CollectionTile.identityItems(
     callbacks: ShelfCallbacks,
     collection: RemembranceCollection,
+    isUncategorized: Boolean,
 ): List<AzkarMenuItem> {
     val id = collection.id
     // Resolved before the list is built rather than inside the duplicate entry's click handler, so
@@ -516,20 +521,24 @@ private fun CollectionTile.identityItems(
                 icon = ActionIcons.open,
             ),
         )
-        add(
-            AzkarMenuItem(
-                label = stringResource(Res.string.collectionsActionEdit),
-                onClick = { callbacks.onEdit(collection) },
-                icon = ActionIcons.edit,
-            ),
-        )
-        add(
-            AzkarMenuItem(
-                label = stringResource(Res.string.collectionsActionDuplicate),
-                onClick = { callbacks.onDuplicate(collection, duplicateName) },
-                icon = ActionIcons.duplicate,
-            ),
-        )
+        if (!isUncategorized) {
+            add(
+                AzkarMenuItem(
+                    label = stringResource(Res.string.collectionsActionEdit),
+                    onClick = { callbacks.onEdit(collection) },
+                    icon = ActionIcons.edit,
+                ),
+            )
+        }
+        if (!isUncategorized) {
+            add(
+                AzkarMenuItem(
+                    label = stringResource(Res.string.collectionsActionDuplicate),
+                    onClick = { callbacks.onDuplicate(collection, duplicateName) },
+                    icon = ActionIcons.duplicate,
+                ),
+            )
+        }
     }
 }
 
@@ -595,14 +604,19 @@ private fun CollectionTile.preferenceItems(
 private fun CollectionTile.destructiveItems(
     callbacks: ShelfCallbacks,
     collection: RemembranceCollection,
+    isProtectedFromDeletion: Boolean,
 ): List<AzkarMenuItem> =
-    listOf(
-        AzkarMenuItem(
-            label = stringResource(Res.string.collectionsActionDelete),
-            onClick = { callbacks.onDelete(collection) },
-            icon = ActionIcons.delete,
-        ),
-    )
+    if (isProtectedFromDeletion) {
+        emptyList()
+    } else {
+        listOf(
+            AzkarMenuItem(
+                label = stringResource(Res.string.collectionsActionDelete),
+                onClick = { callbacks.onDelete(collection) },
+                icon = ActionIcons.delete,
+            ),
+        )
+    }
 
 private val HUB_PADDING = 16.dp
 private val HUB_GAP = 12.dp

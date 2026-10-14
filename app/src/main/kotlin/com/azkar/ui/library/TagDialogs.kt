@@ -234,10 +234,11 @@ internal fun TagNameDialog(
                 Spacer(Modifier.height(BODY_GAP))
                 FieldLabel(text = stringResource(Res.string.tagsDialogNameLabel))
                 Text(
-                    text = stringResource(
-                        Res.string.contentPrimaryLanguage,
-                        initialNameLocale.displayNameIn(AzkarTheme.locale),
-                    ),
+                    text =
+                        stringResource(
+                            Res.string.contentPrimaryLanguage,
+                            initialNameLocale.displayNameIn(AzkarTheme.locale),
+                        ),
                     color = AzkarTheme.colors.textSecondary,
                     fontSize = NOTE_SP,
                 )

@@ -16,6 +16,8 @@ import com.azkar.generated.resources.collectionsNoticeOffHome
 import com.azkar.generated.resources.collectionsNoticeOnHome
 import com.azkar.generated.resources.collectionsNoticePinned
 import com.azkar.generated.resources.collectionsNoticeProgressReset
+import com.azkar.generated.resources.collectionsNoticeRemembranceCreated
+import com.azkar.generated.resources.collectionsNoticeRemembranceDeleted
 import com.azkar.generated.resources.collectionsNoticeReminderRemoved
 import com.azkar.generated.resources.collectionsNoticeReminderSaved
 import com.azkar.generated.resources.collectionsNoticeTagDeleted
@@ -48,6 +50,8 @@ val CollectionNoticeKey.messageResource: StringResource
             CollectionNoticeKey.UNPINNED -> Res.string.collectionsNoticeUnpinned
             CollectionNoticeKey.MEMBERS_ADDED -> Res.string.collectionsNoticeMembersAdded
             CollectionNoticeKey.MEMBERS_REMOVED -> Res.string.collectionsNoticeMembersRemoved
+            CollectionNoticeKey.REMEMBRANCE_CREATED -> Res.string.collectionsNoticeRemembranceCreated
+            CollectionNoticeKey.REMEMBRANCE_DELETED -> Res.string.collectionsNoticeRemembranceDeleted
             CollectionNoticeKey.PROGRESS_RESET -> Res.string.collectionsNoticeProgressReset
             CollectionNoticeKey.ON_HOME -> Res.string.collectionsNoticeOnHome
             CollectionNoticeKey.OFF_HOME -> Res.string.collectionsNoticeOffHome

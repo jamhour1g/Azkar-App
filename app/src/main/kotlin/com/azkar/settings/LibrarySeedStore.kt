@@ -68,6 +68,7 @@ class LibrarySeedStore(
         settings.edit {
             remove(seededKey)
             remove(favoritesCollectionIdKey)
+            remove(uncategorizedCollectionIdKey)
         }
     }
 
@@ -85,6 +86,12 @@ class LibrarySeedStore(
         settings.edit { this[favoritesCollectionIdKey] = collectionId }
     }
 
+    override suspend fun uncategorizedCollectionId(): Long? = settings.read(uncategorizedCollectionIdKey)
+
+    override suspend fun setUncategorizedCollectionId(collectionId: Long) {
+        settings.edit { this[uncategorizedCollectionIdKey] = collectionId }
+    }
+
     internal companion object {
         /**
          * On-disk keys, `internal` for the same reason [com.azkar.i18n.LocaleStore]'s is: the literal
@@ -96,5 +103,8 @@ class LibrarySeedStore(
 
         @VisibleForTesting
         val favoritesCollectionIdKey = longPreferencesKey("favorites_collection_id")
+
+        @VisibleForTesting
+        val uncategorizedCollectionIdKey = longPreferencesKey("uncategorized_collection_id")
     }
 }

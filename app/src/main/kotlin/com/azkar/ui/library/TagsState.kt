@@ -369,7 +369,8 @@ class TagsState(
         nameLocale: Locale? = null,
     ): TagSaveResult? {
         val result =
-            attempt("rename tag id=$id to '$newName'") { gateway.rename(id, newName, translations, nameLocale) } ?: return null
+            attempt("rename tag id=$id to '$newName'") { gateway.rename(id, newName, translations, nameLocale) }
+                ?: return null
         if (result == TagSaveResult.Saved) {
             refresh(announce = CollectionNoticeKey.TAG_RENAMED)
             onTagsChanged()

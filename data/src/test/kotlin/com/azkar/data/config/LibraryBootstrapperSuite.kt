@@ -2,6 +2,8 @@ package com.azkar.data.config
 
 import com.azkar.data.repo.exposed.ExposedCollectionRepository
 import com.azkar.data.repo.exposed.ExposedTagRepository
+import com.azkar.data.seed.CollectionSeed
+import com.azkar.data.seed.SeedDataLoader
 import com.azkar.data.storage.CoverStorage
 import com.azkar.data.table.CollectionTable
 import com.azkar.data.transaction.ExposedTransactionRunner
@@ -77,6 +79,46 @@ val LibraryBootstrapperSuite by testSuite("Library bootstrapper") {
             assertThat(row[CollectionTable.name]).isEqualTo("Favorites")
             assertThat(row[CollectionTable.kind].name).isEqualTo("CUSTOM")
         }
+    }
+
+    test("an already-seeded installation gets one localized uncategorized shelf") {
+        val database = TestDatabase.bootstrapWithH2()
+        val seedState = InMemorySeedState().apply { markSeeded() }
+        val transactions = ExposedTransactionRunner(database)
+        val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
+        val collectionService = CollectionService(collections, transactions)
+        transactions.run {
+            SeedDataLoader.load()
+            CollectionSeed.load()
+        }
+        val existingFavorites =
+            collectionService.create(
+                name = "Favorites",
+                description = "Existing stars",
+                iconKey = "star",
+            )
+        seedState.setFavoritesCollectionId(requireNotNull(existingFavorites.id))
+        val existingCollectionCount = collections.findAll().size
+        val bootstrapper =
+            LibraryBootstrapper(
+                transactions = transactions,
+                seedState = seedState,
+                collectionService = collectionService,
+                collections = collections,
+                covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
+            )
+
+        // Simulate a prior version's dataset and completed gate, before it tracked this system shelf.
+        bootstrapper.bootstrap()
+        val firstId = requireNotNull(seedState.uncategorizedCollectionId())
+        val shelf = requireNotNull(collections.findById(firstId))
+        assertThat(shelf.displayName(Locale.forLanguageTag("ar"))).isEqualTo("غير مصنّف")
+        assertThat(shelf.displayDescription(Locale.forLanguageTag("ar"))).isEqualTo("أذكار بلا تصنيف")
+        assertThat(collections.findAll()).hasSize(existingCollectionCount + 1)
+
+        bootstrapper.bootstrap()
+        assertThat(seedState.uncategorizedCollectionId()).isEqualTo(firstId)
+        assertThat(collections.findAll()).hasSize(existingCollectionCount + 1)
     }
 
     test("the favourites shelf is created in every shipped language, not just English") {
@@ -206,6 +248,7 @@ val LibraryBootstrapperSuite by testSuite("Library bootstrapper") {
 private class InMemorySeedState : LibrarySeedState {
     private var seeded = false
     private var favoritesId: Long? = null
+    private var uncategorizedId: Long? = null
 
     override suspend fun isSeeded(): Boolean = seeded
 
@@ -216,11 +259,18 @@ private class InMemorySeedState : LibrarySeedState {
     override suspend fun forget() {
         seeded = false
         favoritesId = null
+        uncategorizedId = null
     }
 
     override suspend fun favoritesCollectionId(): Long? = favoritesId
 
     override suspend fun setFavoritesCollectionId(collectionId: Long) {
         favoritesId = collectionId
+    }
+
+    override suspend fun uncategorizedCollectionId(): Long? = uncategorizedId
+
+    override suspend fun setUncategorizedCollectionId(collectionId: Long) {
+        uncategorizedId = collectionId
     }
 }

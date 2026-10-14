@@ -6,12 +6,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.outlined.Label
+import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.RestoreFromTrash
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Label
-import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -135,13 +135,13 @@ private fun NarrowingControls(
     ) {
         AzkarSelect(
             label = scopeLabelOf(state.scopeFilter),
-            icon = Icons.Filled.Label,
+            icon = Icons.AutoMirrored.Filled.Label,
             items = scopeItems(state),
             modifier = Modifier.widthIn(max = SELECT_MAX_WIDTH).height(TOOLBAR_HEIGHT),
         )
         AzkarSelect(
             label = sortLabelOf(state.sort),
-            icon = Icons.Outlined.Sort,
+            icon = Icons.AutoMirrored.Outlined.Sort,
             items = sortItems(state),
             modifier = Modifier.widthIn(max = SELECT_MAX_WIDTH).height(TOOLBAR_HEIGHT),
         )
@@ -196,7 +196,7 @@ private fun scopeItem(
 ): AzkarMenuItem =
     AzkarMenuItem(
         label = scopeLabelOf(candidate),
-        icon = if (candidate == state.scopeFilter) Icons.Filled.Check else Icons.Outlined.Label,
+        icon = if (candidate == state.scopeFilter) Icons.Filled.Check else Icons.AutoMirrored.Outlined.Label,
         onClick = onSelect,
     )
 
@@ -209,7 +209,7 @@ private fun sortItem(
 ): AzkarMenuItem =
     AzkarMenuItem(
         label = sortLabelOf(candidate),
-        icon = if (candidate == state.sort) Icons.Filled.Check else Icons.Outlined.Sort,
+        icon = if (candidate == state.sort) Icons.Filled.Check else Icons.AutoMirrored.Outlined.Sort,
         onClick = onSelect,
     )
 

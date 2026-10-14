@@ -191,11 +191,10 @@ class NotificationSettingsState(
     /** The master switch: a summary of [flags], so it always agrees with the rows beneath it. */
     val globalEnabled: Boolean get() = flags.values.any { it }
 
-    init {
-        scope.launch {
-            store.changes.collect { stored ->
-                flags = PrayerKey.entries.associateWith { stored[flagKeyFor(it)] ?: true }
-            }
+    /** Collects stored switches from a composition-owned effect, never from construction. */
+    suspend fun observe() {
+        store.changes.collect { stored ->
+            flags = PrayerKey.entries.associateWith { stored[flagKeyFor(it)] ?: true }
         }
     }
 

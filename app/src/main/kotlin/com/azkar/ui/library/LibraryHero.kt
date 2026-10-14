@@ -17,10 +17,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
@@ -211,7 +211,7 @@ private fun HeroControlRow(controls: LibraryHeroControls) {
             emphasized = true,
         )
         HeroAction(
-            icon = Icons.Filled.Label,
+            icon = Icons.AutoMirrored.Filled.Label,
             description = stringResource(Res.string.tagsActionManage),
             onClick = controls.onManageTags,
         )

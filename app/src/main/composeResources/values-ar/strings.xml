@@ -108,7 +108,7 @@
     <string name="homeCollectionActionDone">تم</string>
     <string name="homeCollectionProgressFormat">%1$d من %2$d</string>
     <string name="collectionDragHandle">اسحب لإعادة الترتيب</string>
-    <string name="collectionsActionAddMembers">إضافة أذكار</string>
+    <string name="collectionsActionAddMembers">إضافة إلى المجموعة</string>
     <string name="collectionsActionBack">العودة إلى المجموعات</string>
     <string name="collectionsEmptyTitle">لا توجد مجموعات بعد</string>
     <string name="collectionsEmptyHint">أنشئ مجموعة تجمع الأذكار التي تعود إليها.</string>
@@ -142,6 +142,7 @@
     <string name="collectionsDialogTagsHint">اختر وسومًا موجودة أو أنشئ وسمًا جديدًا.</string>
     <string name="collectionsDialogTagsSearchPlaceholder">ابحث في الوسوم…</string>
     <string name="collectionsDialogTagsCreate">إنشاء وسم</string>
+    <string name="collectionsDialogTagsClearAll">مسح الكل</string>
     <string name="collectionsDialogTagsNewLabel">إنشاء وسم جديد</string>
     <string name="collectionsDialogTagsNewPlaceholder">اسم الوسم الجديد</string>
     <string name="collectionsDialogTagsNone">لا وسوم بعد. أنشئ أول وسم.</string>
@@ -168,10 +169,39 @@
     <string name="collectionsActionAddTag">إضافة وسم</string>
     <string name="collectionsActionCreateCollection">إنشاء المجموعة</string>
     <string name="collectionsActionSave">حفظ</string>
+    <string name="remembranceCreateActionOpen">إنشاء ذكر</string>
+    <string name="remembranceCreateActionConfirm">إنشاء الذكر</string>
+    <string name="remembranceCreateTitle">إنشاء ذكر جديد</string>
+    <string name="remembranceCreateStepText">اكتب الذكر</string>
+    <string name="remembranceCreateStepTranslations">أضف الترجمات والشروح</string>
+    <string name="remembranceCreateStepTags">اختر وسومًا للعثور عليه لاحقًا</string>
+    <string name="remembranceCreateTextLabel">نص الذكر</string>
+    <string name="remembranceCreateTextPlaceholder">اكتب الذكر بالعربية…</string>
+    <string name="remembranceCreateTextRequired">اكتب نص الذكر للمتابعة.</string>
+    <string name="remembranceCreateAdditionalInfo">معلومات إضافية</string>
+    <string name="remembranceCreateGradeLabel">الدرجة</string>
+    <string name="remembranceCreateGradeSahih">صحيح</string>
+    <string name="remembranceCreateGradeHasan">حسن</string>
+    <string name="remembranceCreateGradeDaif">ضعيف</string>
+    <string name="remembranceCreateGradeUnspecified">غير محدد</string>
+    <string name="remembranceCreateSourceLabel">المصدر (اختياري)</string>
+    <string name="remembranceCreateSourcePlaceholder">الكتاب أو المرجع أو المصدر…</string>
+    <string name="remembranceCreateTranslationHint">الترجمات والشروح اختيارية.</string>
+    <string name="remembranceCreateLanguagePlaceholder">اختر لغة</string>
+    <string name="remembranceCreateLanguageUnavailable">لا توجد لغات أخرى مدعومة.</string>
+    <string name="remembranceCreateTranslationAdd">إضافة ترجمة</string>
+    <string name="remembranceCreateTranslationLabel">الترجمة</string>
+    <string name="remembranceCreateTranslationPlaceholder">اكتب ترجمة الذكر…</string>
+    <string name="remembranceCreateTranslationRemove">إزالة ترجمة %1$s</string>
+    <string name="remembranceCreateExplanationLabel">الشرح</string>
+    <string name="remembranceCreateExplanationPlaceholder">اشرح المعنى (اختياري)…</string>
     <string name="collectionsDuplicateNameSuffix">%1$s (نسخة)</string>
     <!-- Library: a collection's own page -->
     <string name="collectionDetailEmptyTitle">هذه المجموعة فارغة</string>
-    <string name="collectionDetailEmptyHint">أضف الأذكار التي تريدها فيها، أو ابدأ من إحدى مجموعات التطبيق.</string>
+    <string name="collectionDetailEmptyHint">أنشئ ذكرًا أو أضف أذكارًا موجودة إلى هذه المجموعة.</string>
+    <string name="collectionDetailSearchHint">ابحث في أذكار هذه المجموعة…</string>
+    <string name="collectionDetailSearchNoResultsTitle">لم يتم العثور على أذكار</string>
+    <string name="collectionDetailSearchNoResultsHint">جرّب كلمة أخرى أو امسح البحث.</string>
     <!-- قراءة قراءة القراءة — رأس خاصّبةً لها يميز. -->
     <string name="remembranceReaderTitle">ذكر</string>
     <string name="remembranceReaderBack">عودة</string>
@@ -179,8 +209,8 @@
     <string name="remembranceReaderMissingHint">حُذف، أو أُعيد تحميل المكتبة بلاسه.</string>
     <string name="collectionDetailMissingTitle">لم تعد هذه المجموعة موجودة</string>
     <string name="collectionDetailMissingHint">حُذفت، أو أُعيد تحميل الرف بدونها.</string>
-    <string name="collectionDetailAddPickerTitle">إضافة أذكار</string>
-    <string name="collectionDetailAddPickerHint">ضع علامة على ما تريده وأضفه دفعة واحدة.</string>
+    <string name="collectionDetailAddPickerTitle">إضافة إلى المجموعة</string>
+    <string name="collectionDetailAddPickerHint">اختر أذكارًا من مكتبتك لإضافتها إلى هذه المجموعة.</string>
     <string name="collectionDetailAddPickerEmpty">لا شيء لإضافته — تحتوي هذه المجموعة على كل شيء.</string>
     <string name="collectionDetailSelectAll">تحديد الكل</string>
     <string name="collectionDetailClearSelection">إلغاء التحديد</string>
@@ -188,6 +218,10 @@
     <string name="collectionDetailRemove">إزالة</string>
     <string name="collectionDetailRemoveTitle">إزالة من المجموعة؟</string>
     <string name="collectionDetailRemoveBody">سيغادر %1$d ذكرًا هذه المجموعة. وتبقى في بقية مكتبتك.</string>
+    <string name="collectionDetailActionDeleteRemembrance">حذف الذكر</string>
+    <string name="collectionDetailDeleteRemembranceTitle">هل تريد حذف هذا الذكر؟</string>
+    <string name="collectionDetailDeleteRemembranceBody">سيُحذف الذكر نهائيًا من جميع المجموعات. لا يمكن التراجع عن ذلك.</string>
+    <string name="collectionDetailDeleteRemembrance">حذف نهائي</string>
     <!-- Library: one-shot outcomes -->
     <string name="collectionsNoticeCreated">تم إنشاء المجموعة.</string>
     <string name="collectionsNoticeEdited">تم تحديث المجموعة.</string>
@@ -196,6 +230,8 @@
     <string name="collectionsNoticePinned">ثُبّتت في أعلى الرف.</string>
     <string name="collectionsNoticeUnpinned">أُلغي تثبيتها.</string>
     <string name="collectionsNoticeMembersAdded">تمت إضافة الأذكار.</string>
+    <string name="collectionsNoticeRemembranceCreated">تم إنشاء الذكر.</string>
+    <string name="collectionsNoticeRemembranceDeleted">تم حذف الذكر.</string>
     <string name="collectionsNoticeMembersRemoved">تمت إزالة الأذكار.</string>
     <string name="collectionsNoticeFavoriteAdded">أُضيف إلى المفضلة.</string>
     <string name="collectionsNoticeFavoriteRemoved">أُزيل من المفضلة.</string>

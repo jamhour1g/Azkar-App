@@ -60,6 +60,8 @@ internal class PreviewCollectionsGateway(
 
     override suspend fun saveRemembrance(remembrance: Remembrance): Remembrance = remembrance
 
+    override suspend fun deleteRemembrance(id: Long) = Unit
+
     override suspend fun createCollection(
         name: String,
         description: String?,

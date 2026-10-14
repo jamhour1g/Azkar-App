@@ -81,10 +81,10 @@ import com.azkar.generated.resources.collectionsDialogNamePlaceholder
 import com.azkar.generated.resources.collectionsDialogNameRequired
 import com.azkar.generated.resources.collectionsDialogStepCover
 import com.azkar.generated.resources.collectionsDialogStepDetails
-import com.azkar.generated.resources.contentPrimaryLanguage
 import com.azkar.generated.resources.collectionsDialogStepProgress
 import com.azkar.generated.resources.collectionsDialogStepTags
 import com.azkar.generated.resources.contentLanguageNote
+import com.azkar.generated.resources.contentPrimaryLanguage
 import com.azkar.generated.resources.contentTranslationAdd
 import com.azkar.generated.resources.contentTranslationFor
 import com.azkar.generated.resources.contentTranslationRemove
@@ -263,7 +263,7 @@ class CollectionEditorDraft private constructor(
     initialTags: List<String>,
     initialCoverImagePath: String?,
     initialTranslations: List<TranslationEntry>,
-) {
+) : TagDraftView {
     var name: String by mutableStateOf(initialName)
         private set
 
@@ -317,15 +317,15 @@ class CollectionEditorDraft private constructor(
      * twice and fail the save. The first spelling the user typed is the one that survives, so their
      * capitalisation is preserved for the chips.
      */
-    var tags: List<String> by mutableStateOf(initialTags)
+    override var tags: List<String> by mutableStateOf(initialTags)
         private set
 
     /** What the tag picker is filtering by. View state, but it belongs here so the picker stays dumb. */
-    var tagQuery: String by mutableStateOf("")
+    override var tagQuery: String by mutableStateOf("")
         private set
 
     /** The half-typed name of a tag that does not exist yet. Cleared by a successful [addTag]. */
-    var newTagName: String by mutableStateOf("")
+    override var newTagName: String by mutableStateOf("")
         private set
 
     /**
@@ -392,7 +392,7 @@ class CollectionEditorDraft private constructor(
                 }
 
     /** Whether [addTag] would do something, which is what the "Add tag" button's enabled state is. */
-    val newTagAcceptable: Boolean
+    override val newTagAcceptable: Boolean
         get() {
             val typed = newTagName.trim()
             return typed.isNotEmpty() && !isTagSelected(typed)
@@ -406,11 +406,11 @@ class CollectionEditorDraft private constructor(
         description = value
     }
 
-    fun updateTagQuery(value: String) {
+    override fun updateTagQuery(value: String) {
         tagQuery = value
     }
 
-    fun updateNewTagName(value: String) {
+    override fun updateNewTagName(value: String) {
         newTagName = value
     }
 
@@ -484,10 +484,10 @@ class CollectionEditorDraft private constructor(
         change: (TranslationEntry) -> TranslationEntry,
     ): TranslationEntry = if (locale.isSameLanguageAs(this.locale)) change(this) else this
 
-    fun isTagSelected(name: String): Boolean = tags.any { it.equals(name, ignoreCase = true) }
+    override fun isTagSelected(name: String): Boolean = tags.any { it.equals(name, ignoreCase = true) }
 
     /** Adds [name] if it is not already carried, drops it if it is. What a chip press does. */
-    fun toggleTag(name: String) {
+    override fun toggleTag(name: String) {
         val wanted = name.trim()
         if (wanted.isEmpty()) {
             return
@@ -500,13 +500,17 @@ class CollectionEditorDraft private constructor(
             }
     }
 
+    override fun clearTags() {
+        tags = emptyList()
+    }
+
     /**
      * Carries a tag the user has just named, and empties the field it was named in.
      *
      * Reports whether it was worth doing, so the caller can leave the panel open on a rejected name —
      * silently swallowing "sleep" because "Sleep" is already there reads as the app having lost it.
      */
-    fun addTag(raw: String): Boolean {
+    override fun addTag(raw: String): Boolean {
         val wanted = raw.trim()
         if (wanted.isEmpty() || isTagSelected(wanted)) {
             return false
@@ -530,7 +534,7 @@ class CollectionEditorDraft private constructor(
      * typing the Arabic finds it too. Matching the label alone would have made the stored names
      * unsearchable once the shipped ones were translated.
      */
-    fun tagOptions(available: List<TagOption>): List<TagOption> {
+    override fun tagOptions(available: List<TagOption>): List<TagOption> {
         val unheard =
             tags
                 .filter { chosen -> available.none { it.value.equals(chosen, ignoreCase = true) } }
@@ -822,7 +826,7 @@ private fun CollectionEditorStepBody(
         }
 
         CollectionEditorStep.TAGS ->
-            CollectionTagPickerPanel(
+            TagPickerPanel(
                 draft = draft,
                 availableTags = environment.availableTags,
             )
@@ -1002,10 +1006,11 @@ private fun CollectionNameField(draft: CollectionEditorDraft) {
     val ambient = if (isRtlLayout()) LayoutDirection.Rtl else LayoutDirection.Ltr
     FieldLabel(text = stringResource(Res.string.collectionsDialogNameLabel), required = true)
     Text(
-        text = stringResource(
-            Res.string.contentPrimaryLanguage,
-            draft.nameLocale.displayNameIn(AzkarTheme.locale),
-        ),
+        text =
+            stringResource(
+                Res.string.contentPrimaryLanguage,
+                draft.nameLocale.displayNameIn(AzkarTheme.locale),
+            ),
         color = colors.textSecondary,
         fontSize = HINT_SP,
     )

@@ -24,11 +24,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,6 +48,7 @@ import com.azkar.ui.components.pressableClick
 import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ShowToast
 import com.azkar.ui.theme.AzkarTheme
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -93,7 +94,8 @@ fun RemembranceReaderScreen(
     }
 
     val presenter = detail.presenter
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val toastTitle = stringResource(Res.string.collectionsToastTitle)
     val copiedLabel = stringResource(Res.string.libraryActionCopyCopied)
 
@@ -126,8 +128,10 @@ fun RemembranceReaderScreen(
                 if (copyable.isNotBlank()) {
                     (
                         {
-                            clipboard.setText(AnnotatedString(copyable))
-                            showToast(toastTitle, copiedLabel, NotificationPriority.LOW)
+                            scope.launch {
+                                clipboard.setPlainText(copyable)
+                                showToast(toastTitle, copiedLabel, NotificationPriority.LOW)
+                            }
                         }
                     )
                 } else {

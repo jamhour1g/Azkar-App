@@ -44,8 +44,9 @@ interface Remembrance {
     /**
      * The translations of this remembrance, keyed by [Locale].
      *
-     * Each entry provides both an explanation and a textual rendering of the remembrance in the
-     * target language.
+     * Each entry provides a textual rendering of the remembrance in the target language and may
+     * include an explanation. A missing explanation is represented by a blank
+     * `Translations.Pair.text`.
      */
     val translations: Map<Locale, Translations>
 
@@ -56,9 +57,9 @@ interface Remembrance {
     fun translationsFor(locale: Locale): Translations? = translations[locale]
 
     /**
-     * The translations of a remembrance: both an explanation of it and a rendering of its text.
+     * The translation of a remembrance's text and its optional explanation.
      *
-     * @property explanationPair the explanation of the remembrance
+     * @property explanationPair the explanation of the remembrance, or a blank pair when omitted
      * @property translationPair the translation of the remembrance text
      */
     data class Translations(

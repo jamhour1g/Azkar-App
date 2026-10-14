@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Label
-import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -195,11 +195,11 @@ private fun AzkarSelectPreview() {
         ) {
             AzkarSelect(
                 label = "Name A-Z",
-                icon = Icons.Outlined.Sort,
+                icon = Icons.AutoMirrored.Outlined.Sort,
                 items =
                     listOf(
                         AzkarMenuItem(label = "Name A-Z", onClick = {}, icon = Icons.Filled.Check),
-                        AzkarMenuItem(label = "Most used", onClick = {}, icon = Icons.Filled.Label),
+                        AzkarMenuItem(label = "Most used", onClick = {}, icon = Icons.AutoMirrored.Filled.Label),
                     ),
             )
         }

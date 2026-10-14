@@ -202,7 +202,8 @@ private val AmiriTypography = azkarTypography(AmiriFamily, arabic = true)
  * the JavaFX `Amiri, Noto Naskh Arabic, serif` stack it replaces did. Chain [AmiriFamily] onto
  * [InterFamily] to change that.
  */
-fun azkarTypography(uiLocale: Locale): Typography = if (uiLocale.usesArabicTypeface) AmiriTypography else InterTypography
+fun azkarTypography(uiLocale: Locale): Typography =
+    if (uiLocale.usesArabicTypeface) AmiriTypography else InterTypography
 
 /** Gap/spacing tokens lifted from the JavaFX padding + spacing values in the FXML files. */
 object AzkarSpacing {

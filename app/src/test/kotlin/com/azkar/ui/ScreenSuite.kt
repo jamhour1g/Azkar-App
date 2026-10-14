@@ -22,7 +22,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.runSkikoComposeUiTest
+import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.azkar.settings.SettingsStore
@@ -227,7 +227,7 @@ private fun withHomeContainer(block: () -> Unit) {
         startKoin {
             modules(
                 module {
-                    single { SettingsStore.create(directory.resolve("settings.json"), storeScope) }
+                    single { SettingsStore.create(directory.resolve("settings.preferences_pb"), storeScope) }
                     single<HomeGateway> { PreviewHomeGateway() }
                 },
             )

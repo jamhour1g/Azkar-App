@@ -36,6 +36,9 @@ import com.azkar.generated.resources.collectionDetailAddPickerEmpty
 import com.azkar.generated.resources.collectionDetailAddPickerHint
 import com.azkar.generated.resources.collectionDetailAddPickerTitle
 import com.azkar.generated.resources.collectionDetailClearSelection
+import com.azkar.generated.resources.collectionDetailDeleteRemembrance
+import com.azkar.generated.resources.collectionDetailDeleteRemembranceBody
+import com.azkar.generated.resources.collectionDetailDeleteRemembranceTitle
 import com.azkar.generated.resources.collectionDetailRemove
 import com.azkar.generated.resources.collectionDetailRemoveBody
 import com.azkar.generated.resources.collectionDetailRemoveTitle
@@ -289,6 +292,38 @@ internal fun ConfirmRemovalDialog(
                 Spacer(Modifier.height(16.dp))
                 DetailDialogActions(
                     confirmLabel = stringResource(Res.string.collectionDetailRemove),
+                    confirmEnabled = true,
+                    onDismiss = onDismiss,
+                    onConfirm = onConfirm,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun ConfirmDeleteRemembranceDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        AzkarDialogSurface(modifier = Modifier.widthIn(min = 380.dp, max = 520.dp)) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.collectionDetailDeleteRemembranceTitle),
+                    color = AzkarTheme.colors.textPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(Res.string.collectionDetailDeleteRemembranceBody),
+                    color = AzkarTheme.colors.textSecondary,
+                    fontSize = 12.sp,
+                )
+                Spacer(Modifier.height(16.dp))
+                DetailDialogActions(
+                    confirmLabel = stringResource(Res.string.collectionDetailDeleteRemembrance),
                     confirmEnabled = true,
                     onDismiss = onDismiss,
                     onConfirm = onConfirm,

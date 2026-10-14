@@ -153,8 +153,13 @@ internal object CollectionAggregates {
         val joined =
             CollectionTagTable
                 .innerJoin(TagTable)
-                .select(CollectionTagTable.collectionId, TagTable.id, TagTable.name, TagTable.createdAt)
-                .where { (CollectionTagTable.collectionId inList ids) and (TagTable.deletedAt eq null) }
+                .select(
+                    CollectionTagTable.collectionId,
+                    TagTable.id,
+                    TagTable.name,
+                    TagTable.nameLocaleCode,
+                    TagTable.createdAt,
+                ).where { (CollectionTagTable.collectionId inList ids) and (TagTable.deletedAt eq null) }
                 .orderBy(TagTable.id to SortOrder.ASC)
                 .map { it to TagEntity.wrapRow(it) }
         val translations = LibraryTranslations.tagTranslations(joined.map { it.second.id.value }.distinct())

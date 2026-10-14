@@ -9,6 +9,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import java.nio.file.Files
@@ -88,6 +89,7 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
     test("a bell reaches the file, and a fresh store reads it back out of a copy") {
         withSettingsFile { file, scope ->
             val first = NotificationSettingsState(SettingsStore.create(file, scope), scope)
+            scope.launch { first.observe() }
             first.awaitFlags()
             first.onPrayerToggled(PrayerKey.ASR, false)
             first.awaitFlags { it[PrayerKey.ASR] == false }
@@ -111,6 +113,7 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
     test("the master switch is not stored, so a half-open one cannot survive a restart") {
         withSettingsFile { file, scope ->
             val state = NotificationSettingsState(SettingsStore.create(file, scope), scope)
+            scope.launch { state.observe() }
             state.awaitFlags()
             state.onGlobalToggleChanged(false)
             state.awaitFlags { flags -> flags.values.none { it } }
@@ -132,7 +135,11 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
  * Runs [block] against a state on a fresh file, cancelling the scope and deleting the file after.
  */
 private inline fun withSettings(block: (NotificationSettingsState) -> Unit) =
-    withSettingsFile { file, scope -> block(NotificationSettingsState(SettingsStore.create(file, scope), scope)) }
+    withSettingsFile { file, scope ->
+        val state = NotificationSettingsState(SettingsStore.create(file, scope), scope)
+        scope.launch { state.observe() }
+        block(state)
+    }
 
 /**
  * Runs [block] against a fresh file and a scope, for the tests that open a second store over the

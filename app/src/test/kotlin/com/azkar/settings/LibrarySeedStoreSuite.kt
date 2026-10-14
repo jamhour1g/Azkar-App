@@ -48,10 +48,24 @@ val LibrarySeedStoreSuite by testSuite("The seed bookkeeping") {
         }
     }
 
+    test("an uncategorized shelf id survives a restart") {
+        withSeedFile { file, scope ->
+            val store = LibrarySeedStore(SettingsStore.create(file, scope))
+            store.setUncategorizedCollectionId(73L)
+
+            val copy = file.resolveSibling("copy.preferences_pb")
+            Files.copy(file, copy)
+            val nextRun = LibrarySeedStore(SettingsStore.create(copy, scope))
+
+            assertThat(nextRun.uncategorizedCollectionId()).isEqualTo(73L)
+        }
+    }
+
     test("the favourites shelf id survives a restart") {
         withSeedFile { file, scope ->
             val store = LibrarySeedStore(SettingsStore.create(file, scope))
             store.setFavoritesCollectionId(42L)
+            store.setUncategorizedCollectionId(73L)
 
             val copy = file.resolveSibling("copy.preferences_pb")
             Files.copy(file, copy)
@@ -66,6 +80,7 @@ val LibrarySeedStoreSuite by testSuite("The seed bookkeeping") {
             val store = LibrarySeedStore(SettingsStore.create(file, scope))
             store.markSeeded()
             store.setFavoritesCollectionId(42L)
+            store.setUncategorizedCollectionId(73L)
 
             store.forget()
 
@@ -74,6 +89,7 @@ val LibrarySeedStoreSuite by testSuite("The seed bookkeeping") {
             val nextRun = LibrarySeedStore(SettingsStore.create(copy, scope))
             assertThat(nextRun.isSeeded()).isFalse()
             assertThat(nextRun.favoritesCollectionId()).isNull()
+            assertThat(nextRun.uncategorizedCollectionId()).isNull()
         }
     }
 
@@ -81,6 +97,8 @@ val LibrarySeedStoreSuite by testSuite("The seed bookkeeping") {
         assertThat(LibrarySeedStore.seededKey).isEqualTo(booleanPreferencesKey("seed_completed"))
         assertThat(LibrarySeedStore.favoritesCollectionIdKey)
             .isEqualTo(longPreferencesKey("favorites_collection_id"))
+        assertThat(LibrarySeedStore.uncategorizedCollectionIdKey)
+            .isEqualTo(longPreferencesKey("uncategorized_collection_id"))
     }
 }
 

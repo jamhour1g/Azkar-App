@@ -2,6 +2,7 @@ package com.azkar.ui.library
 
 import com.azkar.TestDispatchers
 import com.azkar.domain.model.CollectionKind
+import com.azkar.domain.model.HadithGrade
 import com.azkar.domain.model.Remembrance
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.model.CollectionScope
@@ -242,27 +243,33 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
         assertThat(state.allRemembrances.findById(1L)?.isFavorite).isFalse()
     }
 
-    test("starring pulls the remembrance into the favourites collection without a reload") {
+    test("starring mirrors favorites and removes the now-filed remembrance from Uncategorized") {
         val gateway =
             FakeCollectionsGateway(
-                collections = listOf(favoritesCollection(), morningCollection(id = 11L)),
+                collections =
+                    listOf(
+                        favoritesCollection(),
+                        morningCollection(id = 11L),
+                        customCollection(id = 12L, name = "Uncategorized"),
+                    ),
                 remembrances = listOf(morning),
                 favoritesCollectionId = 10L,
+                uncategorizedCollectionId = 12L,
             )
         val (state, _) = loaded(gateway)
 
         state.toggleFavorite(1L)
 
-        // That collection's membership *is* "everything starred", so the answer is already in hand
-        // once the flag is patched. Re-reading the whole catalogue to learn what the UI just decided
-        // would be the slowest possible way to draw a star.
+        // The favorite shelf is a membership and therefore disqualifies this untagged remembrance
+        // from Uncategorized. A reload reconciles both collection mirrors after the favorite write.
         assertThat(
             state.allCollections
                 .findById(10L)
                 ?.members
                 ?.map { it.id },
         ).containsExactly(1L)
-        assertThat(gateway.snapshotReads).isEqualTo(1)
+        assertThat(state.allCollections.findById(12L)?.members).isEmpty()
+        assertThat(gateway.snapshotReads).isEqualTo(2)
     }
 
     test("un-starring removes the remembrance from the favourites collection") {
@@ -405,6 +412,173 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
         // second copy of the remembrance rather than a correction to the first.
         assertThat(gateway.savedRemembrances).hasSize(1)
         assertThat(gateway.savedRemembrances.single().id).isEqualTo(1L)
+    }
+
+    test("a new remembrance is saved and added to the collection that opened its form") {
+        val gateway = FakeCollectionsGateway(collections = listOf(customCollection(id = 10L, name = "My collection")))
+        val (state, _) = loaded(gateway)
+        val translations =
+            mapOf(
+                ARABIC to
+                    Remembrance.Translations(
+                        explanationPair = Remembrance.Translations.Pair(id = null, text = ""),
+                        translationPair = Remembrance.Translations.Pair(id = null, text = "الحمد لله"),
+                    ),
+                Locale.ENGLISH to
+                    Remembrance.Translations(
+                        explanationPair = Remembrance.Translations.Pair(id = null, text = "Praise belongs to God"),
+                        translationPair = Remembrance.Translations.Pair(id = null, text = "All praise is for God"),
+                    ),
+            )
+
+        state.catalogue.createRemembrance(
+            collectionId = 10L,
+            grade = HadithGrade.HASAN,
+            source = "Book 1",
+            translations = translations,
+            tagNames = listOf("morning"),
+            tagLocale = ARABIC,
+        )
+
+        val saved = gateway.savedRemembrances.single()
+        assertThat(saved.id).isEqualTo(11L)
+        assertThat(saved.grade).isEqualTo(HadithGrade.HASAN)
+        assertThat(saved.source).isEqualTo("Book 1")
+        assertThat(saved.tags.single().name).isEqualTo("morning")
+        assertThat(saved.tags.single().nameLocale).isEqualTo(ARABIC)
+        assertThat(
+            state.allCollections
+                .findById(10L)
+                ?.members
+                ?.map { it.id },
+        ).containsExactly(11L)
+        assertThat(state.noticeKey).isEqualTo(CollectionNoticeKey.REMEMBRANCE_CREATED)
+    }
+
+    test("a new untagged remembrance is filed in Uncategorized instead of the open collection") {
+        val gateway =
+            FakeCollectionsGateway(
+                collections =
+                    listOf(
+                        customCollection(id = 10L, name = "My collection"),
+                        customCollection(id = 20L, name = "Uncategorized"),
+                    ),
+                uncategorizedCollectionId = 20L,
+            )
+        val (state, _) = loaded(gateway)
+
+        state.catalogue.createRemembrance(
+            collectionId = 10L,
+            grade = HadithGrade.UNSPECIFIED,
+            source = null,
+            translations =
+                mapOf(
+                    ARABIC to
+                        Remembrance.Translations(
+                            explanationPair = Remembrance.Translations.Pair(id = null, text = ""),
+                            translationPair = Remembrance.Translations.Pair(id = null, text = "الحمد لله"),
+                        ),
+                ),
+            tagNames = emptyList(),
+            tagLocale = ARABIC,
+        )
+
+        val createdId = requireNotNull(gateway.savedRemembrances.single().id)
+        assertThat(state.allCollections.findById(10L)?.members).isEmpty()
+        assertThat(
+            state.allCollections
+                .findById(20L)
+                ?.members
+                ?.map { it.id },
+        ).containsExactly(createdId)
+    }
+
+    test("permanent remembrance deletion removes it from the catalogue and every collection") {
+        val gateway =
+            FakeCollectionsGateway(
+                collections =
+                    listOf(
+                        customCollection(id = 10L, name = "Morning", members = listOf(morning)),
+                        customCollection(id = 11L, name = "Saved", members = listOf(morning)),
+                    ),
+                remembrances = listOf(morning),
+            )
+        val (state, _) = loaded(gateway)
+
+        state.catalogue.deleteRemembrance(1L)
+
+        assertThat(state.allRemembrances).isEmpty()
+        assertThat(state.allCollections.flatMap { it.members }).isEmpty()
+        assertThat(state.noticeKey).isEqualTo(CollectionNoticeKey.REMEMBRANCE_DELETED)
+    }
+
+    test("removing the last membership of an untagged remembrance files it in Uncategorized") {
+        val gateway =
+            FakeCollectionsGateway(
+                collections =
+                    listOf(
+                        customCollection(id = 10L, name = "Morning", members = listOf(morning)),
+                        customCollection(id = 20L, name = "Uncategorized"),
+                    ),
+                remembrances = listOf(morning),
+                uncategorizedCollectionId = 20L,
+            )
+        val (state, _) = loaded(gateway)
+
+        state.catalogue.removeMembers(collectionId = 10L, remembranceIds = listOf(1L))
+
+        assertThat(state.allCollections.findById(10L)?.members).isEmpty()
+        assertThat(
+            state.allCollections
+                .findById(20L)
+                ?.members
+                ?.map { it.id },
+        ).containsExactly(1L)
+    }
+
+    test("deleting the last containing collection files its untagged members in Uncategorized") {
+        val gateway =
+            FakeCollectionsGateway(
+                collections =
+                    listOf(
+                        customCollection(id = 10L, name = "Morning", members = listOf(morning)),
+                        customCollection(id = 20L, name = "Uncategorized"),
+                    ),
+                remembrances = listOf(morning),
+                uncategorizedCollectionId = 20L,
+            )
+        val (state, _) = loaded(gateway)
+
+        state.catalogue.deleteCollection(10L)
+
+        assertThat(state.allCollections.findById(10L)).isNull()
+        assertThat(
+            state.allCollections
+                .findById(20L)
+                ?.members
+                ?.map { it.id },
+        ).containsExactly(1L)
+    }
+
+    test("the Uncategorized collection cannot be edited or deleted through the catalogue") {
+        val gateway =
+            FakeCollectionsGateway(
+                collections = listOf(customCollection(id = 20L, name = "Uncategorized")),
+                uncategorizedCollectionId = 20L,
+            )
+        val (state, _) = loaded(gateway)
+
+        state.catalogue.editCollection(
+            id = 20L,
+            name = "Renamed",
+            description = null,
+            tagNames = emptyList(),
+            coverImagePath = null,
+        )
+        state.catalogue.deleteCollection(20L)
+
+        assertThat(gateway.collections.single().name).isEqualTo("Uncategorized")
+        assertThat(state.noticeKey).isNull()
     }
 
     test("leaving the translation blank keeps it, while naming one replaces it") {
@@ -620,10 +794,8 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
             description = "Long drives.",
             tagNames = emptyList(),
             coverImagePath = null,
-        ) {
-            createdId =
-                it
-        }
+            onCreated = { createdId = it },
+        )
 
         assertThat(createdId).isNotNull()
         assertThat(state.allCollections.map { it.name }).containsExactly("For the car")
@@ -634,7 +806,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
         val gateway = FakeCollectionsGateway(collections = listOf(customCollection(id = 20L, name = "Existing")))
         val (state, _) = loaded(gateway)
 
-        state.createCollection("For the car", null, emptyList(), null) {}
+        state.createCollection("For the car", null, emptyList(), null, onCreated = {})
 
         // The badge counts custom collections, and one the user just made is the most certainly
         // custom thing on the shelf.
@@ -646,7 +818,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
         val (state, _) = loaded(gateway)
         gateway.failure = IllegalStateException("name already taken")
 
-        state.createCollection("For the car", null, emptyList(), null) {}
+        state.createCollection("For the car", null, emptyList(), null, onCreated = {})
 
         assertThat(state.allCollections).isEmpty()
         assertThat(state.noticeKey).isEqualTo(CollectionNoticeKey.FAILED)
@@ -885,7 +1057,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
         val gateway = FakeCollectionsGateway()
         val (state, _) = loaded(gateway)
 
-        state.createCollection("For the car", null, emptyList(), null) {}
+        state.createCollection("For the car", null, emptyList(), null, onCreated = {})
         assertThat(state.noticeKey).isEqualTo(CollectionNoticeKey.CREATED)
 
         state.onNotice = null

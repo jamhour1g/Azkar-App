@@ -10,10 +10,9 @@ import java.util.Locale
 /**
  * Assembles the immutable domain [Remembrance] from the rows Exposed read.
  *
- * A remembrance is only meaningful when a locale has *both* a translation and an explanation, so the
- * two maps are intersected and anything the caller supplied without a counterpart is dropped. That
- * drop is worth a log line rather than silence: it means a dataset or an import handed over a half
- * translation, and a user seeing a blank explanation has no way of telling that from an empty row.
+ * A translation is meaningful without an explanation, so every translation is retained and gets an
+ * empty explanation pair when its locale has no explanation row. Explanations without a translation
+ * are still discarded and logged because they cannot be attached to a rendered translation.
  *
  * ### Why the logger is declared inside this object
  *
@@ -34,31 +33,27 @@ internal object RemembranceMapper {
         tags: Set<Tag>,
     ): Remembrance {
         val id = id.value
-        val droppedTranslations = translations.keys - explanations.keys
         val droppedExplanations = explanations.keys - translations.keys
-        if (droppedTranslations.isNotEmpty() || droppedExplanations.isNotEmpty()) {
+        if (droppedExplanations.isNotEmpty()) {
             logger.atWarn {
-                message = "Dropped locales missing counterpart"
+                message = "Dropped explanations without translation"
                 payload =
                     mapOf(
                         "remembranceId" to id,
-                        "droppedTranslations" to droppedTranslations,
                         "droppedExplanations" to droppedExplanations,
                     )
             }
         }
 
-        val shared = translations.keys.intersect(explanations.keys)
-        require(shared.isNotEmpty()) {
-            "No locale has both translation and explanation for id=$id"
+        require(translations.isNotEmpty()) {
+            "No translations found for id=$id"
         }
 
         val grouped =
-            shared.associateWith { locale ->
-                val explanation = explanations.getValue(locale)
-                val translation = translations.getValue(locale)
+            translations.mapValues { (locale, translation) ->
+                val explanation = explanations[locale]
                 Remembrance.Translations(
-                    Remembrance.Translations.Pair(explanation.id, explanation.text),
+                    Remembrance.Translations.Pair(explanation?.id, explanation?.text.orEmpty()),
                     Remembrance.Translations.Pair(translation.id, translation.text),
                 )
             }

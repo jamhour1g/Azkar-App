@@ -4,10 +4,14 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.azkar.domain.model.CollectionKind
+import com.azkar.domain.model.HadithGrade
 import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
+import com.azkar.domain.model.impl.RemembranceImpl
+import com.azkar.domain.model.impl.TagImpl
 import com.azkar.domain.model.withMember
 import com.azkar.domain.model.withMembers
 import com.azkar.domain.model.withoutMember
@@ -59,6 +63,8 @@ enum class CollectionNoticeKey {
     PINNED,
     UNPINNED,
     MEMBERS_ADDED,
+    REMEMBRANCE_CREATED,
+    REMEMBRANCE_DELETED,
     MEMBERS_REMOVED,
     FAVORITE_ADDED,
     FAVORITE_REMOVED,
@@ -273,6 +279,10 @@ class CollectionsCatalogue(
     var favoritesCollectionId: Long? by mutableStateOf(null)
         private set
 
+    /** The system holding shelf for untagged remembrances without another collection membership. */
+    var uncategorizedCollectionId: Long? by mutableStateOf(null)
+        private set
+
     /**
      * How far through each collection the user has got.
      *
@@ -347,6 +357,7 @@ class CollectionsCatalogue(
                 allRemembrances = emptyList()
                 recitedCounts = emptyMap()
                 favoritesCollectionId = null
+                uncategorizedCollectionId = null
                 membershipCounts = MembershipCounts.EMPTY
                 loading = false
                 infoLine = loadFailedLabel
@@ -356,7 +367,8 @@ class CollectionsCatalogue(
         allRemembrances = snapshot.remembrances
         recitedCounts = snapshot.recitedCounts
         favoritesCollectionId = snapshot.favoritesCollectionId
-        membershipCounts = membershipCountsOf(snapshot.collections)
+        uncategorizedCollectionId = snapshot.uncategorizedCollectionId
+        membershipCounts = membershipCountsOf(snapshot.collections, uncategorizedCollectionId)
         loading = false
         // Cleared rather than set to a success sentence: see [infoLine]. A read that worked says
         // nothing that the shelf it just filled does not already say.
@@ -375,10 +387,10 @@ class CollectionsCatalogue(
     /**
      * Flips a star, applying it locally first and rolling back if the write fails.
      *
-     * The starred mirror is patched here rather than re-read. Its membership is one row either way,
-     * and the answer is already in hand once the flag is patched — going back to the database for it
-     * would re-read the entire catalogue to learn something the UI just decided. The rollback restores
-     * both the star and the mirror, so a failed write leaves nothing showing that did not happen.
+     * The starred mirror is patched here before the write returns, so the pressed tile updates at once.
+     * A successful write is followed by a read because the star also changes whether an untagged
+     * remembrance qualifies for the Uncategorized shelf. The rollback restores both the star and the
+     * mirror, so a failed write leaves nothing showing that did not happen.
      */
     fun toggleFavorite(id: Long) {
         val target = allRemembrances.findById(id) ?: return
@@ -386,6 +398,7 @@ class CollectionsCatalogue(
         setFavoriteOn(id, nextValue)
         scope.launch {
             runCatching { gateway.setFavorite(id, nextValue) }
+                .onSuccess { reloadQuietly() }
                 .onFailure { failure ->
                     // The star is rolled back below, so the screen recovers on its own. The cause of
                     // the rollback is still a failed write, and that is what has to survive.
@@ -426,7 +439,7 @@ class CollectionsCatalogue(
                     else -> stamped.withoutMember(id)
                 }
             }
-        membershipCounts = membershipCountsOf(allCollections)
+        membershipCounts = membershipCountsOf(allCollections, uncategorizedCollectionId)
     }
 
     /**
@@ -492,7 +505,7 @@ class CollectionsCatalogue(
                 )
             val id = requireNotNull(created.id) { "A saved collection came back without an identifier" }
             allCollections = allCollections + created
-            membershipCounts = membershipCountsOf(allCollections)
+            membershipCounts = membershipCountsOf(allCollections, uncategorizedCollectionId)
             onCreated(id)
         }
     }
@@ -515,33 +528,39 @@ class CollectionsCatalogue(
         translations: Map<Locale, LocalizedPair>? = null,
         nameLocale: Locale? = null,
         tagLocale: Locale? = null,
-    ) = mutate(
-        description = "edit collection $id",
-        onSuccess = CollectionNoticeKey.EDITED,
     ) {
-        val saved =
-            gateway.editCollection(
-                id = id,
-                name = name,
-                description = description,
-                tagNames = tagNames,
-                coverImagePath = coverImagePath,
-                translations = translations,
-                nameLocale = nameLocale,
-                tagLocale = tagLocale,
-            )
-        replaceCollection(saved)
+        if (id == uncategorizedCollectionId) return
+        mutate(
+            description = "edit collection $id",
+            onSuccess = CollectionNoticeKey.EDITED,
+        ) {
+            val saved =
+                gateway.editCollection(
+                    id = id,
+                    name = name,
+                    description = description,
+                    tagNames = tagNames,
+                    coverImagePath = coverImagePath,
+                    translations = translations,
+                    nameLocale = nameLocale,
+                    tagLocale = tagLocale,
+                )
+            replaceCollection(saved)
+        }
     }
 
-    fun deleteCollection(id: Long) =
+    fun deleteCollection(id: Long) {
+        if (id == uncategorizedCollectionId || id == favoritesCollectionId) return
         mutate(
             description = "delete collection $id",
             onSuccess = CollectionNoticeKey.DELETED,
         ) {
             gateway.deleteCollection(id)
             allCollections = allCollections.filterNot { it.id == id }
-            membershipCounts = membershipCountsOf(allCollections)
+            membershipCounts = membershipCountsOf(allCollections, uncategorizedCollectionId)
+            reloadQuietly()
         }
+    }
 
     /**
      * Writes corrected texts over a single passage, everywhere the app holds a copy of it.
@@ -562,7 +581,7 @@ class CollectionsCatalogue(
         val patched = current.withTexts(arabic, english)
         allRemembrances = allRemembrances.map { if (it.id == id) patched else it }
         allCollections = allCollections.map { it.withMemberTexts(id, arabic, english) }
-        membershipCounts = membershipCountsOf(allCollections)
+        membershipCounts = membershipCountsOf(allCollections, uncategorizedCollectionId)
         scope.launch {
             mutate(
                 description = "save texts of remembrance $id",
@@ -573,6 +592,49 @@ class CollectionsCatalogue(
             }
         }
     }
+
+    /** Creates a remembrance, filing tagged entries in the open custom collection when appropriate. */
+    fun createRemembrance(
+        collectionId: Long,
+        grade: HadithGrade,
+        source: String?,
+        translations: Map<Locale, Remembrance.Translations>,
+        tagNames: Collection<String>,
+        tagLocale: Locale = uiLocale,
+    ) = mutate(
+        description = "create remembrance in collection $collectionId",
+        onSuccess = CollectionNoticeKey.REMEMBRANCE_CREATED,
+    ) {
+        val saved =
+            gateway.saveRemembrance(
+                RemembranceImpl(
+                    grade = grade,
+                    source = source,
+                    translations = translations,
+                    tags = tagNames.map { TagImpl(name = it, nameLocale = tagLocale) }.toSet(),
+                ),
+            )
+        val id = requireNotNull(saved.id) { "A saved remembrance came back without an identifier" }
+        val destination = allCollections.findById(collectionId)
+        val canFileInCurrentCollection =
+            tagNames.isNotEmpty() &&
+                destination?.kind == CollectionKind.CUSTOM &&
+                collectionId != favoritesCollectionId &&
+                collectionId != uncategorizedCollectionId
+        if (canFileInCurrentCollection) {
+            gateway.addMembers(collectionId, listOf(id))
+        }
+        reloadQuietly()
+    }
+
+    fun deleteRemembrance(id: Long) =
+        mutate(
+            description = "permanently delete remembrance $id",
+            onSuccess = CollectionNoticeKey.REMEMBRANCE_DELETED,
+        ) {
+            gateway.deleteRemembrance(id)
+            reloadQuietly()
+        }
 
     /**
      * Copies a picture the user just chose into the app's own covers directory.
@@ -606,13 +668,17 @@ class CollectionsCatalogue(
         id: Long,
         newName: String,
         nameLocale: Locale = Locale.ENGLISH,
-    ) = mutate(
-        description = "duplicate collection $id",
-        onSuccess = CollectionNoticeKey.DUPLICATED,
     ) {
-        val copy = gateway.duplicateCollection(id, newName = newName, nameLocale = nameLocale)
-        allCollections = allCollections + copy
-        membershipCounts = membershipCountsOf(allCollections)
+        if (id == uncategorizedCollectionId) return
+        mutate(
+            description = "duplicate collection $id",
+            onSuccess = CollectionNoticeKey.DUPLICATED,
+        ) {
+            val copy = gateway.duplicateCollection(id, newName = newName, nameLocale = nameLocale)
+            allCollections = allCollections + copy
+            membershipCounts = membershipCountsOf(allCollections, uncategorizedCollectionId)
+            reloadQuietly()
+        }
     }
 
     /**
@@ -723,7 +789,7 @@ class CollectionsCatalogue(
             allCollections.map { if (it.id == updated.id) updated else it }.ifEmpty {
                 listOf(updated)
             }
-        membershipCounts = membershipCountsOf(allCollections)
+        membershipCounts = membershipCountsOf(allCollections, uncategorizedCollectionId)
     }
 
     /**

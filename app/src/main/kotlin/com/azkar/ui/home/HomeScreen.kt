@@ -202,6 +202,10 @@ private fun HomeScreenEffects(
 ) {
     val prayerTimes = inputs.prayerTimes
     val notifications = inputs.notifications
+    LaunchedEffect(notifications) {
+        notifications.observe()
+    }
+
     // The hadith card's two fallback texts, read here so [resolveHadith] can stay a plain function
     // and be called from the suspending block below.
     val hadithArabicFallback = stringResource(Res.string.hadithExample)

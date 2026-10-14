@@ -1,11 +1,15 @@
 package com.azkar.ui.library
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -13,10 +17,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.azkar.domain.model.Remembrance
@@ -26,6 +30,7 @@ import com.azkar.generated.resources.collectionDetailEmptyHint
 import com.azkar.generated.resources.collectionDetailEmptyTitle
 import com.azkar.generated.resources.collectionDetailMissingHint
 import com.azkar.generated.resources.collectionDetailMissingTitle
+import com.azkar.generated.resources.collectionDetailSearchHint
 import com.azkar.generated.resources.collectionShareCopied
 import com.azkar.generated.resources.collectionsActionAddMembers
 import com.azkar.generated.resources.collectionsActionDelete
@@ -41,9 +46,12 @@ import com.azkar.generated.resources.collectionsActionUnpin
 import com.azkar.generated.resources.collectionsDuplicateNameSuffix
 import com.azkar.generated.resources.collectionsToastTitle
 import com.azkar.generated.resources.libraryActionCopyCopied
+import com.azkar.generated.resources.remembranceCreateActionOpen
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarMenuItem
+import com.azkar.ui.components.AzkarOutlinedField
 import com.azkar.ui.library.CollectionDetailState
+import com.azkar.ui.library.data.CollectionPresenter.Companion.ARABIC_LOCALE
 import com.azkar.ui.library.data.TransferFormat
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.model.RemembranceTile
@@ -55,6 +63,7 @@ import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ShowToast
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import java.time.LocalDateTime
@@ -161,10 +170,25 @@ internal fun CollectionRegion(
         actions =
             CollectionHeroActions(
                 onBack = navigation.onBack,
-                onAddMembers = detail.addPicker::open,
+                onAddMembers =
+                    if (detail.isUncategorized || detail.isFavoritesCollection) {
+                        null
+                    } else {
+                        detail.addPicker::open
+                    },
+                onCreateRemembrance = {
+                    detail.remembranceDraft =
+                        detail.remembranceDraft ?: RemembranceCreateDraft(ARABIC_LOCALE)
+                },
                 onTogglePin = title.onTogglePin,
                 onEditReminder = { dialogs.reminderDraft = reminderDraftFor(detail) },
-                menuItems = detailMenuItems(collection = collection, actions = title),
+                menuItems =
+                    detailMenuItems(
+                        collection = collection,
+                        actions = title,
+                        isUncategorized = detail.isUncategorized,
+                        isFavoritesCollection = detail.isFavoritesCollection,
+                    ),
             ),
     )
 
@@ -191,6 +215,16 @@ internal fun CollectionRegion(
                 onViewSelected = detail::setMemberView,
             ),
     )
+    if (detail.memberCount > 0) {
+        Spacer(Modifier.height(DETAIL_REGION_GAP))
+        AzkarOutlinedField(
+            value = detail.memberQuery,
+            onValueChange = detail::onMemberQueryChanged,
+            placeholder = stringResource(Res.string.collectionDetailSearchHint),
+            leadingIcon = Icons.Filled.Search,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 /**
@@ -353,23 +387,32 @@ internal fun memberActions(
     onOpenRemembrance: (Long) -> Unit,
     showToast: ShowToast,
 ): MemberActions {
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val toastTitle = stringResource(Res.string.collectionsToastTitle)
     val copiedLabel = stringResource(Res.string.libraryActionCopyCopied)
     return MemberActions(
         onRead = onOpenRemembrance,
         onToggleFavorite = collections::toggleFavorite,
         onCopy = { text ->
-            clipboard.setText(AnnotatedString(text))
-            showToast(toastTitle, copiedLabel, NotificationPriority.LOW)
+            scope.launch {
+                clipboard.setPlainText(text)
+                showToast(toastTitle, copiedLabel, NotificationPriority.LOW)
+            }
         },
         onRequestEdit = { id ->
             dialogs.editingRemembrance = collections.allRemembrances.findById(id)
         },
-        onRequestRemove = {
-            detail.toggleRemoveSelection(it)
-            dialogs.pendingRemoval = true
-        },
+        onRequestRemove =
+            if (detail.isUncategorized || detail.isFavoritesCollection) {
+                null
+            } else {
+                {
+                    detail.toggleRemoveSelection(it)
+                    dialogs.pendingRemoval = true
+                }
+            },
+        onRequestDelete = { dialogs.pendingRemembranceDelete = it },
     )
 }
 
@@ -386,6 +429,7 @@ internal class DetailDialogState {
     var pendingDelete by mutableStateOf(false)
     var pendingReset by mutableStateOf(false)
     var pendingRemoval by mutableStateOf(false)
+    var pendingRemembranceDelete by mutableStateOf<Long?>(null)
     var shareTarget by mutableStateOf<RemembranceCollection?>(null)
 
     /**
@@ -430,7 +474,9 @@ private fun DetailDialogs(
         AddRemembrancesDialog(detail = detail)
     }
 
-    DetailConfirmations(dialogs = dialogs, detail = detail)
+    DetailRemembranceCreateHost(detail = detail, collections = collections)
+
+    DetailConfirmations(dialogs = dialogs, detail = detail, collections = collections)
 
     val collection = detail.collection
     if (dialogs.pendingDelete && collection != null) {
@@ -481,6 +527,31 @@ private fun DetailDialogs(
             },
         )
     }
+}
+
+@Composable
+private fun DetailRemembranceCreateHost(
+    detail: CollectionDetailState,
+    collections: CollectionsCatalogue,
+) {
+    val draft = detail.remembranceDraft ?: return
+    val tagLocale = AzkarTheme.locale
+    RemembranceCreateDialog(
+        draft = draft,
+        availableTags = collections.shelfTags.map { TagOption.of(it, tagLocale) },
+        onDismiss = { detail.remembranceDraft = null },
+        onConfirm = { submitted ->
+            detail.remembranceDraft = null
+            collections.createRemembrance(
+                collectionId = detail.collectionId,
+                grade = submitted.grade,
+                source = submitted.submittedSource,
+                translations = submitted.submittedTranslations,
+                tagNames = submitted.tags,
+                tagLocale = tagLocale,
+            )
+        },
+    )
 }
 
 /**
@@ -574,6 +645,7 @@ private fun DetailReminderHost(
 private fun DetailConfirmations(
     dialogs: DetailDialogState,
     detail: CollectionDetailState,
+    collections: CollectionsCatalogue,
 ) {
     if (dialogs.pendingReset) {
         ConfirmProgressResetDialog(
@@ -599,6 +671,16 @@ private fun DetailConfirmations(
             },
         )
     }
+
+    dialogs.pendingRemembranceDelete?.let { id ->
+        ConfirmDeleteRemembranceDialog(
+            onDismiss = { dialogs.pendingRemembranceDelete = null },
+            onConfirm = {
+                dialogs.pendingRemembranceDelete = null
+                collections.deleteRemembrance(id)
+            },
+        )
+    }
 }
 
 /**
@@ -617,7 +699,8 @@ private fun DetailShareHost(
 ) {
     val toastTitle = stringResource(Res.string.collectionsToastTitle)
     val copied = stringResource(Res.string.collectionShareCopied)
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     // Resolved here rather than inside the dialog, because the dialog builds its document
     // synchronously from a `remember` and a picture has to be read off disk first.
     val coverImageBase64 by produceState<String?>(initialValue = null, collection) {
@@ -632,8 +715,10 @@ private fun DetailShareHost(
             ShareCallbacks(
                 onFormatChanged = { dialogs.shareFormat = it },
                 onCopy = { document ->
-                    clipboard.setText(AnnotatedString(document))
-                    showToast(toastTitle, copied, NotificationPriority.LOW)
+                    scope.launch {
+                        clipboard.setPlainText(document)
+                        showToast(toastTitle, copied, NotificationPriority.LOW)
+                    }
                 },
                 onDismiss = { dialogs.shareTarget = null },
             ),
@@ -658,7 +743,8 @@ private fun headerActions(
         onBack = onBack,
         onEdit = { dialogs.editor = CollectionEditorDraft.edit(it) },
         onDuplicate = { target, newName ->
-            dialogs.editor = CollectionEditorDraft.duplicate(collection = target, newName = newName, nameLocale = activeLocale)
+            dialogs.editor =
+                CollectionEditorDraft.duplicate(collection = target, newName = newName, nameLocale = activeLocale)
         },
         onTogglePin = {
             if (collection != null) {
@@ -759,11 +845,23 @@ internal fun DetailStatePanel(
                 hint = stringResource(Res.string.collectionDetailEmptyHint),
                 modifier = panel,
                 action = {
-                    EmptyStateAction(
-                        icon = ActionIcons.addMembers,
-                        description = stringResource(Res.string.collectionsActionAddMembers),
-                        onClick = detail.addPicker::open,
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (!detail.isUncategorized && !detail.isFavoritesCollection) {
+                            EmptyStateAction(
+                                icon = ActionIcons.addMembers,
+                                description = stringResource(Res.string.collectionsActionAddMembers),
+                                onClick = detail.addPicker::open,
+                            )
+                        }
+                        EmptyStateAction(
+                            icon = Icons.Filled.Add,
+                            description = stringResource(Res.string.remembranceCreateActionOpen),
+                            onClick = {
+                                detail.remembranceDraft =
+                                    detail.remembranceDraft ?: RemembranceCreateDraft(ARABIC_LOCALE)
+                            },
+                        )
+                    }
                 },
             )
 
@@ -799,7 +897,8 @@ internal fun memberTileActions(
         onToggleFavorite = { actions.onToggleFavorite(tile.id) },
         onCopy = { actions.onCopy(tile.primaryPreview) },
         onEdit = { actions.onRequestEdit(tile.id) },
-        onRemoveFromCollection = { actions.onRequestRemove(tile.id) },
+        onRemoveFromCollection = actions.onRequestRemove?.let { onRemove -> { onRemove(tile.id) } },
+        onDelete = { actions.onRequestDelete(tile.id) },
     )
 
 /**
@@ -840,7 +939,8 @@ internal data class MemberActions(
     val onToggleFavorite: (Long) -> Unit,
     val onCopy: (String) -> Unit,
     val onRequestEdit: (Long) -> Unit,
-    val onRequestRemove: (Long) -> Unit,
+    val onRequestRemove: ((Long) -> Unit)?,
+    val onRequestDelete: (Long) -> Unit,
 )
 
 /** The rename / duplicate form, dispatched on which of the two it was opened as. */
@@ -935,25 +1035,38 @@ private fun DetailDeleteHost(
 private fun detailMenuItems(
     collection: RemembranceCollection,
     actions: DetailActions,
+    isUncategorized: Boolean,
+    isFavoritesCollection: Boolean,
 ): List<AzkarMenuItem> {
     val duplicateName = stringResource(Res.string.collectionsDuplicateNameSuffix, collection.name)
     return buildList {
-        add(
-            AzkarMenuItem(
-                label = stringResource(Res.string.collectionsActionEdit),
-                onClick = { actions.onEdit(collection) },
-                icon = ActionIcons.edit,
+        if (!isUncategorized) {
+            add(
+                AzkarMenuItem(
+                    label = stringResource(Res.string.collectionsActionEdit),
+                    onClick = { actions.onEdit(collection) },
+                    icon = ActionIcons.edit,
+                ),
+            )
+        }
+        addAll(
+            identityMenuItems(
+                collection = collection,
+                actions = actions,
+                duplicateName = duplicateName,
+                isUncategorized = isUncategorized,
             ),
         )
-        addAll(identityMenuItems(collection = collection, actions = actions, duplicateName = duplicateName))
         addAll(preferenceMenuItems(collection = collection, actions = actions))
-        add(
-            AzkarMenuItem(
-                label = stringResource(Res.string.collectionsActionDelete),
-                onClick = actions.onDelete,
-                icon = ActionIcons.delete,
-            ),
-        )
+        if (!isUncategorized && !isFavoritesCollection) {
+            add(
+                AzkarMenuItem(
+                    label = stringResource(Res.string.collectionsActionDelete),
+                    onClick = actions.onDelete,
+                    icon = ActionIcons.delete,
+                ),
+            )
+        }
     }
 }
 
@@ -968,19 +1081,26 @@ private fun identityMenuItems(
     collection: RemembranceCollection,
     actions: DetailActions,
     duplicateName: String,
+    isUncategorized: Boolean,
 ): List<AzkarMenuItem> =
-    listOf(
-        AzkarMenuItem(
-            label = stringResource(Res.string.collectionsActionDuplicate),
-            onClick = { actions.onDuplicate(collection, duplicateName) },
-            icon = ActionIcons.duplicate,
-        ),
-        AzkarMenuItem(
-            label = stringResource(Res.string.collectionsActionShare),
-            onClick = { actions.onShare(collection) },
-            icon = ActionIcons.share,
-        ),
-    )
+    buildList {
+        if (!isUncategorized) {
+            add(
+                AzkarMenuItem(
+                    label = stringResource(Res.string.collectionsActionDuplicate),
+                    onClick = { actions.onDuplicate(collection, duplicateName) },
+                    icon = ActionIcons.duplicate,
+                ),
+            )
+        }
+        add(
+            AzkarMenuItem(
+                label = stringResource(Res.string.collectionsActionShare),
+                onClick = { actions.onShare(collection) },
+                icon = ActionIcons.share,
+            ),
+        )
+    }
 
 /**
  * Where this device shows the collection: on the shelf, on the Home rail, or starred.
@@ -1055,7 +1175,7 @@ internal val MEMBER_GAP = 12.dp
  * more air under it than the reader asked for; see the comment where it is applied for why these
  * states cannot fill what is left over.
  */
-private val DETAIL_EMPTY_STATE_MIN_HEIGHT = 320.dp
+internal val DETAIL_EMPTY_STATE_MIN_HEIGHT = 320.dp
 
 /**
  * The narrowest a member card may get before the grid drops a column.

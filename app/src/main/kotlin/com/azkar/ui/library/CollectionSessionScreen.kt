@@ -23,11 +23,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.azkar.domain.model.Remembrance
@@ -61,6 +61,7 @@ import com.azkar.ui.shell.stepTransition
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import java.time.LocalDateTime
@@ -361,7 +362,8 @@ private fun SessionReading(
     val current = session.current ?: return
     val forwards = session.advancesForwards()
     val isRtl = isRtlLayout()
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val toastTitle = stringResource(Res.string.collectionsToastTitle)
     val copiedLabel = stringResource(Res.string.libraryActionCopyCopied)
 
@@ -392,8 +394,10 @@ private fun SessionReading(
             forwards = forwards,
             isRtl = isRtl,
             onCopy = { text ->
-                clipboard.setText(AnnotatedString(text))
-                showToast(toastTitle, copiedLabel, NotificationPriority.LOW)
+                scope.launch {
+                    clipboard.setPlainText(text)
+                    showToast(toastTitle, copiedLabel, NotificationPriority.LOW)
+                }
             },
         )
         Spacer(Modifier.height(SESSION_REGION_GAP))

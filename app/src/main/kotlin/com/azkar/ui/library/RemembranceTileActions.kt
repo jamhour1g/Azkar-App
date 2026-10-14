@@ -17,4 +17,5 @@ internal data class RemembranceTileActions(
     val onCopy: () -> Unit,
     val onEdit: (() -> Unit)? = null,
     val onRemoveFromCollection: (() -> Unit)? = null,
+    val onDelete: (() -> Unit)? = null,
 )

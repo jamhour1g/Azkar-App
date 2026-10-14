@@ -777,6 +777,26 @@ val CollectionFilteringSuite by testSuite("Narrowing, ordering and searching the
         assertThat(CollectionFiltering.matchesRemembrance(travel, "")).isTrue()
     }
 
+    test("Uncategorized holds only untagged remembrances with no other collection membership") {
+        val alone = remembrance(id = 40L)
+        val favorited = remembrance(id = 41L, favorite = true)
+        val favoriteWithoutMirror = remembrance(id = 44L, favorite = true)
+        val filedElsewhere = remembrance(id = 42L)
+        val tagged = remembrance(id = 43L, tags = setOf(tag(9L, "morning")))
+        val uncategorized = customCollection(id = 30L, name = "Uncategorized", members = listOf(alone))
+        val favorites = customCollection(id = 31L, name = "Favorites", members = listOf(favorited))
+        val other = customCollection(id = 32L, name = "Saved", members = listOf(filedElsewhere))
+
+        val ids =
+            CollectionFiltering.uncategorizedRemembranceIds(
+                remembrances = listOf(alone, favorited, favoriteWithoutMirror, filedElsewhere, tagged),
+                collections = listOf(uncategorized, favorites, other),
+                uncategorizedCollectionId = 30L,
+            )
+
+        assertThat(ids).containsExactly(40L)
+    }
+
     test("a member missing from the catalogue is skipped rather than reported without text") {
         val groups =
             CollectionFiltering.groupSearchResults(

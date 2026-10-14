@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionsActionAddTag
+import com.azkar.generated.resources.collectionsDialogTagsClearAll
 import com.azkar.generated.resources.collectionsDialogTagsCollapse
 import com.azkar.generated.resources.collectionsDialogTagsCreate
 import com.azkar.generated.resources.collectionsDialogTagsExpand
@@ -90,8 +92,8 @@ import org.jetbrains.compose.resources.stringResource
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun CollectionTagPickerPanel(
-    draft: CollectionEditorDraft,
+internal fun TagPickerPanel(
+    draft: TagDraftView,
     availableTags: List<TagOption>,
     modifier: Modifier = Modifier,
 ) {
@@ -136,7 +138,7 @@ internal fun CollectionTagPickerPanel(
  */
 @Composable
 private fun TagSearchRow(
-    draft: CollectionEditorDraft,
+    draft: TagDraftView,
     expanded: Boolean,
     onToggleExpanded: () -> Unit,
 ) {
@@ -196,7 +198,7 @@ private fun TagSearchRow(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TagChips(
-    draft: CollectionEditorDraft,
+    draft: TagDraftView,
     options: List<TagOption>,
     onToggleCreating: () -> Unit,
 ) {
@@ -226,6 +228,14 @@ private fun TagChips(
                 selected = selected,
                 onClick = { draft.toggleTag(option.value) },
                 leadingIcon = Icons.Filled.Check.takeIf { selected },
+            )
+        }
+        if (draft.tags.isNotEmpty()) {
+            AzkarFilterChip(
+                text = stringResource(Res.string.collectionsDialogTagsClearAll),
+                selected = false,
+                onClick = draft::clearTags,
+                leadingIcon = Icons.Filled.Close,
             )
         }
         CreateTagChip(onClick = onToggleCreating)
@@ -279,7 +289,7 @@ private fun CreateTagChip(onClick: () -> Unit) {
  *
  * Deliberately one field with no translations attached, and the reason is worth stating because it is
  * the only authoring surface in the app that has none: this row does not create a tag. It buffers a
- * name onto [CollectionEditorDraft.tags], and the row itself appears later as a side effect of saving
+ * name onto [TagDraftView.tags], and the row itself appears later as a side effect of saving
  * the collection, through `ExposedTagRepository.findOrCreateId`. Carrying translations would mean
  * turning that list into something with a translation per entry and threading a second concept through
  * `CollectionService.setTags` and `ExposedCollectionRepository.replaceTags` for one shortcut field.
@@ -287,7 +297,7 @@ private fun CreateTagChip(onClick: () -> Unit) {
  * made here can be translated there.
  */
 @Composable
-private fun NewTagRow(draft: CollectionEditorDraft) {
+private fun NewTagRow(draft: TagDraftView) {
     val colors = AzkarTheme.colors
     val ambient = if (isRtlLayout()) LayoutDirection.Rtl else LayoutDirection.Ltr
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -366,12 +376,12 @@ private fun Modifier.dashedOutline(
 
 @Preview
 @Composable
-private fun CollectionTagPickerPanelPreview() {
+private fun TagPickerPanelPreview() {
     AzkarThemePreview(width = 560.dp, height = 520.dp) {
         val draft = CollectionEditorDraft.create()
         draft.toggleTag("morning")
         draft.toggleTag("sleep")
-        CollectionTagPickerPanel(
+        TagPickerPanel(
             draft = draft,
             availableTags = listOf("morning", "sleep", "travel", "after prayer", "commute").map(TagOption::of),
             modifier = Modifier.width(520.dp),

@@ -32,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionDetailActionDeleteRemembrance
 import com.azkar.generated.resources.collectionDetailActionRemoveFromCollection
 import com.azkar.generated.resources.collectionDetailPositionFormat
 import com.azkar.generated.resources.collectionDragHandle
@@ -354,18 +355,31 @@ private fun TileActions(
                 iconSize = TILE_ACTION_GLYPH,
             )
         }
-        if (actions.onRemoveFromCollection != null) {
+        if (actions.onRemoveFromCollection != null || actions.onDelete != null) {
             AzkarOverflowMenu(
                 icon = Icons.Filled.MoreVert,
                 contentDescription = stringResource(Res.string.libraryActionMore),
                 items =
-                    listOf(
-                        AzkarMenuItem(
-                            label = stringResource(Res.string.collectionDetailActionRemoveFromCollection),
-                            onClick = actions.onRemoveFromCollection,
-                            icon = ActionIcons.removeFromCollection,
-                        ),
-                    ),
+                    buildList {
+                        actions.onRemoveFromCollection?.let { onRemove ->
+                            add(
+                                AzkarMenuItem(
+                                    label = stringResource(Res.string.collectionDetailActionRemoveFromCollection),
+                                    onClick = onRemove,
+                                    icon = ActionIcons.removeFromCollection,
+                                ),
+                            )
+                        }
+                        actions.onDelete?.let { onDelete ->
+                            add(
+                                AzkarMenuItem(
+                                    label = stringResource(Res.string.collectionDetailActionDeleteRemembrance),
+                                    onClick = onDelete,
+                                    icon = ActionIcons.delete,
+                                ),
+                            )
+                        }
+                    },
                 buttonSize = TILE_ACTION_SIZE,
                 iconSize = TILE_ACTION_GLYPH,
             )

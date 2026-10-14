@@ -24,8 +24,8 @@ import com.azkar.domain.model.TagUsage
 import com.azkar.domain.model.impl.TagImpl
 import com.azkar.domain.repo.TagRepository
 import com.azkar.domain.service.TransactionRunner
-import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.LowerCase
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -130,7 +130,12 @@ class ExposedTagRepository(
                                 createdAt = timestamp
                                 updatedAt = timestamp
                             }
-                        TagImpl(id = inserted.id.value, name = name, nameLocale = tag.nameLocale, createdAt = inserted.createdAt.toInstant())
+                        TagImpl(
+                            id = inserted.id.value,
+                            name = name,
+                            nameLocale = tag.nameLocale,
+                            createdAt = inserted.createdAt.toInstant(),
+                        )
                     }
                 } else {
                     val before = findTag(existingId)?.name
@@ -150,7 +155,13 @@ class ExposedTagRepository(
                 }
             val id = checkNotNull(saved.id) { "A just-saved tag must have an id" }
             syncTranslations(id, tag.translations)
-            TagImpl(id = saved.id, name = saved.name, nameLocale = tag.nameLocale, createdAt = saved.createdAt, translations = tag.translations)
+            TagImpl(
+                id = saved.id,
+                name = saved.name,
+                nameLocale = tag.nameLocale,
+                createdAt = saved.createdAt,
+                translations = tag.translations,
+            )
         }
 
     /**
@@ -288,7 +299,10 @@ class ExposedTagRepository(
      * the deleted tag was still attached to, so re-typing a label they had only just removed restores
      * their organisation rather than quietly discarding it.
      */
-    fun findOrCreateId(name: String, nameLocale: Locale = Locale.ENGLISH): Long {
+    fun findOrCreateId(
+        name: String,
+        nameLocale: Locale = Locale.ENGLISH,
+    ): Long {
         val folded = Tag.fold(name)
         val existing = findTagRowByName(folded)
         if (existing != null) {
@@ -324,7 +338,10 @@ class ExposedTagRepository(
      * the uniqueness that stops it is the caller's to enforce: the domain checks the name with
      * [com.azkar.domain.service.TagService] before it gets here.
      */
-    private fun reviveByName(name: String, nameLocale: Locale): Tag? {
+    private fun reviveByName(
+        name: String,
+        nameLocale: Locale,
+    ): Tag? {
         val row = findTagRowByName(name)
         if (row == null || row.deletedAt == null) {
             return null
