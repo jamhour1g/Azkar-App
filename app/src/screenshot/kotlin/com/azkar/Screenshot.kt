@@ -45,7 +45,6 @@ import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.LocalWindowSizeClass
 import com.azkar.ui.theme.rememberSystemTheme
 import com.azkar.ui.theme.windowSizeClassFor
-import kotlinx.coroutines.runBlocking
 import org.jetbrains.skia.EncodedImageFormat
 import org.koin.compose.koinInject
 import org.koin.core.context.startKoin
@@ -77,7 +76,7 @@ import javax.swing.SwingUtilities
  * are about.
  */
 @Suppress("ForbiddenMethodCall")
-fun main() {
+suspend fun main() {
     val out = File(System.getProperty("azkar.screenshot.out") ?: "build/screenshot.png")
     val width = System.getProperty("azkar.screenshot.width")?.toInt() ?: 1440
     val height = System.getProperty("azkar.screenshot.height")?.toInt() ?: 900
@@ -91,9 +90,7 @@ fun main() {
         modules(dataModule, appModule)
     }
 
-    runBlocking {
-        KoinPlatform.getKoin().get<LocaleStore>().readAndActivate()
-    }
+    KoinPlatform.getKoin().get<LocaleStore>().readAndActivate()
     // Deliberately not `persist`: rendering in another language must not rewrite the real
     // setting, so this only moves the JVM default the resources read.
     System
@@ -306,6 +303,7 @@ private fun ScreenshotScreen(
             CollectionsScreen(
                 onOpenCollection = {},
                 onOpenRemembrance = {},
+                onManageTags = {},
                 showToast = { _, _, _ -> },
                 catalogue = catalogue,
             )

@@ -7,7 +7,7 @@ import com.azkar.ui.library.data.CollectionReminderGateway
 import com.azkar.ui.library.data.CollectionReminderRow
 import de.infix.testBalloon.framework.core.testSuite
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import java.time.DayOfWeek
 import java.time.Instant
@@ -62,21 +62,25 @@ val CollectionReminderStateSuite by testSuite("The reminder schedules") {
         test("a reminder whose time has passed today is owed straight away") {
             val harness = harnessWith(daily(), details = mapOf(COLLECTION_ID to ("Morning Azkar" to 52)))
             harness.state.load()
-            val fired = runBlocking { harness.state.tick(NOW) }
-            assertThat(fired).containsExactly(FiredReminder(COLLECTION_ID, "Morning Azkar", 52))
+            runTest {
+                val fired = harness.state.tick(NOW)
+                assertThat(fired).containsExactly(FiredReminder(COLLECTION_ID, "Morning Azkar", 52))
+            }
         }
 
         test("the same reminder does not come round twice") {
             val harness = harnessWith(daily())
             harness.state.load()
-            assertThat(runBlocking { harness.state.tick(NOW) }).hasSize(1)
-            assertThat(runBlocking { harness.state.tick(NOW) }).isEmpty()
+            runTest {
+                assertThat(harness.state.tick(NOW)).hasSize(1)
+                assertThat(harness.state.tick(NOW)).isEmpty()
+            }
         }
 
         test("the firing is acknowledged on the schedule, so the next tick finds nothing owed") {
             val harness = harnessWith(daily())
             harness.state.load()
-            runBlocking { harness.state.tick(NOW) }
+            runTest { harness.state.tick(NOW) }
             assertThat(
                 harness.gateway.reminders
                     .getValue(COLLECTION_ID)
@@ -87,35 +91,35 @@ val CollectionReminderStateSuite by testSuite("The reminder schedules") {
         test("a paused reminder never comes round") {
             val harness = harnessWith(daily(enabled = false))
             harness.state.load()
-            assertThat(runBlocking { harness.state.tick(NOW) }).isEmpty()
+            runTest { assertThat(harness.state.tick(NOW)).isEmpty() }
             assertThat(harness.state.dueCollections).isEmpty()
         }
 
         test("a reminder acknowledged at its own time is owed the next day rather than the same") {
             val harness = harnessWith(daily(lastTriggeredAt = Instant.parse("2026-06-03T06:00:00Z")))
             harness.state.load()
-            assertThat(runBlocking { harness.state.tick(NOW) }).isEmpty()
+            runTest { assertThat(harness.state.tick(NOW)).isEmpty() }
             val tomorrow = Instant.parse("2026-06-04T12:00:00Z")
-            assertThat(runBlocking { harness.state.tick(tomorrow) }).hasSize(1)
+            runTest { assertThat(harness.state.tick(tomorrow)).hasSize(1) }
         }
 
         test("a reminder that has been owed since yesterday still comes round today") {
             val harness = harnessWith(daily())
             harness.state.load()
             val tomorrow = Instant.parse("2026-06-04T07:00:00Z")
-            assertThat(runBlocking { harness.state.tick(tomorrow) }).hasSize(1)
+            runTest { assertThat(harness.state.tick(tomorrow)).hasSize(1) }
         }
 
         test("a weekly reminder acknowledged last week is not owed again this week") {
             val harness = harnessWith(weekly(DayOfWeek.MONDAY, lastTriggeredAt = Instant.parse("2026-06-01T06:00:00Z")))
             harness.state.load()
-            assertThat(runBlocking { harness.state.tick(NOW) }).isEmpty()
+            runTest { assertThat(harness.state.tick(NOW)).isEmpty() }
         }
 
         test("a weekly reminder is owed on the day it names, even days after it") {
             val harness = harnessWith(weekly(DayOfWeek.THURSDAY))
             harness.state.load()
-            assertThat(runBlocking { harness.state.tick(NOW) }).hasSize(1)
+            runTest { assertThat(harness.state.tick(NOW)).hasSize(1) }
         }
 
         test("every reminder that came round is reported, not just the first") {
@@ -126,13 +130,15 @@ val CollectionReminderStateSuite by testSuite("The reminder schedules") {
                     daily(collectionId = 12L, enabled = false),
                 )
             harness.state.load()
-            assertThat(runBlocking { harness.state.tick(NOW) }.map { it.collectionId }).containsExactly(10L, 11L)
+            runTest {
+                assertThat(harness.state.tick(NOW).map { it.collectionId }).containsExactly(10L, 11L)
+            }
         }
 
         test("a fired collection is badged for the rail until it is dealt with") {
             val harness = harnessWith(daily())
             harness.state.load()
-            runBlocking { harness.state.tick(NOW) }
+            runTest { harness.state.tick(NOW) }
             assertThat(harness.state.dueCollections).containsExactly(COLLECTION_ID)
         }
 
@@ -140,15 +146,17 @@ val CollectionReminderStateSuite by testSuite("The reminder schedules") {
             val fake = fakeWith(daily())
             val state = stateFor(FragileGateway(fake).apply { failsToAcknowledge = true })
             state.load()
-            val fired = runBlocking { state.tick(NOW) }
-            assertThat(fired).hasSize(1)
+            runTest {
+                val fired = state.tick(NOW)
+                assertThat(fired).hasSize(1)
+            }
             assertThat(state.dueCollections).containsExactly(COLLECTION_ID)
             assertThat(state.forCollection(COLLECTION_ID)!!.reminder.lastTriggeredAt).isEqualTo(NOW)
         }
 
         test("nothing is owed before anything has been read, so the tick is harmless") {
             val harness = harnessWith(daily())
-            assertThat(runBlocking { harness.state.tick(NOW) }).isEmpty()
+            runTest { assertThat(harness.state.tick(NOW)).isEmpty() }
         }
     }
 
@@ -253,7 +261,7 @@ val CollectionReminderStateSuite by testSuite("The reminder schedules") {
         test("removing drops the row and the badge straight away") {
             val harness = harnessWith(daily())
             harness.state.load()
-            runBlocking { harness.state.tick(NOW) }
+            runTest { harness.state.tick(NOW) }
             harness.state.remove(COLLECTION_ID)
             assertThat(harness.state.rows).isEmpty()
             assertThat(harness.state.dueCollections).isEmpty()
@@ -294,7 +302,7 @@ val CollectionReminderStateSuite by testSuite("The reminder schedules") {
         test("acknowledging clears the badge for that collection only") {
             val harness = harnessWith(daily(collectionId = 10L), daily(collectionId = 11L))
             harness.state.load()
-            runBlocking { harness.state.tick(NOW) }
+            runTest { harness.state.tick(NOW) }
             harness.state.acknowledge(10L)
             assertThat(harness.state.dueCollections).containsExactly(11L)
         }
@@ -302,7 +310,7 @@ val CollectionReminderStateSuite by testSuite("The reminder schedules") {
         test("a badge for a schedule that has gone does not survive a reload") {
             val harness = harnessWith(daily())
             harness.state.load()
-            runBlocking { harness.state.tick(NOW) }
+            runTest { harness.state.tick(NOW) }
             harness.gateway.reminders = emptyMap()
             harness.state.load()
             assertThat(harness.state.dueCollections).isEmpty()

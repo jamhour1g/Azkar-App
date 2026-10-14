@@ -10,7 +10,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import java.nio.file.Files
 import java.nio.file.Path
@@ -20,9 +20,8 @@ import kotlin.io.path.deleteIfExists
  * The notification switches, against a real DataStore on a real file.
  *
  * Each test gets its own file and its own store, so nothing is shared and nothing reaches the
- * developer's actual settings. The scope is a real [CoroutineScope] on [Dispatchers.IO] rather than
- * a `runTest` one: the value under test arrives through a `Flow` fed by file IO, and virtual time
- * would not advance it.
+ * developer's actual settings. The store is collected by a real [CoroutineScope] on [Dispatchers.IO];
+ * `runTest` only suspends while awaiting a snapshot and does not control that file-backed IO.
  *
  * The bug this suite exists for was a local `val flags` in the old `loadPersistedSettings` that
  * shadowed the backing store, leaving it empty until a switch was touched. It then held exactly one
@@ -100,13 +99,11 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
             val copy = file.resolveSibling("copy.preferences_pb")
             Files.copy(file, copy)
 
-            val stored =
-                runBlocking {
-                    SettingsStore.create(copy, scope).changes.first()
-                }
-
-            assertThat(stored[storedFlagKey(PrayerKey.ASR)]).isFalse()
-            assertThat(stored[storedFlagKey(PrayerKey.ISHA)]).isNull()
+            runTest {
+                val stored = SettingsStore.create(copy, scope).changes.first()
+                assertThat(stored[storedFlagKey(PrayerKey.ASR)]).isFalse()
+                assertThat(stored[storedFlagKey(PrayerKey.ISHA)]).isNull()
+            }
         }
     }
 
@@ -121,12 +118,14 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
 
             val copy = file.resolveSibling("copy.preferences_pb")
             Files.copy(file, copy)
-            val stored = runBlocking { SettingsStore.create(copy, scope).changes.first() }
+            runTest {
+                val stored = SettingsStore.create(copy, scope).changes.first()
 
-            // Master off with a bell still on used to be reachable, and then persisted as-is. The
-            // master switch is derived now, so only the five bells are ever written.
-            assertThat(stored.asMap().keys.map { it.name })
-                .containsExactlyInAnyOrderElementsOf(PrayerKey.entries.map { "prayer.${it.id}.enabled" })
+                // Master off with a bell still on used to be reachable, and then persisted as-is. The
+                // master switch is derived now, so only the five bells are ever written.
+                assertThat(stored.asMap().keys.map { it.name })
+                    .containsExactlyInAnyOrderElementsOf(PrayerKey.entries.map { "prayer.${it.id}.enabled" })
+            }
         }
     }
 }

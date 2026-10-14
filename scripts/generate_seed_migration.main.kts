@@ -1,7 +1,5 @@
 #!/usr/bin/env -S kotlinc -script
 @file:DependsOn(
-    "io.ktor:ktor-client-core-jvm:3.6.0",
-    "io.ktor:ktor-client-cio-jvm:3.6.0",
     "org.xerial:sqlite-jdbc:3.53.4.0",
 )
 
@@ -18,31 +16,26 @@
  * The shebang needs `env -S` (coreutils 8.30+) to pass `-script` as a separate argument, and the
  * file needs its execute bit, so `./scripts/generate_seed_migration.main.kts` works too.
  *
- * Two details make the `@file:DependsOn` classpath resolve. The extension has to be `.main.kts`,
- * because only that one loads the Maven script definition from `kotlin-main-kts.jar`, which is what
- * reads the annotation; a plain `.kts` gets a definition with no resolver and fails with
- * `unresolved reference 'DependsOn'`. And the Ktor coordinates have to name the `-jvm` variant,
- * since the unsuffixed ones resolve to the Kotlin Multiplatform metadata jar, which has no classes
- * in it. The jars themselves are fetched from Maven Central on the first run.
+ * The extension has to be `.main.kts`, because only that one loads the Maven script definition from
+ * `kotlin-main-kts.jar`, which reads the annotation; a plain `.kts` gets a definition with no
+ * resolver and fails with `unresolved reference 'DependsOn'`. The SQLite JDBC jar is fetched from
+ * Maven Central on the first run. The generator is a synchronous command-line tool, so it uses the
+ * JDK HTTP client directly rather than bridging asynchronous networking with a blocking coroutine.
  */
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.utils.io.jvm.javaio.copyTo
-import kotlinx.coroutines.runBlocking
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.file.Path
 import java.sql.DriverManager
 import java.sql.ResultSet
+import java.time.Duration
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.invariantSeparatorsPathString
 import kotlin.io.path.outputStream
 import kotlin.io.path.writeText
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 private val DATASET_URL =
     "https://raw.githubusercontent.com/my-prayers/muslim-data-android/f7968b8765bfa23706751edadc3fed2fa17a9864" +
@@ -141,17 +134,21 @@ private data class Remembrance(
     val referenceEn: String,
 )
 
-private val client =
-    HttpClient(CIO) {
-        install(HttpTimeout) {
-            // The dataset is a few megabytes, well past the engine default of 15 seconds.
-            requestTimeoutMillis = 5.minutes.inWholeMilliseconds
-            connectTimeoutMillis = 30.seconds.inWholeMilliseconds
-        }
-    }
+private val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build()
 
-private suspend fun HttpClient.download(url: String, into: Path) =
-    into.outputStream().use { out -> get(url).bodyAsChannel().copyTo(out) }
+private fun HttpClient.download(url: String, into: Path) {
+    val request =
+        HttpRequest
+            .newBuilder(URI.create(url))
+            .timeout(Duration.ofMinutes(5))
+            .GET()
+            .build()
+    val response = send(request, HttpResponse.BodyHandlers.ofInputStream())
+    response.body().use { input ->
+        check(response.statusCode() in 200..299) { "Dataset download failed with HTTP ${response.statusCode()}" }
+        into.outputStream().use { output -> input.copyTo(output) }
+    }
+}
 
 private fun ResultSet.remembrances(): Sequence<Remembrance> = generateSequence { if (next()) asRemembrance() else null }
 
@@ -203,35 +200,33 @@ private fun Remembrance.render() =
 private fun render(remembrances: List<Remembrance>) =
     (HEADER + remembrances.map(Remembrance::render)).joinToString(separator = "\n", postfix = "\n")
 
-runBlocking {
-    client.use { http ->
-        val dataset = createTempFile(suffix = ".db")
-        try {
-            println("Downloading the source dataset")
-            http.download(DATASET_URL, dataset)
+client.use { http ->
+    val dataset = createTempFile(suffix = ".db")
+    try {
+        println("Downloading the source dataset")
+        http.download(DATASET_URL, dataset)
 
-            val remembrances =
-                DriverManager.getConnection("jdbc:sqlite:${dataset.toAbsolutePath().invariantSeparatorsPathString}")
-                    .use { connection ->
-                        connection.prepareStatement(SELECT_REMEMBRANCES).use { statement ->
-                            statement.executeQuery().use { records ->
-                                records
-                                    .remembrances()
-                                    .filter { it.arabic.isArabic() && it.english.length >= MIN_ENGLISH_LENGTH }
-                                    .distinctBy(Remembrance::arabic)
-                                    .toList()
-                            }
+        val remembrances =
+            DriverManager.getConnection("jdbc:sqlite:${dataset.toAbsolutePath().invariantSeparatorsPathString}")
+                .use { connection ->
+                    connection.prepareStatement(SELECT_REMEMBRANCES).use { statement ->
+                        statement.executeQuery().use { records ->
+                            records
+                                .remembrances()
+                                .filter { it.arabic.isArabic() && it.english.length >= MIN_ENGLISH_LENGTH }
+                                .distinctBy(Remembrance::arabic)
+                                .toList()
                         }
                     }
+                }
 
-            check(remembrances.isNotEmpty()) { "The source dataset yielded no remembrances" }
+        check(remembrances.isNotEmpty()) { "The source dataset yielded no remembrances" }
 
-            OUTPUT.parent.createDirectories()
-            OUTPUT.writeText(render(remembrances))
+        OUTPUT.parent.createDirectories()
+        OUTPUT.writeText(render(remembrances))
 
-            println("Wrote ${remembrances.size} remembrances to ${OUTPUT.toAbsolutePath()}")
-        } finally {
-            dataset.deleteIfExists()
-        }
+        println("Wrote ${remembrances.size} remembrances to ${OUTPUT.toAbsolutePath()}")
+    } finally {
+        dataset.deleteIfExists()
     }
 }

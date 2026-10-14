@@ -23,8 +23,8 @@ import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
  * ### Why this looks the way it does
  *
  * `suspendTransaction` is Exposed's own suspending entry point. Its `statement` lambda is a
- * `suspend` function type, so [block] is handed to it directly — no `runBlocking`, no thread
- * hop to keep a thread-local alive.
+ * `suspend` function type, so [block] is handed to it directly without a thread hop to keep a
+ * thread-local alive.
  *
  * The transaction itself is bound to the *coroutine context* rather than to a thread, so it
  * survives any dispatcher change inside [block] instead of only working while execution

@@ -4,7 +4,7 @@ import com.azkar.domain.exception.RemembranceNotFoundException
 import com.azkar.testUtils.TestDatabase
 import com.azkar.testUtils.seededRemembrances
 import de.infix.testBalloon.framework.core.testSuite
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -138,11 +138,11 @@ val ExposedRemembranceRepositorySuite by testSuite(
             }
 
             test("unknown IDs are rejected") { repositories ->
-                // AssertJ's `ThrowingCallable` is not a suspend lambda, so the call has to be
-                // bridged back into a coroutine by hand.
-                assertThatThrownBy { runBlocking { repositories.remembrances.markFavorite(404L) } }
+                // AssertJ's `ThrowingCallable` is not a suspend lambda, so execute the suspend call
+                // inside the coroutine test harness and let the exception propagate to the assertion.
+                assertThatThrownBy { runTest { repositories.remembrances.markFavorite(404L) } }
                     .isInstanceOf(RemembranceNotFoundException::class.java)
-                assertThatThrownBy { runBlocking { repositories.remembrances.unmarkFavorite(404L) } }
+                assertThatThrownBy { runTest { repositories.remembrances.unmarkFavorite(404L) } }
                     .isInstanceOf(RemembranceNotFoundException::class.java)
             }
         }

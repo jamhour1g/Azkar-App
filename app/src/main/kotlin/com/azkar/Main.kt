@@ -148,7 +148,7 @@ suspend fun main() {
  * The window title, in the language the app is currently in.
  *
  * Read in the composition rather than resolved once at launch, which is what the original
- * `runBlocking { getString(Res.string.title) }` did and why the title never changed language: the
+ * one-time blocking resource read did and why the title never changed language: the
  * JavaFX original set `stage.setTitle` once in `start()` and had no live switch to miss, but
  * [com.azkar.ui.shell.AzkarAppState.applyLocale] retranslates in place, so the title had to follow.
  *

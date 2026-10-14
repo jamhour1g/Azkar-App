@@ -43,4 +43,6 @@ dependencies {
     // container DSL. The Compose bindings stay in `:app`, which is the only module with a
     // UI.
     implementation(libs.io.insert.koin.koin.core)
+
+    testImplementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.test)
 }
