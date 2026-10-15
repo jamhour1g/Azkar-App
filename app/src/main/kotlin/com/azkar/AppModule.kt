@@ -14,10 +14,12 @@ import com.azkar.ui.library.data.DomainCollectionsGateway
 import com.azkar.ui.library.data.DomainReminderGateway
 import com.azkar.ui.library.data.DomainTagsGateway
 import com.azkar.ui.library.data.TagGateway
+import com.azkar.ui.library.model.CollectionsSnapshot
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationActionRouter
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.NotificationRuntime
+import com.azkar.ui.notifications.ReminderCatalogueSource
 import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationDispatcher
 import com.azkar.ui.notifications.presentation.NotificationPublisher
@@ -147,6 +149,17 @@ val appModule =
         } bind CollectionHomeGateway::class
 
         single<HomeGateway> { DomainHomeGateway(get(), get()) }
+
+        // The reminders screen's own seam over the same gateway. It reads one snapshot and writes
+        // nothing, and giving it the whole library interface for that single call would make it the
+        // one screen that can reach past `CollectionsGateway` by accident — the thing the `bind`
+        // above exists to prevent.
+        single<ReminderCatalogueSource> {
+            val gateway = get<CollectionsGateway>()
+            object : ReminderCatalogueSource {
+                override suspend fun snapshot(): CollectionsSnapshot = gateway.fetchSnapshot()
+            }
+        }
 
         // Under its own seam rather than added to `CollectionsGateway`, because a tag outlives the
         // screens that attach one to a collection: deleting or renaming one is a job the library has

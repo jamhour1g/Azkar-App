@@ -430,15 +430,6 @@ private const val PUBLISHER_TAG = "muslim data"
  */
 private fun String.isPublisherTag(): Boolean = equals(PUBLISHER_TAG, ignoreCase = true)
 
-/**
- * This tag name as it should read in the interface: first letter capitalised, rest untouched.
- *
- * Only the first character is touched, so a name that is already capitalised is left alone and one
- * the user wrote as "mORNING" reads as "MORNING" rather than being silently restyled. Applies to
- * the display locale, so an Arabic or Turkish tag name capitalises the way that locale expects.
- */
-private fun String.capitalized(): String = replaceFirstChar { it.titlecase(Locale.getDefault()) }
-
 /** `LibraryRemembranceLookup.findById`. */
 fun List<Remembrance>.findById(id: Long): Remembrance? = firstOrNull { it.id == id }
 

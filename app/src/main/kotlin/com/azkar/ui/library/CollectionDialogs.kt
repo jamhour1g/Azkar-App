@@ -242,6 +242,24 @@ enum class CollectionEditorMode {
 }
 
 /**
+ * What a [CollectionEditorDraft] is opened with, before the user has touched any of it.
+ *
+ * The five content fields travel together because the three factories in [CollectionEditorDraft.Companion]
+ * all have to supply all five, and passing them one at a time is how a create ends up seeded with the
+ * source's cover. Identity — the mode, the identifier and the language the name is written in — stays on
+ * the constructor, because those three are what make a *create* a create; this is only what was in the
+ * fields when the dialog opened.
+ */
+@Immutable
+private data class CollectionSeed(
+    val name: String,
+    val description: String,
+    val tags: List<String>,
+    val coverImagePath: String?,
+    val translations: List<TranslationEntry>,
+)
+
+/**
  * The half-typed collection behind [CollectionEditorDialog].
  *
  * Held by the screen rather than by the dialog so dismissing the dialog and reopening it for the same
@@ -257,14 +275,10 @@ enum class CollectionEditorMode {
 class CollectionEditorDraft private constructor(
     val mode: CollectionEditorMode,
     val collectionId: Long,
-    initialName: String,
     val nameLocale: Locale,
-    initialDescription: String,
-    initialTags: List<String>,
-    initialCoverImagePath: String?,
-    initialTranslations: List<TranslationEntry>,
+    seed: CollectionSeed,
 ) : TagDraftView {
-    var name: String by mutableStateOf(initialName)
+    var name: String by mutableStateOf(seed.name)
         private set
 
     /**
@@ -274,15 +288,15 @@ class CollectionEditorDraft private constructor(
      * collection, and a rename has to be able to tell a box the user has since rewritten from one they
      * have merely left sitting there. See [submittedTranslations].
      */
-    private val openedWith = initialName
+    private val openedWith = seed.name
 
     /**
      * The wording this draft was opened with, kept whole because [submittedTranslations] has to be
      * able to tell a box the user rewrote from one they did not.
      */
-    private val openedTranslations: List<TranslationEntry> = initialTranslations
+    private val openedTranslations: List<TranslationEntry> = seed.translations
 
-    var description: String by mutableStateOf(initialDescription)
+    var description: String by mutableStateOf(seed.description)
         private set
 
     /**
@@ -298,7 +312,7 @@ class CollectionEditorDraft private constructor(
      * a second copy of the same language would be a field the user fills in only to have it shadowed
      * by the one above it.
      */
-    var translations: List<TranslationEntry> by mutableStateOf(initialTranslations)
+    var translations: List<TranslationEntry> by mutableStateOf(seed.translations)
         private set
 
     /**
@@ -317,7 +331,7 @@ class CollectionEditorDraft private constructor(
      * twice and fail the save. The first spelling the user typed is the one that survives, so their
      * capitalisation is preserved for the chips.
      */
-    override var tags: List<String> by mutableStateOf(initialTags)
+    override var tags: List<String> by mutableStateOf(seed.tags)
         private set
 
     /** What the tag picker is filtering by. View state, but it belongs here so the picker stays dumb. */
@@ -334,7 +348,7 @@ class CollectionEditorDraft private constructor(
      * Set to `null` to go back to the wash, which is a real choice rather than an absent one — hence a
      * nullable field and not a blank string the storage layer would have to interpret.
      */
-    var coverImagePath: String? by mutableStateOf(initialCoverImagePath)
+    var coverImagePath: String? by mutableStateOf(seed.coverImagePath)
         private set
 
     /**
@@ -573,12 +587,15 @@ class CollectionEditorDraft private constructor(
             CollectionEditorDraft(
                 mode = CollectionEditorMode.CREATE,
                 collectionId = NO_COLLECTION_ID,
-                initialName = "",
                 nameLocale = nameLocale,
-                initialDescription = "",
-                initialTags = emptyList(),
-                initialCoverImagePath = null,
-                initialTranslations = emptyList(),
+                seed =
+                    CollectionSeed(
+                        name = "",
+                        description = "",
+                        tags = emptyList(),
+                        coverImagePath = null,
+                        translations = emptyList(),
+                    ),
             )
 
         /**
@@ -592,17 +609,20 @@ class CollectionEditorDraft private constructor(
             CollectionEditorDraft(
                 mode = CollectionEditorMode.EDIT,
                 collectionId = requireId(collection),
-                initialName = collection.name,
                 nameLocale = collection.nameLocale,
-                initialDescription = collection.description.orEmpty(),
-                // Sorted rather than in the set's own order for the same reason the chips are: a
-                // hash-ordered set would reorder the chips every time the user opened the dialog.
-                initialTags =
-                    collection.tags
-                        .map { it.name }
-                        .sortedWith(String.CASE_INSENSITIVE_ORDER),
-                initialCoverImagePath = collection.coverImagePath,
-                initialTranslations = collection.entries(),
+                seed =
+                    CollectionSeed(
+                        name = collection.name,
+                        description = collection.description.orEmpty(),
+                        // Sorted rather than in the set's own order for the same reason the chips are:
+                        // a hash-ordered set would reorder them every time the dialog was opened.
+                        tags =
+                            collection.tags
+                                .map { it.name }
+                                .sortedWith(String.CASE_INSENSITIVE_ORDER),
+                        coverImagePath = collection.coverImagePath,
+                        translations = collection.entries(),
+                    ),
             )
 
         /**
@@ -617,15 +637,18 @@ class CollectionEditorDraft private constructor(
             CollectionEditorDraft(
                 mode = CollectionEditorMode.DUPLICATE,
                 collectionId = requireId(collection),
-                initialName = newName,
                 nameLocale = nameLocale,
-                initialDescription = "",
-                initialTags = emptyList(),
-                initialCoverImagePath = null,
-                // Empty even though the source has some. A duplicate is a new collection with a new
-                // name, and inheriting the source's other languages would leave translations that
-                // describe a passage the user is not editing and cannot see.
-                initialTranslations = emptyList(),
+                seed =
+                    CollectionSeed(
+                        name = newName,
+                        description = "",
+                        tags = emptyList(),
+                        coverImagePath = null,
+                        // Empty even though the source has some. A duplicate is a new collection with a
+                        // new name, and inheriting the source's other languages would leave translations
+                        // that describe a passage the user is not editing and cannot see.
+                        translations = emptyList(),
+                    ),
             )
 
         private fun requireId(collection: RemembranceCollection): Long =

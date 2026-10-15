@@ -34,6 +34,7 @@ import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationActionRouter
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.NotificationRuntime
+import com.azkar.ui.notifications.ReminderCatalogueSource
 import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationPublisher
 import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
@@ -168,6 +169,7 @@ val AppModuleSuite by testSuite("AppModule") {
                     CollectionsGateway::class,
                     HomeGateway::class,
                     TagGateway::class,
+                    ReminderCatalogueSource::class,
                     HttpClient::class,
                     LocationDetector::class,
                     NotificationPreferencesRepository::class,

@@ -2,16 +2,11 @@ package com.azkar.i18n
 
 import java.util.Locale
 
-/** Layout and type choices that belong to a language, configured beside the supported locales. */
-data class LanguageProfile(
-    val locale: Locale,
-    val isRightToLeft: Boolean,
-    val usesArabicTypeface: Boolean,
-)
-
 // The languages the app ships translations for, and the handful of locale questions the UI asks
 // about them. Nothing here holds state, reads storage or knows that Compose exists — it is the
 // vocabulary the rest of the app is written against, so it can be exercised from a plain unit test.
+// The one type in the vocabulary, [LanguageProfile], lives next door in its own file so that this one
+// can be named for what it holds rather than for a single declaration inside it.
 //
 // The *active* language is not here. It is [AzkarAppState.locale] inside the tree, and
 // `Locale.getDefault()` outside it; see [activateLocale] for why the two have to be kept in step.

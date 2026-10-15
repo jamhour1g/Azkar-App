@@ -240,7 +240,10 @@ private fun ColumnScope.AzkarContent(
                     )
                 }
                 entry<AzkarDestination.Notifications> { destination ->
-                    ReminderManagerScreen(initialCollectionId = destination.initialCollectionId)
+                    ReminderManagerScreen(
+                        initialCollectionId = destination.initialCollectionId,
+                        onClose = navigator::back,
+                    )
                 }
                 collectionEntries(navigator, showToast, reminders, catalogue)
                 tagsEntry(navigator, showToast, library)

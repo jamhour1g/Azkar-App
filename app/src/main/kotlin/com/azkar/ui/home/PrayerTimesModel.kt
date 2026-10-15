@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.nextPrayerLabel
+import com.azkar.ui.components.AzkarClock
 import com.azkar.ui.notifications.PrayerLocationSettings
 import com.azkar.ui.notifications.PrayerTimeCalculator
 import org.jetbrains.compose.resources.getString
@@ -14,7 +15,6 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /** The five fixed prayers, in the order `PrayerTimesController.bindPrayerRows` inserted them. */
@@ -68,8 +68,15 @@ class PrayerTimesModel(
     private val uiLocale: Locale,
     private val location: PrayerLocationSettings,
 ) {
-    private val timeFormatter12 = DateTimeFormatter.ofPattern("hh:mm a", uiLocale)
-    private val timeFormatter24 = DateTimeFormatter.ofPattern("HH:mm")
+    /**
+     * How a prayer time is written, once, for both halves of its row.
+     *
+     * The row used to print the same prayer twice in two conventions: `5:12 AM` as the subtitle and
+     * `17:12` as the value. Whichever of the two the eye landed on first decided which one the reader
+     * believed, and a reader who believed the 24-hour half had no reason to believe the other. There
+     * is one clock in the app now ([AzkarClock]) and this row shows it once.
+     */
+    private val timeFormatter = AzkarClock.timeFormatter(uiLocale)
 
     /**
      * Empty until [load] has resolved the localized prayer names and times.
@@ -117,8 +124,8 @@ class PrayerTimesModel(
                 PrayerRowState(
                     key = prayer.key,
                     name = prayer.name,
-                    timeLabel = if (isNext) nextPrayerLabel else formatTime(time),
-                    value = timeFormatter24.format(time),
+                    timeLabel = if (isNext) nextPrayerLabel else "",
+                    value = timeFormatter.format(time),
                     isNext = isNext,
                     notificationsEnabled = false,
                 )
@@ -145,8 +152,6 @@ class PrayerTimesModel(
                 ?: moments.first()
         return NextPrayer(nearest.second, Duration.between(now, nearest.first))
     }
-
-    private fun formatTime(time: LocalTime): String = timeFormatter12.format(time)
 
     private fun formatDuration(duration: Duration): String {
         val totalSeconds = maxOf(0L, duration.seconds)

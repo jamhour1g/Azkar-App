@@ -73,7 +73,7 @@ private const val CHEVRON_ROTATION_MILLIS = 140
  * instead of holding [fieldWidth], which would otherwise override the weight.
  */
 @Composable
-internal fun <T> AzkarDropdown(
+fun <T> AzkarDropdown(
     selected: T?,
     options: List<T>,
     label: @Composable (T) -> String,

@@ -7,7 +7,7 @@
     <string name="azkarLibrary">مكتبة الاذكار</string>
     <string name="home">الرئيسية</string>
     <string name="reminderManagerTitle">التذكيرات</string>
-    <string name="reminderManagerSubtitle">أنشئ قائمة موحدة للمجموعات والأذكار الفردية، وأدر تنبيهات الصلاة.</string>
+    <string name="reminderManagerSubtitle">أنشئ قائمة موحدة للمجموعات والأذكار الفردية.</string>
     <!-- Tray menu -->
     <string name="trayMenuOpen">فتح الأذكار</string>
     <string name="trayMenuPause">إيقاف التذكيرات مؤقتًا</string>
@@ -511,8 +511,6 @@
     </plurals>
 
     <string name="notificationDismiss">إخفاء</string>
-    <string name="notificationPresentationTitle">المظهر</string>
-    <string name="notificationPresentationSubtitle">كيف يظهر التذكير عندما لا تكون نافذة التطبيق في المقدمة.</string>
     <string name="notificationChannelSystem">أرسِل أيضًا إلى سطح المكتب</string>
     <string name="notificationChannelSystemNote">معطّل افتراضيًا، لأن سطح المكتب يرسمه بأسلوبه الخاص. فعّله فقط إذا أردت رؤية التذكير في مركز الإشعارات أيضًا.</string>
     <string name="notificationDuration">يظهر على الشاشة %1$d ثانية</string>
@@ -523,4 +521,115 @@
     <string name="notificationPlacementBottomEnd">أسفل اليمين</string>
     <string name="notificationStackSize">اعرض %1$d في آن واحد</string>
     <string name="notificationOverlayPolicy">تتراكم التذكيرات في الزاوية التي تختارها، الأحدث الأقرب إلى الزاوية. ويحلّ التذكير الجديد محل الأقدم عند بلوغ الحد، ولا يتكرر التذكير المطابق الموجود على الشاشة.</string>
+
+    <!-- Reminders screen -->
+    <string name="reminderManagerBack">رجوع</string>
+    <!-- Live summary at the top of the reminders screen -->
+    <string name="reminderManagerHeroTitle">القادم</string>
+    <string name="reminderManagerHeroQueueLabel">الذكرى القادمة</string>
+    <string name="reminderManagerHeroQueueOff">الطابور متوقف</string>
+    <string name="reminderManagerHeroQueueEmpty">اختر مجموعة أو ذكرى لملء الطابور</string>
+    <string name="reminderManagerHeroCountdownHours">بعد %1$dh و%2$dm</string>
+    <string name="reminderManagerHeroCountdownDays">بعد %1$d يوم و%2$d ساعة</string>
+    <string name="reminderManagerHeroCountdownMinutes">بعد %1$dm</string>
+    <string name="reminderManagerHeroCountdownNow">الآن</string>
+    <string name="reminderManagerHeroWindow">من %1$s إلى %2$s</string>
+    <!-- Reminders screen: sources -->
+    <string name="reminderManagerSourcesTitle">المصادر</string>
+    <string name="reminderManagerSourcesHint">المجموعات والأذكار التي يختار منها الطابور.</string>
+    <string name="reminderManagerSourcesEmpty">لا توجد مجموعات بعد.</string>
+    <string name="reminderManagerSearchPlaceholder">ابحث في الأذكار</string>
+    <string name="reminderManagerPassagesTitle">الأذكار</string>
+    <string name="reminderManagerPassagesEmpty">لا يطابق أي ذكرٍ بحثك.</string>
+    <string name="reminderManagerPassagesTruncated">تُعرض أول %1$d نتيجة. ضيّق البحث للوصول إلى الباقي.</string>
+    <string name="reminderManagerPassageUnnamed">ذكرى %1$d</string>
+    <string name="reminderManagerDropChance">احتمال التخطي</string>
+    <!-- Reminders screen: manual order -->
+    <string name="reminderManagerManualOrderTitle">الترتيب اليدوي</string>
+    <string name="reminderManagerManualOrderHint">يسير الطابور على هذه القائمة من أعلى إلى أسفل ثم يبدأ من جديد.</string>
+    <string name="reminderManagerManualOrderEmpty">اختر بعض الأذكار أولًا لتظهر هنا.</string>
+    <string name="reminderManagerMoveUp">تحريك لأعلى</string>
+    <string name="reminderManagerMoveDown">تحريك لأسفل</string>
+    <!-- Settings screen -->
+    <!-- Tabs -->
+    <string name="settingsTabGeneral">عام</string>
+    <string name="settingsTabNotifications">التنبيهات</string>
+    <string name="settingsTabPrayer">الصلاة</string>
+    <!-- Settings screen: notifications tab -->
+    <!-- Settings screen: the reminder queue's schedule, which moved off the reminders page -->
+    <string name="reminderManagerScheduleTitle">الجدولة</string>
+    <string name="reminderManagerScheduleHint">متى يُعرض ذكرى من طابورك، وكم مرة.</string>
+    <string name="reminderManagerQueueEnable">طابور الأذكار</string>
+    <string name="reminderManagerQueueEnableHint">فعّله لبدء عرض أذكار من المصادر أدناه.</string>
+    <string name="reminderManagerQueueModeLabel">الترتيب</string>
+    <string name="reminderManagerQueueModeManual">يدوي</string>
+    <string name="reminderManagerQueueModeRandom">عشوائي</string>
+    <string name="reminderManagerQueueModeWeighted">مرجّح</string>
+    <string name="reminderManagerQueueModeWeightedHint">كلما زاد احتمال التخطي زاد احتمال تجاوز الذكرى.</string>
+    <string name="reminderManagerQueueDropChance">احتمال التخطي الافتراضي</string>
+    <string name="reminderManagerQueueIntervalLabel">كل</string>
+    <string name="reminderManagerQueueCadenceLabel">التكرار</string>
+    <string name="reminderManagerQueueCadenceInterval">على فاصل</string>
+    <string name="reminderManagerQueueCadenceContinuous">مستمر بلا انقطاع</string>
+    <string name="reminderManagerQueueCadenceContinuousHint">يستمر طوال اليوم في الأيام التي اخترتها. في هذا الوضع لا يوجد وقت بداية أو نهاية.</string>
+    <string name="reminderManagerQueueDaysLabel">الأيام</string>
+    <string name="reminderManagerQueueDaysHint">يبقى يوم واحد على الأقل مفعّلًا، فلا تتوقف القائمة إلى الأبد.</string>
+    <string name="reminderManagerDayMonday">الاثنين</string>
+    <string name="reminderManagerDayTuesday">الثلاثاء</string>
+    <string name="reminderManagerDayWednesday">الأربعاء</string>
+    <string name="reminderManagerDayThursday">الخميس</string>
+    <string name="reminderManagerDayFriday">الجمعة</string>
+    <string name="reminderManagerDaySaturday">السبت</string>
+    <string name="reminderManagerDaySunday">الأحد</string>
+    <string name="reminderManagerQueueWindowLabel">الفترة</string>
+    <string name="reminderManagerQueueWindowStart">من</string>
+    <string name="reminderManagerQueueWindowEnd">إلى</string>
+    <string name="reminderManagerQueueWindowHint">الفترات الفائتة تُتجاوز ولا تُعاد دفعة واحدة.</string>
+    <string name="settingsNotificationsHint">كيف يصلك التذكير عندما لا تكون نافذة الأذكار في المقدمة.</string>
+    <string name="settingsNotificationOverlayTitle">على الشاشة</string>
+    <string name="settingsNotificationOverlayHint">كيف يُرسم التذكير فوق بقية نوافذك.</string>
+    <string name="settingsNotificationDesktopTitle">إشعارات سطح المكتب</string>
+    <string name="settingsNotificationStartupTitle">شغّل أذكار عند تسجيل الدخول</string>
+    <string name="settingsNotificationStartupHint">يسجّل أذكار مع سطح المكتب ليعمل عند تسجيل دخولك.</string>
+    <string name="settingsNotificationStartupFailed">تعذّر تحديث إعداد بدء التشغيل.</string>
+    <!-- Settings screen: prayer tab -->
+    <string name="settingsPrayerTitle">أوقات الصلاة</string>
+    <string name="settingsPrayerHint">المصدر الذي تُحسب منه أوقات الصلاة. يُفعَّل أو يُعطَّل كل وقت من الشاشة الرئيسية.</string>
+    <string name="settingsPrayerCityLabel">المدينة أو المكان</string>
+    <string name="settingsPrayerLatitudeLabel">خط العرض</string>
+    <string name="settingsPrayerLongitudeLabel">خط الطول</string>
+    <string name="settingsPrayerZoneLabel">المنطقة الزمنية</string>
+    <string name="settingsPrayerZoneHint">المنطقة والمدينة، مثل Europe/London.</string>
+    <string name="settingsPrayerMethodLabel">طريقة الحساب</string>
+    <string name="settingsPrayerSave">حفظ الموقع</string>
+    <string name="settingsPrayerDetect">تحديد تلقائي</string>
+    <string name="settingsPrayerSaved">تم حفظ الموقع</string>
+    <string name="settingsPrayerDetected">تم تحديد %1$s</string>
+    <string name="settingsPrayerInvalidCoordinates">أدخل إحداثيات صحيحة.</string>
+    <string name="settingsPrayerInvalidZone">أدخل منطقة زمنية صحيحة.</string>
+    <string name="settingsPrayerDetectFailed">تعذّر تحديد موقعك.</string>
+    <!-- Steppers. Symbols, not words: these sit on the trailing edge of a row that already names the value. -->
+    <string name="settingsStepperDecrease">أقل</string>
+    <string name="settingsStepperIncrease">أكثر</string>
+    <plurals name="reminderManagerQueueIntervalValue">
+        <item quantity="zero">%1$d دقيقة</item>
+        <item quantity="one">دقيقة واحدة</item>
+        <item quantity="two">دقيقتان</item>
+        <item quantity="few">%1$d دقائق</item>
+        <item quantity="many">%1$d دقيقة</item>
+        <item quantity="other">%1$d دقيقة</item>
+    </plurals>
+    <plurals name="reminderManagerPassageCount">
+        <item quantity="zero">لا مصادر</item>
+        <item quantity="one">مصدر واحد</item>
+        <item quantity="two">مصدران</item>
+        <item quantity="few">%1$d مصادر</item>
+        <item quantity="many">%1$d مصدرًا</item>
+        <item quantity="other">%1$d مصدر</item>
+    </plurals>
+    <string name="reminderManagerTimePickerTitle">اختر وقتًا</string>
+    <string name="reminderManagerTimePickerClock">فتح قرص الساعة</string>
+    <string name="reminderManagerTimePickerToggleDisplay">اكتبه بدلًا من ذلك</string>
+    <string name="reminderManagerTimePickerConfirm">اعتماد هذا الوقت</string>
+    <string name="reminderManagerTimePickerCancel">إلغاء</string>
 </resources>

@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.nextPrayerIn
-import com.azkar.generated.resources.nextPrayerLabel
 import com.azkar.generated.resources.prayerNotification
 import com.azkar.generated.resources.prayerNotificationsShort
 import com.azkar.generated.resources.prayerTimesLocation
@@ -461,23 +460,7 @@ private fun PrayerTableRow(
             accent = accent,
             modifier = Modifier.width(LEADING_WIDTH),
         )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = row.name,
-                color = colors.textPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = if (row.isNext) stringResource(Res.string.nextPrayerLabel) else row.timeLabel,
-                color = colors.textSecondary,
-                fontSize = 12.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        PrayerRowLabel(row = row, modifier = Modifier.weight(1f))
         Text(
             text = row.value,
             color = colors.textPrimary,
@@ -497,6 +480,43 @@ private fun PrayerTableRow(
                         onNotificationToggled(row.key, !row.notificationsEnabled)
                     },
         )
+    }
+}
+
+/**
+ * A prayer's name, and the one line of context under it.
+ *
+ * Only the next prayer has a subtitle, because only the next prayer has anything to say that its
+ * time does not. The other four used to print their time here as well as in the value beside it — once
+ * as `5:12 AM` and once as `17:12` — and a row showing the same instant twice in two conventions is a
+ * row whose reader has to guess which of the two to trust. Rendering conditionally rather than as an
+ * empty string keeps the four ordinary rows one line tall, so the names stay on a single baseline down
+ * the card; an empty `Text` would have kept the line and left them sitting a line below their own.
+ */
+@Composable
+private fun PrayerRowLabel(
+    row: PrayerRowState,
+    modifier: Modifier = Modifier,
+) {
+    val colors = AzkarTheme.colors
+    Column(modifier = modifier) {
+        Text(
+            text = row.name,
+            color = colors.textPrimary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (row.timeLabel.isNotBlank()) {
+            Text(
+                text = row.timeLabel,
+                color = colors.textSecondary,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

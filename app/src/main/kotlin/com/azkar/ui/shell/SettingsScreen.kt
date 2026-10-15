@@ -1,15 +1,11 @@
 package com.azkar.ui.shell
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -19,30 +15,44 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.azkar.generated.resources.*
-import com.azkar.i18n.displayNameIn
-import com.azkar.i18n.isSameLanguageAs
-import com.azkar.i18n.supportedLocales
-import com.azkar.ui.components.AzkarCard
-import com.azkar.ui.components.AzkarFilterChip
+import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.settingsBack
+import com.azkar.generated.resources.settingsSubtitle
+import com.azkar.generated.resources.settingsTabGeneral
+import com.azkar.generated.resources.settingsTabNotifications
+import com.azkar.generated.resources.settingsTabPrayer
+import com.azkar.generated.resources.settingsTitle
 import com.azkar.ui.components.AzkarIcons
-import com.azkar.ui.components.pressableClick
+import com.azkar.ui.components.AzkarOutlinedButton
+import com.azkar.ui.components.AzkarTabStrip
+import com.azkar.ui.notifications.LocationDetector
+import com.azkar.ui.notifications.NotificationPreferencesRepository
+import com.azkar.ui.notifications.NotificationSettingsState
+import com.azkar.ui.notifications.PrayerLocationSettings
+import com.azkar.ui.notifications.ReminderQueueConfig
+import com.azkar.ui.notifications.StartupRegistration
+import com.azkar.ui.notifications.presentation.NotificationPresentationSettings
 import com.azkar.ui.preview.previewAzkarAppState
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
-import java.util.Locale
+import org.koin.compose.koinInject
 
 /**
  * How wide the settings column is allowed to get.
@@ -56,17 +66,30 @@ import java.util.Locale
  */
 private val SETTINGS_MAX_WIDTH = 760.dp
 
+private const val TAB_GENERAL = 0
+
+private const val TAB_NOTIFICATIONS = 1
+
+private const val TAB_PRAYER = 2
+
 /**
- * The screen the gear opens, holding the two preferences that used to be scattered.
+ * The screen the gear opens, holding the app-level preferences.
  *
  * The theme lived on a sun/moon in the header and the language in a modal that could not show both, so
  * neither read as a setting and there was nowhere to put a third. Both live here now, which is why
  * this is a [AzkarDestination] rather than the dialog it replaced: a modal has nowhere to grow, and
  * it is dismissed by the very click that changes its contents.
  *
- * State arrives rather than being held here. Both values are already on [AzkarAppState] — they have to
- * be, since they outlive the window — so handing this composable the state plus the one callback per
- * value keeps it with no fields of its own and makes the screen's whole contract its signature.
+ * It is a tabbed page now because it outgrew one column. Appearance and language were the whole screen
+ * at 760dp; the notification presentation settings and the prayer location that the reminders screen
+ * used to carry make roughly double that, and a single scroll that long buries the language picker
+ * under two cards of unrelated switches. Three tabs is the point at which one column is no longer the
+ * honest shape of the page — two would still scroll comfortably.
+ *
+ * State arrives rather than being held here. The theme and locale are already on [AzkarAppState] — they
+ * have to be, since they outlive the window — and the notification and prayer values come from the same
+ * [NotificationPreferencesRepository] the runtime reads, so this composable holds no field of its own
+ * beyond which tab is showing.
  *
  * The layout is the dashboard's: a scrolling box over one full-width column, padded by the same screen
  * tokens, so settings sits at the same measure as home and library instead of reading as a dialog that
@@ -78,6 +101,9 @@ fun SettingsScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val notificationState = rememberNotificationSettingsState()
+    val notificationValues = rememberNotificationSettingsValues()
+    var selectedTab by rememberSaveable { mutableStateOf(TAB_GENERAL) }
     val colors = AzkarTheme.colors
     Box(
         modifier =
@@ -100,23 +126,137 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
         ) {
             SettingsHeader(onClose = onClose)
-            ThemeSection(
-                selected = state.themePreference,
-                onSelect = state::selectTheme,
-            )
-            LanguageSection(
-                selected = state.locale,
-                onSelect = state::applyLocale,
-            )
+            AzkarTabStrip(tabs = settingsTabs(), selectedIndex = selectedTab, onSelect = { selectedTab = it })
+            SettingsTabBody(selectedTab, state, notificationValues, notificationState)
         }
     }
+}
+
+/**
+ * The three sections, named by index.
+ *
+ * Order is General, Notifications, Prayer: the first two are preferences about the app and its
+ * reminders, the third is a location the app reads from and belongs to no other setting, so it reads
+ * as the odd one out at the end rather than interrupting the two that are related.
+ */
+@Composable
+private fun settingsTabs(): List<String> =
+    listOf(
+        stringResource(Res.string.settingsTabGeneral),
+        stringResource(Res.string.settingsTabNotifications),
+        stringResource(Res.string.settingsTabPrayer),
+    )
+
+/**
+ * Which tab is showing, and the state that tab needs.
+ *
+ * Split out purely for length: the routing itself is three lines, but inlining it pushed
+ * [SettingsScreen] past the point where it was readable as a layout. Nothing here holds state — the
+ * tab index stays in the caller because it is the thing the tab strip writes to.
+ */
+@Composable
+private fun SettingsTabBody(
+    selectedTab: Int,
+    state: AzkarAppState,
+    values: NotificationSettingsValues,
+    notificationState: NotificationSettingsState,
+    modifier: Modifier = Modifier,
+) {
+    when (selectedTab) {
+        TAB_NOTIFICATIONS ->
+            SettingsNotificationsTab(
+                queue = values.queue,
+                presentation = values.presentation,
+                startOnLogin = values.startOnLogin,
+                settings = notificationState,
+                modifier = modifier,
+            )
+        TAB_PRAYER ->
+            SettingsPrayerTab(
+                location = values.prayerLocation,
+                settings = notificationState,
+                modifier = modifier,
+            )
+        else -> SettingsGeneralTab(state = state, modifier = modifier)
+    }
+}
+
+/**
+ * The holder behind the two moved tabs.
+ *
+ * Both of the platform capabilities are injected here rather than taken from a parameter: the settings
+ * page is the only screen that needs them, and a screen that is handed a detector it does not own
+ * would let a caller pass one that is not the one the runtime uses. They are still nullable on the
+ * holder so a preview host with no network and no login manager still draws every row.
+ */
+@Composable
+private fun rememberNotificationSettingsState(): NotificationSettingsState {
+    val preferences = koinInject<NotificationPreferencesRepository>()
+    val locationDetector = koinInject<LocationDetector>()
+    val startupRegistration = koinInject<StartupRegistration>()
+    val scope = rememberCoroutineScope()
+    return remember(preferences, locationDetector, startupRegistration) {
+        NotificationSettingsState(
+            scope = scope,
+            preferences = preferences,
+            locationDetector = locationDetector,
+            startupRegistration = startupRegistration,
+        )
+    }
+}
+
+/**
+ * Everything persisted on the moved tabs, snapshotted into one value.
+ *
+ * Four `collectAsState` calls would have left four locals to thread by hand into the tab bodies, and
+ * a single immutable holder means a tab only recomposes when the settings it actually reads change —
+ * the prayer tab does not recompose when the start-on-login flag is toggled on the one beside it.
+ *
+ * [queue] joined them when the reminder schedule card moved here from the reminders screen. It is the
+ * one value on this page the reminders screen also draws, which is the point of reading it from the
+ * repository rather than from a local: the summary at the top of that screen and the card at the top
+ * of this one are two readings of one record, and neither holds a copy.
+ */
+@Immutable
+private data class NotificationSettingsValues(
+    val queue: ReminderQueueConfig,
+    val prayerLocation: PrayerLocationSettings,
+    val startOnLogin: Boolean,
+    val presentation: NotificationPresentationSettings,
+)
+
+@Composable
+private fun rememberNotificationSettingsValues(): NotificationSettingsValues {
+    val preferences = koinInject<NotificationPreferencesRepository>()
+    val queue by preferences.queue.collectAsState()
+    val prayerLocation by preferences.prayerLocation.collectAsState()
+    val startOnLogin by preferences.startOnLogin.collectAsState()
+    val presentation by preferences.presentation.collectAsState()
+    return NotificationSettingsValues(queue, prayerLocation, startOnLogin, presentation)
 }
 
 @Preview
 @Composable
 private fun SettingsScreenPreview() {
     AzkarThemePreview {
-        SettingsScreen(state = previewAzkarAppState(), onClose = {})
+        // Assembled from the parts rather than by calling [SettingsScreen], because that composable
+        // reaches Koin for the moved tabs' holder and a preview has no container to resolve it
+        // against. The two tabs below it each carry their own preview for the same reason.
+        Column(
+            modifier =
+                Modifier
+                    .widthIn(max = SETTINGS_MAX_WIDTH)
+                    .padding(AzkarSpacing.screenPaddingHorizontal),
+            verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
+        ) {
+            SettingsHeader(onClose = {})
+            AzkarTabStrip(
+                tabs = listOf("General", "Notifications", "Prayer"),
+                selectedIndex = TAB_GENERAL,
+                onSelect = {},
+            )
+            SettingsGeneralTab(state = previewAzkarAppState())
+        }
     }
 }
 
@@ -170,226 +310,6 @@ private fun SettingsHeader(
                 fontSize = 13.sp,
             )
         }
-        OutlinedButton(
-            text = stringResource(Res.string.settingsBack),
-            onClick = onClose,
-        )
-    }
-}
-
-/**
- * The theme, as the three options rather than a toggle.
- *
- * A toggle has to answer "what does pressing this do?" from the glyph alone, and it cannot offer the
- * third option at all — which is how [ThemePreference.SYSTEM], still the launch default, became
- * unreachable once the bar stopped cycling through it. A named choice in a row of three answers the
- * question with the label instead, which is also what lets the system option exist honestly: "System"
- * is not a glyph anyone would have recognised on its own.
- *
- * The glyphs are the header's, unchanged. They were fine; what could not carry the meaning was a single
- * one of them standing for the whole preference.
- */
-@Composable
-private fun ThemeSection(
-    selected: ThemePreference,
-    onSelect: (ThemePreference) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    SettingsCard(
-        title = stringResource(Res.string.settingsThemeHeader),
-        body = stringResource(Res.string.settingsThemeBody),
-        modifier = modifier,
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ThemeOption(
-                preference = ThemePreference.SYSTEM,
-                label = stringResource(Res.string.settingsThemeSystem),
-                icon = AzkarIcons.Compass,
-                selected = selected,
-                onSelect = onSelect,
-            )
-            ThemeOption(
-                preference = ThemePreference.LIGHT,
-                label = stringResource(Res.string.settingsThemeLight),
-                icon = AzkarIcons.Sun,
-                selected = selected,
-                onSelect = onSelect,
-            )
-            ThemeOption(
-                preference = ThemePreference.DARK,
-                label = stringResource(Res.string.settingsThemeDark),
-                icon = AzkarIcons.Moon,
-                selected = selected,
-                onSelect = onSelect,
-            )
-        }
-    }
-}
-
-/**
- * One theme choice, from the same two parts as the header's toggle: a glyph and now a word for it.
- *
- * [AzkarFilterChip] rather than `PillToggle` because the difference has to be unmistakable. PillToggle
- * marks the selection by tinting its background, which reads as a hover — and here the whole page
- * repaints underneath the user's finger, so a tint is exactly the kind of change that gets mistaken for
- * the palette moving instead of the selection.
- */
-@Composable
-private fun ThemeOption(
-    preference: ThemePreference,
-    label: String,
-    icon: ImageVector,
-    selected: ThemePreference,
-    onSelect: (ThemePreference) -> Unit,
-) {
-    AzkarFilterChip(
-        text = label,
-        selected = preference == selected,
-        onClick = { onSelect(preference) },
-        leadingIcon = icon,
-    )
-}
-
-/**
- * The language, as a list rather than a dropdown.
- *
- * Two options behind a dropdown is two clicks and a menu to learn for the sake of a setting people
- * change once, and the list has room for the one thing the dropdown would have had to abbreviate: which
- * language is current. Picking applies immediately, so there is no OK to press and no way to leave
- * having changed nothing — the dialog had both, and both were ways to walk away from a decision.
- *
- * Each option is named by its endonym via [displayNameIn] against the *active* locale rather than
- * translated, which is the one piece of self-description a language list can give that a localised
- * label cannot: "English" written in Arabic is a claim about the option, and "English" written in
- * English is a claim about the reader.
- */
-@Composable
-private fun LanguageSection(
-    selected: Locale,
-    onSelect: (Locale) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val current = AzkarTheme.locale
-    SettingsCard(
-        title = stringResource(Res.string.settingsLanguageHeader),
-        body = stringResource(Res.string.settingsLanguageBody),
-        modifier = modifier,
-    ) {
-        supportedLocales.forEach { candidate ->
-            LanguageRow(
-                label = candidate.displayNameIn(current),
-                selected = candidate.isSameLanguageAs(selected),
-                onClick = { onSelect(candidate) },
-            )
-        }
-    }
-}
-
-/**
- * One language, kept on the fill the dialog gave it.
- *
- * A surface of its own rather than a bare list row, because these rows sit *inside* a card: transparent
- * ones leave nothing to aim at against a background that already reads as a surface. The selection
- * changes weight and colour as well as the fill, since the fill alone is a 5% shift between the two
- * palettes and has to survive being read at a glance.
- */
-@Composable
-private fun LanguageRow(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = AzkarTheme.colors
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(if (selected) colors.highlight else Color.Transparent)
-                .border(
-                    1.dp,
-                    if (selected) colors.primary.copy(alpha = 0.45f) else colors.border,
-                    RoundedCornerShape(10.dp),
-                ).pressableClick(scale = 1f, onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            color = if (selected) colors.primaryStrong else colors.textPrimary,
-            fontSize = 13.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-/** A titled group: what it is called, one line saying what it does, then the control itself. */
-@Composable
-private fun SettingsCard(
-    title: String,
-    body: String,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    val colors = AzkarTheme.colors
-    AzkarCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        contentPadding = AzkarSpacing.xl,
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = title,
-                color = colors.textPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = body,
-                color = colors.textSecondary,
-                fontSize = 12.sp,
-            )
-            Spacer(Modifier.height(6.dp))
-            content()
-        }
-    }
-}
-
-/**
- * The header's way out, outlined rather than filled.
- *
- * Leaving a screen is the default outcome, not the thing the user came to do, so it does not get the
- * primary button's fill — the same reasoning as the library's "Back to dashboard" sitting in its empty
- * state rather than in the toolbar.
- */
-@Composable
-private fun OutlinedButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = AzkarTheme.colors
-    Box(
-        modifier =
-            modifier
-                // The default shrink rather than the tint-only a large surface gets: this is a
-                // button-sized outline, and its border is the whole reason it reads as one.
-                .pressableClick(onClick = onClick)
-                .clip(RoundedCornerShape(10.dp))
-                .border(1.dp, colors.border, RoundedCornerShape(10.dp))
-                .padding(horizontal = 14.dp, vertical = 9.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            color = colors.textSecondary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-        )
+        AzkarOutlinedButton(text = stringResource(Res.string.settingsBack), onClick = onClose)
     }
 }

@@ -342,6 +342,101 @@ interface CollectionMembershipGateway {
 }
 
 /**
+ * Writing a collection, and the cover image that goes with it.
+ *
+ * A seventh concern, split for the same reason as the other six: the collection dialogs are the only
+ * caller of any of this, and the shelf screen and the member picker never create, edit, duplicate or
+ * delete a row. Handing either of them eight write methods it would refuse to call is the shape of a
+ * dependency that quietly grows, because nothing stops the next method from being added to the same
+ * place.
+ *
+ * Supertype of [CollectionsGateway] rather than a sibling, for the reason given on
+ * [CollectionMembershipGateway]: Kotlin rejects an intersection type on a constructor parameter, and
+ * every state class, preview and fixture already takes one gateway argument.
+ *
+ * Every method returns the collection as stored, or the name of the file the cover now lives under,
+ * rather than nothing. That is what lets the dialog seed its next open from what was actually
+ * written instead of from what it hoped it wrote.
+ */
+interface CollectionWriteGateway {
+/**
+     * Creates a collection and returns it.
+     *
+     * [tagNames] are resolved to real tags on the way in, creating any that do not exist yet, so a
+     * caller types what it means rather than looking up an id first. [coverImagePath] is the name of a
+     * file the app already owns — see [storeCoverImage] — or `null` for the generated wash.
+     */
+    suspend fun createCollection(
+        name: String,
+        description: String?,
+        tagNames: Collection<String>,
+        coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair> = emptyMap(),
+        nameLocale: Locale = Locale.ENGLISH,
+    ): RemembranceCollection
+
+/**
+     * Writes every editable field of a collection and returns it as stored.
+     *
+     * Takes the whole desired state rather than only what changed: the editor dialog opens seeded with
+     * the collection's current values, so "leave the cover alone" and "remove the cover" are both
+     * ordinary values of [coverImagePath] rather than a tri-state the signature would have to invent
+     * for them.
+     */
+    suspend fun editCollection(
+        id: Long,
+        name: String,
+        description: String?,
+        tagNames: Collection<String>,
+        coverImagePath: String?,
+        translations: Map<Locale, LocalizedPair>? = null,
+        nameLocale: Locale? = null,
+        tagLocale: Locale? = null,
+    ): RemembranceCollection
+
+/**
+     * Takes a copy of [source] into the app's own cover storage and returns the name to store.
+     *
+     * Separate from [createCollection] and [editCollection] because the file has to be copied before
+     * anything references it — a collection pointing at a file the app does not own would break the
+     * moment the user moved or deleted the original — and because the dialog wants the copy in hand
+     * while it is still open, so it can show the picture it is about to save.
+     */
+    suspend fun storeCoverImage(source: Path): String
+
+/** Pins a collection to the top of the shelf, or unpins it, returning it as stored. */
+    suspend fun setCollectionPinned(
+        id: Long,
+        pinned: Boolean,
+    ): RemembranceCollection
+
+/**
+     * Stars a collection the user comes back to, or takes the star off, returning it as stored.
+     *
+     * Named for its subject rather than simply `setFavorite` because [setFavorite] above already
+     * means the same word about a *remembrance*, and two favourites in one interface — one starred
+     * passage, one starred collection — is exactly the pair of names that gets a caller wrong.
+     */
+    suspend fun setCollectionFavorite(
+        id: Long,
+        favorite: Boolean,
+    ): RemembranceCollection
+
+/** Copies a collection into a new one and returns the copy. */
+    suspend fun duplicateCollection(
+        id: Long,
+        newName: String,
+        nameLocale: Locale = Locale.ENGLISH,
+    ): RemembranceCollection
+
+/** Deletes a collection, and the cover image it owned if it had one. */
+    suspend fun deleteCollection(id: Long)
+
+/** Records that the collection was opened just now, so the shelf can lead with it. */
+    suspend fun touchCollectionOpened(id: Long)
+}
+
+/**
  * Everything the library needs from the database, behind one injectable interface.
  *
  * The screen used to reach for the domain services directly from inside its state mutators, which
@@ -353,14 +448,19 @@ interface CollectionMembershipGateway {
  * That is what lets the state layer tell "added three" from "added nothing because they were already
  * members" and say so, instead of reloading the shelf to find out.
  *
- * Extends [CollectionProgressGateway], [CollectionTransferGateway], [CollectionHomeGateway],
- * [CollectionReminderGateway] and [CollectionMembershipGateway]: how many times a passage has been
- * said, what can be brought in from another machine, which collection the Home screen leads with,
- * when it comes round again and how its contents are edited are all part of what the library needs
- * from the database, and having the state classes take one dependency rather than six is worth more
- * than a longer list of method names on one interface.
+ * Extends the six concern interfaces above it — [CollectionWriteGateway],
+ * [CollectionProgressGateway], [CollectionTransferGateway], [CollectionHomeGateway],
+ * [CollectionReminderGateway] and [CollectionMembershipGateway]: creating and editing a collection,
+ * how many times a passage has been said, what can be brought in from another machine, which
+ * collection the Home screen leads with, when it comes round again and how its contents are edited
+ * are all part of what the library needs from the database, and having the state classes take one
+ * dependency rather than seven is worth more than a longer list of method names on one interface.
+ *
+ * What is left here is the catalogue itself: read the shelf, mark a passage, write a passage's texts,
+ * take a passage away. Those four have no narrower caller to be split out for, so they stay.
  */
 interface CollectionsGateway :
+    CollectionWriteGateway,
     CollectionProgressGateway,
     CollectionTransferGateway,
     CollectionHomeGateway,
@@ -391,82 +491,6 @@ interface CollectionsGateway :
 
     /** Permanently removes a remembrance and all of its collection memberships. */
     suspend fun deleteRemembrance(id: Long)
-
-    /**
-     * Creates a collection and returns it.
-     *
-     * [tagNames] are resolved to real tags on the way in, creating any that do not exist yet, so a
-     * caller types what it means rather than looking up an id first. [coverImagePath] is the name of a
-     * file the app already owns — see [storeCoverImage] — or `null` for the generated wash.
-     */
-    suspend fun createCollection(
-        name: String,
-        description: String?,
-        tagNames: Collection<String>,
-        coverImagePath: String?,
-        translations: Map<Locale, LocalizedPair> = emptyMap(),
-        nameLocale: Locale = Locale.ENGLISH,
-    ): RemembranceCollection
-
-    /**
-     * Writes every editable field of a collection and returns it as stored.
-     *
-     * Takes the whole desired state rather than only what changed: the editor dialog opens seeded with
-     * the collection's current values, so "leave the cover alone" and "remove the cover" are both
-     * ordinary values of [coverImagePath] rather than a tri-state the signature would have to invent
-     * for them.
-     */
-    suspend fun editCollection(
-        id: Long,
-        name: String,
-        description: String?,
-        tagNames: Collection<String>,
-        coverImagePath: String?,
-        translations: Map<Locale, LocalizedPair>? = null,
-        nameLocale: Locale? = null,
-        tagLocale: Locale? = null,
-    ): RemembranceCollection
-
-    /**
-     * Takes a copy of [source] into the app's own cover storage and returns the name to store.
-     *
-     * Separate from [createCollection] and [editCollection] because the file has to be copied before
-     * anything references it — a collection pointing at a file the app does not own would break the
-     * moment the user moved or deleted the original — and because the dialog wants the copy in hand
-     * while it is still open, so it can show the picture it is about to save.
-     */
-    suspend fun storeCoverImage(source: Path): String
-
-    /** Pins a collection to the top of the shelf, or unpins it, returning it as stored. */
-    suspend fun setCollectionPinned(
-        id: Long,
-        pinned: Boolean,
-    ): RemembranceCollection
-
-    /**
-     * Stars a collection the user comes back to, or takes the star off, returning it as stored.
-     *
-     * Named for its subject rather than simply `setFavorite` because [setFavorite] above already
-     * means the same word about a *remembrance*, and two favourites in one interface — one starred
-     * passage, one starred collection — is exactly the pair of names that gets a caller wrong.
-     */
-    suspend fun setCollectionFavorite(
-        id: Long,
-        favorite: Boolean,
-    ): RemembranceCollection
-
-    /** Copies a collection into a new one and returns the copy. */
-    suspend fun duplicateCollection(
-        id: Long,
-        newName: String,
-        nameLocale: Locale = Locale.ENGLISH,
-    ): RemembranceCollection
-
-    /** Deletes a collection, and the cover image it owned if it had one. */
-    suspend fun deleteCollection(id: Long)
-
-    /** Records that the collection was opened just now, so the shelf can lead with it. */
-    suspend fun touchCollectionOpened(id: Long)
 }
 
 /**

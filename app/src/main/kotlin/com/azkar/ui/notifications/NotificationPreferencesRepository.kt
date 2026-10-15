@@ -136,6 +136,7 @@ class NotificationPreferencesRepository(
                     if (end == windowStartMinute) (end + 1) % 1440 else end
                 },
             intervalMinutes = intervalMinutes.coerceIn(5, 1440),
+            activeDays = activeDays.ifEmpty { ReminderQueueConfig.ALL_DAYS },
             defaultDropChance = defaultDropChance.coerceIn(0, 100),
             collectionDropChances = collectionDropChances.mapValues { it.value.coerceIn(0, 100) },
             remembranceDropOverrides = remembranceDropOverrides.mapValues { it.value.coerceIn(0, 100) },

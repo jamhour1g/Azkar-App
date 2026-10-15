@@ -125,18 +125,36 @@ class NotificationRuntime(
         }
     }
 
+    /**
+     * Delivers the passage this moment's slot is for, if there is one.
+     *
+     * [QueueCadence] is read once here and decides whether the daily window applies, rather than being
+     * pushed down into [QueueSchedule] as another argument. A continuous queue has no window to be
+     * outside of, so handing its arithmetic a start and an end would have meant inventing a window to
+     * immediately ignore — and inventing one is how a schedule that never stops ends up stopping at
+     * half past ten, with the preview counting down to tomorrow because the preview asked the same
+     * question.
+     */
     private suspend fun deliverQueueIfDue(
         now: LocalDateTime,
         config: ReminderQueueConfig,
     ) {
-        if (!config.enabled) return
+        val interval = config.effectiveIntervalMinutes
         val slot =
-            QueueSchedule.dueSlot(
-                now = now,
-                startMinute = config.windowStartMinute,
-                endMinute = config.windowEndMinute,
-                intervalMinutes = config.intervalMinutes,
-            ) ?: return
+            when {
+                !config.enabled -> null
+                !QueueSchedule.isDayActive(now, config.activeDays) -> null
+                config.cadence == QueueCadence.CONTINUOUS ->
+                    ContinuousSchedule.dueSlot(now = now, intervalMinutes = interval)
+
+                else ->
+                    QueueSchedule.dueSlot(
+                        now = now,
+                        startMinute = config.windowStartMinute,
+                        endMinute = config.windowEndMinute,
+                        intervalMinutes = interval,
+                    )
+            } ?: return
         deliverQueueAtSlot(slot, config)
     }
 

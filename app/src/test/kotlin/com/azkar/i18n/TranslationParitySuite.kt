@@ -69,7 +69,8 @@ val TranslationParitySuite by testSuite("English and Arabic say the same set of 
 
             assertThat(mismatched)
                 .describedAs(
-                    "A placeholder is bound by index, so a missing one leaves a hole and an extra one is not an error you will ever see",
+                    "A placeholder is bound by index, so a missing one leaves a hole and an extra one is not an " +
+                        "error you will ever see",
                 ).isEmpty()
         }
 
@@ -83,7 +84,8 @@ val TranslationParitySuite by testSuite("English and Arabic say the same set of 
 
             assertThat(missing)
                 .describedAs(
-                    "Arabic may write the number into fewer forms than English — \"وسم واحد\" already carries it — but never into more, and never none",
+                    "Arabic may write the number into fewer forms than English — \"وسم واحد\" already carries it — " +
+                        "but never into more, and never none",
                 ).isEmpty()
         }
     }
@@ -108,8 +110,8 @@ val TranslationParitySuite by testSuite("English and Arabic say the same set of 
 }
 
 /** Where the two files are, named after the languages rather than after the folder names. */
-private val ENGLISH_FILE = "values"
-private val ARABIC_FILE = "values-ar"
+private const val ENGLISH_FILE = "values"
+private const val ARABIC_FILE = "values-ar"
 
 /**
  * One `strings.xml`, as the two things worth comparing: what it names, and what each name takes.
@@ -210,5 +212,5 @@ private fun locate(directory: String): File {
         if (target.isFile) return target
         candidate = candidate.parentFile
     }
-    throw IllegalStateException("No $tail at or above ${System.getProperty("user.dir")}")
+    error("No $tail at or above ${System.getProperty("user.dir")}")
 }

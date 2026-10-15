@@ -355,36 +355,53 @@ private fun TileActions(
                 iconSize = TILE_ACTION_GLYPH,
             )
         }
-        if (actions.onRemoveFromCollection != null || actions.onDelete != null) {
-            AzkarOverflowMenu(
-                icon = Icons.Filled.MoreVert,
-                contentDescription = stringResource(Res.string.libraryActionMore),
-                items =
-                    buildList {
-                        actions.onRemoveFromCollection?.let { onRemove ->
-                            add(
-                                AzkarMenuItem(
-                                    label = stringResource(Res.string.collectionDetailActionRemoveFromCollection),
-                                    onClick = onRemove,
-                                    icon = ActionIcons.removeFromCollection,
-                                ),
-                            )
-                        }
-                        actions.onDelete?.let { onDelete ->
-                            add(
-                                AzkarMenuItem(
-                                    label = stringResource(Res.string.collectionDetailActionDeleteRemembrance),
-                                    onClick = onDelete,
-                                    icon = ActionIcons.delete,
-                                ),
-                            )
-                        }
-                    },
-                buttonSize = TILE_ACTION_SIZE,
-                iconSize = TILE_ACTION_GLYPH,
-            )
-        }
+        TileOverflowMenu(actions = actions)
     }
+}
+
+/**
+ * The ⋯ that carries the two commands a tile cannot show as a glyph.
+ *
+ * Its own function, and returning early when there is nothing to put in it, so that [TileActions] stays
+ * the short row of glyphs a reader learns the positions of rather than a nesting of `buildList` blocks.
+ *
+ * The order is the order of severity: taking this passage out of *this* collection comes first because it
+ * is recoverable, deleting it outright comes last because it is not.
+ */
+@Composable
+private fun TileOverflowMenu(
+    actions: RemembranceTileActions,
+    modifier: Modifier = Modifier,
+) {
+    if (actions.onRemoveFromCollection == null && actions.onDelete == null) return
+    AzkarOverflowMenu(
+        icon = Icons.Filled.MoreVert,
+        contentDescription = stringResource(Res.string.libraryActionMore),
+        items =
+            buildList {
+                actions.onRemoveFromCollection?.let { onRemove ->
+                    add(
+                        AzkarMenuItem(
+                            label = stringResource(Res.string.collectionDetailActionRemoveFromCollection),
+                            onClick = onRemove,
+                            icon = ActionIcons.removeFromCollection,
+                        ),
+                    )
+                }
+                actions.onDelete?.let { onDelete ->
+                    add(
+                        AzkarMenuItem(
+                            label = stringResource(Res.string.collectionDetailActionDeleteRemembrance),
+                            onClick = onDelete,
+                            icon = ActionIcons.delete,
+                        ),
+                    )
+                }
+            },
+        modifier = modifier,
+        buttonSize = TILE_ACTION_SIZE,
+        iconSize = TILE_ACTION_GLYPH,
+    )
 }
 
 /**

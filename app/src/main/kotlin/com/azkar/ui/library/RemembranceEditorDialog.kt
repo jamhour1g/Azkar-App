@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -89,10 +90,7 @@ internal fun RemembranceEditorDialog(
                 EditorField(
                     value = draft.arabic,
                     onValueChange = draft::typeArabic,
-                    label = stringResource(Res.string.remembranceEditorArabicLabel),
-                    placeholder = stringResource(Res.string.remembranceEditorArabicPlaceholder),
-                    minHeight = EDITOR_ARABIC_HEIGHT,
-                    direction = LayoutDirection.Rtl,
+                    spec = arabicBoxSpec(),
                 )
                 if (draft.arabicRejected) {
                     ValidationNote(stringResource(Res.string.remembranceEditorArabicRequired))
@@ -101,10 +99,7 @@ internal fun RemembranceEditorDialog(
                 EditorField(
                     value = draft.english,
                     onValueChange = draft::typeEnglish,
-                    label = stringResource(Res.string.remembranceEditorEnglishLabel),
-                    placeholder = stringResource(Res.string.remembranceEditorEnglishPlaceholder),
-                    minHeight = EDITOR_ENGLISH_HEIGHT,
-                    direction = LayoutDirection.Ltr,
+                    spec = englishBoxSpec(),
                 )
                 Text(
                     text = stringResource(Res.string.remembranceEditorTranslationHelp),
@@ -157,37 +152,72 @@ private fun EditorButtons(
 }
 
 /**
+ * Everything about one editor box that follows from the *language* it holds rather than from its text.
+ *
+ * The two boxes in this dialog differ only in that choice, and it decides all four of these at once:
+ * the label, the placeholder, the height and the caret. Bundling them means a box cannot end up with an
+ * Arabic label above an English caret, which is exactly the mistake four independent parameters invite
+ * once somebody adds a third language.
+ */
+@Immutable
+private data class EditorBoxSpec(
+    val label: String,
+    val placeholder: String,
+    val minHeight: Dp,
+    val direction: LayoutDirection,
+)
+
+/**
+ * The Arabic box's fixed furniture, read once per composition.
+ *
+ * [EditorBoxSpec.direction] is stated here rather than inferred from the text because these two boxes
+ * are the one pair in the app whose language is known before anything is typed. Inferring would get an
+ * empty box wrong, and a box nobody has typed into is exactly when the caret has to be in the right
+ * place — which is the whole point of the setting.
+ */
+@Composable
+private fun arabicBoxSpec(): EditorBoxSpec =
+    EditorBoxSpec(
+        label = stringResource(Res.string.remembranceEditorArabicLabel),
+        placeholder = stringResource(Res.string.remembranceEditorArabicPlaceholder),
+        minHeight = EDITOR_ARABIC_HEIGHT,
+        direction = LayoutDirection.Rtl,
+    )
+
+/** The English box's [arabicBoxSpec] counterpart. */
+@Composable
+private fun englishBoxSpec(): EditorBoxSpec =
+    EditorBoxSpec(
+        label = stringResource(Res.string.remembranceEditorEnglishLabel),
+        placeholder = stringResource(Res.string.remembranceEditorEnglishPlaceholder),
+        minHeight = EDITOR_ENGLISH_HEIGHT,
+        direction = LayoutDirection.Ltr,
+    )
+
+/**
  * One labelled box, and the label above it.
  *
-* A pair because the two boxes differ only in their draft slot and their height: splitting them into
- * 2 near-identical composables would mean the placeholder, the multiline setting and the width had
- *  to be kept in step by hand, and there is nothing in either that the other should not have.
- *
- * [direction] is a parameter rather than something inferred from [value] because these two boxes are
- * the one pair in the app whose language is known before anything is typed: one holds Arabic and one
- * holds English. Inferring would get an empty box wrong, and a box nobody has typed into is exactly
- * when the caret has to be in the right place — which is the whole point of the setting.
+ * A pair because the two boxes differ only in their draft slot and their [EditorBoxSpec]: splitting them
+ * into 2 near-identical composables would mean the placeholder, the multiline setting and the width had
+ * to be kept in step by hand, and there is nothing in either that the other should not have.
  */
 @Composable
 private fun EditorField(
     value: String,
     onValueChange: (String) -> Unit,
-    label: String,
-    placeholder: String,
-    minHeight: Dp,
-    direction: LayoutDirection,
+    spec: EditorBoxSpec,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        FieldLabel(label)
+        FieldLabel(spec.label)
         AzkarOutlinedField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = placeholder,
+            placeholder = spec.placeholder,
             modifier = Modifier.fillMaxWidth(),
             singleLine = false,
-            minHeight = minHeight,
-            textDirection = direction,
+            minHeight = spec.minHeight,
+            textDirection = spec.direction,
         )
     }
 }

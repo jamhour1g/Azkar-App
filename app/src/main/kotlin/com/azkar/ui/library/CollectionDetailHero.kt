@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -533,9 +534,50 @@ private fun HeroActions(
     actions: CollectionHeroActions,
     modifier: Modifier = Modifier,
 ) {
-    val colors = AzkarTheme.colors
-    val addMembersLabel = stringResource(Res.string.collectionsActionAddMembers)
-    val createRemembranceLabel = stringResource(Res.string.remembranceCreateActionOpen)
+    // The words are worked out once here and handed down, because both widths need the same five and
+    // reading them twice was the reason this grew a parameter list longer than it could carry. A value
+    // rather than six more arguments also means a label can never be spelled one way in the compact
+    // band and another way in the wide one.
+    val labels = heroActionLabels(isPinned = isPinned, reminder = reminder)
+    if (AzkarWindowSize.isCompactWidth) {
+        CompactHeroActions(
+            actions = actions,
+            isPinned = isPinned,
+            labels = labels,
+            background = AzkarTheme.colors.artPillSurface,
+            modifier = modifier,
+        )
+    } else {
+        WideHeroActions(
+            actions = actions,
+            isPinned = isPinned,
+            labels = labels,
+            modifier = modifier,
+        )
+    }
+}
+
+/**
+ * The five things the band's controls have to say, decided once for both widths.
+ *
+ * [pin] switches on whether the collection is pinned and [reminderLive] on whether the schedule will
+ * actually come round, because those are the two answers that change a pill's ink rather than its
+ * label, and a caller that passed only strings would have to derive them again.
+ */
+@Immutable
+private data class HeroActionLabels(
+    val addMembers: String,
+    val createRemembrance: String,
+    val pin: String,
+    val reminder: String,
+    val reminderLive: Boolean,
+)
+
+@Composable
+private fun heroActionLabels(
+    isPinned: Boolean,
+    reminder: CollectionHeroReminder,
+): HeroActionLabels {
     val pinLabel =
         stringResource(
             if (isPinned) Res.string.collectionsActionUnpin else Res.string.collectionsActionPin,
@@ -551,62 +593,64 @@ private fun HeroActions(
             is CollectionHeroReminder.At ->
                 stringResource(Res.string.collectionDetailRemindAtFormat, reminder.time) to true
         }
-    if (AzkarWindowSize.isCompactWidth) {
-        CompactHeroActions(
-            actions = actions,
-            isPinned = isPinned,
-            pinLabel = pinLabel,
-            reminderLabel = reminderLabel,
-            reminderLive = reminderLive,
-            addMembersLabel = addMembersLabel,
-            createRemembranceLabel = createRemembranceLabel,
-            background = colors.artPillSurface,
-            modifier = modifier,
-        )
-    } else {
-        Row(
-            modifier = modifier,
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(HERO_PILL_GAP),
-        ) {
-            // The one edit that lives up here rather than in the row below. Everything else the band
-            // carries — pin, remind, rename, share — is about this collection as a whole; adding members
-            // changes what the page is *for*, and it is the change a reader most often arrives to make,
-            // so it belongs beside the other things you can do to the collection rather than buried in a
-            // toolbar that is otherwise about how the members are shown.
-            actions.onAddMembers?.let { onAddMembers ->
-                HeroPill(
-                    icon = Icons.Filled.Layers,
-                    label = addMembersLabel,
-                    onClick = onAddMembers,
-                )
-            }
+    return HeroActionLabels(
+        addMembers = stringResource(Res.string.collectionsActionAddMembers),
+        createRemembrance = stringResource(Res.string.remembranceCreateActionOpen),
+        pin = pinLabel,
+        reminder = reminderLabel,
+        reminderLive = reminderLive,
+    )
+}
+
+@Composable
+private fun WideHeroActions(
+    actions: CollectionHeroActions,
+    isPinned: Boolean,
+    labels: HeroActionLabels,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(HERO_PILL_GAP),
+    ) {
+        // The one edit that lives up here rather than in the row below. Everything else the band
+        // carries — pin, remind, rename, share — is about this collection as a whole; adding members
+        // changes what the page is *for*, and it is the change a reader most often arrives to make,
+        // so it belongs beside the other things you can do to the collection rather than buried in a
+        // toolbar that is otherwise about how the members are shown.
+        actions.onAddMembers?.let { onAddMembers ->
             HeroPill(
-                icon = Icons.Filled.Add,
-                label = createRemembranceLabel,
-                onClick = actions.onCreateRemembrance,
-            )
-            HeroPill(
-                icon = ActionIcons.pin(isPinned),
-                label = pinLabel,
-                onClick = actions.onTogglePin,
-                selected = isPinned,
-            )
-            HeroPill(
-                icon = AzkarIcons.Bell,
-                label = reminderLabel,
-                onClick = actions.onEditReminder,
-                selected = reminderLive,
-            )
-            AzkarOverflowMenu(
-                icon = Icons.Filled.MoreVert,
-                contentDescription = stringResource(Res.string.libraryActionMore),
-                items = actions.menuItems,
-                buttonSize = HERO_PILL_HEIGHT,
-                iconSize = HERO_PILL_GLYPH,
-                background = colors.artPillSurface,
+                icon = Icons.Filled.Layers,
+                label = labels.addMembers,
+                onClick = onAddMembers,
             )
         }
+        HeroPill(
+            icon = Icons.Filled.Add,
+            label = labels.createRemembrance,
+            onClick = actions.onCreateRemembrance,
+        )
+        HeroPill(
+            icon = ActionIcons.pin(isPinned),
+            label = labels.pin,
+            onClick = actions.onTogglePin,
+            selected = isPinned,
+        )
+        HeroPill(
+            icon = AzkarIcons.Bell,
+            label = labels.reminder,
+            onClick = actions.onEditReminder,
+            selected = labels.reminderLive,
+        )
+        AzkarOverflowMenu(
+            icon = Icons.Filled.MoreVert,
+            contentDescription = stringResource(Res.string.libraryActionMore),
+            items = actions.menuItems,
+            buttonSize = HERO_PILL_HEIGHT,
+            iconSize = HERO_PILL_GLYPH,
+            background = AzkarTheme.colors.artPillSurface,
+        )
     }
 }
 
@@ -614,11 +658,7 @@ private fun HeroActions(
 private fun CompactHeroActions(
     actions: CollectionHeroActions,
     isPinned: Boolean,
-    pinLabel: String,
-    reminderLabel: String,
-    reminderLive: Boolean,
-    addMembersLabel: String,
-    createRemembranceLabel: String,
+    labels: HeroActionLabels,
     background: Color,
     modifier: Modifier = Modifier,
 ) {
@@ -630,26 +670,26 @@ private fun CompactHeroActions(
         actions.onAddMembers?.let { onAddMembers ->
             CompactHeroAction(
                 icon = Icons.Filled.Layers,
-                label = addMembersLabel,
+                label = labels.addMembers,
                 onClick = onAddMembers,
             )
         }
         CompactHeroAction(
             icon = Icons.Filled.Add,
-            label = createRemembranceLabel,
+            label = labels.createRemembrance,
             onClick = actions.onCreateRemembrance,
         )
         CompactHeroAction(
             icon = ActionIcons.pin(isPinned),
-            label = pinLabel,
+            label = labels.pin,
             onClick = actions.onTogglePin,
             selected = isPinned,
         )
         CompactHeroAction(
             icon = AzkarIcons.Bell,
-            label = reminderLabel,
+            label = labels.reminder,
             onClick = actions.onEditReminder,
-            selected = reminderLive,
+            selected = labels.reminderLive,
         )
         AzkarTooltip(tooltip = stringResource(Res.string.libraryActionMore)) {
             AzkarOverflowMenu(

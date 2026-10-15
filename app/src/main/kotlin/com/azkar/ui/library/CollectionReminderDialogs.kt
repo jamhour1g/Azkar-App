@@ -49,7 +49,9 @@ import com.azkar.generated.resources.collectionReminderTimeLabel
 import com.azkar.generated.resources.collectionsActionCancel
 import com.azkar.generated.resources.collectionsActionDelete
 import com.azkar.generated.resources.collectionsActionSave
+import com.azkar.ui.components.AzkarClock
 import com.azkar.ui.components.AzkarDialogSurface
+import com.azkar.ui.components.AzkarTimePicker
 import com.azkar.ui.components.AzkarToggleSwitch
 import com.azkar.ui.components.PrimaryButton
 import com.azkar.ui.components.SecondaryButton
@@ -57,9 +59,6 @@ import com.azkar.ui.theme.AzkarTheme
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import java.time.DayOfWeek
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -301,25 +300,27 @@ private fun ReminderPauseRow(
     }
 }
 
-/** Hours and minutes side by side, each a dropdown wide enough for its widest entry. */
+/**
+ * The hour and minute, as one time.
+ *
+ * This was two dropdowns of hours and minutes, each wide enough for its widest entry, on the
+ * reasoning that the app had no time picker. It does — [AzkarTimePicker], and the one underneath it is
+ * Material 3's — and keeping a second, worse spelling of the same value here meant the two dialogs in
+ * the app that set a time set it by different rules and spelled it differently.
+ *
+ * The draft's two setters stay, because the rest of the draft still thinks in hours and minutes; only
+ * the control changed. Choosing an hour keeps the minute, which is [ReminderDraft.onHourChanged]'s
+ * long-standing rule and is the reason the picker only has to report the whole minute back.
+ */
 @Composable
 private fun TimePickers(draft: ReminderDraft) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        AzkarDropdown(
-            selected = draft.hour,
-            options = HOURS,
-            label = ::hourLabel,
-            onSelect = draft::onHourChanged,
-            fieldWidth = 104.dp,
-        )
-        AzkarDropdown(
-            selected = draft.minute,
-            options = MINUTES,
-            label = ::minuteLabel,
-            onSelect = draft::onMinuteChanged,
-            fieldWidth = 104.dp,
-        )
-    }
+    AzkarTimePicker(
+        minuteOfDay = draft.minuteOfDay,
+        onMinuteChange = { minute ->
+            if (minute / MINUTES_IN_HOUR != draft.hour) draft.onHourChanged(minute / MINUTES_IN_HOUR)
+            if (minute % MINUTES_IN_HOUR != draft.minute) draft.onMinuteChanged(minute % MINUTES_IN_HOUR)
+        },
+    )
 }
 
 @Composable
@@ -423,13 +424,14 @@ private fun dayLabel(day: DayOfWeek): String {
     return stringResource(dayTextResource(day))
 }
 
-/** The clock face. Zero-padded so a schedule reads as a time rather than as two numbers. */
-@Composable
-private fun hourLabel(hour: Int): String = "%02d".format(Locale.ROOT, hour)
-
-@Composable
-private fun minuteLabel(minute: Int): String = "%02d".format(Locale.ROOT, minute)
-
+/**
+ * The clock face, on both halves of it.
+ *
+ * Zero-padded bare numbers used to stand here, which made this dialog the one place in the app where
+ * a schedule could be read as `22:30` with nothing to say whether that was evening or morning. It goes
+ * through [AzkarClock] now, which is also what the editor's [AzkarTimePicker] displays, so the row a
+ * schedule is written in and the line it is read back on cannot drift apart.
+ */
 private fun dayTextResource(day: DayOfWeek): StringResource =
     when (day) {
         DayOfWeek.MONDAY -> Res.string.collectionReminderDayMonday
@@ -444,21 +446,14 @@ private fun dayTextResource(day: DayOfWeek): StringResource =
 /**
  * A scheduled time on the clock face, in the user's language and with no zone attached.
  *
- * A [LocalTime] rather than an [java.time.Instant] because that is what the schedule holds: a time of
+ * A `LocalTime` rather than an [java.time.Instant] because that is what the schedule holds: a time of
  * day means nothing until a zone is applied, and the zone is the machine's to choose at the moment it
  * asks what is next.
  */
 internal fun formatReminderTime(
     minuteOfDay: Int,
     locale: Locale,
-): String =
-    LocalTime
-        .of(minuteOfDay / 60, minuteOfDay % 60)
-        .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
-
-private val HOURS = (0..23).toList()
-
-private val MINUTES = (0 until 60 step MINUTE_STEP).toList()
+): String = AzkarClock.format(minuteOfDay, locale)
 
 /**
  * The air between the pickers and the pause switch, and between the pause switch and the button that
@@ -486,4 +481,5 @@ private val PAUSE_HINT_GAP = 2.dp
  */
 private val PAUSE_HINT_LINE_SP = 15.sp
 
-private const val MINUTE_STEP = 5
+/** Minutes in an hour, for handing [AzkarTimePicker]'s single value back to the draft's two fields. */
+private const val MINUTES_IN_HOUR = 60

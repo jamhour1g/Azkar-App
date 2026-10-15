@@ -36,7 +36,9 @@ import com.azkar.ui.library.RemembranceReaderScreen
 import com.azkar.ui.library.rememberCollectionDetailState
 import com.azkar.ui.library.rememberCollectionSessionState
 import com.azkar.ui.library.rememberRemembranceReaderState
+import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationPreferencesRepository
+import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.preview.PREVIEW_COLLECTION_ID
 import com.azkar.ui.preview.PreviewHomeGateway
 import com.azkar.ui.preview.previewAzkarAppState
@@ -49,6 +51,8 @@ import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.LocalWindowSizeClass
 import com.azkar.ui.theme.windowSizeClassFor
 import de.infix.testBalloon.framework.core.testSuite
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -198,12 +202,18 @@ private fun collectionCard(name: String): SemanticsMatcher =
 /**
  * Runs [block] with a Koin container that can satisfy `HomeScreen`, and no screen of its own.
  *
- * Home is the one screen this suite cannot build the ordinary way. Every other screen takes its
+* Home is the one screen this suite cannot build the ordinary way. Every other screen takes its
  * dependencies as parameters, so [ScreenFixture] is the whole of the wiring. `HomeScreen` resolves its
- * own [SettingsStore] and [HomeGateway] from the container, which is a real difference in how the
+ * own `SettingsStore` and `HomeGateway` from the container, which is a real difference in how the
  * screen is constructed and not something to work around — so this stands up the smallest container
  * that can satisfy it: the store on a temp file it will never meaningfully write, and the preview
  * gateway that returns fixtures instead of querying.
+ *
+ * `SettingsScreen` joins it for a second, unrelated reason: the notification and prayer tabs resolve
+ * their own settings holder, so a test that composes that screen needs the same store and the two
+ * platform capabilities behind it. The container is a list of what is needed rather than a list of
+ * what is convenient, which is why the detector is here even though nothing in the suite presses its
+ * button.
  *
  * It deliberately does **not** render anything. An earlier version of this took a
  * `SkikoComposeUiTest` receiver and set the screen up itself, but that left every test free to call
@@ -220,7 +230,7 @@ private fun collectionCard(name: String): SemanticsMatcher =
  * It is a top-level function rather than one declared inside `testSuite { }` because Kotlin does not
  * allow a `private` local function, and a helper local to the suite body could not be.
  */
-private fun withHomeContainer(block: () -> Unit) {
+private fun withScreenContainer(block: () -> Unit) {
     val directory = Files.createTempDirectory("azkar-home-screen")
     val storeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     try {
@@ -230,6 +240,13 @@ private fun withHomeContainer(block: () -> Unit) {
                     single { SettingsStore.create(directory.resolve("settings.preferences_pb"), storeScope) }
                     single { NotificationPreferencesRepository(get()) }
                     single<HomeGateway> { PreviewHomeGateway() }
+                    // The settings page's two moved tabs resolve these themselves rather than taking
+                    // them as parameters, so any test that composes that screen needs them here too.
+                    // Nothing calls the detector — no test presses "Auto-detect" — but Koin has to be
+                    // able to hand one over before the screen finishes composing.
+                    single { HttpClient(CIO) }
+                    single { LocationDetector(get()) }
+                    single { StartupRegistration() }
                 },
             )
         }
@@ -399,37 +416,45 @@ val ScreenSuite by testSuite("Screen smoke") {
      * updates the label and forgets to persist passes one and fails the other.
      */
     test("choosing a theme in settings reaches the state and persists it") {
-        screenTest {
-            val persisted = mutableListOf<ThemePreference>()
-            setContent {
-                val state =
-                    AzkarAppState(
-                        initialThemePreference = ThemePreference.SYSTEM,
-                        initialLocale = Locale.ENGLISH,
-                        persistTheme = { persisted += it },
-                        persist = {},
-                    )
-                ScreenFixture { SettingsScreen(state = state, onClose = {}) }
+        withScreenContainer {
+            screenTest {
+                val persisted = mutableListOf<ThemePreference>()
+                setContent {
+                    val state =
+                        AzkarAppState(
+                            initialThemePreference = ThemePreference.SYSTEM,
+                            initialLocale = Locale.ENGLISH,
+                            persistTheme = { persisted += it },
+                            persist = {},
+                        )
+                    ScreenFixture { SettingsScreen(state = state, onClose = {}) }
+                }
+                waitForIdle()
+                onNodeWithText(THEME_OPTION_DARK).performClick()
+                waitForIdle()
+                assertThat(
+                    persisted,
+                ).describedAs(
+                    "the choice must reach the store, not just the label",
+                ).containsExactly(ThemePreference.DARK)
             }
-            waitForIdle()
-            onNodeWithText(THEME_OPTION_DARK).performClick()
-            waitForIdle()
-            assertThat(
-                persisted,
-            ).describedAs("the choice must reach the store, not just the label").containsExactly(ThemePreference.DARK)
         }
     }
 
     test("leaving settings calls back") {
-        screenTest {
-            var closes = 0
-            setContent {
-                ScreenFixture { SettingsScreen(state = previewAzkarAppState(), onClose = { closes++ }) }
+        withScreenContainer {
+            screenTest {
+                var closes = 0
+                setContent {
+                    ScreenFixture { SettingsScreen(state = previewAzkarAppState(), onClose = { closes++ }) }
+                }
+                waitForIdle()
+                onNodeWithText(SETTINGS_BACK).performClick()
+                waitForIdle()
+                assertThat(
+                    closes,
+                ).describedAs("settings is pushed onto a screen and has to pop back off it").isEqualTo(1)
             }
-            waitForIdle()
-            onNodeWithText(SETTINGS_BACK).performClick()
-            waitForIdle()
-            assertThat(closes).describedAs("settings is pushed onto a screen and has to pop back off it").isEqualTo(1)
         }
     }
 
@@ -552,7 +577,7 @@ val ScreenSuite by testSuite("Screen smoke") {
      * — the callback could report the wrong collection and the screen would still look right.
      */
     test("opening a home rail card reports that collection's id") {
-        withHomeContainer {
+        withScreenContainer {
             screenTest {
                 val opened = mutableListOf<Long>()
                 var libraryOpens = 0

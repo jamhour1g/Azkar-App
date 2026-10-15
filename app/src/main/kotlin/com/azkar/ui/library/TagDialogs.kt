@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,6 +75,7 @@ import com.azkar.ui.library.model.survivingRename
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -181,6 +184,173 @@ internal fun TagMarkTile(
 }
 
 /**
+ * The two answers a save can be refused with, resolved once before the coroutine that needs them.
+ *
+ * They cannot be read inside the write, because a coroutine is not a composition and has no locale of
+ * its own to resolve against. Held as one value rather than two strings so the call site reads as a
+ * single decision — which messages this dialog can say — instead of two loose arguments.
+ */
+@Immutable
+private data class TagSaveMessages(
+    val nameTaken: String,
+    val nameRequired: String,
+)
+
+/**
+ * The edits a translation section can make to the list it was handed.
+ *
+ * An interface rather than three lambdas because the section never invents any of them — it forwards all
+ * three to whoever owns the list. Letting the section also *be* the holder is what keeps its own
+ * parameter list short enough that the forwarding stays visible when someone reads it.
+ */
+private interface TagTranslationEdits {
+    val translations: List<TranslationEntry>
+
+    fun addTranslation(locale: Locale)
+
+    fun changeTranslation(
+        entry: TranslationEntry,
+        value: String,
+    )
+
+    fun removeTranslation(entry: TranslationEntry)
+}
+
+/**
+ * The half-typed name and its translations, and the one write that turns them into a tag.
+ *
+ * A class rather than four remembered values because those four cannot be judged apart: a save has to
+ * refuse a name that is blank and a name that is taken, and both answers land on the same note under the
+ * same box. Held apart they would mean the footer and the field each had to know about the other's state,
+ * which is how a note ends up describing a save that never happened.
+ *
+ * The properties are snapshot state rather than plain fields, and that is load-bearing rather than
+ * stylistic: [TagNameDialog] reads [busy] and [problem] while composing, so a plain `var` would never
+ * invalidate the composition and the footer would stay enabled for the whole of a slow write.
+ */
+@Stable
+private class TagNameDraft(
+    private val scope: CoroutineScope,
+    /**
+     * The name as it was when the dialog opened, kept for the life of the draft because
+     * [submit] needs it to tell a translation the user rewrote from one they merely left sitting there.
+     * See [survivingRename].
+     */
+    private val openedWith: String,
+    /** The other-language names as they were when the dialog opened. The same reason as [openedWith]. */
+    private val openedWithTranslations: List<TranslationEntry>,
+    private val onSubmit: suspend (String, Map<Locale, String>) -> TagSaveResult?,
+    private val onDismiss: () -> Unit,
+    private val messages: TagSaveMessages,
+) : TagTranslationEdits {
+    /** The name as it stands, which the header's monogram is drawn from as the user types. */
+    var name by mutableStateOf(openedWith)
+        private set
+
+    /** What is wrong with the name, or `null`. Cleared by the next keystroke, never on its own. */
+    var problem by mutableStateOf<String?>(null)
+        private set
+
+    /** Whether a write is in flight. Blocks a second press, which for a create means a second row. */
+    var busy by mutableStateOf(false)
+        private set
+
+    override var translations by mutableStateOf(openedWithTranslations)
+        private set
+
+    fun rename(value: String) {
+        name = value
+        problem = null
+    }
+
+    override fun addTranslation(locale: Locale) {
+        translations = translations + TranslationEntry(locale)
+    }
+
+    override fun changeTranslation(
+        entry: TranslationEntry,
+        value: String,
+    ) {
+        translations = translations.replacing(entry.locale) { it.copy(name = value) }
+    }
+
+    override fun removeTranslation(entry: TranslationEntry) {
+        translations = translations.filterNot { it.locale == entry.locale }
+    }
+
+    /**
+     * Write the tag, then close on success or explain the refusal.
+     *
+     * A translation the user opened but did not fill in is dropped rather than refused on the way in:
+     * an empty language is the normal state of one someone has just added and has not typed yet, and
+     * treating that as an error would put a red note under a box nobody has finished writing.
+     */
+    fun submit() {
+        if (busy) return
+        busy = true
+        scope.launch {
+            val result =
+                onSubmit(
+                    name,
+                    translations
+                        .survivingRename(
+                            renamedFrom = openedWith,
+                            renamedTo = name,
+                            opened = openedWithTranslations,
+                        ).toNameTranslations(),
+                )
+            busy = false
+            problem =
+                when (result) {
+                    TagSaveResult.Saved, null -> null
+                    TagSaveResult.NameTaken -> messages.nameTaken
+                    TagSaveResult.Missing, TagSaveResult.Blank -> messages.nameRequired
+                }
+            if (result == TagSaveResult.Saved) {
+                onDismiss()
+            }
+        }
+    }
+}
+
+/**
+ * The canonical name, its field, and whatever note the last refusal left under it.
+ *
+ * Split out of [TagNameDialog] because the language line above the box is not part of the field: it
+ * exists to say *which* language this box writes in, and it is the only place in the app that knows a
+ * box's language before anything has been typed into it.
+ */
+@Composable
+private fun TagPrimaryNameBlock(
+    draft: TagNameDraft,
+    nameLocale: Locale,
+    note: String?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        FieldLabel(text = stringResource(Res.string.tagsDialogNameLabel))
+        Text(
+            text =
+                stringResource(
+                    Res.string.contentPrimaryLanguage,
+                    nameLocale.displayNameIn(AzkarTheme.locale),
+                ),
+            color = AzkarTheme.colors.textSecondary,
+            fontSize = NOTE_SP,
+        )
+        Spacer(Modifier.height(SMALL_GAP))
+        TagNameField(
+            name = draft.name,
+            problem = draft.problem,
+            onNameChanged = draft::rename,
+        )
+        if (note != null) {
+            TagNameNote(note)
+        }
+    }
+}
+
+/**
  * One field and one question: what is this tag called?
  *
  * Serves both adding and renaming, because the two differ only in which row they were opened from, in
@@ -216,89 +386,48 @@ internal fun TagNameDialog(
     initialTranslations: List<TranslationEntry> = emptyList(),
     initialNameLocale: Locale = AzkarTheme.locale,
 ) {
-    var name by remember { mutableStateOf(initialName) }
-    var problem by remember { mutableStateOf<String?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    var translations by remember { mutableStateOf(initialTranslations) }
     val scope = rememberCoroutineScope()
-    // Resolved here rather than where they are used, because the place they are used is inside the
-    // coroutine below and a `stringResource` cannot be read from one — a coroutine is not a
-    // composition, so it has no locale of its own to resolve against.
+    // Resolved here rather than inside `remember`, because a `stringResource` is a composable call and
+    // this block is not a composition — the same reason the messages cannot be read from the coroutine
+    // in [TagNameDraft.submit], which is not one either.
     val nameTakenMessage = stringResource(Res.string.tagsDialogNameTaken)
     val nameRequiredMessage = stringResource(Res.string.tagsDialogNameRequired)
+    // Keyed on what the dialog was opened with, not on the scope: the scope survives every recomposition
+    // and keying on it would rebuild the draft — and throw away what the user has typed — on each pass.
+    val draft =
+        remember(initialName, initialTranslations) {
+            TagNameDraft(
+                scope = scope,
+                openedWith = initialName,
+                openedWithTranslations = initialTranslations,
+                onSubmit = onSubmit,
+                onDismiss = onDismiss,
+                messages =
+                    TagSaveMessages(
+                        nameTaken = nameTakenMessage,
+                        nameRequired = nameRequiredMessage,
+                    ),
+            )
+        }
 
     Dialog(onDismissRequest = onDismiss) {
         AzkarDialogSurface(modifier = Modifier.widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)) {
             Column {
-                TagDialogHeader(markName = name, title = title, subtitle = subtitle)
+                TagDialogHeader(markName = draft.name, title = title, subtitle = subtitle)
                 Spacer(Modifier.height(BODY_GAP))
-                FieldLabel(text = stringResource(Res.string.tagsDialogNameLabel))
-                Text(
-                    text =
-                        stringResource(
-                            Res.string.contentPrimaryLanguage,
-                            initialNameLocale.displayNameIn(AzkarTheme.locale),
-                        ),
-                    color = AzkarTheme.colors.textSecondary,
-                    fontSize = NOTE_SP,
-                )
-                Spacer(Modifier.height(SMALL_GAP))
-                TagNameField(
-                    name = name,
-                    problem = problem,
-                    onNameChanged = {
-                        name = it
-                        problem = null
-                    },
-                )
-                if (note != null) {
-                    TagNameNote(note)
-                }
+                TagPrimaryNameBlock(draft = draft, nameLocale = initialNameLocale, note = note)
                 Spacer(Modifier.height(BODY_GAP))
                 TagTranslationSection(
-                    name = name,
+                    name = draft.name,
                     nameLocale = initialNameLocale,
-                    translations = translations,
-                    onAdd = { translations = translations + TranslationEntry(it) },
-                    onNameChanged = { entry, value ->
-                        translations = translations.replacing(entry.locale) { it.copy(name = value) }
-                    },
-                    onRemove = { entry -> translations = translations.filterNot { it.locale == entry.locale } },
+                    edits = draft,
                 )
                 Spacer(Modifier.height(BODY_GAP))
                 DialogFooter(
                     confirmLabel = confirmLabel,
-                    confirmEnabled = !busy,
+                    confirmEnabled = !draft.busy,
                     onDismiss = onDismiss,
-                    onConfirm = {
-                        // Re-entry is refused rather than ignored, so a slow write cannot be sent
-                        // twice by a second press — which for a create means two rows, because by the
-                        // time the second press lands the first is no longer a duplicate.
-                        if (busy) return@DialogFooter
-                        busy = true
-                        scope.launch {
-                            val result =
-                                onSubmit(
-                                    name,
-                                    translations
-                                        .survivingRename(
-                                            renamedFrom = initialName,
-                                            renamedTo = name,
-                                            opened = initialTranslations,
-                                        ).toNameTranslations(),
-                                )
-                            busy = false
-                            problem =
-                                when (result) {
-                                    TagSaveResult.Saved, null -> null
-                                    TagSaveResult.NameTaken -> nameTakenMessage
-                                    TagSaveResult.Missing, TagSaveResult.Blank -> nameRequiredMessage
-                                }
-                            if (result == TagSaveResult.Saved) {
-                                onDismiss()
-                            }
-                        }
-                    },
+                    onConfirm = draft::submit,
                 )
             }
         }
@@ -319,17 +448,19 @@ internal fun TagNameDialog(
 private fun TagTranslationSection(
     name: String,
     nameLocale: Locale,
-    translations: List<TranslationEntry>,
-    onAdd: (Locale) -> Unit,
-    onNameChanged: (TranslationEntry, String) -> Unit,
-    onRemove: (TranslationEntry) -> Unit,
+    edits: TagTranslationEdits,
 ) {
     val locale = AzkarTheme.locale
     val available =
-        remember(translations, name, nameLocale, locale) {
-            missingLanguages(name = name, existing = translations, uiLocale = locale, nameLocale = nameLocale)
+        remember(edits.translations, name, nameLocale, locale) {
+            missingLanguages(
+                name = name,
+                existing = edits.translations,
+                uiLocale = locale,
+                nameLocale = nameLocale,
+            )
         }
-    if (available.isEmpty() && translations.isEmpty()) return
+    if (available.isEmpty() && edits.translations.isEmpty()) return
 
     Column {
         Text(
@@ -338,8 +469,12 @@ private fun TagTranslationSection(
             fontSize = NOTE_SP,
         )
         Spacer(Modifier.height(SMALL_GAP))
-        translations.forEach { entry ->
-            TagTranslationBlock(entry = entry, onNameChanged = onNameChanged, onRemove = onRemove)
+        edits.translations.forEach { entry ->
+            TagTranslationBlock(
+                entry = entry,
+                onNameChanged = edits::changeTranslation,
+                onRemove = edits::removeTranslation,
+            )
             Spacer(Modifier.height(SMALL_GAP))
         }
         if (available.isNotEmpty()) {
@@ -349,7 +484,7 @@ private fun TagTranslationSection(
                         text = candidate.displayNameIn(locale),
                         selected = false,
                         leadingIcon = Icons.Filled.Add,
-                        onClick = { onAdd(candidate) },
+                        onClick = { edits.addTranslation(candidate) },
                     )
                 }
             }

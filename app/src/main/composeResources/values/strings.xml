@@ -7,7 +7,7 @@
     <string name="azkarLibrary">Azkar Library</string>
     <string name="home">Home</string>
     <string name="reminderManagerTitle">Reminders</string>
-    <string name="reminderManagerSubtitle">Build one queue for collections and individual remembrances, and manage prayer alerts.</string>
+    <string name="reminderManagerSubtitle">Build one queue for collections and individual remembrances.</string>
     <!-- Tray menu -->
     <string name="trayMenuOpen">Open Azkar</string>
     <string name="trayMenuPause">Pause reminders</string>
@@ -498,8 +498,6 @@
     </plurals>
 
     <string name="notificationDismiss">Dismiss</string>
-    <string name="notificationPresentationTitle">Appearance</string>
-    <string name="notificationPresentationSubtitle">How a reminder is shown when the app window is not in front.</string>
     <string name="notificationChannelSystem">Also send to the desktop</string>
     <string name="notificationChannelSystemNote">Off by default: the desktop draws its own style. Turn it on only if you want the reminder in the notification centre too.</string>
     <string name="notificationDuration">On screen for %1$d seconds</string>
@@ -510,4 +508,108 @@
     <string name="notificationPlacementBottomEnd">Bottom right</string>
     <string name="notificationStackSize">Show up to %1$d at once</string>
     <string name="notificationOverlayPolicy">Reminders stack in the corner you pick, newest nearest the corner. A new reminder replaces the oldest once the limit is reached, and an identical reminder already on screen is not repeated.</string>
+
+    <!-- Reminders screen -->
+    <string name="reminderManagerBack">Back</string>
+    <!-- Live summary at the top of the reminders screen -->
+    <string name="reminderManagerHeroTitle">Up next</string>
+    <string name="reminderManagerHeroQueueLabel">Next passage</string>
+    <string name="reminderManagerHeroQueueOff">The queue is off</string>
+    <string name="reminderManagerHeroQueueEmpty">Pick a collection or a passage to fill the queue</string>
+    <string name="reminderManagerHeroCountdownHours">in %1$dh %2$dm</string>
+    <string name="reminderManagerHeroCountdownDays">in %1$dd %2$dh</string>
+    <string name="reminderManagerHeroCountdownMinutes">in %1$dm</string>
+    <string name="reminderManagerHeroCountdownNow">now</string>
+    <string name="reminderManagerHeroWindow">%1$s to %2$s</string>
+    <!-- Reminders screen: sources -->
+    <string name="reminderManagerSourcesTitle">Sources</string>
+    <string name="reminderManagerSourcesHint">The collections and passages the queue draws from.</string>
+    <string name="reminderManagerSourcesEmpty">No collections yet.</string>
+    <string name="reminderManagerSearchPlaceholder">Search passages</string>
+    <string name="reminderManagerPassagesTitle">Passages</string>
+    <string name="reminderManagerPassagesEmpty">No passage matches that search.</string>
+    <string name="reminderManagerPassagesTruncated">Showing the first %1$d matches. Narrow the search to reach the rest.</string>
+    <string name="reminderManagerPassageUnnamed">Remembrance %1$d</string>
+    <string name="reminderManagerDropChance">Skip chance</string>
+    <!-- Reminders screen: manual order -->
+    <string name="reminderManagerManualOrderTitle">Manual order</string>
+    <string name="reminderManagerManualOrderHint">The queue walks this list from the top, then starts again.</string>
+    <string name="reminderManagerManualOrderEmpty">Choose some passages first and they will appear here.</string>
+    <string name="reminderManagerMoveUp">Move up</string>
+    <string name="reminderManagerMoveDown">Move down</string>
+
+    <!-- Settings screen -->
+    <!-- Tabs -->
+    <string name="settingsTabGeneral">General</string>
+    <string name="settingsTabNotifications">Notifications</string>
+    <string name="settingsTabPrayer">Prayer</string>
+    <!-- Settings screen: notifications tab -->
+    <!-- Settings screen: the reminder queue's schedule, which moved off the reminders page -->
+    <string name="reminderManagerScheduleTitle">Schedule</string>
+    <string name="reminderManagerScheduleHint">How often a passage from your queue is shown, and when.</string>
+    <string name="reminderManagerQueueEnable">Remembrance queue</string>
+    <string name="reminderManagerQueueEnableHint">Turn this on to start showing passages from the sources below.</string>
+    <string name="reminderManagerQueueModeLabel">Order</string>
+    <string name="reminderManagerQueueModeManual">Manual</string>
+    <string name="reminderManagerQueueModeRandom">Random</string>
+    <string name="reminderManagerQueueModeWeighted">Weighted</string>
+    <string name="reminderManagerQueueModeWeightedHint">A higher drop chance means a passage is more likely to be skipped.</string>
+    <string name="reminderManagerQueueDropChance">Default drop chance</string>
+    <string name="reminderManagerQueueIntervalLabel">Every</string>
+    <string name="reminderManagerQueueCadenceLabel">Cadence</string>
+    <string name="reminderManagerQueueCadenceInterval">On an interval</string>
+    <string name="reminderManagerQueueCadenceContinuous">Keep running</string>
+    <string name="reminderManagerQueueCadenceContinuousHint">Keeps going all day on the days you picked. There is no start and end hour in this mode.</string>
+    <string name="reminderManagerQueueDaysLabel">Days</string>
+    <string name="reminderManagerQueueDaysHint">At least one day stays on, so the queue never stops for good.</string>
+    <string name="reminderManagerDayMonday">Mon</string>
+    <string name="reminderManagerDayTuesday">Tue</string>
+    <string name="reminderManagerDayWednesday">Wed</string>
+    <string name="reminderManagerDayThursday">Thu</string>
+    <string name="reminderManagerDayFriday">Fri</string>
+    <string name="reminderManagerDaySaturday">Sat</string>
+    <string name="reminderManagerDaySunday">Sun</string>
+    <string name="reminderManagerQueueWindowLabel">Window</string>
+    <string name="reminderManagerQueueWindowStart">From</string>
+    <string name="reminderManagerQueueWindowEnd">To</string>
+    <string name="reminderManagerQueueWindowHint">Missed intervals are skipped rather than replayed in a burst.</string>
+    <string name="settingsNotificationsHint">How a reminder reaches you when the Azkar window is not in front.</string>
+    <string name="settingsNotificationOverlayTitle">On screen</string>
+    <string name="settingsNotificationOverlayHint">How a reminder is drawn over your other windows.</string>
+    <string name="settingsNotificationDesktopTitle">Desktop notifications</string>
+    <string name="settingsNotificationStartupTitle">Start Azkar when I sign in</string>
+    <string name="settingsNotificationStartupHint">Registers Azkar with your desktop so it opens when you log in.</string>
+    <string name="settingsNotificationStartupFailed">Could not update the startup setting.</string>
+    <!-- Settings screen: prayer tab -->
+    <string name="settingsPrayerTitle">Prayer times</string>
+    <string name="settingsPrayerHint">Where Azkar calculates your prayer times from. Each prayer is turned on or off from the home screen.</string>
+    <string name="settingsPrayerCityLabel">City or place</string>
+    <string name="settingsPrayerLatitudeLabel">Latitude</string>
+    <string name="settingsPrayerLongitudeLabel">Longitude</string>
+    <string name="settingsPrayerZoneLabel">Time zone</string>
+    <string name="settingsPrayerZoneHint">Region and city, for example Europe/London.</string>
+    <string name="settingsPrayerMethodLabel">Calculation</string>
+    <string name="settingsPrayerSave">Save location</string>
+    <string name="settingsPrayerDetect">Auto-detect</string>
+    <string name="settingsPrayerSaved">Location saved</string>
+    <string name="settingsPrayerDetected">Detected %1$s</string>
+    <string name="settingsPrayerInvalidCoordinates">Enter valid coordinates.</string>
+    <string name="settingsPrayerInvalidZone">Enter a valid time zone.</string>
+    <string name="settingsPrayerDetectFailed">Could not detect your location.</string>
+    <!-- Steppers. Symbols, not words: these sit on the trailing edge of a row that already names the value. -->
+    <string name="settingsStepperDecrease">Less</string>
+    <string name="settingsStepperIncrease">More</string>
+    <plurals name="reminderManagerQueueIntervalValue">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="reminderManagerPassageCount">
+        <item quantity="one">%1$d source</item>
+        <item quantity="other">%1$d sources</item>
+    </plurals>
+    <string name="reminderManagerTimePickerTitle">Choose a time</string>
+    <string name="reminderManagerTimePickerClock">Open the clock dial</string>
+    <string name="reminderManagerTimePickerToggleDisplay">Type it instead</string>
+    <string name="reminderManagerTimePickerConfirm">Use this time</string>
+    <string name="reminderManagerTimePickerCancel">Cancel</string>
 </resources>

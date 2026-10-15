@@ -66,7 +66,6 @@ import com.azkar.ui.theme.AzkarThemePreview
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
-import java.util.Locale
 
 /**
  * One collection, opened.
@@ -159,37 +158,14 @@ internal fun CollectionRegion(
     collection: RemembranceCollection,
     navigation: DetailNavigation,
 ) {
-    val activeLocale = AzkarTheme.locale
-    val title = headerActions(collections, detail, collection, dialogs, navigation.onBack, activeLocale)
+    val title = headerActions(collections, detail, collection, dialogs, navigation)
 
     CollectionDetailHero(
         collection = collection,
         memberCount = detail.memberCount,
         stats = detail.stats,
         reminder = CollectionHeroReminder.None,
-        actions =
-            CollectionHeroActions(
-                onBack = navigation.onBack,
-                onAddMembers =
-                    if (detail.isUncategorized || detail.isFavoritesCollection) {
-                        null
-                    } else {
-                        detail.addPicker::open
-                    },
-                onCreateRemembrance = {
-                    detail.remembranceDraft =
-                        detail.remembranceDraft ?: RemembranceCreateDraft(ARABIC_LOCALE)
-                },
-                onTogglePin = title.onTogglePin,
-                onEditReminder = { navigation.onManageReminders(detail.collectionId) },
-                menuItems =
-                    detailMenuItems(
-                        collection = collection,
-                        actions = title,
-                        isUncategorized = detail.isUncategorized,
-                        isFavoritesCollection = detail.isFavoritesCollection,
-                    ),
-            ),
+        actions = detailHeroActions(detail = detail, collection = collection, title = title, navigation = navigation),
     )
 
     Spacer(Modifier.height(DETAIL_REGION_GAP))
@@ -666,19 +642,21 @@ private fun DetailShareHost(
 /**
  * What the title bar does, wired to the state and the open dialogs.
  *
- * The copy's name is resolved by the header rather than here: that is a composable, and this is not,
- * so a `stringResource` inside it would not compile.
+ * Composable rather than a plain builder so it can read [AzkarTheme] for itself: the locale used to
+ * name a duplicated collection was threaded in as an argument, and it was the sixth — the one that
+ * made this the only signature on the page that could not be told apart from a mistake.
  */
+@Composable
 private fun headerActions(
     collections: CollectionsCatalogue,
     detail: CollectionDetailState,
     collection: RemembranceCollection?,
     dialogs: DetailDialogState,
-    onBack: () -> Unit,
-    activeLocale: Locale,
-): DetailActions =
-    DetailActions(
-        onBack = onBack,
+    navigation: DetailNavigation,
+): DetailActions {
+    val activeLocale = AzkarTheme.locale
+    return DetailActions(
+        onBack = navigation.onBack,
         onEdit = { dialogs.editor = CollectionEditorDraft.edit(it) },
         onDuplicate = { target, newName ->
             dialogs.editor =
@@ -705,6 +683,45 @@ private fun headerActions(
         },
         onDelete = { dialogs.pendingDelete = true },
         onShare = { dialogs.shareTarget = it },
+    )
+}
+
+/**
+ * What the band's controls point at.
+ *
+ * Out of [CollectionRegion] so that the page above reads as a page — band, toolbar, search field —
+ * rather than as twenty lines of wiring for a set of callbacks whose shape is already spelled out in
+ * [CollectionHeroActions]. Two of them are conditional: the two shelves the app owns rather than the
+ * user cannot have members added to them, and cannot be renamed either, so offering the control there
+ * would offer one that silently does nothing.
+ */
+@Composable
+private fun detailHeroActions(
+    detail: CollectionDetailState,
+    collection: RemembranceCollection,
+    title: DetailActions,
+    navigation: DetailNavigation,
+): CollectionHeroActions =
+    CollectionHeroActions(
+        onBack = navigation.onBack,
+        onAddMembers =
+            if (detail.isUncategorized || detail.isFavoritesCollection) {
+                null
+            } else {
+                detail.addPicker::open
+            },
+        onCreateRemembrance = {
+            detail.remembranceDraft = detail.remembranceDraft ?: RemembranceCreateDraft(ARABIC_LOCALE)
+        },
+        onTogglePin = title.onTogglePin,
+        onEditReminder = { navigation.onManageReminders(detail.collectionId) },
+        menuItems =
+            detailMenuItems(
+                collection = collection,
+                actions = title,
+                isUncategorized = detail.isUncategorized,
+                isFavoritesCollection = detail.isFavoritesCollection,
+            ),
     )
 
 // ---- members ------------------------------------------------------------------------------------------
