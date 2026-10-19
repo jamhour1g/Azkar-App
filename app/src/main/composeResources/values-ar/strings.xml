@@ -258,8 +258,16 @@
     <string name="settingsThemeDark">داكن</string>
     <string name="settingsLanguageHeader">اللغة</string>
     <string name="settingsLanguageBody">سيؤثر الاختيار على الواجهة ونصوص الأذكار.</string>
-    <string name="settingsLanguageEnglish">الإنجليزية</string>
-    <string name="settingsLanguageArabic">العربية</string>
+    <string name="settingsTypographyHeader">النص</string>
+    <string name="settingsTypographyBody">الخط وحجم النص المستخدَمان في كل مكان، بما في ذلك التذكيرات.</string>
+    <string name="settingsTypographyFontLabel">الخط</string>
+    <string name="settingsTypographyFontHint">الخط الذي يعرض به التطبيق نصه.</string>
+    <string name="settingsTypographyAzkarFont">أذكار (Inter + Amiri)</string>
+    <string name="settingsTypographyFontMissing">لم يعد هذا الخط مثبتًا على الجهاز، لذا يستخدم التطبيق خط أذكار.</string>
+    <string name="settingsTypographySizeLabel">حجم النص</string>
+    <string name="settingsTypographySizeHint">حجم نص التطبيق كنسبة مئوية من الحجم الافتراضي.</string>
+    <string name="settingsTypographyPreview">معاينة</string>
+    <string name="settingsTypographySample">ذكر المساء يدعو إلى الشكر، ويقول ذلك مرة واحدة، بوضوح، في جملة طويلة بما يكفي لتُقرأ بالحجم الذي اخترته هنا.</string>
 
     <plurals name="collectionsMemberCount">
         <item quantity="zero">لا أذكار</item>

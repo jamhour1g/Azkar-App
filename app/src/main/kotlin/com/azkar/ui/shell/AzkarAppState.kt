@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import com.azkar.i18n.LocaleStore
 import com.azkar.i18n.activateLocale
 import com.azkar.i18n.isSameLanguageAs
+import com.azkar.ui.theme.AppTypography
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -53,9 +54,11 @@ enum class ThemePreference { SYSTEM, LIGHT, DARK }
  * both it and the JVM default — resources read the latter, everything else reads the former.
  *
  * [themePreference] follows the same shape for the same reason: it is seeded from the stored value
- * by [ThemePreferenceStore.read] and every change is handed to [persistTheme].
+ * by [ThemePreferenceStore.read] and every change is handed to [persistTheme]. [typography] is the
+ * third of this family and the newest: the reader's font and text size, seeded by [TypographyStore.read]
+ * and handed to [persistTypography].
  *
- * Both persistence callbacks are required rather than defaulting to the real writes. They used to
+ * All three persistence callbacks are required rather than defaulting to the real writes. They used to
  * default to `::persistThemePreference` and `::persistLocale`, which quietly meant "write to the
  * developer's own `settings.preferences_pb`" — a default no caller other than production could
  * survive. [rememberAzkarAppState] supplies them from the container, so the one place that knows
@@ -65,13 +68,25 @@ enum class ThemePreference { SYSTEM, LIGHT, DARK }
 class AzkarAppState(
     initialThemePreference: ThemePreference = ThemePreference.SYSTEM,
     initialLocale: Locale = Locale.getDefault(),
+    initialTypography: AppTypography = AppTypography(),
     persistTheme: (ThemePreference) -> Unit,
     persist: (Locale) -> Unit,
+    persistTypography: (AppTypography) -> Unit,
 ) {
     var themePreference: ThemePreference by mutableStateOf(initialThemePreference)
         private set
 
     var locale: Locale by mutableStateOf(initialLocale)
+        private set
+
+    /**
+     * The reader's font and text size.
+     *
+     * Held here rather than in the settings screen because it is not a settings-screen concern: it
+     * governs the whole app including the overlay window, and the two roots that install `AzkarTheme`
+     * are the only things that need to hear about it.
+     */
+    var typography: AppTypography by mutableStateOf(initialTypography)
         private set
 
     val toasts: MutableList<ToastMessage> = mutableStateListOf()
@@ -109,6 +124,9 @@ class AzkarAppState(
     /** Injected so a test can observe the write without touching the real settings file. */
     private val persist: (Locale) -> Unit = persist
 
+    /** Injected so a test can observe the write without touching the real settings file. */
+    private val persistTypography: (AppTypography) -> Unit = persistTypography
+
     /**
      * Switches to [preference] and stores it for the next run.
      *
@@ -140,6 +158,32 @@ class AzkarAppState(
         target.activateLocale()
         locale = target
         persist(target)
+    }
+
+    /**
+     * Draws the app in [name], and stores it.
+     *
+     * [AppTypography.AZKAR_FONT] is the empty string rather than a name, so "back to the bundled
+     * faces" needs no special case here — it is the same call with the same argument.
+     */
+    fun selectFont(name: String) = updateTypography { copy(family = name) }
+
+    /**
+     * Draws the app at [percent] of its size, and stores it.
+     *
+     * Clamped on the way in rather than at the call site: the value arrives from a slider, but the
+     * store is the thing that also reads values written by other builds of the app, so it is the only
+     * place both paths meet.
+     */
+    fun setTextScale(percent: Int) = updateTypography { copy(scalePercent = percent) }
+
+    /**
+     * The one place a typographic change is applied, so that the two halves of [typography] are never
+     * written by something that forgets the write.
+     */
+    private fun updateTypography(transform: AppTypography.() -> AppTypography) {
+        typography = typography.transform().coerced()
+        persistTypography(typography)
     }
 }
 
@@ -192,25 +236,30 @@ const val TOAST_VISIBLE_MILLIS = 6_000L
 /**
  * `remember`ed shell state, hoisted once by [AzkarApp].
  *
- * The two persistence callbacks are built here from the container's [LocaleStore] and
- * [ThemePreferenceStore] rather than defaulted inside [AzkarAppState], so that a state holder built
- * by hand — a test, or the next caller that is not a screen — has to say what a language or theme
- * change should do to the settings file instead of inheriting the answer from wherever the code
- * happens to sit.
+ * The two persistence callbacks are built here from the container's [LocaleStore],
+ * [ThemePreferenceStore] and [TypographyStore] rather than defaulted inside [AzkarAppState], so that
+ * a state holder built
+ * by hand — a test, or the next caller that is not a screen — has to say what a language, theme or
+ * typographic change should do to the settings file instead of inheriting the answer from wherever
+ * the code happens to sit.
  */
 @Composable
 fun rememberAzkarAppState(
     initialThemePreference: ThemePreference = ThemePreference.SYSTEM,
     initialLocale: Locale = Locale.getDefault(),
+    initialTypography: AppTypography = AppTypography(),
 ): AzkarAppState {
     val locales = koinInject<LocaleStore>()
     val themePreferences = koinInject<ThemePreferenceStore>()
-    return remember(locales, themePreferences) {
+    val typography = koinInject<TypographyStore>()
+    return remember(locales, themePreferences, typography) {
         AzkarAppState(
             initialThemePreference = initialThemePreference,
             initialLocale = initialLocale,
+            initialTypography = initialTypography,
             persistTheme = { themePreferences.persist(it) },
             persist = { locales.persist(it) },
+            persistTypography = { typography.persist(it) },
         )
     }
 }

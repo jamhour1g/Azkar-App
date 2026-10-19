@@ -99,7 +99,7 @@ fun AzkarApp(
 
     RouteNotificationActions(actionRouter, navigator, reminderScope)
 
-    AzkarTheme(darkTheme = darkTheme, uiLocale = state.locale) {
+    AzkarTheme(darkTheme = darkTheme, uiLocale = state.locale, typography = state.typography) {
         key(state.locale) {
             BoxWithConstraints(
                 modifier =

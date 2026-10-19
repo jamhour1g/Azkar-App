@@ -260,8 +260,16 @@
     <string name="settingsThemeDark">Dark</string>
     <string name="settingsLanguageHeader">Language</string>
     <string name="settingsLanguageBody">Your selection updates interface and remembrance text.</string>
-    <string name="settingsLanguageEnglish">English</string>
-    <string name="settingsLanguageArabic">Arabic</string>
+    <string name="settingsTypographyHeader">Text</string>
+    <string name="settingsTypographyBody">The typeface and size used everywhere, reminders included.</string>
+    <string name="settingsTypographyFontLabel">Typeface</string>
+    <string name="settingsTypographyFontHint">Which typeface the app draws its text in.</string>
+    <string name="settingsTypographyAzkarFont">Azkar (Inter + Amiri)</string>
+    <string name="settingsTypographyFontMissing">That typeface is no longer installed, so the app is falling back to Azkar.</string>
+    <string name="settingsTypographySizeLabel">Text size</string>
+    <string name="settingsTypographySizeHint">How large the app's text is drawn, as a percentage of the default size.</string>
+    <string name="settingsTypographyPreview">Preview</string>
+    <string name="settingsTypographySample">The evening remembrance asks for gratitude, and says so once, plainly, in a sentence long enough to read at the size you have chosen here.</string>
 
     <plurals name="collectionsMemberCount">
         <item quantity="one">%1$d remembrance</item>

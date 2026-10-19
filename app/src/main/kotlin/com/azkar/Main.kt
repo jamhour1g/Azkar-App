@@ -36,13 +36,16 @@ import com.azkar.ui.notifications.NotificationRuntime
 import com.azkar.ui.notifications.presentation.NotificationOverlayWindow
 import com.azkar.ui.notifications.presentation.NotificationPublisher
 import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
+import com.azkar.ui.notifications.presentation.OverlayTheme
 import com.azkar.ui.shell.AzkarApp
 import com.azkar.ui.shell.AzkarAppState
 import com.azkar.ui.shell.ReminderTray
 import com.azkar.ui.shell.ThemePreferenceStore
+import com.azkar.ui.shell.TypographyStore
 import com.azkar.ui.shell.rememberAzkarAppState
 import com.azkar.ui.shell.rememberAzkarDarkTheme
 import com.azkar.ui.shell.trayAvailable
+import com.azkar.ui.theme.AppTypography
 import com.azkar.ui.theme.DEFAULT_WINDOW_HEIGHT
 import com.azkar.ui.theme.DEFAULT_WINDOW_WIDTH
 import com.azkar.ui.theme.windowSizeFor
@@ -75,8 +78,7 @@ private val logger = KotlinLogging.logger {}
  * ```
  *
  * It deliberately does *not* start [NotificationRuntime], so the queue cannot add a card of its own
- * and confuse what is being observed, and it publishes through the dispatcher rather than
- * straight into the presenter, so the native channel behaves exactly as it would in normal use.
+ * and confuse what is being observed.
  */
 private const val OVERLAY_PROOF_OF_CONSENT_FLAG = "--overlay-poc"
 
@@ -100,14 +102,16 @@ suspend fun main(args: Array<String>) {
 private data class DesktopStartup(
     val databaseWarmUp: DatabaseWarmUp,
     val themePreference: com.azkar.ui.shell.ThemePreference,
+    val typography: AppTypography,
 )
 
 private suspend fun prepareDesktopStartup(koin: org.koin.core.Koin): DesktopStartup {
     koin.get<LocaleStore>().readAndActivate()
     val warmUp = DatabaseWarmUp().apply { start() }
     val theme = koin.get<ThemePreferenceStore>().read()
+    val typography = koin.get<TypographyStore>().read()
     registerComposeGraphics()
-    return DesktopStartup(warmUp, theme)
+    return DesktopStartup(warmUp, theme, typography)
 }
 
 /** Register Skiko before `rememberVectorPainter` builds the system-window icon. */
@@ -147,7 +151,11 @@ private fun DesktopApplicationRoot(
     // One state for the whole application: the main tree and the overlay window are two separate
     // windows, and two state holders would mean two theme preferences and two locales, so the
     // overlay would stop looking like the app the moment either of them changed.
-    val appState = rememberAzkarAppState(initialThemePreference = startup.themePreference)
+    val appState =
+        rememberAzkarAppState(
+            initialThemePreference = startup.themePreference,
+            initialTypography = startup.typography,
+        )
 
     val preferences = remember { koin.get<NotificationPreferencesRepository>() }
     // Only the queue's on/off flag is read here, and only so the tray menu can say which of "pause"
@@ -223,10 +231,10 @@ private fun DesktopApplicationRoot(
  * The one place the process is allowed to end, in the order that leaves nothing half-released.
  *
  * The scheduler's scope goes first so nothing new is scheduled while the rest is being torn down;
- * the publisher next, so the overlay's stack and the OS channel both stop; then the database, the
- * one HTTP client, and Koin itself. Anything that can fail during shutdown is inside a `runCatching`
- * on purpose — a tray menu item that threw on the way out would leave the window gone and the
- * process alive, which is the one state with no way back into it.
+ * the publisher next, so the overlay's stack stops; then the database, the one HTTP client, and
+ * Koin itself. Anything that can fail during shutdown is inside a `runCatching` on purpose — a tray
+ * menu item that threw on the way out would leave the window gone and the process alive, which is
+ * the one state with no way back into it.
  */
 private fun shutdown(
     koin: org.koin.core.Koin,
@@ -237,8 +245,10 @@ private fun shutdown(
 ) {
     notificationScope.cancel()
     runCatching { dispatcher.dispose() }
+        .onFailure { failure -> logger.warn(failure) { "Unable to dispose the notification publisher" } }
     databaseWarmUp.close()
     runCatching { koin.get<HttpClient>().close() }
+        .onFailure { failure -> logger.warn(failure) { "Unable to close the HTTP client" } }
     stopKoin()
     logger.info { "Azkar is shutting down" }
     exitApplication()
@@ -264,8 +274,15 @@ private fun NotificationOverlayHost(
     NotificationOverlayWindow(
         presenter = overlay,
         settings = settings,
-        darkTheme = rememberAzkarDarkTheme(appState.themePreference),
-        locale = appState.locale,
+        // The app's appearance, not a reminder appearance: a card in someone else's typeface reads as
+        // a notification from somewhere else, and a card in a size the reader has already rejected
+        // everywhere else reads as worse.
+        theme =
+            OverlayTheme(
+                darkTheme = rememberAzkarDarkTheme(appState.themePreference),
+                locale = appState.locale,
+                typography = appState.typography,
+            ),
         // Through the router rather than straight to the navigator, because the overlay window can be
         // clicked before the main tree has ever composed — the autostart path is exactly that case.
         onOpen = { action -> actionRouter.dispatch(action) },
@@ -368,4 +385,5 @@ private fun screenSizeInDp(density: Density): DpSize? =
             width = (size.width / density.density).dp,
             height = (size.height / density.density).dp,
         )
-    }.getOrNull()
+    }.onFailure { failure -> logger.debug(failure) { "Unable to read the screen size" } }
+        .getOrNull()

@@ -11,8 +11,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import com.azkar.i18n.ENGLISH
 import com.azkar.i18n.isRightToLeft
@@ -182,10 +185,21 @@ private val AzkarMotionScheme: MotionScheme = MotionScheme.expressive()
 fun AzkarTheme(
     darkTheme: Boolean = rememberSystemTheme().isDark,
     uiLocale: Locale = Locale.getDefault(),
+    typography: AppTypography = AppTypography(),
     content: @Composable () -> Unit,
 ) {
     val colors = if (darkTheme) DarkAzkarColors else LightAzkarColors
     val layoutDirection = if (uiLocale.isRightToLeft) LayoutDirection.Rtl else LayoutDirection.Ltr
+
+    // `staticCompositionLocalOf` does not track readers: a changed instance invalidates everything
+    // beneath the provider. Both of these therefore have to be remembered, or dragging the text-size
+    // slider would rebuild the ramp and the density on every frame and redraw the app to do it.
+    val ramp = remember(typography.family, uiLocale) { azkarTypography(uiLocale, typography) }
+    val base = LocalDensity.current
+    val density =
+        remember(base, typography.scalePercent) {
+            Density(density = base.density, fontScale = base.fontScale * typography.scale)
+        }
 
     // Not a theme decision -- the palette, the type and the shapes above are -- but it belongs to the
     // same seam. Coil's loader is a process-wide singleton, and `AzkarTheme` is the one composable
@@ -198,11 +212,12 @@ fun AzkarTheme(
         LocalAzkarColors provides colors,
         LocalUiLocale provides uiLocale,
         LocalLayoutDirection provides layoutDirection,
+        LocalDensity provides density,
     ) {
         MaterialExpressiveTheme(
             colorScheme = if (darkTheme) DarkMaterialScheme else LightMaterialScheme,
             motionScheme = AzkarMotionScheme,
-            typography = azkarTypography(uiLocale),
+            typography = ramp,
             shapes = AzkarShapes,
             content = content,
         )

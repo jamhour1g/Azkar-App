@@ -28,6 +28,7 @@ import com.azkar.ui.notifications.presentation.SystemNotificationPresenter
 import com.azkar.ui.shell.NativeReminderNotifier
 import com.azkar.ui.shell.ReminderNotifier
 import com.azkar.ui.shell.ThemePreferenceStore
+import com.azkar.ui.shell.TypographyStore
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
@@ -131,6 +132,8 @@ val appModule =
         single { NotificationRuntime(get(), get(), get(), get()) }
 
         single { ThemePreferenceStore(get()) }
+
+        single { TypographyStore(get()) }
 
         single { LocaleStore(get()) }
 

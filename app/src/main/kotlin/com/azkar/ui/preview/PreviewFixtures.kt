@@ -62,6 +62,7 @@ import com.azkar.ui.library.model.CollectionTile
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.shell.AzkarAppState
 import com.azkar.ui.shell.ThemePreference
+import com.azkar.ui.theme.AppTypography
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -743,22 +744,25 @@ internal fun previewGateway(): PreviewCollectionsGateway =
     )
 
 /**
- * An [AzkarAppState] with both persistence callbacks stubbed out.
+ * An [AzkarAppState] with all three persistence callbacks stubbed out.
  *
  * The callbacks are required rather than defaulted precisely so that nothing can write to the
  * developer's own `settings.preferences_pb` by accident; a preview that passed real ones would be the
- * one caller in the app that quietly did, so it passes `{}` for both and says so here rather than at
+ * one caller in the app that quietly did, so it passes `{}` for each and says so here rather than at
  * every call site.
  */
 fun previewAzkarAppState(
     themePreference: ThemePreference = ThemePreference.SYSTEM,
     locale: Locale = ENGLISH,
+    typography: AppTypography = AppTypography(),
 ): AzkarAppState =
     AzkarAppState(
         initialThemePreference = themePreference,
         initialLocale = locale,
+        initialTypography = typography,
         persistTheme = {},
         persist = {},
+        persistTypography = {},
     )
 
 /**

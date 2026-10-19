@@ -41,6 +41,7 @@ import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
 import com.azkar.ui.notifications.presentation.SystemNotificationPresenter
 import com.azkar.ui.shell.ReminderNotifier
 import com.azkar.ui.shell.ThemePreferenceStore
+import com.azkar.ui.shell.TypographyStore
 import de.infix.testBalloon.framework.core.testSuite
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineDispatcher
@@ -164,6 +165,7 @@ val AppModuleSuite by testSuite("AppModule") {
                     SettingsStore::class,
                     ThemePreferenceStore::class,
                     LocaleStore::class,
+                    TypographyStore::class,
                     LibrarySeedState::class,
                     CollectionReminderGateway::class,
                     CollectionsGateway::class,

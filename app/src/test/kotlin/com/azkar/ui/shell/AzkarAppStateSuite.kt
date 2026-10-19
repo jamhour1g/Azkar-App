@@ -2,6 +2,7 @@ package com.azkar.ui.shell
 
 import com.azkar.i18n.ARABIC
 import com.azkar.i18n.ENGLISH
+import com.azkar.ui.theme.AppTypography
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
 import java.util.Locale
@@ -21,7 +22,13 @@ val AzkarAppStateSuite by testSuite("Switching the application language") {
     test("a switch updates the shell state and the JVM default together") {
         withRestoredLocale {
             val persisted = mutableListOf<Locale>()
-            val state = AzkarAppState(initialLocale = ENGLISH, persistTheme = {}) { persisted += it }
+            val state =
+                AzkarAppState(
+                    initialLocale = ENGLISH,
+                    persistTheme = {},
+                    persist = { persisted += it },
+                    persistTypography = {},
+                )
 
             state.applyLocale(ARABIC)
 
@@ -37,7 +44,13 @@ val AzkarAppStateSuite by testSuite("Switching the application language") {
         withRestoredLocale {
             val before = Locale.getDefault()
             val persisted = mutableListOf<Locale>()
-            val state = AzkarAppState(initialLocale = ARABIC, persistTheme = {}) { persisted += it }
+            val state =
+                AzkarAppState(
+                    initialLocale = ARABIC,
+                    persistTheme = {},
+                    persist = { persisted += it },
+                    persistTypography = {},
+                )
 
             // A different tag for the same language must still count as no change: a user who picks
             // "ar" again must not trigger the rebuild that re-reads every resource. The settings
@@ -77,7 +90,7 @@ private fun withRestoredLocale(block: () -> Unit) {
 val AzkarAppThemeSuite by testSuite("Switching the application theme") {
     test("choosing a theme moves the palette and stores the choice") {
         val persisted = mutableListOf<ThemePreference>()
-        val state = AzkarAppState(persistTheme = { persisted += it }, persist = {})
+        val state = AzkarAppState(persistTheme = { persisted += it }, persist = {}, persistTypography = {})
 
         state.selectTheme(ThemePreference.DARK)
 
@@ -92,6 +105,7 @@ val AzkarAppThemeSuite by testSuite("Switching the application theme") {
                 initialThemePreference = ThemePreference.DARK,
                 persistTheme = { persisted += it },
                 persist = {},
+                persistTypography = {},
             )
 
         assertThat(state.themePreference).isEqualTo(ThemePreference.DARK)
@@ -107,6 +121,7 @@ val AzkarAppThemeSuite by testSuite("Switching the application theme") {
                 initialThemePreference = ThemePreference.DARK,
                 persistTheme = { persisted += it },
                 persist = {},
+                persistTypography = {},
             )
 
         state.selectTheme(ThemePreference.LIGHT)
@@ -122,6 +137,7 @@ val AzkarAppThemeSuite by testSuite("Switching the application theme") {
                 initialThemePreference = ThemePreference.DARK,
                 persistTheme = { persisted += it },
                 persist = {},
+                persistTypography = {},
             )
 
         state.selectTheme(ThemePreference.SYSTEM)
@@ -139,6 +155,7 @@ val AzkarAppThemeSuite by testSuite("Switching the application theme") {
                 initialThemePreference = ThemePreference.LIGHT,
                 persistTheme = { persisted += it },
                 persist = {},
+                persistTypography = {},
             )
 
         state.selectTheme(ThemePreference.LIGHT)
@@ -147,5 +164,40 @@ val AzkarAppThemeSuite by testSuite("Switching the application theme") {
         // user just clicked is the only way to name the current value. Re-storing it is harmless.
         assertThat(state.themePreference).isEqualTo(ThemePreference.LIGHT)
         assertThat(persisted).containsExactly(ThemePreference.LIGHT)
+    }
+}
+
+/** A saved face and scale are installed before the first themed composition begins. */
+val AzkarAppTypographySuite by testSuite("Restoring the application typography") {
+    test("the stored face and scale are the initial app state without being rewritten") {
+        val persisted = mutableListOf<AppTypography>()
+        val saved = AppTypography(family = "Georgia", scalePercent = 130)
+        val state =
+            AzkarAppState(
+                initialTypography = saved,
+                persistTheme = {},
+                persist = {},
+                persistTypography = { persisted += it },
+            )
+
+        assertThat(state.typography).isEqualTo(saved)
+        assertThat(persisted).isEmpty()
+    }
+
+    test("changing the restored size stores the new value") {
+        val persisted = mutableListOf<AppTypography>()
+        val state =
+            AzkarAppState(
+                initialTypography = AppTypography(family = "Georgia", scalePercent = 130),
+                persistTheme = {},
+                persist = {},
+                persistTypography = { persisted += it },
+            )
+
+        state.setTextScale(145)
+
+        val expected = AppTypography(family = "Georgia", scalePercent = 145)
+        assertThat(state.typography).isEqualTo(expected)
+        assertThat(persisted).containsExactly(expected)
     }
 }

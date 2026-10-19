@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.i18n.usesArabicTypeface
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import androidx.compose.ui.text.platform.Font as DesktopFont
 
 private const val AMIRI_REGULAR = "/com/azkar/fonts/Amiri/Amiri-Regular.ttf"
@@ -188,6 +189,14 @@ private val InterTypography = azkarTypography(InterFamily, arabic = false)
 private val AmiriTypography = azkarTypography(AmiriFamily, arabic = true)
 
 /**
+ * Ramps built for faces off the reader's system, keyed by `(family, script)`.
+ *
+ * Concurrent because the settings screen and the main window can both ask for a ramp in the same
+ * frame, and a plain map would be a data race for the sake of a field read.
+ */
+private val systemTypographyCache = ConcurrentHashMap<Pair<String, Boolean>, Typography>()
+
+/**
  * Replaces the JavaFX `-fx-font-family` overrides with a Compose typography tuned per script.
  *
  * This is the whole of what a new language costs on the typography side, because direction is
@@ -204,6 +213,68 @@ private val AmiriTypography = azkarTypography(AmiriFamily, arabic = true)
  */
 fun azkarTypography(uiLocale: Locale): Typography =
     if (uiLocale.usesArabicTypeface) AmiriTypography else InterTypography
+
+/**
+ * Ramped typography for a face the reader chose off their own system.
+ *
+ * Keyed and cached by `(family, script)`. The cache is what makes this cheap to call from
+ * `AzkarTheme` on every recomposition — building a `Typography` is not itself expensive, but a
+ * fresh instance is handed to `MaterialTheme`, whose typography local is a `staticCompositionLocalOf`
+ * and therefore invalidates every reading it anywhere in the tree. A new instance per frame would
+ * redraw the app to change nothing.
+ *
+ * @see AppTypography for why the scale is not applied here.
+ */
+private fun systemTypography(
+    family: String,
+    arabic: Boolean,
+): Typography =
+    systemTypographyCache.getOrPut(family to arabic) {
+        // A family this machine no longer has. The reader gets the bundled pairing rather than a
+        // name Compose could not resolve: the settings screen has already shown the name as missing,
+        // and a reminder that silently changed face would be the app disagreeing with itself.
+        val chosen =
+            SystemFontCatalogue.family(family)
+                ?: return@getOrPut if (arabic) AmiriTypography else InterTypography
+        azkarTypography(family = chosen, arabic = arabic)
+    }
+
+/**
+ * The typography for a reader's typographic choice.
+ *
+ * The bundled pairing is still the answer for most readers and is reached without building anything:
+ * [InterTypography] and [AmiriTypography] are the same two instances that were already here, so the
+ * default path costs nothing at all.
+ *
+ * ## Why a face off the system needs nothing else arranged around it
+ *
+ * The obvious worry about handing Compose a desktop font is that a face with no Arabic in it will
+ * draw tofu, and the obvious fix is a fallback list. There is no API for one here, and there turns
+ * out not to be a need for one either — the two halves of that were worth checking properly:
+ *
+ * - `TextStyle` in this version of Compose has no `fontFamilyFallback` property. Android gained it
+ *   later; this is a multiplatform `TextStyle`, and the field simply is not on it.
+ * - A `FontFamily` does not chain for glyphs either. Compose matches a request to *one* `Font` for
+ *   the requested weight and style and hands the resulting typeface to the paragraph; the second and
+ *   later fonts in the list are consulted only if an earlier one fails to load at all, not if it
+ *   turns out to lack a glyph.
+ * - Neither is needed, because the fallback happens underneath Compose. Skiko builds the paragraph
+ *   with no `FontCollection` of its own, which means Skia's default font collection is in play, and
+ *   that one has glyph fallback switched on: a character the resolved face does not have is looked
+ *   up in the system font manager, which on any machine with a fontconfig or a font directory has
+ *   something for Arabic.
+ *
+ * So a reader's chosen face is used for every character it has, the desktop supplies the rest, and
+ * the app does not have to pretend it can audit which of the several hundred installed families
+ * carry which of the scripts this data set happens to contain.
+ */
+fun azkarTypography(
+    uiLocale: Locale,
+    typography: AppTypography,
+): Typography {
+    if (typography.isAzkarFont) return azkarTypography(uiLocale)
+    return systemTypography(typography.family, uiLocale.usesArabicTypeface)
+}
 
 /** Gap/spacing tokens lifted from the JavaFX padding + spacing values in the FXML files. */
 object AzkarSpacing {
