@@ -62,7 +62,7 @@ class TagService(
         nameLocale: Locale? = null,
     ): Tag =
         transactions.run {
-            val current = repository.findById(id) ?: throw IllegalStateException("Tag $id does not exist")
+            val current = repository.findById(id) ?: error("Tag $id does not exist")
             val wording = translations ?: current.translations
             val renamed =
                 TagImpl(
@@ -125,13 +125,17 @@ class TagService(
                     if (text.isNotBlank()) add(text.trim())
                 }
             }
+        var clash: String? = null
         for (word in names) {
-            val byName = repository.findByNameIgnoreCase(word)
-            if (byName != null && byName.id != ignoring) return word
-            val byTranslation = repository.findByTranslationIgnoreCase(word)
-            if (byTranslation != null && byTranslation.id != ignoring) return word
+            val takenByName = repository.findByNameIgnoreCase(word)?.id?.let { it != ignoring } == true
+            val takenByTranslation =
+                !takenByName && repository.findByTranslationIgnoreCase(word)?.id?.let { it != ignoring } == true
+            if (takenByName || takenByTranslation) {
+                clash = word
+                break
+            }
         }
-        return null
+        return clash
     }
 
     /** Returns the live tag identified by [id], or `null` when [id] is `null`, unknown or deleted. */

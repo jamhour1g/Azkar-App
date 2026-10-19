@@ -100,7 +100,9 @@ class CoverStorage(
         if (!Files.isRegularFile(file)) {
             return null
         }
-        return runCatching { Files.readAllBytes(file) }.getOrNull()
+        return runCatching { Files.readAllBytes(file) }
+            .onFailure { failure -> logger.warn(failure) { "Unable to read the cover image [$coverImagePath]" } }
+            .getOrNull()
     }
 
     /** Removes one stored cover. Missing is not a failure — there is nothing left to remove. */

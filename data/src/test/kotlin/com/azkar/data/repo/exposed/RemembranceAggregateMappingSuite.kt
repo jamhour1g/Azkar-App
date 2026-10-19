@@ -144,7 +144,8 @@ val RemembranceAggregateMappingSuite by testSuite("Remembrance aggregate mapping
             val id = requireNotNull(saved.id)
             transaction(repositories.database) {
                 exec(
-                    "INSERT INTO explanation_translation (remembrance_id, locale_code, text) VALUES ($id,'fr','Explication')",
+                    "INSERT INTO explanation_translation (remembrance_id, locale_code, text) " +
+                        "VALUES ($id,'fr','Explication')",
                 )
             }
 

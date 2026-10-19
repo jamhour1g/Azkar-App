@@ -9,6 +9,7 @@ import com.azkar.domain.model.ReminderCadence
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.TagSummary
 import com.azkar.domain.model.impl.TagImpl
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.DayOfWeek
 import java.util.Locale
 
@@ -28,6 +29,8 @@ import java.util.Locale
 // The translations ride in as an argument for the same reason the counts do below: they are a second
 // table, and a mapper that went back for them itself would be issuing a statement per row of whatever
 // list it is mapping.
+private val logger = KotlinLogging.logger {}
+
 internal fun TagEntity.toTag(translations: Map<Locale, String> = emptyMap()): Tag =
     TagImpl(
         id = id.value,
@@ -93,7 +96,9 @@ internal fun RecitationProgressEntity.toProgress(): RecitationProgress =
 internal fun CollectionReminderEntity.toReminder(): CollectionReminder? {
     val day =
         dayOfWeek?.let { stored ->
-            runCatching { DayOfWeek.valueOf(stored) }.getOrNull()
+            runCatching { DayOfWeek.valueOf(stored) }
+                .onFailure { failure -> logger.warn(failure) { "Unable to parse the stored day of week [$stored]" } }
+                .getOrNull()
         }
     if (cadence == ReminderCadence.WEEKLY && day == null) return null
     return CollectionReminder(

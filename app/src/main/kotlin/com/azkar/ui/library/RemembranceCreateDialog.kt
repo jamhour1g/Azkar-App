@@ -57,11 +57,7 @@ import com.azkar.generated.resources.remembranceCreateActionConfirm
 import com.azkar.generated.resources.remembranceCreateAdditionalInfo
 import com.azkar.generated.resources.remembranceCreateExplanationLabel
 import com.azkar.generated.resources.remembranceCreateExplanationPlaceholder
-import com.azkar.generated.resources.remembranceCreateGradeDaif
-import com.azkar.generated.resources.remembranceCreateGradeHasan
 import com.azkar.generated.resources.remembranceCreateGradeLabel
-import com.azkar.generated.resources.remembranceCreateGradeSahih
-import com.azkar.generated.resources.remembranceCreateGradeUnspecified
 import com.azkar.generated.resources.remembranceCreateLanguagePlaceholder
 import com.azkar.generated.resources.remembranceCreateLanguageUnavailable
 import com.azkar.generated.resources.remembranceCreateSourceLabel
@@ -84,6 +80,7 @@ import com.azkar.ui.components.AzkarSelect
 import com.azkar.ui.components.IconActionButton
 import com.azkar.ui.components.PrimaryButton
 import com.azkar.ui.components.SecondaryButton
+import com.azkar.ui.i18n.hadithGradeLabel
 import com.azkar.ui.library.model.RemembranceTranslationEntry
 import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.library.model.missingRemembranceLanguages
@@ -239,15 +236,7 @@ private fun RemembranceAdditionalInfo(draft: RemembranceCreateDraft) {
 }
 
 @Composable
-private fun gradeLabel(grade: HadithGrade): String =
-    stringResource(
-        when (grade) {
-            HadithGrade.SAHIH -> Res.string.remembranceCreateGradeSahih
-            HadithGrade.HASAN -> Res.string.remembranceCreateGradeHasan
-            HadithGrade.DAIF -> Res.string.remembranceCreateGradeDaif
-            HadithGrade.UNSPECIFIED -> Res.string.remembranceCreateGradeUnspecified
-        },
-    )
+private fun gradeLabel(grade: HadithGrade): String = hadithGradeLabel(grade)
 
 @Composable
 private fun gradeOptions(draft: RemembranceCreateDraft): List<AzkarMenuItem> =

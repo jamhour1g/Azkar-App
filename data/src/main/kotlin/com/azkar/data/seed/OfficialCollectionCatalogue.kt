@@ -73,104 +73,91 @@ internal object OfficialCollectionCatalogue {
                 name = "Morning Azkar",
                 description = "Remembrance for the start of the day",
                 iconKey = "sunrise",
-                arabicName = "أذكار الصباح",
-                arabicDescription = "أذكار لبداية اليوم",
+                arabic = LocalizedPair(name = "أذكار الصباح", description = "أذكار لبداية اليوم"),
             ),
             entry(
                 tagName = "Evening",
                 name = "Evening Azkar",
                 description = "Remembrance for the end of the day",
                 iconKey = "sunset",
-                arabicName = "أذكار المساء",
-                arabicDescription = "أذكار لنهاية اليوم",
+                arabic = LocalizedPair(name = "أذكار المساء", description = "أذكار لنهاية اليوم"),
             ),
             entry(
                 tagName = "Morning & Evening",
                 name = "Morning & Evening",
                 description = "Remembrance recited at both ends of the day",
                 iconKey = "sun",
-                arabicName = "أذكار الصباح والمساء",
-                arabicDescription = "أذكار تُقال في أول اليوم وآخره",
+                arabic = LocalizedPair(name = "أذكار الصباح والمساء", description = "أذكار تُقال في أول اليوم وآخره"),
             ),
             entry(
                 tagName = "Prayer",
                 name = "After Prayer",
                 description = "Remembrance said once the prayer is finished",
                 iconKey = "mosque",
-                arabicName = "أذكار بعد الصلاة",
-                arabicDescription = "أذكار تُقال بعد انتهاء الصلاة",
+                arabic = LocalizedPair(name = "أذكار بعد الصلاة", description = "أذكار تُقال بعد انتهاء الصلاة"),
             ),
             entry(
                 tagName = "Travel",
                 name = "Travel",
                 description = "Remembrance for setting out and arriving",
                 iconKey = "compass",
-                arabicName = "أذكار السفر",
-                arabicDescription = "أذكار عند الخروج والوصول",
+                arabic = LocalizedPair(name = "أذكار السفر", description = "أذكار عند الخروج والوصول"),
             ),
             entry(
                 tagName = "Home & Family",
                 name = "Home & Family",
                 description = "Remembrance for the home and those in it",
                 iconKey = "home",
-                arabicName = "البيت والأسرة",
-                arabicDescription = "أذكار البيت وأهله",
+                arabic = LocalizedPair(name = "البيت والأسرة", description = "أذكار البيت وأهله"),
             ),
             entry(
                 tagName = "Food & Drink",
                 name = "Food & Drink",
                 description = "Remembrance before and after eating",
                 iconKey = "khatim",
-                arabicName = "الطعام والشراب",
-                arabicDescription = "أذكار قبل الطعام وبعده",
+                arabic = LocalizedPair(name = "الطعام والشراب", description = "أذكار قبل الطعام وبعده"),
             ),
             entry(
                 tagName = "Nature",
                 name = "Nature",
                 description = "Remembrance for rain, wind, sun and sky",
                 iconKey = "nature",
-                arabicName = "الطبيعة",
-                arabicDescription = "أذكار المطر والرياح والشمس والسماء",
+                arabic = LocalizedPair(name = "الطبيعة", description = "أذكار المطر والرياح والشمس والسماء"),
             ),
             entry(
                 tagName = "Good Etiquette",
                 name = "Good Etiquette",
                 description = "Remembrance for how to treat people",
                 iconKey = "people",
-                arabicName = "حسن الأدب",
-                arabicDescription = "أذكار في معاملة الناس",
+                arabic = LocalizedPair(name = "حسن الأدب", description = "أذكار في معاملة الناس"),
             ),
             entry(
                 tagName = "Praising Allah",
                 name = "Praising Allah",
                 description = "Remembrance that glorifies the Creator",
                 iconKey = "star",
-                arabicName = "الثناء على الله",
-                arabicDescription = "أذكار في الثناء على الخالق",
+                arabic = LocalizedPair(name = "الثناء على الله", description = "أذكار في الثناء على الخالق"),
             ),
             entry(
                 tagName = "Joy & Distress",
                 name = "Joy & Distress",
                 description = "Remembrance for times of ease and hardship",
                 iconKey = "heart",
-                arabicName = "الفرح والهمّ",
-                arabicDescription = "أذكار في وقت الفرج والهم",
+                arabic = LocalizedPair(name = "الفرح والهمّ", description = "أذكار في وقت الفرج والهم"),
             ),
             entry(
                 tagName = "Sickness & Death",
                 name = "Sickness & Death",
                 description = "Remembrance for illness, recovery and loss",
                 iconKey = "heart",
-                arabicName = "المرض والموت",
-                arabicDescription = "أذكار المرض والشفاء والفقد",
+                arabic = LocalizedPair(name = "المرض والموت", description = "أذكار المرض والشفاء والفقد"),
             ),
             entry(
                 tagName = "Hajj & Umrah",
                 name = "Hajj & Umrah",
                 description = "Remembrance for the pilgrimage",
                 iconKey = "khatim",
-                arabicName = "الحجّ والعمرة",
-                arabicDescription = "أذكار الحج والعمرة",
+                arabic = LocalizedPair(name = "الحجّ والعمرة", description = "أذكار الحج والعمرة"),
             ),
         )
 
@@ -183,14 +170,17 @@ internal object OfficialCollectionCatalogue {
      * English?" should not get two different answers depending on where a shelf came from — and it is
      * what lets a later release translate the canonical name into a language the seed originally
      * shipped in without that being a schema change.
+     *
+     * The Arabic wording arrives as one [LocalizedPair] rather than as two loose strings, because
+     * that is the shape a translation actually has — a shelf's card draws a name and its description
+     * together, and passing them separately is what made this function long enough to be a mistake.
      */
     private fun entry(
         tagName: String?,
         name: String,
         description: String,
         iconKey: String,
-        arabicName: String,
-        arabicDescription: String,
+        arabic: LocalizedPair,
     ): Entry =
         Entry(
             tagName = tagName,
@@ -200,7 +190,7 @@ internal object OfficialCollectionCatalogue {
             translations =
                 mapOf(
                     ENGLISH to LocalizedPair(name = name, description = description),
-                    ARABIC to LocalizedPair(name = arabicName, description = arabicDescription),
+                    ARABIC to arabic,
                 ),
         )
 }

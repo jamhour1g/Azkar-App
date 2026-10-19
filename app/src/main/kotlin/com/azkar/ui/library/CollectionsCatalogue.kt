@@ -378,7 +378,10 @@ class CollectionsCatalogue(
     /** Looks up a collection for the detail screen, and refreshes its "last opened" stamp. */
     fun findCollection(id: Long): RemembranceCollection? {
         val collection = allCollections.findById(id) ?: return null
-        scope.launch { runCatching { gateway.touchCollectionOpened(id) } }
+        scope.launch {
+            runCatching { gateway.touchCollectionOpened(id) }
+                .onFailure { failure -> logger.warn(failure) { "Unable to record the last opening of collection $id" } }
+        }
         return collection
     }
 

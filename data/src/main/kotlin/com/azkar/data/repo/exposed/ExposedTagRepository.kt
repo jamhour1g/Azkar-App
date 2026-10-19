@@ -139,19 +139,21 @@ class ExposedTagRepository(
                     }
                 } else {
                     val before = findTag(existingId)?.name
-                    findTag(existingId)
-                        ?.updateAndFlush {
-                            this.name = name
-                            nameLocaleCode = tag.nameLocale.toLanguageTag()
-                            updatedAt = now()
-                        }?.withTranslations()
-                        ?: error("Tag $existingId vanished during save")
-                            // A rename is the user saying "this is what it is called now", and the wording in
-                            // other languages was the wording of the *old* name. Keeping it would leave a
-                            // label that answers to "Morning Azkar" in Arabic after being renamed to
-                            // something else entirely — which is worse than showing the folded name, because
-                            // it is confidently wrong rather than visibly untranslated.
-                            .also { if (before != null && before != name) TagTranslationTable.clearTexts(existingId) }
+                    val renamed = before != null && before != name
+                    val updated =
+                        findTag(existingId)
+                            ?.updateAndFlush {
+                                this.name = name
+                                nameLocaleCode = tag.nameLocale.toLanguageTag()
+                                updatedAt = now()
+                            }?.withTranslations()
+                    // A rename is the user saying "this is what it is called now", and the wording in
+                    // other languages was the wording of the *old* name. Keeping it would leave a
+                    // label that answers to "Morning Azkar" in Arabic after being renamed to
+                    // something else entirely — which is worse than showing the folded name, because
+                    // it is confidently wrong rather than visibly untranslated.
+                    if (renamed) TagTranslationTable.clearTexts(existingId)
+                    checkNotNull(updated) { "Tag $existingId vanished during save" }
                 }
             val id = checkNotNull(saved.id) { "A just-saved tag must have an id" }
             syncTranslations(id, tag.translations)
