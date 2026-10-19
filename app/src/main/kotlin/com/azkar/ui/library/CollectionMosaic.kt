@@ -44,40 +44,50 @@ import com.azkar.ui.theme.AzkarThemePreview
  *
  * The key is a plain string rather than an enum because it is written by a seed file, and a seed file
  * that names a glyph the app has since dropped must not stop the database from migrating. An
- * unrecognised key falls back to the bookshelf rather than to nothing: the tile is still
+ * unrecognised key falls back to the shelves rather than to nothing: the tile is still
  * identifiable by its name, and a missing icon is a smaller failure than a blank one.
  *
  * The mapping lives here, in the UI, rather than next to the seed data — the data layer has no
- * business depending on a set of hand-drawn vector paths.
+ * business depending on a set of hand-drawn vector paths. The lookup runs in composition and in two
+ * halves ([brandIconFor], [materialIconFor]) because the brand glyphs are composable accessors to
+ * resource-backed vectors while the material ones are plain constants; splitting on exactly that
+ * difference keeps each list short enough to read in one glance.
  */
-fun iconForCollection(iconKey: String): ImageVector = COLLECTION_ICONS[iconKey] ?: AzkarIcons.Library
+@Composable
+fun iconForCollection(iconKey: String): ImageVector =
+    brandIconFor(iconKey) ?: materialIconFor(iconKey) ?: AzkarIcons.Library
 
 /**
- * Every `icon_key` a seed file may name, and the glyph it means.
- *
- * A table rather than a `when` because the set is data, not control flow: the seed catalogue in
- * `:data` picks these keys and the UI draws them, and a `when` would make "is there a glyph for this
- * key?" a question about indentation.
+ * The keys resolved to the brand set — Lucide where the set is upstream, the khatim and mosque where
+ * it is the app's own artwork.
  */
-private val COLLECTION_ICONS: Map<String, ImageVector> =
-    mapOf(
-        "sunrise" to AzkarIcons.Sunrise,
-        "sunset" to AzkarIcons.Sunset,
-        "sun" to AzkarIcons.Sun,
-        "moon" to AzkarIcons.Moon,
-        "mosque" to AzkarIcons.Mosque,
-        "compass" to AzkarIcons.Compass,
-        "home" to AzkarIcons.Home,
-        "khatim" to AzkarIcons.Khatim,
-        "star" to AzkarIcons.Star,
-        "library" to AzkarIcons.Library,
-        "book" to AzkarIcons.BookOpen,
-        "nature" to Icons.Outlined.Eco,
-        "people" to Icons.Outlined.People,
-        "heart" to Icons.Outlined.FavoriteBorder,
-        "folder" to Icons.Outlined.Folder,
-        "sparkle" to Icons.Filled.AutoAwesome,
-    )
+@Composable
+private fun brandIconFor(iconKey: String): ImageVector? =
+    when (iconKey) {
+        "sunrise" -> AzkarIcons.Sunrise
+        "sunset" -> AzkarIcons.Sunset
+        "sun" -> AzkarIcons.Sun
+        "moon" -> AzkarIcons.Moon
+        "mosque" -> AzkarIcons.Mosque
+        "compass" -> AzkarIcons.Compass
+        "home" -> AzkarIcons.Home
+        "khatim" -> AzkarIcons.Khatim
+        "star" -> AzkarIcons.Star
+        "library" -> AzkarIcons.Library
+        "book" -> AzkarIcons.BookOpen
+        else -> null
+    }
+
+/** The keys resolved to material glyphs, which are constants and need nothing from composition. */
+private fun materialIconFor(iconKey: String): ImageVector? =
+    when (iconKey) {
+        "nature" -> Icons.Outlined.Eco
+        "people" -> Icons.Outlined.People
+        "heart" -> Icons.Outlined.FavoriteBorder
+        "folder" -> Icons.Outlined.Folder
+        "sparkle" -> Icons.Filled.AutoAwesome
+        else -> null
+    }
 
 /** What a custom collection with no icon of its own falls back to. */
 internal fun defaultIconKeyFor(kind: CollectionKind): String =

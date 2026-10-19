@@ -3,6 +3,7 @@ package com.azkar.ui.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
@@ -132,6 +134,18 @@ internal object ActionIcons {
      */
     val removeFromCollection: ImageVector get() = Icons.Outlined.PlaylistRemove
 
+    /**
+     * Dismiss: make the thing on screen go away, as an X everywhere it is drawn.
+     *
+     * The material glyph rather than the brand set's crossed strokes. The crossed strokes existed
+     * for one place — the 14dp corner of the notification overlay, where a heavier X blobbed — and
+     * the button has since been accepted at the material glyph there too; everywhere else an X is
+     * drawn at normal button sizes and a second shape for the same action would only be something
+     * to confuse it with.
+     */
+    val dismiss: ImageVector get() = Icons.Filled.Close
+
     /** Where a passage came from. A book, everywhere it is printed. */
-    val source: ImageVector get() = AzkarIcons.BookOpen
+    val source: ImageVector
+        @Composable get() = AzkarIcons.BookOpen
 }

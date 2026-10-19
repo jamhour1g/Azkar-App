@@ -1,0 +1,62 @@
+<!--
+  Azkar brand mark: a gradient eight-pointed khatim with a white mosque inside it.
+
+  The app's own artwork, not part of the Lucide pack. It is a filled, self-coloured mark, so it is
+  drawn with Image rather than Icon throughout: an Icon tint would flatten the gradient to a single
+  colour. The gradient rides in an inline <aapt:attr> element because a plain android:fillColor can
+  only be one colour, and the two stops here are what make the mark read as the app's own.
+
+  The paths are drawn around the mark's own centre rather than the viewport's: they fill only
+  x 5..27.3 and y 1.8..24 of the 32-unit square. Unfitted that slack is visible anywhere the vector
+  is drawn into a box it does not choose for itself, which is what made the Linux tray icon - a
+  fixed 24px slot - look undersized and sit high in its slot. The <group> below is the fit, stated
+  once: one uniform scale off the artwork's longer side, then a translation that centres the result
+  inside a 26x26 box and so leaves a 3-unit margin on every side. Nudging any path above means
+  moving those four numbers with it.
+
+  The 3-unit margin is the whole tuning decision, and it is a compromise between the two places
+  this vector lands. Pushed to fill the box outright the star's flattened diagonal shoulders butt
+  against the edge and read as a clipped blue block rather than an eight-pointed star; pulled back
+  too far the mark shrinks again. At 3 units the longest point-to-point span is 26 of the 32, and
+  all eight points stay legible both at the tray's 24px and at the 32dp window icon.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="32.0"
+    android:viewportHeight="32.0">
+    <group
+        android:name="fit"
+        android:scaleX="1.1659193"
+        android:scaleY="1.1659193"
+        android:translateX="-2.8295964"
+        android:translateY="0.9596413">
+        <path android:pathData="M16 1.8 19.4 5l4.6-.1.1 4.6 3.2 3.4-3.2 3.4.1 4.6-4.6-.1-3.4 3.2-3.4-3.2-4.6.1.1-4.6L5 12.9l3.2-3.4-.1-4.6 4.6.1L16 1.8Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="4"
+                    android:startY="2"
+                    android:endX="28"
+                    android:endY="30">
+                    <item android:offset="0.0" android:color="#FF60A5FA"/>
+                    <item android:offset="1.0" android:color="#FF2563EB"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- The mosque inside the star: its two walls and roofline, its dome, its spire, its doorway. -->
+        <path
+            android:pathData="M10 20.2v-5.4l2-2.1v7.5h2v-9.9l2-2.2 2 2.2v9.9h2v-7.5l2 2.1v5.4H10Z"
+            android:fillColor="#FFFFFFFF"/>
+        <path
+            android:pathData="M16 6.1c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2Z"
+            android:fillColor="#FFFFFFFF"/>
+        <path
+            android:pathData="M15.35 4.2h1.3v1.9h-1.3z"
+            android:fillColor="#FFFFFFFF"/>
+        <path
+            android:pathData="M14.2 20.2h3.6v-3.1h-3.6z"
+            android:fillColor="#FFFFFFFF"/>
+    </group>
+</vector>

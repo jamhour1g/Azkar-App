@@ -93,6 +93,7 @@ private data class PrayerAccent(
     val color: Color,
 )
 
+@Composable
 private fun prayerAccent(key: PrayerKey): PrayerAccent =
     when (key) {
         PrayerKey.FAJR -> PrayerAccent(AzkarIcons.Sunrise, Color(0xFFF59E0B))

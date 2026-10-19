@@ -1,0 +1,6 @@
+<!-- Azkar artwork, ported from the hand-drawn SVGs in azkar-compose-ui-assets (khatim watermark). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M40 5 52 17 69 11 63 28 75 40 63 52 69 69 52 63 40 75 28 63 11 69 17 52 5 40 17 28 11 11 28 17Z"/>
+  <path d="M40 17 49 31 63 40 49 49 40 63 31 49 17 40 31 31Z"/>
+  <circle cx="40" cy="40" r="5"/>
+</svg>

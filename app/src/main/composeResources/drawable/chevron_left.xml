@@ -1,0 +1,22 @@
+<!--
+  Lucide 0.544.0 - ISC (assets/icons/lucide/chevron-right.svg mirrored across x=12, which is how the
+  other half of that chevron was always drawn - a mirror, not a rotation, because a rotation cannot
+  flip and both ends of a row have to point the way the reader is already travelling.
+
+  Both this and chevron_right are autoMirrored, so in a right-to-left layout they exchange roles:
+  the "next" affordance points left, the "walk back" one points right.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24.0"
+    android:viewportHeight="24.0"
+    android:autoMirrored="true">
+    <path
+        android:pathData="m15 18-6-6 6-6"
+        android:fillColor="#00000000"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+</vector>

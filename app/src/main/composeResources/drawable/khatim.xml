@@ -1,0 +1,14 @@
+<!-- Azkar artwork (assets/icons/azkar/khatim.svg converted to a vector drawable, circle expanded) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="80dp"
+    android:viewportWidth="80.0"
+    android:viewportHeight="80.0">
+    <path
+        android:pathData="M40 5 52 17 69 11 63 28 75 40 63 52 69 69 52 63 40 75 28 63 11 69 17 52 5 40 17 28 11 11 28 17ZM40 17 49 31 63 40 49 49 40 63 31 49 17 40 31 31ZM35 40a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+</vector>
