@@ -1,0 +1,72 @@
+# ProGuard rules for the release build. The compose desktop DSL runs this with
+# shrink alone - no obfuscation (the app is open source, so renaming buys nothing
+# and only breaks name lookups) and no optimization (it rewrote a LocalVariableTable
+# entry in material3's SwitchDefaults into a malformed class that JDK 21+ rejects).
+# So the job here is pruning dead library classes, notably the ~37MB of unused
+# Material icons in material-icons-extended-desktop, while keeping the parts that
+# are only ever reached by name.
+#
+# The Compose plugin injects its own defaults for compose/skiko; rules here cover
+# what it cannot see. :app:collectProguardRules scans the runtime classpath for
+# META-INF/services and generates a keep per provider into
+# build/compose/proguard-generated.pro, minus the ones already held by a rule in
+# this file or by the plugin defaults, so a dependency bump cannot silently drop
+# one.
+
+# ProGuard 7.8.0 reads Kotlin metadata up to version 2.3, while this project
+# compiles with Kotlin 2.4, and reading the module file then fails the build,
+# so let ProGuard skip it.
+-dontprocesskotlinmetadata
+
+# Exposed builds the entities in com.azkar.data.table.entity through
+# kotlin-reflect (`primaryConstructor` plus `callBy`), which needs our classes'
+# metadata and constructors intact. Without this it throws
+# `KotlinReflectionInternalError: Could not compute caller` the first time
+# anything loads the favourites, the hadith or the collection rail. The app's own
+# code is a few megabytes, so keeping all of it costs nothing measurable.
+-keep class com.azkar.** { *; }
+
+# DataStore's `PreferencesProto` is a protobuf-lite message: at runtime it
+# resolves its own fields by name, so dropping a field breaks it with
+# `Field preferences_ for ... not found` while reading the settings file. DataStore
+# 1.2.x ships its own repackaged copy of the protobuf runtime, so the messages
+# extend `androidx.datastore.preferences.protobuf.GeneratedMessageLite` rather than
+# the usual `com.google.protobuf` one.
+-keep class * extends androidx.datastore.preferences.protobuf.GeneratedMessageLite { *; }
+-keep class * extends androidx.datastore.preferences.protobuf.GeneratedMessageLite$Builder { *; }
+
+# H2 is loaded reflectively (Class.forName("org.h2.Driver")) and its SQLDialect
+# / JdbcConnection classes are picked up by string name.
+-keep class org.h2.** { *; }
+
+# Logback is configured by text (logback.xml) and its SPI (ServiceLoader).
+-keep class ch.qos.logback.** { *; }
+
+# Ktor resolves engines and serialization formats through ServiceLoader and
+# string-named configuration keys.
+-keep class io.ktor.** { *; }
+
+# JNA discovers native symbols via string lookups on interfaces
+# (tray / Linux bus glue), so keep its infrastructure whole.
+-keep class com.sun.jna.** { *; }
+
+# kotlinx.serialization's generated serializers and the reflective lookup of
+# serializers from Companion properties.
+-keepclassmembers class * {
+    *** Companion;
+}
+-keepclasseswithmembers class * {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep interface kotlinx.serialization.KSerializer { *; }
+
+# H2 and Hikari reference method-handle signatures ProGuard cannot resolve, and
+# the JDK's own classes are read from jmods rather than rt.jar, so some member
+# shapes differ from what the program classes expect. Optional integration hooks
+# of the kept libraries (servlet containers, mail, metrics backends, lucene/geo
+# hooks in H2, janino hooks in logback…) are absent from this desktop app. All of
+# it is inert at runtime - silence the warnings wholesale.
+-ignorewarnings
+
+# Generic signatures + annotations are needed by serialization and DI lookups.
+-keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*,SourceFile,LineNumberTable

@@ -79,6 +79,12 @@ coil = "3.6.3"
 # app already has a `suspend () -> String?` seam for the chooser that every host supplies, so
 # adopting it would mean wrapping a function the app has rather than deleting one.
 filekit = "0.16.0"
+# Hydraulic Conveyor (conveyor.hydraulic.dev) is the desktop packaging + auto-update tool.
+# Its Gradle plugin's whole job is to define the per-OS Compose configurations that
+# `conveyor.conf` reads back through `printConveyorConfig`; the packaging itself is driven by
+# the Conveyor CI action, which is released upstream on its own cadence, so this pin tracks
+# the Gradle plugin only. Starter pin was 1.12, but 2.0 is current as of March 2026.
+dev-hydraulic-conveyor = "2.0"
 
 [libraries]
 # Database Dependencies
@@ -175,3 +181,4 @@ org-jetbrains-kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.
 com-diffplug-spotless = { id = "com.diffplug.spotless", version = "7.2.1" }
 dev-detekt = { id = "dev.detekt", version.ref = "detekt" }
 de-infix-test-balloon = { id = "de.infix.testBalloon", version.ref = "de-infix-test-balloon" }
+dev-hydraulic-conveyor = { id = "dev.hydraulic.conveyor", version.ref = "dev-hydraulic-conveyor" }

@@ -1,13 +1,16 @@
-# Build native installers with the Compose Multiplatform plugin's jpackage
-# tasks and publish them as a GitHub Release.
+# Build native installers for Windows, macOS and Linux with Hydraulic Conveyor
+# and publish them as a GitHub Release.
 #
-# jpackage cannot cross-compile, so the matrix runs one runner per target OS.
-# Runs only on tag pushes (e.g. v1.0.0).
+# Conveyor builds all three targets from a single ubuntu runner and wires native
+# auto-updates on each OS (MSIX/.appinstaller on Windows, Sparkle 2 on macOS,
+# deb package + apt repository on Linux). No pre-releases: the update feed for
+# `make copied-site` reads the /releases/latest endpoint. The pushed tag must
+# match the Gradle project version in app/build.gradle.kts.
 #
-# Tasks provided by org.jetbrains.compose:
-#   Linux   -> :app:packageDeb
-#   Windows -> :app:packageMsi
-#   macOS   -> :app:packageDmg   (universal, arm64 + x64)
+# Requires two repository secrets (see docs/releasing.md): SIGNING_KEY (the
+# encrypted root-key value from ~/.config/hydraulic/conveyor/defaults.conf) and
+# SIGNING_PASSPHRASE (the passphrase the key is encrypted under, injected via
+# --passphrase=env:). Also needs app.vcs-url in conveyor.conf.
 
 name: Release
 
@@ -20,27 +23,10 @@ concurrency:
 
 jobs:
   build-and-release:
-    name: Build ${{ matrix.target }} installer
-    runs-on: ${{ matrix.os }}
+    name: Package and publish releases
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux
-            task: ':app:packageDeb'
-            artifact: azkar-linux
-          - os: windows-latest
-            target: windows
-            task: ':app:packageMsi'
-            artifact: azkar-windows
-          - os: macos-latest
-            target: macos
-            task: ':app:packageDmg'
-            artifact: azkar-macos
 
     steps:
       - uses: actions/checkout@v5
@@ -49,36 +35,30 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '25'
-          distribution: 'temurin'
+          # Temurin 24+ ships no `jmods` (JEP 493) and ProGuard needs them; Zulu still does.
+          distribution: 'zulu'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4 - pinned for act compatibility
 
-      - name: Build with Gradle
-        run: |
-          chmod +x ./gradlew
-          ./gradlew build
+      # Conveyor takes the Gradle outputs as pre-built inputs (it never runs
+      # Gradle itself), so build and version-check before handing over.
+      - name: Build ProGuard jars for Conveyor inputs
+        shell: bash
         env:
           CI: true
-
-      - name: Package ${{ matrix.target }}
         run: |
           chmod +x ./gradlew
-          ./gradlew ${{ matrix.task }}
-        env:
-          CI: true
+          ./gradlew :app:checkTagParity :app:proguardReleaseJars --console=plain
 
-      - name: Collect installer
-        shell: bash
-        run: |
-          mkdir -p dist
-          find app/build/compose/binaries -type f \( -name '*.deb' -o -name '*.msi' -o -name '*.dmg' \) \
-            -exec cp {} dist/ \;
-          ls -l dist
-
-      - name: Upload installer
-        shell: bash
-        run: gh release create "${{ github.ref_name }}" dist/* --title "${{ github.ref_name }}" --generate-notes --repo "${{ github.repository }}" || \
-             gh release upload "${{ github.ref_name }}" dist/* --clobber --repo "${{ github.repository }}"
+      - name: Build and publish releases with Conveyor
+        uses: hydraulic-software/conveyor/actions/build@v22.3
+        with:
+          command: make copied-site
+          signing_key: ${{ secrets.SIGNING_KEY }}
+          extra_flags: "--passphrase=env:SIGNING_PASSPHRASE"
+          agree_to_license: 1
+          conveyor_version: '22.3'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}

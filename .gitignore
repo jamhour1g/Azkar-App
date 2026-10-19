@@ -54,6 +54,9 @@ logs/
 ### Conveyor ###
 output/
 generated.conveyor.conf
+conveyor.output/
+.conveyor/
+defaults.conf
 
 ### Codex ###
 .codex/
