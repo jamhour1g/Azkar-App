@@ -1,17 +1,25 @@
 package com.azkar.ui.notifications
 
 import com.azkar.domain.model.Remembrance
+import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.notificationReminderBodyFallback
+import com.azkar.generated.resources.notificationReminderTitle
 import com.azkar.i18n.RemembranceI18n
+import com.azkar.ui.components.AzkarClock
+import com.azkar.ui.home.PrayerKey
 import com.azkar.ui.home.name
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.model.CollectionsSnapshot
 import com.azkar.ui.notifications.presentation.NotificationPublisher
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Locale
 
@@ -61,18 +69,47 @@ class NotificationRuntime(
     private val locationDetector: LocationDetector,
     private val publisher: NotificationPublisher,
 ) {
+    private val startLock = Any()
+    private var schedulerJob: Job? = null
+
+    /**
+     * Starts the process-owned scheduler once and keeps its polling cadence independent of tick cost.
+     *
+     * The runtime is a singleton, but its caller lives in a recomposing application root. A second
+     * start must not create a second consumer of the same saved queue progress: two loops could both
+     * read one slot as unconsumed, race to save the same next index, and make one visible notice stand
+     * in for two attempted deliveries. Polls are also anchored to a monotonic clock rather than
+     * sleeping for thirty seconds *after* every database read; otherwise a slow read shifts every
+     * later check farther from the slot boundary. Work that takes longer than the polling period
+     * coalesces to the latest due slot, matching the schedule's existing missed-slot policy.
+     */
     fun start(scope: CoroutineScope) {
-        preferences.observe(scope)
-        scope.launch {
-            runCatching { preferences.refresh() }
-                .onFailure { logger.error(it) { "Unable to load notification preferences" } }
-            refreshDetectedLocation()
-                .onFailure { logger.warn(it) { "Unable to detect prayer-time location; keeping the saved location" } }
-            while (isActive) {
-                runCatching { tick() }
-                    .onFailure { logger.error(it) { "Notification scheduler tick failed" } }
-                delay(TICK_MILLIS)
-            }
+        synchronized(startLock) {
+            if (schedulerJob?.isActive == true) return
+            preferences.observe(scope)
+            schedulerJob =
+                scope.launch {
+                    runCatching { preferences.refresh() }
+                        .onFailure { logger.error(it) { "Unable to load notification preferences" } }
+                    refreshDetectedLocation()
+                        .onFailure {
+                            logger.warn(
+                                it,
+                            ) { "Unable to detect prayer-time location; keeping the saved location" }
+                        }
+                    var nextTickNanos = System.nanoTime()
+                    while (isActive) {
+                        runCatching { tick() }
+                            .onFailure { logger.error(it) { "Notification scheduler tick failed" } }
+                        nextTickNanos += TICK_NANOS
+                        val remainingNanos = nextTickNanos - System.nanoTime()
+                        if (remainingNanos > 0L) {
+                            delay(remainingNanos / NANOS_PER_MILLI)
+                        } else {
+                            nextTickNanos = System.nanoTime()
+                        }
+                    }
+                }
         }
     }
 
@@ -114,16 +151,41 @@ class NotificationRuntime(
                         lastDeliveredLocalDates = progress.lastDeliveredLocalDates + (key.id to dateKey),
                     )
                 preferences.savePrayerProgress(updated)
+                val content = buildPrayerContent(key, time, location)
                 publisher.publish(
                     NotificationNotice(
-                        title = key.name(),
-                        message = "${key.name()} prayer time • ${location.city}",
+                        title = content.prayer,
+                        message =
+                            buildString {
+                                append(content.time)
+                                append(TIME_CITY_SEPARATOR)
+                                append(content.city)
+                            },
                         action = NotificationAction.PrayerTimes,
+                        content = content,
                     ),
                 )
             }
         }
     }
+
+    /**
+     * Answers everything the prayer card draws, in the language the user is reading.
+     *
+     * The time is formatted against the same locale rather than against the host's: a reader who set
+     * the app to Arabic is reading twelve-hour times with Arabic numerals and an English one is not,
+     * and a clock in the wrong locale is the kind of detail that makes a whole screen look borrowed.
+     */
+    private suspend fun buildPrayerContent(
+        key: PrayerKey,
+        time: LocalTime,
+        location: PrayerLocationSettings,
+    ): NotificationContent.Prayer =
+        NotificationContent.Prayer(
+            prayer = key.name(),
+            time = AzkarClock.format(time, Locale.getDefault()),
+            city = location.city,
+        )
 
     /**
      * Delivers the passage this moment's slot is for, if there is one.
@@ -177,23 +239,81 @@ class NotificationRuntime(
             return
         }
 
-        val id = cycle.cycleOrder[cycle.nextIndex]
-        val remembrance = snapshot.remembrances.firstOrNull { it.id == id } ?: return
-        val text = remembrance.toNotificationText()
-        preferences.saveQueueProgress(
-            cycle.copy(
-                nextIndex = cycle.nextIndex + 1,
-                lastDeliveredSlot = slot.toString(),
-            ),
-        )
-        publisher.publish(
-            NotificationNotice(
-                title = "Azkar reminder",
-                message = text,
-                action = NotificationAction.Remembrance(id),
-            ),
-        )
+        publishNextPassage(snapshot, cycle, slot)
     }
+
+    /**
+     * Commits the index the passage occupied and then publishes it.
+     *
+     * The progress is written *before* the publish, and that order is the whole of the scheduler's
+     * promise: a crash between the two loses a reminder rather than repeating one, and a repeated
+     * reminder is the failure a reader would actually notice.
+     *
+     * @return whether a passage was published. `false` means the cycle named an index it does not
+     *   have a passage for — the queue was edited between the cycle being built and being read.
+     */
+    private suspend fun publishNextPassage(
+        snapshot: CollectionsSnapshot,
+        cycle: ReminderQueueProgress,
+        slot: LocalDateTime,
+    ): Boolean {
+        val next =
+            cycle.cycleOrder
+                .getOrNull(cycle.nextIndex)
+                ?.let { id -> snapshot.remembrances.firstOrNull { it.id == id }?.let { it to id } }
+        return next?.let { (remembrance, id) ->
+            val locale = reminderLocale()
+            val content = buildRemembranceContent(remembrance, cycle, locale)
+            preferences.saveQueueProgress(
+                cycle.copy(
+                    nextIndex = cycle.nextIndex + 1,
+                    lastDeliveredSlot = slot.toString(),
+                ),
+            )
+            publisher.publish(
+                NotificationNotice(
+                    title = getString(Res.string.notificationReminderTitle),
+                    message = remembrance.toNoticeText(locale),
+                    action = NotificationAction.Remembrance(id),
+                    content = content,
+                ),
+            )
+            true
+        } ?: false
+    }
+
+    /**
+     * The language a reminder's *text* is written in.
+     *
+     * The reader's own choice when they have made one, and the interface language otherwise. It is
+     * deliberately not the interface language unconditionally: this whole setting exists because the two
+     * can legitimately differ, and a reader who reads the app in English may still want the passage they
+     * are being reminded of in Arabic. Only the passage follows it — the title and the prayer names are
+     * the app's own voice and stay in the interface language.
+     */
+    private fun reminderLocale(): Locale = preferences.presentation.value.notificationLocale ?: Locale.getDefault()
+
+    /**
+     * Resolves the passage into the two things the card draws: the passage, and how far through it
+     * the reader is.
+     *
+     * Which collection a passage belongs to is deliberately not resolved. It used to be, and the card
+     * printed it in a pill at the top of the header, which made a reminder into a card *about* a
+     * passage: the reader had to read a queue's provenance before the reminder could become the thing
+     * the queue was reminding them of. Everything that pill said — which collection, which grade,
+     * which source, which tags, whether it is kept — is answered by the screen the click opens, and
+     * answering it here meant the passage had to share a card with it.
+     */
+    private suspend fun buildRemembranceContent(
+        remembrance: Remembrance,
+        cycle: ReminderQueueProgress,
+        locale: Locale,
+    ): NotificationContent.Remembrance =
+        NotificationContent.Remembrance(
+            text = remembrance.passageText(locale),
+            position = cycle.nextIndex + 1,
+            total = cycle.cycleOrder.size,
+        )
 
     private fun resolveQueueSources(
         snapshot: CollectionsSnapshot,
@@ -263,16 +383,49 @@ class NotificationRuntime(
             config.remembranceDropOverrides.toSortedMap(),
         ).joinToString("|")
 
-    private fun Remembrance.toNotificationText(): String {
-        val texts = RemembranceI18n.resolveTexts(this, Locale.getDefault(), "", "")
-        return (texts.translation.ifBlank { texts.explanation.ifBlank { "A remembrance from your queue" } })
-            .replace('\n', ' ')
-            .take(MAX_NOTICE_LENGTH)
-    }
+    /**
+     * The passage in [locale], which is the reminder language the reader chose.
+     *
+     * Resolved the same way every other string on screen is, through [RemembranceI18n]: the requested
+     * language if the passage has it, the same language under a different regional tag if not, and only
+     * then the other one it does have. Pinning this to Arabic — which an earlier revision did, because a
+     * dhikr *is* Arabic — would answer an English reader with a passage they had just told the app they
+     * did not want to read. What language somebody wants their adhkar in is a setting they have already
+     * made, and a reminder that ignores it is nagging in a language they chose not to speak.
+     *
+     * The fallback is a sentence rather than an empty card because the card is the one place with no
+     * room to explain itself: a blank box in the corner is read as a fault, and the sentence is what
+     * the app says everywhere else it has nothing to show. It is drawn from resources, and so follows
+     * the interface language rather than [locale]: it is the app speaking, not the passage, and it only
+     * appears when a passage has no text in any language it was stored with.
+     */
+    private suspend fun Remembrance.passageText(locale: Locale): String =
+        RemembranceI18n
+            .resolveTexts(
+                remembrance = this,
+                preferredLocale = locale,
+                translationFallback = "",
+                explanationFallback = "",
+            ).translation
+            .ifBlank { getString(Res.string.notificationReminderBodyFallback) }
+
+    /**
+     * A passage clipped to the one line a notice's `message` is allowed to be.
+     *
+     * Newlines go before the clip rather than after it, because collapsing them is what makes the
+     * remaining characters contiguous: a passage stored as a wrapped block would otherwise lose its
+     * tail to [MAX_NOTICE_LENGTH] mid-sentence.
+     */
+    private suspend fun Remembrance.toNoticeText(locale: Locale): String =
+        passageText(locale).replace('\n', ' ').take(MAX_NOTICE_LENGTH)
 
     private companion object {
         const val TICK_MILLIS = 30_000L
+        const val NANOS_PER_MILLI = 1_000_000L
+        const val TICK_NANOS = TICK_MILLIS * NANOS_PER_MILLI
         const val PRAYER_GRACE_MINUTES = 2L
         const val MAX_NOTICE_LENGTH = 180
+
+        const val TIME_CITY_SEPARATOR = " • "
     }
 }

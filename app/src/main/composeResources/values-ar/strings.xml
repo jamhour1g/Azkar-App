@@ -519,16 +519,41 @@
     </plurals>
 
     <string name="notificationDismiss">إخفاء</string>
-    <string name="notificationChannelSystem">أرسِل أيضًا إلى سطح المكتب</string>
-    <string name="notificationChannelSystemNote">معطّل افتراضيًا، لأن سطح المكتب يرسمه بأسلوبه الخاص. فعّله فقط إذا أردت رؤية التذكير في مركز الإشعارات أيضًا.</string>
+    <string name="notificationDurationTitle">المدة</string>
     <string name="notificationDuration">يظهر على الشاشة %1$d ثانية</string>
+    <string name="notificationDurationReading">بحسب القراءة</string>
+    <string name="notificationDurationFixed">وقت ثابت</string>
     <string name="notificationPlacement">الموضع</string>
     <string name="notificationPlacementTopStart">أعلى اليسار</string>
     <string name="notificationPlacementTopEnd">أعلى اليمين</string>
     <string name="notificationPlacementBottomStart">أسفل اليسار</string>
     <string name="notificationPlacementBottomEnd">أسفل اليمين</string>
+    <string name="notificationStackSizeTitle">حجم المكدس</string>
     <string name="notificationStackSize">اعرض %1$d في آن واحد</string>
-    <string name="notificationOverlayPolicy">تتراكم التذكيرات في الزاوية التي تختارها، الأحدث الأقرب إلى الزاوية. ويحلّ التذكير الجديد محل الأقدم عند بلوغ الحد، ولا يتكرر التذكير المطابق الموجود على الشاشة.</string>
+    <string name="notificationStackSizeHint">كم عدد التذكيرات التي يمكن أن تظهر على الشاشة في آن واحد.</string>
+    <string name="notificationPlacementHint">مكان ظهور البطاقة على الشاشة.</string>
+    <string name="notificationDurationHint">مدة بقاء كل بطاقة على الشاشة.</string>
+    <string name="notificationReminderTitle">تذكير أذكار</string>
+    <string name="notificationReminderBodyFallback">ذكر من قائمة تذكيرك</string>
+    <string name="notificationCardPosition">%1$d من %2$d</string>
+    <string name="notificationCardSizeTitle">حجم التذكير</string>
+    <string name="notificationCardSizeHint">حجم كل تذكير في زاوية الشاشة. يمكن للبطاقة أن تتمدد بحسب نصّها، أو أن تحتفظ بحجم ثابت. المعاينة أدناه هي البطاقة الحقيقية.</string>
+    <string name="notificationCardSizeSizingHint">ما إذا كانت البطاقة تكبر لتناسب نصها أو تحتفظ بحجم ثابت.</string>
+    <string name="notificationCardSizePresetHint">حجم بداية: مدمج، مريح، أو واسع.</string>
+    <string name="notificationCardSizeWidthHint">عرض البطاقة.</string>
+    <string name="notificationCardSizeHeightHint">ارتفاع البطاقة الثابتة.</string>
+    <string name="notificationCardSizeFit">بحسب النصّ</string>
+    <string name="notificationCardSizeFixed">حجم ثابت</string>
+    <string name="notificationCardSizeCompact">مضغوط</string>
+    <string name="notificationCardSizeComfortable">مريح</string>
+    <string name="notificationCardSizeRoomy">فسيح</string>
+    <string name="notificationCardSizeWidth">العرض</string>
+    <string name="notificationCardSizeHeight">الارتفاع</string>
+    <string name="notificationCardSizePreview">معاينة</string>
+    <string name="notificationCardSizeSample">مَنْ قَالَ: أَقُولُ: اللَّهُ أَحَدٌ، لَا شَرِيكَ لَهُ.</string>
+    <string name="notificationLanguageTitle">لغة التذكير</string>
+    <string name="notificationLanguageHint">اللغة التي يُكتب بها التذكير نفسه. ويبقى التطبيق باللغة التي اخترتها.</string>
+    <string name="notificationLanguageSameAsApp">نفس لغة التطبيق</string>
 
     <!-- Reminders screen -->
     <string name="reminderManagerBack">رجوع</string>
@@ -559,11 +584,6 @@
     <string name="reminderManagerMoveUp">تحريك لأعلى</string>
     <string name="reminderManagerMoveDown">تحريك لأسفل</string>
     <!-- Settings screen -->
-    <!-- Tabs -->
-    <string name="settingsTabGeneral">عام</string>
-    <string name="settingsTabNotifications">التنبيهات</string>
-    <string name="settingsTabPrayer">الصلاة</string>
-    <!-- Settings screen: notifications tab -->
     <!-- Settings screen: the reminder queue's schedule, which moved off the reminders page -->
     <string name="reminderManagerScheduleTitle">الجدولة</string>
     <string name="reminderManagerScheduleHint">متى يُعرض ذكرى من طابورك، وكم مرة.</string>

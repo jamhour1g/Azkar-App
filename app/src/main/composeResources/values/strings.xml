@@ -506,16 +506,41 @@
     </plurals>
 
     <string name="notificationDismiss">Dismiss</string>
-    <string name="notificationChannelSystem">Also send to the desktop</string>
-    <string name="notificationChannelSystemNote">Off by default: the desktop draws its own style. Turn it on only if you want the reminder in the notification centre too.</string>
+    <string name="notificationDurationTitle">Duration</string>
     <string name="notificationDuration">On screen for %1$d seconds</string>
+    <string name="notificationDurationReading">Reading time</string>
+    <string name="notificationDurationFixed">Fixed time</string>
     <string name="notificationPlacement">Position</string>
     <string name="notificationPlacementTopStart">Top left</string>
     <string name="notificationPlacementTopEnd">Top right</string>
     <string name="notificationPlacementBottomStart">Bottom left</string>
     <string name="notificationPlacementBottomEnd">Bottom right</string>
+    <string name="notificationStackSizeTitle">Stack size</string>
     <string name="notificationStackSize">Show up to %1$d at once</string>
-    <string name="notificationOverlayPolicy">Reminders stack in the corner you pick, newest nearest the corner. A new reminder replaces the oldest once the limit is reached, and an identical reminder already on screen is not repeated.</string>
+    <string name="notificationStackSizeHint">How many reminders can be on screen at once.</string>
+    <string name="notificationPlacementHint">Where on the screen the card appears.</string>
+    <string name="notificationDurationHint">How long each card stays on screen.</string>
+    <string name="notificationReminderTitle">Azkar reminder</string>
+    <string name="notificationReminderBodyFallback">A remembrance from your queue</string>
+    <string name="notificationCardPosition">%1$d of %2$d</string>
+    <string name="notificationCardSizeTitle">Reminder size</string>
+    <string name="notificationCardSizeHint">How large each reminder is in the corner of the screen. A card can grow to fit its passage, or keep one fixed size. The preview below is the real card.</string>
+    <string name="notificationCardSizeSizingHint">Whether the card grows to fit its passage or keeps one fixed size.</string>
+    <string name="notificationCardSizePresetHint">A starting size: compact, comfortable, or roomy.</string>
+    <string name="notificationCardSizeWidthHint">How wide the card is.</string>
+    <string name="notificationCardSizeHeightHint">How tall the fixed card is.</string>
+    <string name="notificationCardSizeFit">Fit to text</string>
+    <string name="notificationCardSizeFixed">Fixed size</string>
+    <string name="notificationCardSizeCompact">Compact</string>
+    <string name="notificationCardSizeComfortable">Comfortable</string>
+    <string name="notificationCardSizeRoomy">Roomy</string>
+    <string name="notificationCardSizeWidth">Width</string>
+    <string name="notificationCardSizeHeight">Height</string>
+    <string name="notificationCardSizePreview">Preview</string>
+    <string name="notificationCardSizeSample">Whoever says: \"I say: Allah is One, and He has no partner.\"</string>
+    <string name="notificationLanguageTitle">Reminder language</string>
+    <string name="notificationLanguageHint">The language the reminder itself is written in. The app stays in the language you chose.</string>
+    <string name="notificationLanguageSameAsApp">Same as app language</string>
 
     <!-- Reminders screen -->
     <string name="reminderManagerBack">Back</string>
@@ -547,11 +572,6 @@
     <string name="reminderManagerMoveDown">Move down</string>
 
     <!-- Settings screen -->
-    <!-- Tabs -->
-    <string name="settingsTabGeneral">General</string>
-    <string name="settingsTabNotifications">Notifications</string>
-    <string name="settingsTabPrayer">Prayer</string>
-    <!-- Settings screen: notifications tab -->
     <!-- Settings screen: the reminder queue's schedule, which moved off the reminders page -->
     <string name="reminderManagerScheduleTitle">Schedule</string>
     <string name="reminderManagerScheduleHint">How often a passage from your queue is shown, and when.</string>

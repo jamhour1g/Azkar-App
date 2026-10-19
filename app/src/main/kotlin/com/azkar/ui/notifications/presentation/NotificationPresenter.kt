@@ -1,6 +1,7 @@
 package com.azkar.ui.notifications.presentation
 
 import com.azkar.ui.notifications.NotificationAction
+import com.azkar.ui.notifications.NotificationContent
 import com.azkar.ui.notifications.NotificationNotice
 import kotlinx.coroutines.flow.StateFlow
 
@@ -17,6 +18,7 @@ data class PresentedNotice(
     val title: String,
     val message: String,
     val action: NotificationAction,
+    val content: NotificationContent? = null,
 ) {
     /** Whether [notice] is the same announcement, for [OverlayNotificationPresenter]'s de-duplication. */
     fun isSameAnnouncementAs(notice: NotificationNotice): Boolean =
@@ -28,12 +30,12 @@ data class PresentedNotice(
  * forgetting them.
  *
  * The narrowness is the point. The scheduler fires from a coroutine on a background dispatcher and
- * must not know whether the user is looking at a Compose card, at the OS's own notification
- * centre, or at nothing at all; so the only thing it is given is somewhere to hand a notice to. What
- * the presenter does with it — hold it, expire it, drop it — is entirely its own business, and
- * because the overlay's answer is a [StateFlow] rather than a window, every rule in it (the stack
- * cap, the timeout, de-duplication, pause-on-hover) is a plain function that a unit test can
- * exercise with no display attached. That is the whole reason the drawing lives somewhere else.
+ * must not know whether the user is looking at a Compose card or at nothing at all; so the only
+ * thing it is given is somewhere to hand a notice to. What the presenter does with it — hold it,
+ * expire it, drop it — is entirely its own business, and because the overlay's answer is a
+ * [StateFlow] rather than a window, every rule in it (the stack cap, the timeout, de-duplication,
+ * pause-on-hover) is a plain function that a unit test can exercise with no display attached. That
+ * is the whole reason the drawing lives somewhere else.
  */
 interface NotificationPresenter {
     /**
@@ -52,8 +54,8 @@ interface NotificationPresenter {
      *
      * Returns the id it was accepted under, or `null` when it was suppressed — because the exact
      * same announcement is already on screen, or because this presenter has been disposed. The
-     * caller uses that answer to decide whether the *other* channel should also fire, which is how
-     * "never send the same reminder twice" holds across both channels at once.
+     * return value is what tells a caller that a reminder was actually seen rather than dropped as a
+     * duplicate, so it is not a convenience: it is the only report of what happened.
      *
      * Safe to call from any thread.
      */
@@ -74,9 +76,32 @@ interface NotificationPresenter {
         paused: Boolean,
     )
 
+    /**
+     * How much of [id]'s on-screen time is left, as a fraction of the whole: `1f` on arrival, `0f` when
+     * the card's time is up, and the frozen value while it is paused.
+     *
+     * This is a question rather than a [kotlinx.coroutines.flow.StateFlow] on purpose. The card draws
+     * the answer as a depleting bar, so it has to be able to re-ask as the seconds pass, and it has to
+     * ask *its own* card's question — a flow of "how much time is left on every card" would invalidate
+     * the whole stack thirty times a second to animate one hairline, and the overlay is a window that
+     * lives above somebody else's work. Reading one card's own deadline is also the only version of
+     * the question that can be right: a paused card's remaining time is not a number anything else in
+     * the system is tracking.
+     *
+     * [DEFAULT_REMAINING_FRACTION] rather than a required override, so that a presenter which has no
+     * clock to answer with — a test double, or the settings preview, which renders a card that was
+     * never scheduled — draws a full bar instead of failing to compile. A bar that never moves is an
+     * honest answer from something that has no deadline; an empty one would be a lie about a card the
+     * reader is looking at.
+     */
+    fun remainingFraction(id: Long): Float = DEFAULT_REMAINING_FRACTION
+
     /** Drops everything on screen without cancelling the presenter. */
     fun clear()
 
     /** Releases everything and stops accepting. Called once, from the app's Quit path. */
     fun dispose()
 }
+
+/** A card with no deadline on it is entirely time remaining. */
+private const val DEFAULT_REMAINING_FRACTION = 1f

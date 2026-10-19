@@ -40,6 +40,19 @@ sealed interface LocationNotice {
     data class Unavailable(
         val reason: String?,
     ) : LocationNotice
+
+    /** The place search could not answer — offline, the lookup refused, or the host has no client. */
+    data class SearchFailed(
+        val reason: String?,
+    ) : LocationNotice
+
+    /** The place search answered, and nothing matched what was typed. */
+    data object NoResults : LocationNotice
+
+    /** A suggestion was picked and written, naming the place it filled in. */
+    data class PlaceSelected(
+        val city: String,
+    ) : LocationNotice
 }
 
 /** Why the desktop login manager refused. Its own type so it cannot be shown as a location problem. */

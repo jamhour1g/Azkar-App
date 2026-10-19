@@ -30,6 +30,7 @@ import com.azkar.ui.library.data.DomainCollectionsGateway
 import com.azkar.ui.library.data.DomainReminderGateway
 import com.azkar.ui.library.data.DomainTagsGateway
 import com.azkar.ui.library.data.TagGateway
+import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationActionRouter
 import com.azkar.ui.notifications.NotificationPreferencesRepository
@@ -38,8 +39,6 @@ import com.azkar.ui.notifications.ReminderCatalogueSource
 import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationPublisher
 import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
-import com.azkar.ui.notifications.presentation.SystemNotificationPresenter
-import com.azkar.ui.shell.ReminderNotifier
 import com.azkar.ui.shell.ThemePreferenceStore
 import com.azkar.ui.shell.TypographyStore
 import de.infix.testBalloon.framework.core.testSuite
@@ -98,14 +97,13 @@ val AppModuleSuite by testSuite("AppModule") {
                     koin.get<LocaleStore>(),
                     koin.get<HttpClient>(),
                     koin.get<LocationDetector>(),
+                    koin.get<GeocodingClient>(),
                     koin.get<NotificationPreferencesRepository>(),
                     koin.get<NotificationActionRouter>(),
                     koin.get<StartupRegistration>(),
-                    koin.get<ReminderNotifier>(),
                     koin.get<NotificationPublisher>(),
                     koin.get<NotificationRuntime>(),
                     koin.get<OverlayNotificationPresenter>(),
-                    koin.get<SystemNotificationPresenter>(),
                     koin.get<CoroutineDispatcher>(
                         org.koin.core.qualifier
                             .named("notificationDispatcher"),
@@ -174,14 +172,13 @@ val AppModuleSuite by testSuite("AppModule") {
                     ReminderCatalogueSource::class,
                     HttpClient::class,
                     LocationDetector::class,
+                    GeocodingClient::class,
                     NotificationPreferencesRepository::class,
                     NotificationActionRouter::class,
                     StartupRegistration::class,
-                    ReminderNotifier::class,
                     NotificationPublisher::class,
                     NotificationRuntime::class,
                     OverlayNotificationPresenter::class,
-                    SystemNotificationPresenter::class,
                     CoroutineDispatcher::class,
                     CoroutineScope::class,
                 )
@@ -190,22 +187,16 @@ val AppModuleSuite by testSuite("AppModule") {
         test("the notification stack is a single, and it is in the container") { graph ->
             val koin = graph.koin
             // The overlay window is a composition, but everything that decides *whether* to show
-            // something is not: the scheduler, the dispatcher and the presenter stack have to exist
-            // before any window does, because the state the tray leaves the app in is "no window at
-            // all" and a reminder still has to arrive there. So the container owns them, and this is
-            // the assertion that they are built once — a second overlay presenter would be a second
+            // something is not: the scheduler, the dispatcher and the presenter have to exist before
+            // any window does, because the state the tray leaves the app in is "no window at all" and
+            // a reminder still has to arrive there. So the container owns them, and this is the
+            // assertion that they are built once — a second overlay presenter would be a second
             // stack, and a second runtime would be a second scheduler.
-            assertThat(registers(ReminderNotifier::class)).isTrue()
             assertThat(koin.get<NotificationPublisher>())
                 .isSameAs(koin.get<NotificationPublisher>())
             assertThat(koin.get<OverlayNotificationPresenter>())
                 .isSameAs(koin.get<OverlayNotificationPresenter>())
-            assertThat(koin.get<SystemNotificationPresenter>())
-                .isSameAs(koin.get<SystemNotificationPresenter>())
             assertThat(koin.get<NotificationRuntime>()).isSameAs(koin.get<NotificationRuntime>())
-            // And the notifier itself is reachable only as the system-presenter's collaborator, so
-            // no screen can start talking to the OS channel without going through the dispatcher.
-            assertThat(koin.get<ReminderNotifier>()).isSameAs(koin.get<ReminderNotifier>())
         }
     }
 }
@@ -218,6 +209,10 @@ val AppModuleSuite by testSuite("AppModule") {
  * six definitions. That duplication is the shape the previous test relies on, so it is collapsed
  * here rather than asserted twice.
  *
+ * Being the module's own index rather than the container's resolved list is also what pins the OS
+ * notification channel's absence: it is gone because nothing registers it, not because nothing
+ * asked for it.
+ *
  * The module's own index is Koin's internal API, so the opt-in lives here rather than on the whole
  * file: two assertions need it, and every other assertion in the suite asks the container the way
  * the UI does, which is the way worth teaching.
@@ -227,10 +222,6 @@ private fun registeredTypes(): List<KClass<*>> =
     appModule.mappings.values
         .map { it.beanDefinition.primaryType }
         .distinct()
-
-/** Whether any definition in [appModule] is reachable by asking for [type]. */
-@OptIn(KoinInternalApi::class)
-private fun registers(type: KClass<*>): Boolean = appModule.mappings.values.any { it.beanDefinition.hasType(type) }
 
 /**
  * The container, plus the one piece of scratch state the overrides need released afterwards.

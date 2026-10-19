@@ -31,15 +31,6 @@ ktor = "3.3.3"
 # Desktop's `application { }`. The sibling `-app` artifact adds `TrayApp` (a tray-anchored popup
 # window) and pulls in the Nucleus windowing backend for it, which this app has no use for.
 compose-native-tray = "2.1.7"
-# Desktop notifications, shipped by the same authors as a standalone module. The tray artifact
-# deliberately covers only the icon and menu, so without this a due reminder has nowhere to be
-# announced once the window is hidden -- and AWT's `TrayIcon.displayMessage` cannot fill the gap
-# once the tray icon itself belongs to ComposeNativeTray, since two tray entries for one app is
-# worse than none. This sends real OS notifications instead: UserNotifications on macOS, WinRT
-# toasts on Windows, and freedesktop notifications over D-Bus on Linux. Pinned to the same 2.5.x
-# line as the tray's own notification docs; it depends on `nucleus.core-runtime` but not on the
-# windowing backend, so it stands alone next to Compose Desktop's `application { }`.
-nucleus-notification = "2.5.18"
 # detekt is the Kotlin/Compose static-analysis gate; it replaces SpotBugs.
 detekt = "2.0.0-alpha.5"
 # Compose Multiplatform versions its Material 3 / extended-icons artifacts independently
@@ -119,9 +110,9 @@ org-jetbrains-kotlinx-kotlinx-serialization-json = { module = "org.jetbrains.kot
 io-ktor-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 io-ktor-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 io-ktor-ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+io-ktor-ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 io-ktor-ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 dev-nucleusframework-compose-native-tray = { module = "dev.nucleusframework:composenativetray", version.ref = "compose-native-tray" }
-dev-nucleusframework-nucleus-notification-common = { module = "dev.nucleusframework:nucleus.notification-common", version.ref = "nucleus-notification" }
 org-jetbrains-kotlinx-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "jetbrains-coroutines" }
 # Jetpack DataStore, the `common`/`jvm` artifact. `-core` is the variant without the Android
 # dependencies, which is the one a desktop-only build can use; `datastore-preferences` itself

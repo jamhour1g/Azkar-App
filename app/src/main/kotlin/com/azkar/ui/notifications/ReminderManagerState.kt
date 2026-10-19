@@ -9,6 +9,7 @@ import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.i18n.RemembranceI18n
 import com.azkar.ui.library.model.CollectionsSnapshot
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -89,6 +90,8 @@ class ReminderManagerState(
      */
     private val zone: ZoneId = ZoneId.systemDefault(),
 ) {
+    private val logger = KotlinLogging.logger {}
+
     /**
      * The catalogue behind the source pickers.
      *
@@ -131,6 +134,8 @@ class ReminderManagerState(
                 collections = snapshot.collections
                 remembrances = snapshot.remembrances
                 uncategorizedId = snapshot.uncategorizedCollectionId
+            }.onFailure { failure ->
+                logger.error(failure) { "Unable to read the reminder catalogue" }
             }
     }
 

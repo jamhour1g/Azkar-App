@@ -161,8 +161,75 @@ sealed interface NotificationAction {
     data object OpenApp : NotificationAction
 }
 
+/**
+ * What a card can draw beyond a title and a line of body, when the scheduler was able to supply it.
+ *
+ * [NotificationNotice] already carries a `title` and a `message`, and that pair is not going away:
+ * de-duplication is defined on exactly those two plus the action. This is the *third* thing — the
+ * passage itself at a size worth reading, laid out the way the reader reads, which cannot be
+ * reassembled from a clipped string.
+ *
+ * It is deliberately this small. An earlier revision also carried the collection, the grade, the
+ * source, the tags and the favourite flag, and the card drew all of them: which made a reminder into a
+ * card about a passage rather than a passage. A card is glanced at on the way to something else, and
+ * every one of those facts is answered by the screen the click opens — where it came from, how the
+ * tradition grades it, where it is filed and whether it is kept. What is left here is the one thing
+ * the reader cannot get anywhere else without opening the app, and the one line of context that says
+ * where they are in it.
+ *
+ * A prayer time and a queue passage are not the same kind of event and do not want the same card, so
+ * the two answers are siblings here rather than one wide struct with a field per possibility.
+ *
+ * Every field is a plain resolved string or a primitive, never a domain object. The scheduler runs on
+ * a background dispatcher outside any composition, so it cannot hand over a `Remembrance` for a card
+ * to resolve later: it has to answer now, in the language the user is in, or the card would have to
+ * know about translations to read it.
+ */
+sealed interface NotificationContent {
+    /**
+     * One passage from the queue.
+     *
+     * @param text the passage, in the language the reader's interface is in. Not the Arabic
+     *   specifically: a reader who has chosen English wants to be reminded in English, and a card
+     *   that answered an English interface with Arabic would be insisting on the very translation the
+     *   choice was a choice *about*. The direction is not stored either — a card that pinned its
+     *   paragraph right-to-left would mis-order an English passage's punctuation, and the text itself
+     *   already says which way it runs.
+     * @param position 1-based, and [total] the length of the cycle. Not the size of the collection:
+     *   the queue may be weighted, manual, or a union of several collections, so the only honest
+     *   denominator is the cycle the scheduler actually built.
+     */
+    data class Remembrance(
+        val text: String,
+        val position: Int,
+        val total: Int,
+    ) : NotificationContent
+
+    /**
+     * One prayer's time.
+     *
+     * Carries [prayer] and [time] separately rather than one pre-joined string so the card can set the
+     * time in the type it wants rather than inheriting whatever the scheduler's string concatenation
+     * happened to produce — which is what made the old notice read as one sentence.
+     */
+    data class Prayer(
+        val prayer: String,
+        val time: String,
+        val city: String,
+    ) : NotificationContent
+}
+
 data class NotificationNotice(
     val title: String,
     val message: String,
     val action: NotificationAction,
+    /**
+     * The card's rich payload, or `null` when the scheduler had nothing beyond two strings.
+     *
+     * Optional rather than defaulted-to-empty so that "there is no rich card for this notice" and
+     * "there is a rich card with nothing in it" cannot be confused, and so the plain fallback path
+     * stays reachable for the developer harness and for any future publisher that is not the
+     * scheduler.
+     */
+    val content: NotificationContent? = null,
 )

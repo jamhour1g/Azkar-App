@@ -15,6 +15,15 @@ val QueueScheduleSuite by testSuite("The shared reminder queue schedule") {
         assertThat(QueueSchedule.dueSlot(LocalDateTime.parse("2026-10-14T22:00:00"), 480, 1320, 60)).isNull()
     }
 
+    test("a five-minute queue reaches the next slot after an 11:10 delivery") {
+        val lastSlot = QueueSchedule.dueSlot(LocalDateTime.parse("2026-10-14T11:10:00"), 8 * 60, 22 * 60, 5)
+        val nextSlot = QueueSchedule.dueSlot(LocalDateTime.parse("2026-10-14T11:15:00"), 8 * 60, 22 * 60, 5)
+
+        assertThat(lastSlot).isEqualTo(LocalDateTime.parse("2026-10-14T11:10:00"))
+        assertThat(nextSlot).isEqualTo(LocalDateTime.parse("2026-10-14T11:15:00"))
+        assertThat(nextSlot).isNotEqualTo(lastSlot)
+    }
+
     test("keeps interval slots continuous through an overnight window") {
         val slot = QueueSchedule.dueSlot(LocalDateTime.parse("2026-10-15T01:10:00"), 22 * 60, 4 * 60, 90)
 

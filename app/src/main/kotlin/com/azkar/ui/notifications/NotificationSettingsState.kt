@@ -4,10 +4,17 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.azkar.ui.notifications.presentation.OverlayCardSize
+import com.azkar.ui.notifications.presentation.OverlayCardSizing
+import com.azkar.ui.notifications.presentation.OverlayDurationMode
 import com.azkar.ui.notifications.presentation.OverlayPlacement
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.ZoneId
+import java.util.Locale
 
 /**
  * Transient state for the notification and prayer settings that live on the settings screen.
@@ -46,7 +53,11 @@ class NotificationSettingsState(
     private val locationDetector: LocationDetector? = null,
     /** The desktop login manager, when there is one. See [locationDetector] on nullability. */
     private val startupRegistration: StartupRegistration? = null,
+    /** Place search and reverse geocoding behind the picker's search box. See [locationDetector]. */
+    private val geocodingClient: GeocodingClient? = null,
 ) {
+    private val logger = KotlinLogging.logger {}
+
     /** The location editor's working copy of the four fields. */
     var locationDraft: PrayerLocationDraft by mutableStateOf(PrayerLocationDraft.of(preferences.prayerLocation.value))
         private set
@@ -54,7 +65,7 @@ class NotificationSettingsState(
     /** Writes for the prayer tab's location card. */
     val prayer = PrayerEditor()
 
-    /** Writes for the notifications tab's overlay, channel and startup cards. */
+    /** Writes for the notifications tab's overlay-appearance and startup cards. */
     val notifications = NotificationEditor()
 
     /**
@@ -80,6 +91,27 @@ class NotificationSettingsState(
         /** The last location failure or confirmation, or null. See [LocationNotice]. */
         var notice: LocationNotice? by mutableStateOf(null)
             private set
+
+        /** What has been typed into the picker's search box. */
+        var searchQuery: String by mutableStateOf("")
+            private set
+
+        /** The places the last search matched, drawn as the suggestion list. */
+        var suggestions: List<PrayerPlace> by mutableStateOf(emptyList())
+            private set
+
+        /** True while a search is in flight, so the field can say so. */
+        var isSearching: Boolean by mutableStateOf(false)
+            private set
+
+        /**
+         * The pending debounced search.
+         *
+         * Held so a keystroke can cancel the one before it: the search box fires on every character,
+         * and firing a request per character would both hammer a free endpoint and let an early,
+         * slower answer land after a later one and replace the list with stale results.
+         */
+        private var searchDebounce: Job? = null
 
         /**
          * Edits the four fields of the location editor.
@@ -174,6 +206,7 @@ class NotificationSettingsState(
                         locationDraft = PrayerLocationDraft.of(preferences.prayerLocation.value)
                         notice = LocationNotice.Detected(updated.city)
                     }.onFailure { failure ->
+                        logger.error(failure) { "Unable to detect the prayer-time location" }
                         notice = LocationNotice.Unavailable(failure.message)
                     }
             }
@@ -183,6 +216,125 @@ class NotificationSettingsState(
         fun dismissNotice() {
             notice = null
         }
+
+        /**
+         * Records what the user is typing and, after a pause, searches for it.
+         *
+         * The pause is the whole point: a search fires on every character, so without the debounce a
+         * request would leave for each of the eight letters of "New York" and seven of them would be
+         * thrown away. An empty query cancels the pending search and clears the list rather than
+         * searching for nothing.
+         *
+         * Named `update…` rather than `setSearchQuery` for the same reason as the reminder manager's:
+         * a `fun setX(x: T)` beside a `var x: T` collides with the JVM setter the property generates.
+         */
+        fun updateSearchQuery(value: String) {
+            searchQuery = value
+            searchDebounce?.cancel()
+            val query = value.trim()
+            if (query.isEmpty()) {
+                suggestions = emptyList()
+                isSearching = false
+                return
+            }
+            searchDebounce =
+                scope.launch {
+                    delay(SEARCH_DEBOUNCE_MILLIS)
+                    runSearch(query)
+                }
+        }
+
+        private suspend fun runSearch(query: String) {
+            val client =
+                geocodingClient ?: run {
+                    isSearching = false
+                    notice = LocationNotice.SearchFailed(reason = null)
+                    return
+                }
+            isSearching = true
+            runCatching { client.searchPlaces(query, searchLanguage()) }
+                .onSuccess { results ->
+                    // A slower early answer must not overwrite a later query's list.
+                    if (searchQuery.trim() != query) return@onSuccess
+                    suggestions = results
+                    notice = if (results.isEmpty()) LocationNotice.NoResults else null
+                }.onFailure { failure ->
+                    logger.warn(failure) { "Unable to search for places" }
+                    suggestions = emptyList()
+                    notice = LocationNotice.SearchFailed(failure.message)
+                }
+            isSearching = false
+        }
+
+        /**
+         * Fills the location from a picked suggestion and writes it.
+         *
+         * A pick is a finished answer — the search box and the list are put back to rest, the four
+         * fields are filled from the one place the suggestion carried, and the save is immediate
+         * because the user has already chosen. The calculation method is left alone, as everywhere
+         * else: choosing a city says nothing about which angles to use.
+         */
+        fun selectPlace(place: PrayerPlace) {
+            searchDebounce?.cancel()
+            searchQuery = place.label
+            suggestions = emptyList()
+            isSearching = false
+            commit(
+                latitude = place.latitude,
+                longitude = place.longitude,
+                city = place.label,
+                zoneId = place.zoneId ?: preferences.prayerLocation.value.zoneId,
+                saved = { LocationNotice.PlaceSelected(place.label) },
+            )
+        }
+
+        /** Hides the suggestion list, e.g. when the search box loses focus. */
+        fun clearSuggestions() {
+            suggestions = emptyList()
+        }
+
+        /**
+         * Writes a resolved location, then reports it.
+         *
+         * The one path every non-typed write goes through, so a picked suggestion, a dropped pin and
+         * a detected city cannot disagree about validation or about re-seeding the draft. The zone is
+         * still checked against [ZoneId] even though a provider gave it, because a provider is
+         * exactly the kind of thing that can hand back a renamed or invented id.
+         */
+        private fun commit(
+            latitude: Double,
+            longitude: Double,
+            city: String,
+            zoneId: String,
+            saved: () -> LocationNotice,
+        ) {
+            if (runCatching { ZoneId.of(zoneId) }.isFailure) {
+                notice = LocationNotice.InvalidTimeZone
+                return
+            }
+            val candidate =
+                preferences.prayerLocation.value.copy(
+                    latitude = latitude,
+                    longitude = longitude,
+                    city = city,
+                    zoneId = zoneId,
+                    autoDetect = false,
+                )
+            scope.launch {
+                preferences.savePrayerLocation(candidate)
+                locationDraft = PrayerLocationDraft.of(preferences.prayerLocation.value)
+                notice = saved()
+            }
+        }
+
+        /**
+         * The language the geocoder should name places in.
+         *
+         * The process default, which the app's locale store sets when the interface language changes,
+         * so an Arabic interface searches in Arabic. Blank (a JVM with no default locale) falls back
+         * to English rather than sending an empty `language` parameter.
+         */
+        private fun searchLanguage(): String = Locale.getDefault().language.ifBlank { "en" }
     }
 
     /**
@@ -198,10 +350,6 @@ class NotificationSettingsState(
         var notice: StartupNotice? by mutableStateOf(null)
             private set
 
-        fun setSystemNotifications(enabled: Boolean) {
-            scope.launch { preferences.updatePresentation { it.copy(systemNotificationsEnabled = enabled) } }
-        }
-
         fun setOverlayDuration(seconds: Int) {
             scope.launch {
                 preferences.updatePresentation {
@@ -212,12 +360,93 @@ class NotificationSettingsState(
             }
         }
 
+        /**
+         * Sets how long a card stays, but touches neither the stored seconds nor the reading model.
+         *
+         * A single write on purpose: when the mode returns to [OverlayDurationMode.FIXED], the card
+         * should be shown for exactly the number that was last changed by hand, not for whatever the
+         * reading estimate happened to produce for the reminder that was on screen when the reader
+         * switched away from it.
+         */
+        fun setDurationMode(mode: OverlayDurationMode) {
+            scope.launch { preferences.updatePresentation { it.copy(durationMode = mode) } }
+        }
+
         fun setOverlayStackSize(count: Int) {
             scope.launch { preferences.updatePresentation { it.copy(maxVisible = count.coerceIn(1, 5)) } }
         }
 
         fun setPlacement(placement: OverlayPlacement) {
             scope.launch { preferences.updatePresentation { it.copy(placement = placement) } }
+        }
+
+        /**
+         * Chooses the language the reminder text is written in, or blank for "the app's own".
+         *
+         * Stored as a tag rather than as a parsed [java.util.Locale] because the tag is what survives a
+         * round trip through DataStore and what the settings model already models; the runtime is the
+         * only place that turns it back into a language, through
+         * [com.azkar.ui.notifications.presentation.NotificationPresentationSettings.notificationLocale].
+         */
+        fun setNotificationLanguage(languageTag: String) {
+            scope.launch { preferences.updatePresentation { it.copy(notificationLanguageTag = languageTag) } }
+        }
+
+        /**
+         * Jumps both dimensions to one of the three named sizes at once.
+         *
+         * One write rather than two on purpose. Width and height are stored as a pair, and a preset is
+         * a *pair* of answers; writing them separately would let a second write be dropped if the
+         * screen left composition in between, and the result would be a comfortable height on a
+         * compact width with nothing on screen to say so.
+         */
+        fun setCardSize(preset: OverlayCardSize) {
+            scope.launch {
+                preferences.updatePresentation {
+                    it.copy(cardWidthDp = preset.widthDp, cardHeightDp = preset.heightDp)
+                }
+            }
+        }
+
+        /**
+         * Nudges one dimension, leaving the other where it was.
+         *
+         * Separate from [setCardSize] because a slider reports a continuous value on every frame of a
+         * drag: the point of the pair is that a slider is fine adjustment *around* a preset, and a
+         * whole-pair write would yank the untouched dimension back to its preset on the first pixel
+         * of a drag.
+         *
+         * Clamped rather than rejected for the same reason [setOverlayDuration] clamps — a slider
+         * stops at its own bounds, so anything outside the range arriving here means the two ended up
+         * out of step, and dropping the value keeps the stored pair legal either way.
+         */
+        fun setCardWidthDp(widthDp: Int) {
+            scope.launch {
+                preferences.updatePresentation {
+                    it.copy(cardWidthDp = widthDp.coerceIn(MIN_CARD_WIDTH_DP, MAX_CARD_WIDTH_DP))
+                }
+            }
+        }
+
+        fun setCardHeightDp(heightDp: Int) {
+            scope.launch {
+                preferences.updatePresentation {
+                    it.copy(cardHeightDp = heightDp.coerceIn(MIN_CARD_HEIGHT_DP, MAX_CARD_HEIGHT_DP))
+                }
+            }
+        }
+
+        /**
+         * Chooses whether a card follows its passage or the two dimensions above.
+         *
+         * A single write, and one that deliberately leaves both stored dimensions alone: the height the
+         * reader set under a fixed slot is the height a fitted card falls back to wherever its content
+         * cannot be measured, so switching modes must not throw it away. A reader who fits their cards,
+         * misses the steadier slot and switches back finds the size they last chose rather than a
+         * default they never picked.
+         */
+        fun setCardSizing(sizing: OverlayCardSizing) {
+            scope.launch { preferences.updatePresentation { it.copy(cardSizing = sizing) } }
         }
 
         /**
@@ -241,6 +470,7 @@ class NotificationSettingsState(
                         preferences.setStartOnLogin(enabled)
                         notice = null
                     }.onFailure { failure ->
+                        logger.error(failure) { "Unable to register Azkar to start on login" }
                         notice = StartupNotice.Unavailable(failure.message)
                     }
             }
@@ -262,5 +492,29 @@ class NotificationSettingsState(
          */
         const val MIN_DURATION = 3
         const val MAX_DURATION = 120
+
+        /**
+         * The bounds a card dimension is clamped to, for the same reason as [MIN_DURATION] above.
+         *
+         * These have to be the same numbers as
+         * [com.azkar.ui.notifications.presentation.NotificationPresentationSettings]'s own `require`,
+         * and they are duplicated rather than shared because that class keeps its bounds file-private
+         * for the sake of its generated serializer. A slider that could hand the settings a width it
+         * would refuse to construct would throw on the *read* side of the next decode, which is a
+         * far worse place to find out.
+         */
+        const val MIN_CARD_WIDTH_DP = 300
+        const val MAX_CARD_WIDTH_DP = 700
+        const val MIN_CARD_HEIGHT_DP = 120
+        const val MAX_CARD_HEIGHT_DP = 400
+
+        /**
+         * How long typing must pause before the place search fires.
+         *
+         * Long enough that a word is one request rather than one per letter, short enough that the
+         * list appears to keep up with a person. The same order of magnitude as the library's own
+         * search debounce, deliberately, so the two search boxes in the app feel the same.
+         */
+        const val SEARCH_DEBOUNCE_MILLIS = 300L
     }
 }

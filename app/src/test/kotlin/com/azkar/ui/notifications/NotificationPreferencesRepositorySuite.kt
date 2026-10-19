@@ -33,7 +33,6 @@ val NotificationPreferencesRepositorySuite by testSuite("The notification prefer
             preferences.refresh()
 
             val presentation = preferences.presentation.value
-            assertThat(presentation.systemNotificationsEnabled).isFalse()
             assertThat(presentation.durationSeconds).isEqualTo(8)
             assertThat(presentation.placement).isEqualTo(OverlayPlacement.TOP_END)
             assertThat(presentation.maxVisible).isEqualTo(3)
@@ -46,7 +45,6 @@ val NotificationPreferencesRepositorySuite by testSuite("The notification prefer
             preferences.refresh()
             val chosen =
                 NotificationPresentationSettings(
-                    systemNotificationsEnabled = true,
                     durationSeconds = 20,
                     placement = OverlayPlacement.BOTTOM_START,
                     maxVisible = 4,

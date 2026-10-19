@@ -68,6 +68,7 @@ class OverlayNotificationPresenter(
     private var nextId = 1L
     private var disposed = false
     private val deadlines = mutableMapOf<Long, Long>()
+    private val durations = mutableMapOf<Long, Long>()
     private val frozenRemaining = mutableMapOf<Long, Long>()
     private val expiryJobs = mutableMapOf<Long, Job>()
 
@@ -91,9 +92,20 @@ class OverlayNotificationPresenter(
         val id = nextId++
         val retained = _notices.value.take(current.maxVisible - 1)
         _notices.value.drop(current.maxVisible - 1).forEach { retire(it.id) }
-        deadlines[id] = now() + current.durationMillis
+        val durationMillis = current.durationFor(notice)
+        deadlines[id] = now() + durationMillis
+        durations[id] = durationMillis
         frozenRemaining.remove(id)
-        _notices.value = listOf(PresentedNotice(id, notice.title, notice.message, notice.action)) + retained
+        _notices.value =
+            listOf(
+                PresentedNotice(
+                    id = id,
+                    title = notice.title,
+                    message = notice.message,
+                    action = notice.action,
+                    content = notice.content,
+                ),
+            ) + retained
         startExpiryLocked(id)
         return id
     }
@@ -124,6 +136,29 @@ class OverlayNotificationPresenter(
             }
         }
     }
+
+    /**
+     * How much of [id]'s time is left, for the bar the card draws along its top edge.
+     *
+     * Read from the same deadline [setPaused] freezes and [nextWakeMillisLocked] sleeps against, so
+     * the bar and the expiry can only ever disagree by the length of a poll — and once the card is
+     * gone there is nothing left on screen to be wrong about.
+     *
+     * The duration is remembered per card rather than read back out of the difference between "now
+     * and the deadline", because a reader who opens the settings and changes the on-screen duration
+     * mid-countdown would otherwise watch the bar jump: the card keeps the length it was accepted
+     * with, exactly as it keeps the deadline it was accepted with.
+     *
+     * A card the presenter no longer knows about answers with the interface's default rather than
+     * with zero, because the caller that asked is about to be taken off screen anyway and a bar at
+     * zero is a flash of the wrong colour on the way out.
+     */
+    override fun remainingFraction(id: Long): Float =
+        synchronized(lock) {
+            val duration = durations[id]?.toFloat() ?: return DEFAULT_REMAINING
+            val remaining = frozenRemaining[id] ?: (deadlines[id]?.minus(now()) ?: 0L)
+            (remaining / duration).coerceIn(0f, 1f)
+        }
 
     override fun clear() {
         synchronized(lock) {
@@ -190,6 +225,7 @@ class OverlayNotificationPresenter(
     private fun retire(id: Long) {
         expiryJobs.remove(id)?.cancel()
         deadlines.remove(id)
+        durations.remove(id)
         frozenRemaining.remove(id)
     }
 
@@ -201,5 +237,13 @@ class OverlayNotificationPresenter(
          * stopped, and it costs one wake-up per visible card rather than per hidden one.
          */
         const val EXPIRY_POLL_MILLIS = 100L
+
+        /**
+         * What a card this presenter has never heard of reports as remaining.
+         *
+         * Mirrors the interface's own default rather than repeating its number, so that a presenter
+         * which grows a real answer later cannot end up disagreeing with the contract it implements.
+         */
+        const val DEFAULT_REMAINING = 1f
     }
 }

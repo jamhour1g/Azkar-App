@@ -109,6 +109,52 @@ val OverlayPresenterSuite by testSuite("The overlay notification presenter") {
         }
     }
 
+    test("the countdown reports the remainder of that card's own deadline") {
+        runPresenterTest(durationSeconds = 8) { presenter, scope ->
+            val id = presenter.present(notice(1))!!
+
+            assertThat(presenter.remainingFraction(id)).isEqualTo(1f)
+
+            scope.advanceTimeBy(2_000)
+            scope.runCurrent()
+            assertThat(presenter.remainingFraction(id)).isEqualTo(0.75f)
+
+            scope.advanceTimeBy(6_500)
+            scope.runCurrent()
+            // The card is gone; a bar for an id nobody is asking about any more is an honest full bar
+            // rather than a division by a duration that has already been forgotten.
+            assertThat(presenter.remainingFraction(id)).isEqualTo(1f)
+        }
+    }
+
+    test("the countdown stops under the pointer and resumes from where it stopped") {
+        runPresenterTest(durationSeconds = 8) { presenter, scope ->
+            val id = presenter.present(notice(1))!!
+            scope.advanceTimeBy(4_000)
+            scope.runCurrent()
+
+            presenter.setPaused(id, true)
+            scope.advanceTimeBy(30_000)
+            scope.runCurrent()
+            assertThat(presenter.remainingFraction(id)).isEqualTo(0.5f)
+
+            presenter.setPaused(id, false)
+            scope.advanceTimeBy(2_000)
+            scope.runCurrent()
+            assertThat(presenter.remainingFraction(id)).isEqualTo(0.25f)
+
+            scope.advanceTimeBy(2_100)
+            scope.runCurrent()
+            assertThat(presenter.notices.value).isEmpty()
+        }
+    }
+
+    test("a card the presenter has never heard of reports a full bar") {
+        presenterTest { presenter ->
+            assertThat(presenter.remainingFraction(404L)).isEqualTo(1f)
+        }
+    }
+
     test("dismissing a card removes it and touches nothing else") {
         presenterTest { presenter ->
             val first = presenter.present(notice(1))!!
@@ -136,20 +182,57 @@ val OverlayPresenterSuite by testSuite("The overlay notification presenter") {
             assertThat(presenter.present(notice(2))).isNull()
         }
     }
+
+    test("in reading time, a card's countdown divides by the words it shows, not the setting's seconds") {
+        // Two words cost the model's "to see it" base plus two words' read: 3,100 ms, deliberately
+        // nowhere near the 8 s the fixed stepper holds — this is the spot where the mode actually
+        // produces a different number from the one the reader had set.
+        runPresenterTest(durationMode = OverlayDurationMode.READING) { presenter, scope ->
+            val id = presenter.present(notice(1))!!
+
+            assertThat(presenter.remainingFraction(id)).isEqualTo(1f)
+
+            scope.advanceTimeBy(1_550)
+            scope.runCurrent()
+            assertThat(presenter.remainingFraction(id)).isEqualTo(0.5f)
+        }
+    }
+
+    test("in reading time, a short dhikr leaves before a passage does") {
+        runPresenterTest(durationMode = OverlayDurationMode.READING) { presenter, scope ->
+            val longId = presenter.present(longNotice(1))!!
+            presenter.present(notice(2))
+
+            // Two words ≈ 3,100 ms; the long passage has already reached the model's ceiling.
+            scope.advanceTimeBy(3_200)
+            scope.runCurrent()
+            assertThat(presenter.notices.value.map { it.id }).containsExactly(longId)
+            presenter.dispose()
+            scope.advanceUntilIdle()
+        }
+    }
 }
 
 /** Runs [body] against a presenter on virtual time, with no display and no real sleeping. */
 private fun runPresenterTest(
     durationSeconds: Int = 8,
     maxVisible: Int = 3,
+    durationMode: OverlayDurationMode = OverlayDurationMode.FIXED,
     body: suspend (OverlayNotificationPresenter, TestScope) -> Unit,
 ) = runTest {
+    // Fixed time is the default here rather than the model's reading time, so every expiry assertion
+    // below keeps the arithmetic of the seconds it was written against and only the reading-time tests
+    // opt into the other mode.
     val presenter =
         OverlayNotificationPresenter(
             scope = this,
             settings =
                 MutableStateFlow(
-                    NotificationPresentationSettings(durationSeconds = durationSeconds, maxVisible = maxVisible),
+                    NotificationPresentationSettings(
+                        durationSeconds = durationSeconds,
+                        maxVisible = maxVisible,
+                        durationMode = durationMode,
+                    ),
                 ),
             // The test scheduler's virtual clock, so `advanceTimeBy` is what moves the presenter's
             // idea of "now" — the same relationship the real clock has to the real delays.
@@ -168,7 +251,13 @@ private fun presenterTest(
     val presenter =
         OverlayNotificationPresenter(
             scope = this,
-            settings = MutableStateFlow(NotificationPresentationSettings(maxVisible = maxVisible)),
+            settings =
+                MutableStateFlow(
+                    NotificationPresentationSettings(
+                        maxVisible = maxVisible,
+                        durationMode = OverlayDurationMode.FIXED,
+                    ),
+                ),
             now = { 0L },
         )
     body(presenter)
@@ -180,5 +269,16 @@ private fun notice(index: Int) =
     NotificationNotice(
         title = if (index == 1) "First" else "Second",
         message = "Message $index",
+        action = NotificationAction.Remembrance(index.toLong()),
+    )
+
+/**
+ * A notice whose words reach far past the reading model's ceiling, so its card runs the whole way
+ * to the duration cap: the other end of the scale the two-word notice sits on.
+ */
+private fun longNotice(index: Int) =
+    NotificationNotice(
+        title = if (index == 1) "First" else "Second",
+        message = List(600) { "word" }.joinToString(" "),
         action = NotificationAction.Remembrance(index.toLong()),
     )
