@@ -63,6 +63,7 @@ fun AzkarDayPicker(
     onDayChange: (DayOfWeek, Boolean) -> Unit,
     dayLabel: @Composable (DayOfWeek) -> String,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     FlowRow(
         modifier = modifier.fillMaxWidth(),
@@ -75,6 +76,7 @@ fun AzkarDayPicker(
                 text = dayLabel(day),
                 selected = active,
                 onClick = { onDayChange(day, !active) },
+                enabled = enabled,
             )
         }
     }
@@ -116,6 +118,7 @@ fun AzkarTimePicker(
     minuteOfDay: Int,
     onMinuteChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val locale = AzkarTheme.locale
     var text by remember { mutableStateOf("") }
@@ -125,6 +128,7 @@ fun AzkarTimePicker(
     AzkarOutlinedField(
         value = if (editing) text else AzkarClock.format(minuteOfDay, locale),
         onValueChange = { entered ->
+            if (!enabled) return@AzkarOutlinedField
             text = entered
             editing = true
             AzkarClock.parse(entered)?.let(onMinuteChange)
@@ -132,17 +136,19 @@ fun AzkarTimePicker(
         placeholder = AzkarClock.format(minuteOfDay, locale),
         modifier = modifier,
         leadingIcon = AzkarIcons.Clock,
+        enabled = enabled,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
         trailingContent = {
             TooltipIconActionButton(
                 icon = AzkarIcons.Clock,
                 tooltip = stringResource(Res.string.reminderManagerTimePickerClock),
                 onClick = { dialOpen = true },
+                enabled = enabled,
             )
         },
     )
 
-    if (dialOpen) {
+    if (dialOpen && enabled) {
         AzkarTimePickerDialog(
             minuteOfDay = minuteOfDay,
             onConfirm = {

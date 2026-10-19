@@ -3,6 +3,7 @@ package com.azkar.ui.shell
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -20,15 +21,19 @@ import com.azkar.generated.resources.reminderManagerDayTuesday
 import com.azkar.generated.resources.reminderManagerDayWednesday
 import com.azkar.generated.resources.reminderManagerQueueCadenceContinuous
 import com.azkar.generated.resources.reminderManagerQueueCadenceContinuousHint
+import com.azkar.generated.resources.reminderManagerQueueCadenceHint
 import com.azkar.generated.resources.reminderManagerQueueCadenceInterval
 import com.azkar.generated.resources.reminderManagerQueueCadenceLabel
 import com.azkar.generated.resources.reminderManagerQueueDaysHint
 import com.azkar.generated.resources.reminderManagerQueueDaysLabel
 import com.azkar.generated.resources.reminderManagerQueueDropChance
+import com.azkar.generated.resources.reminderManagerQueueDropChanceHint
 import com.azkar.generated.resources.reminderManagerQueueEnable
 import com.azkar.generated.resources.reminderManagerQueueEnableHint
+import com.azkar.generated.resources.reminderManagerQueueIntervalHint
 import com.azkar.generated.resources.reminderManagerQueueIntervalLabel
 import com.azkar.generated.resources.reminderManagerQueueIntervalValue
+import com.azkar.generated.resources.reminderManagerQueueModeHint
 import com.azkar.generated.resources.reminderManagerQueueModeLabel
 import com.azkar.generated.resources.reminderManagerQueueModeManual
 import com.azkar.generated.resources.reminderManagerQueueModeRandom
@@ -38,13 +43,10 @@ import com.azkar.generated.resources.reminderManagerQueueWindowEnd
 import com.azkar.generated.resources.reminderManagerQueueWindowHint
 import com.azkar.generated.resources.reminderManagerQueueWindowLabel
 import com.azkar.generated.resources.reminderManagerQueueWindowStart
-import com.azkar.generated.resources.reminderManagerScheduleHint
-import com.azkar.generated.resources.reminderManagerScheduleTitle
 import com.azkar.ui.components.AzkarDayPicker
 import com.azkar.ui.components.AzkarTimePicker
 import com.azkar.ui.components.AzkarToggleSwitch
 import com.azkar.ui.components.HintText
-import com.azkar.ui.components.SectionCard
 import com.azkar.ui.components.SelectRow
 import com.azkar.ui.components.SettingRow
 import com.azkar.ui.components.StepperRow
@@ -95,7 +97,7 @@ private val INTERVAL_CHOICES = listOf(5, 10, 15, 30, 60, 90, 120, 180)
  * deliberate behaviour change from the old card — it showed a full set of controls for a queue that
  * was switched off, so a disabled feature occupied more of the screen than the rest of the page put
  * together and the eye could not tell which parts were live. It is also what keeps the notifications
- * tab short: the overlay, channel and startup cards below it are all live with the queue off.
+ * tab short: the card-appearance and startup cards below it are all live with the queue off.
  */
 @Composable
 internal fun ReminderScheduleCard(
@@ -103,11 +105,7 @@ internal fun ReminderScheduleCard(
     schedule: ReminderScheduleEditor,
     modifier: Modifier = Modifier,
 ) {
-    SectionCard(
-        title = stringResource(Res.string.reminderManagerScheduleTitle),
-        body = stringResource(Res.string.reminderManagerScheduleHint),
-        modifier = modifier,
-    ) {
+    SettingsGroupCard(modifier = modifier, contentPadding = AzkarSpacing.xl) {
         SettingRow(
             label = stringResource(Res.string.reminderManagerQueueEnable),
             hint = stringResource(Res.string.reminderManagerQueueEnableHint),
@@ -117,7 +115,6 @@ internal fun ReminderScheduleCard(
                 onCheckedChange = schedule::setEnabled,
             )
         }
-        if (!config.enabled) return@SectionCard
 
         SelectRow(
             label = stringResource(Res.string.reminderManagerQueueModeLabel),
@@ -125,6 +122,8 @@ internal fun ReminderScheduleCard(
             options = QueueMode.entries,
             optionLabel = ::queueModeLabel,
             onSelect = schedule::setMode,
+            hint = stringResource(Res.string.reminderManagerQueueModeHint),
+            enabled = config.enabled,
         )
         if (config.mode == QueueMode.WEIGHTED) {
             HintText(stringResource(Res.string.reminderManagerQueueModeWeightedHint))
@@ -133,12 +132,14 @@ internal fun ReminderScheduleCard(
                 value = config.defaultDropChance,
                 onValueChange = schedule::setDefaultDropChance,
                 range = 0..100,
+                hint = stringResource(Res.string.reminderManagerQueueDropChanceHint),
+                enabled = config.enabled,
             )
         }
-        CadenceRows(config = config, schedule = schedule)
-        DaysRow(config = config, schedule = schedule)
+        CadenceRows(config = config, schedule = schedule, enabled = config.enabled)
+        DaysRow(config = config, schedule = schedule, enabled = config.enabled)
         if (config.cadence == QueueCadence.INTERVAL) {
-            WindowRow(config = config, schedule = schedule)
+            WindowRow(config = config, schedule = schedule, enabled = config.enabled)
         }
     }
 }
@@ -163,6 +164,7 @@ internal fun ReminderScheduleCard(
 private fun CadenceRows(
     config: ReminderQueueConfig,
     schedule: ReminderScheduleEditor,
+    enabled: Boolean,
 ) {
     SelectRow(
         label = stringResource(Res.string.reminderManagerQueueCadenceLabel),
@@ -170,6 +172,8 @@ private fun CadenceRows(
         options = QueueCadence.entries,
         optionLabel = ::cadenceLabel,
         onSelect = schedule::setCadence,
+        hint = stringResource(Res.string.reminderManagerQueueCadenceHint),
+        enabled = enabled,
     )
     SelectRow(
         label = stringResource(Res.string.reminderManagerQueueIntervalLabel),
@@ -178,6 +182,8 @@ private fun CadenceRows(
         optionLabel = ::intervalLabel,
         onSelect = schedule::setIntervalMinutes,
         fieldWidth = 170.dp,
+        hint = stringResource(Res.string.reminderManagerQueueIntervalHint),
+        enabled = enabled,
     )
     if (config.cadence == QueueCadence.CONTINUOUS) {
         HintText(stringResource(Res.string.reminderManagerQueueCadenceContinuousHint))
@@ -195,20 +201,20 @@ private fun CadenceRows(
 private fun DaysRow(
     config: ReminderQueueConfig,
     schedule: ReminderScheduleEditor,
+    enabled: Boolean,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.sm)) {
-        Text(
-            text = stringResource(Res.string.reminderManagerQueueDaysLabel),
-            color = AzkarTheme.colors.textPrimary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
+    SettingRow(
+        label = stringResource(Res.string.reminderManagerQueueDaysLabel),
+        hint = stringResource(Res.string.reminderManagerQueueDaysHint),
+        enabled = enabled,
+    ) {
         AzkarDayPicker(
             activeDays = config.activeDays,
             onDayChange = schedule::setDayActive,
             dayLabel = ::activeDayLabel,
+            modifier = Modifier.width(320.dp),
+            enabled = enabled,
         )
-        HintText(stringResource(Res.string.reminderManagerQueueDaysHint))
     }
 }
 
@@ -224,11 +230,12 @@ private fun DaysRow(
 private fun WindowRow(
     config: ReminderQueueConfig,
     schedule: ReminderScheduleEditor,
+    enabled: Boolean,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.sm)) {
         Text(
             text = stringResource(Res.string.reminderManagerQueueWindowLabel),
-            color = AzkarTheme.colors.textPrimary,
+            color = if (enabled) AzkarTheme.colors.textPrimary else AzkarTheme.colors.textSecondary,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
         )
@@ -238,12 +245,14 @@ private fun WindowRow(
                 minuteOfDay = config.windowStartMinute,
                 onMinuteChange = schedule::setWindowStart,
                 modifier = Modifier.weight(1f),
+                enabled = enabled,
             )
             LabelledTimePicker(
                 label = stringResource(Res.string.reminderManagerQueueWindowEnd),
                 minuteOfDay = config.windowEndMinute,
                 onMinuteChange = schedule::setWindowEnd,
                 modifier = Modifier.weight(1f),
+                enabled = enabled,
             )
         }
         HintText(stringResource(Res.string.reminderManagerQueueWindowHint))
@@ -263,6 +272,7 @@ private fun LabelledTimePicker(
     minuteOfDay: Int,
     onMinuteChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(AzkarSpacing.xs)) {
         Text(
@@ -271,7 +281,7 @@ private fun LabelledTimePicker(
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
         )
-        AzkarTimePicker(minuteOfDay = minuteOfDay, onMinuteChange = onMinuteChange)
+        AzkarTimePicker(minuteOfDay = minuteOfDay, onMinuteChange = onMinuteChange, enabled = enabled)
     }
 }
 

@@ -250,8 +250,14 @@
     <!-- Settings -->
     <string name="settingsTitle">الإعدادات</string>
     <string name="settingsSubtitle">شكل التطبيق ولغته</string>
-    <string name="settingsBack">رجوع</string>
-    <string name="settingsThemeHeader">المظهر</string>
+    <!-- المجموعات الأربع التي تُصنَّف ضمنها أقسام صفحة الإعدادات -->
+    <string name="settingsGroupGeneral">عام</string>
+    <string name="settingsGroupAppearance">المظهر</string>
+    <string name="settingsGroupReminders">التذكيرات</string>
+    <string name="settingsGroupPrayer">الصلاة</string>
+    <string name="settingsStartupTitle">بدء التشغيل</string>
+    <string name="settingsStartupHint">هل يفتح أذكار نفسه عند تسجيل دخولك.</string>
+    <string name="settingsThemeHeader">السمة</string>
     <string name="settingsThemeBody">اتبع إعدادات سطح المكتب، أو اختر الفاتح أو الداكن لكل مرة تفتح فيها التطبيق.</string>
     <string name="settingsThemeSystem">النظام</string>
     <string name="settingsThemeLight">فاتح</string>
@@ -590,16 +596,20 @@
     <string name="reminderManagerQueueEnable">طابور الأذكار</string>
     <string name="reminderManagerQueueEnableHint">فعّله لبدء عرض أذكار من المصادر أدناه.</string>
     <string name="reminderManagerQueueModeLabel">الترتيب</string>
+    <string name="reminderManagerQueueModeHint">كيفية اختيار النصوص من مصادر.</string>
     <string name="reminderManagerQueueModeManual">يدوي</string>
     <string name="reminderManagerQueueModeRandom">عشوائي</string>
     <string name="reminderManagerQueueModeWeighted">مرجّح</string>
     <string name="reminderManagerQueueModeWeightedHint">كلما زاد احتمال التخطي زاد احتمال تجاوز الذكرى.</string>
     <string name="reminderManagerQueueDropChance">احتمال التخطي الافتراضي</string>
+    <string name="reminderManagerQueueDropChanceHint">احتمال تخطي نص في الوضع الموزون.</string>
     <string name="reminderManagerQueueIntervalLabel">كل</string>
+    <string name="reminderManagerQueueIntervalHint">عدد المرات التي يظهر فيها تذكير.</string>
     <string name="reminderManagerQueueCadenceLabel">التكرار</string>
+    <string name="reminderManagerQueueCadenceHint">ما إذا كان الطابور يتوقف ليلاً.</string>
     <string name="reminderManagerQueueCadenceInterval">على فاصل</string>
     <string name="reminderManagerQueueCadenceContinuous">مستمر بلا انقطاع</string>
-    <string name="reminderManagerQueueCadenceContinuousHint">يستمر طوال اليوم في الأيام التي اخترتها. في هذا الوضع لا يوجد وقت بداية أو نهاية.</string>
+    <string name="reminderManagerQueueCadenceContinuousHint">في هذا الوضع لا يوجد وقت بداية أو نهاية.</string>
     <string name="reminderManagerQueueDaysLabel">الأيام</string>
     <string name="reminderManagerQueueDaysHint">يبقى يوم واحد على الأقل مفعّلًا، فلا تتوقف القائمة إلى الأبد.</string>
     <string name="reminderManagerDayMonday">الاثنين</string>
@@ -613,22 +623,27 @@
     <string name="reminderManagerQueueWindowStart">من</string>
     <string name="reminderManagerQueueWindowEnd">إلى</string>
     <string name="reminderManagerQueueWindowHint">الفترات الفائتة تُتجاوز ولا تُعاد دفعة واحدة.</string>
-    <string name="settingsNotificationsHint">كيف يصلك التذكير عندما لا تكون نافذة الأذكار في المقدمة.</string>
-    <string name="settingsNotificationOverlayTitle">على الشاشة</string>
-    <string name="settingsNotificationOverlayHint">كيف يُرسم التذكير فوق بقية نوافذك.</string>
-    <string name="settingsNotificationDesktopTitle">إشعارات سطح المكتب</string>
     <string name="settingsNotificationStartupTitle">شغّل أذكار عند تسجيل الدخول</string>
     <string name="settingsNotificationStartupHint">يسجّل أذكار مع سطح المكتب ليعمل عند تسجيل دخولك.</string>
     <string name="settingsNotificationStartupFailed">تعذّر تحديث إعداد بدء التشغيل.</string>
-    <!-- Settings screen: prayer tab -->
-    <string name="settingsPrayerTitle">أوقات الصلاة</string>
-    <string name="settingsPrayerHint">المصدر الذي تُحسب منه أوقات الصلاة. يُفعَّل أو يُعطَّل كل وقت من الشاشة الرئيسية.</string>
+    <!-- Settings screen: prayer blocks -->
+    <string name="settingsPrayerLocationTitle">الموقع</string>
+    <string name="settingsPrayerLocationHint">المكان الذي تُحسب منه كل أوقات الصلاة.</string>
+    <string name="settingsPrayerPerPrayerHint">يُفعَّل أو يُعطَّل كل وقت من الشاشة الرئيسية.</string>
+    <string name="settingsPrayerCalculationTitle">الحساب</string>
+    <string name="settingsPrayerCalculationHint">الطريقة التي يحوّل بها ذلك المكان إلى أوقات صلاة.</string>
     <string name="settingsPrayerCityLabel">المدينة أو المكان</string>
+    <string name="settingsPrayerSearchLabel">ابحث عن مدينة</string>
+    <string name="settingsPrayerSearching">جارٍ البحث…</string>
+    <string name="settingsPrayerSearchFailed">تعذّر البحث عن الأماكن.</string>
+    <string name="settingsPrayerNoResults">لا توجد أماكن مطابقة.</string>
+    <string name="settingsPrayerPlaceSelected">تم تعيين الموقع إلى %1$s</string>
+    <string name="settingsPrayerManualToggle">الإدخال يدويًا</string>
     <string name="settingsPrayerLatitudeLabel">خط العرض</string>
     <string name="settingsPrayerLongitudeLabel">خط الطول</string>
     <string name="settingsPrayerZoneLabel">المنطقة الزمنية</string>
     <string name="settingsPrayerZoneHint">المنطقة والمدينة، مثل Europe/London.</string>
-    <string name="settingsPrayerMethodLabel">طريقة الحساب</string>
+    <string name="settingsPrayerMethodLabel">الطريقة</string>
     <string name="settingsPrayerSave">حفظ الموقع</string>
     <string name="settingsPrayerDetect">تحديد تلقائي</string>
     <string name="settingsPrayerSaved">تم حفظ الموقع</string>
@@ -660,4 +675,15 @@
     <string name="reminderManagerTimePickerToggleDisplay">اكتبه بدلًا من ذلك</string>
     <string name="reminderManagerTimePickerConfirm">اعتماد هذا الوقت</string>
     <string name="reminderManagerTimePickerCancel">إلغاء</string>
+    <!-- صفحة الإعدادات: الشريط الجانبي الذي يفهرس الصفحة، وطريقة الخروج منها -->
+    <string name="settingsNavGroup">الإعدادات</string>
+    <string name="settingsNavStorageNote">تُحفظ التفضيلات على هذا الجهاز.</string>
+    <string name="settingsClose">إغلاق</string>
+    <string name="settingsCloseKey">ESC</string>
+    <!-- صفحة الإعدادات: مجموعة التذكيرات. شكل البطاقة مُصنَّف تحت المظهر لأنه إعداد مظهر،
+         أما هذان فيقرّران أن يقع التذكير وكيف يُسمح له بالوصول. -->
+    <string name="settingsNotificationsScheduleTitle">جدول التذكير</string>
+    <string name="settingsNotificationsScheduleHint">متى تكون القائمة مفعّلة، ومن أي الأذكار تستمد.</string>
+    <string name="settingsReminderCardTitle">بطاقة التذكير</string>
+    <string name="settingsReminderCardHint">كم يبقى التذكير ظاهرًا، وأين يظهر، وحجمه.</string>
 </resources>

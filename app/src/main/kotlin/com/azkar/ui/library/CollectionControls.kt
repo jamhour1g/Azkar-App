@@ -83,6 +83,7 @@ fun <T> AzkarDropdown(
     fieldWidth: Dp = 200.dp,
     minHeight: Dp = 40.dp,
     fillAvailableWidth: Boolean = false,
+    enabled: Boolean = true,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val sizing = if (fillAvailableWidth) Modifier.fillMaxWidth() else Modifier.width(fieldWidth)
@@ -94,6 +95,7 @@ fun <T> AzkarDropdown(
             singleLine = true,
             minHeight = minHeight,
             active = expanded,
+            enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
             trailingContent = { DropdownChevron(expanded = expanded) },
         )
@@ -109,6 +111,7 @@ fun <T> AzkarDropdown(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
+                        enabled = enabled,
                     ) { expanded = true },
         )
         DropdownMenu(

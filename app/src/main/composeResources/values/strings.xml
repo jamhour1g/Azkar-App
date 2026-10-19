@@ -251,9 +251,15 @@
     <string name="toastMessageFallback">Done.</string>
     <!-- Settings -->
     <string name="settingsTitle">Settings</string>
-    <string name="settingsSubtitle">How the app looks and reads</string>
-    <string name="settingsBack">Back</string>
-    <string name="settingsThemeHeader">Appearance</string>
+    <string name="settingsSubtitle">Manage how Azkar looks, shows reminders, and calculates prayer times.</string>
+    <!-- Settings page: the four groups the rail files the blocks under. -->
+    <string name="settingsGroupGeneral">General</string>
+    <string name="settingsGroupAppearance">Appearance</string>
+    <string name="settingsGroupReminders">Reminders</string>
+    <string name="settingsGroupPrayer">Prayer</string>
+    <string name="settingsStartupTitle">Startup</string>
+    <string name="settingsStartupHint">Whether Azkar opens itself when you sign in.</string>
+    <string name="settingsThemeHeader">Theme</string>
     <string name="settingsThemeBody">Follow the desktop, or pin light or dark for every launch.</string>
     <string name="settingsThemeSystem">System</string>
     <string name="settingsThemeLight">Light</string>
@@ -578,16 +584,20 @@
     <string name="reminderManagerQueueEnable">Remembrance queue</string>
     <string name="reminderManagerQueueEnableHint">Turn this on to start showing passages from the sources below.</string>
     <string name="reminderManagerQueueModeLabel">Order</string>
+    <string name="reminderManagerQueueModeHint">How passages are picked from your sources.</string>
     <string name="reminderManagerQueueModeManual">Manual</string>
     <string name="reminderManagerQueueModeRandom">Random</string>
     <string name="reminderManagerQueueModeWeighted">Weighted</string>
     <string name="reminderManagerQueueModeWeightedHint">A higher drop chance means a passage is more likely to be skipped.</string>
     <string name="reminderManagerQueueDropChance">Default drop chance</string>
+    <string name="reminderManagerQueueDropChanceHint">Chance a passage is skipped in weighted mode.</string>
     <string name="reminderManagerQueueIntervalLabel">Every</string>
+    <string name="reminderManagerQueueIntervalHint">How often a reminder is shown.</string>
     <string name="reminderManagerQueueCadenceLabel">Cadence</string>
+    <string name="reminderManagerQueueCadenceHint">Whether the queue stops overnight.</string>
     <string name="reminderManagerQueueCadenceInterval">On an interval</string>
     <string name="reminderManagerQueueCadenceContinuous">Keep running</string>
-    <string name="reminderManagerQueueCadenceContinuousHint">Keeps going all day on the days you picked. There is no start and end hour in this mode.</string>
+    <string name="reminderManagerQueueCadenceContinuousHint">There is no start and end hour in this mode.</string>
     <string name="reminderManagerQueueDaysLabel">Days</string>
     <string name="reminderManagerQueueDaysHint">At least one day stays on, so the queue never stops for good.</string>
     <string name="reminderManagerDayMonday">Mon</string>
@@ -601,22 +611,27 @@
     <string name="reminderManagerQueueWindowStart">From</string>
     <string name="reminderManagerQueueWindowEnd">To</string>
     <string name="reminderManagerQueueWindowHint">Missed intervals are skipped rather than replayed in a burst.</string>
-    <string name="settingsNotificationsHint">How a reminder reaches you when the Azkar window is not in front.</string>
-    <string name="settingsNotificationOverlayTitle">On screen</string>
-    <string name="settingsNotificationOverlayHint">How a reminder is drawn over your other windows.</string>
-    <string name="settingsNotificationDesktopTitle">Desktop notifications</string>
     <string name="settingsNotificationStartupTitle">Start Azkar when I sign in</string>
     <string name="settingsNotificationStartupHint">Registers Azkar with your desktop so it opens when you log in.</string>
     <string name="settingsNotificationStartupFailed">Could not update the startup setting.</string>
-    <!-- Settings screen: prayer tab -->
-    <string name="settingsPrayerTitle">Prayer times</string>
-    <string name="settingsPrayerHint">Where Azkar calculates your prayer times from. Each prayer is turned on or off from the home screen.</string>
+    <!-- Settings screen: prayer blocks -->
+    <string name="settingsPrayerLocationTitle">Location</string>
+    <string name="settingsPrayerLocationHint">The place every prayer time is calculated from.</string>
+    <string name="settingsPrayerPerPrayerHint">Each prayer is turned on or off from the home screen.</string>
+    <string name="settingsPrayerCalculationTitle">Calculation</string>
+    <string name="settingsPrayerCalculationHint">The convention that turns that place into prayer times.</string>
     <string name="settingsPrayerCityLabel">City or place</string>
+    <string name="settingsPrayerSearchLabel">Search for a city</string>
+    <string name="settingsPrayerSearching">Searching…</string>
+    <string name="settingsPrayerSearchFailed">Could not search for places.</string>
+    <string name="settingsPrayerNoResults">No matching places.</string>
+    <string name="settingsPrayerPlaceSelected">Location set to %1$s</string>
+    <string name="settingsPrayerManualToggle">Enter manually</string>
     <string name="settingsPrayerLatitudeLabel">Latitude</string>
     <string name="settingsPrayerLongitudeLabel">Longitude</string>
     <string name="settingsPrayerZoneLabel">Time zone</string>
     <string name="settingsPrayerZoneHint">Region and city, for example Europe/London.</string>
-    <string name="settingsPrayerMethodLabel">Calculation</string>
+    <string name="settingsPrayerMethodLabel">Method</string>
     <string name="settingsPrayerSave">Save location</string>
     <string name="settingsPrayerDetect">Auto-detect</string>
     <string name="settingsPrayerSaved">Location saved</string>
@@ -640,4 +655,15 @@
     <string name="reminderManagerTimePickerToggleDisplay">Type it instead</string>
     <string name="reminderManagerTimePickerConfirm">Use this time</string>
     <string name="reminderManagerTimePickerCancel">Cancel</string>
+    <!-- Settings page: the rail that indexes the page, and the way out of it -->
+    <string name="settingsNavGroup">Settings</string>
+    <string name="settingsNavStorageNote">Preferences are stored on this device.</string>
+    <string name="settingsClose">Close</string>
+    <string name="settingsCloseKey">ESC</string>
+    <!-- Settings page: the reminders group. How a card is drawn is filed under Appearance, because it is
+         a look setting; these two are what makes a reminder happen and how it is allowed to arrive. -->
+    <string name="settingsNotificationsScheduleTitle">Reminder schedule</string>
+    <string name="settingsNotificationsScheduleHint">When the queue is on, and which passages it draws from.</string>
+    <string name="settingsReminderCardTitle">Reminder card</string>
+    <string name="settingsReminderCardHint">How long a reminder stays up, where it appears, and how big it is.</string>
 </resources>

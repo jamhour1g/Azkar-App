@@ -36,6 +36,7 @@ import com.azkar.ui.library.RemembranceReaderScreen
 import com.azkar.ui.library.rememberCollectionDetailState
 import com.azkar.ui.library.rememberCollectionSessionState
 import com.azkar.ui.library.rememberRemembranceReaderState
+import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.StartupRegistration
@@ -115,7 +116,14 @@ private const val SESSION_BREADCRUMB = "Back to Collections"
  */
 private const val THEME_OPTION_DARK = "Dark"
 
-private const val SETTINGS_BACK = "Back"
+/**
+ * The round dismiss in the settings page header.
+ *
+ * It used to be a labelled "Back" button. The rail now names every block on the page, so the header only
+ * has to offer a way out — and a way out is not owed a sentence, which is why this test finds it by its
+ * accessible name rather than by text a reader sees.
+ */
+private const val SETTINGS_CLOSE = "Close"
 
 private const val SESSION_SKIP = "Skip"
 
@@ -246,6 +254,7 @@ private fun withScreenContainer(block: () -> Unit) {
                     // able to hand one over before the screen finishes composing.
                     single { HttpClient(CIO) }
                     single { LocationDetector(get()) }
+                    single { GeocodingClient(get()) }
                     single { StartupRegistration() }
                 },
             )
@@ -426,9 +435,12 @@ val ScreenSuite by testSuite("Screen smoke") {
                             initialLocale = Locale.ENGLISH,
                             persistTheme = { persisted += it },
                             persist = {},
+                            persistTypography = {},
                         )
                     ScreenFixture { SettingsScreen(state = state, onClose = {}) }
                 }
+                waitForIdle()
+                onNodeWithText("Theme").performClick()
                 waitForIdle()
                 onNodeWithText(THEME_OPTION_DARK).performClick()
                 waitForIdle()
@@ -449,7 +461,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                     ScreenFixture { SettingsScreen(state = previewAzkarAppState(), onClose = { closes++ }) }
                 }
                 waitForIdle()
-                onNodeWithText(SETTINGS_BACK).performClick()
+                onNodeWithContentDescription(SETTINGS_CLOSE).performClick()
                 waitForIdle()
                 assertThat(
                     closes,

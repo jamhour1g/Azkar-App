@@ -4,15 +4,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -21,25 +25,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
-import com.azkar.generated.resources.settingsBack
 import com.azkar.generated.resources.settingsSubtitle
-import com.azkar.generated.resources.settingsTabGeneral
-import com.azkar.generated.resources.settingsTabNotifications
-import com.azkar.generated.resources.settingsTabPrayer
 import com.azkar.generated.resources.settingsTitle
-import com.azkar.ui.components.AzkarIcons
-import com.azkar.ui.components.AzkarOutlinedButton
-import com.azkar.ui.components.AzkarTabStrip
+import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.NotificationSettingsState
@@ -51,49 +47,43 @@ import com.azkar.ui.preview.previewAzkarAppState
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
-/**
- * How wide the settings column is allowed to get.
- *
- * The dashboard's cards fill the window because they hold a hero image, two columns of text and a
- * prayer table — there is always enough inside them to justify the width. A settings list is one short
- * line per row, so stretched to 1440dp it reads as a page of content that ran out, and the eye has
- * 600dp of empty card to cross to get from a heading to the control under it. Capped near the measure
- * the dialogs use (`widthIn(max = 700.dp)`), so the screen they grew out of and the screen they became
- * have the same comfortable width and the window's extra space is left as margin.
- */
-private val SETTINGS_MAX_WIDTH = 760.dp
+// `ui/shell/SettingsScreen.kt` — the screen the gear opens: a rail that names every block on this page
+// under the family it belongs to, and one long scroll holding them all in the same order.
 
-private const val TAB_GENERAL = 0
+/** How much of the page the rail's edge takes, as a hairline rather than a shadow. */
+private val RAIL_RULE_WIDTH = 1.dp
 
-private const val TAB_NOTIFICATIONS = 1
-
-private const val TAB_PRAYER = 2
+/** The scroll container's own inset. Wider than the dashboard's, because the pane is narrower. */
+private val PAGE_PADDING =
+    PaddingValues(
+        start = 40.dp,
+        end = 40.dp,
+        top = AzkarSpacing.screenPaddingTop,
+        bottom = AzkarSpacing.screenPaddingBottom,
+    )
 
 /**
- * The screen the gear opens, holding the app-level preferences.
+ * The app-level preferences.
  *
- * The theme lived on a sun/moon in the header and the language in a modal that could not show both, so
- * neither read as a setting and there was nowhere to put a third. Both live here now, which is why
- * this is a [AzkarDestination] rather than the dialog it replaced: a modal has nowhere to grow, and
- * it is dismissed by the very click that changes its contents.
+ * It is one scroll rather than a tab strip because a strip hides the shape of the page. The reminders
+ * blocks together run several times the height of the language block, so "Notifications" read as a peer of
+ * "Language" and gave no hint that choosing it was a longer scroll than the others — and a reader who
+ * wanted only the prayer city had to open the last tab to find out. Stacked, the length *is* the
+ * information: the reader sees that the reminder settings are the big ones before choosing anything.
  *
- * It is a tabbed page now because it outgrew one column. Appearance and language were the whole screen
- * at 760dp; the notification presentation settings and the prayer location that the reminders screen
- * used to carry make roughly double that, and a single scroll that long buries the language picker
- * under two cards of unrelated switches. Three tabs is the point at which one column is no longer the
- * honest shape of the page — two would still scroll comfortably.
+ * The rail is what replaces the strip's job. It names every block under the family it is filed in — the
+ * four families partition the page, so a row's parent is always the answer to "what kind of setting is
+ * this" — jumps to it, and marks the one the reader is inside, so the page still has a table of contents
+ * without spending the top of the window on a few buttons that hide everything.
  *
  * State arrives rather than being held here. The theme and locale are already on [AzkarAppState] — they
  * have to be, since they outlive the window — and the notification and prayer values come from the same
  * [NotificationPreferencesRepository] the runtime reads, so this composable holds no field of its own
- * beyond which tab is showing.
- *
- * The layout is the dashboard's: a scrolling box over one full-width column, padded by the same screen
- * tokens, so settings sits at the same measure as home and library instead of reading as a dialog that
- * got tall.
+ * beyond the scroll position.
  */
 @Composable
 fun SettingsScreen(
@@ -103,119 +93,229 @@ fun SettingsScreen(
 ) {
     val notificationState = rememberNotificationSettingsState()
     val notificationValues = rememberNotificationSettingsValues()
-    var selectedTab by rememberSaveable { mutableStateOf(TAB_GENERAL) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var selectedGroup by remember { mutableStateOf(SettingsGroup.GENERAL) }
+    val activeSection = activeSettingsSection(listState, selectedGroup)
     val colors = AzkarTheme.colors
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(colors.background)
-                .verticalScroll(rememberScrollState()),
-        contentAlignment = Alignment.TopCenter,
+
+    Row(
+        modifier = modifier.fillMaxSize().background(colors.background),
+        verticalAlignment = Alignment.Top,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .widthIn(max = SETTINGS_MAX_WIDTH)
-                    .padding(
-                        start = AzkarSpacing.screenPaddingHorizontal,
-                        end = AzkarSpacing.screenPaddingHorizontal,
-                        top = AzkarSpacing.screenPaddingTop,
-                        bottom = AzkarSpacing.screenPaddingBottom,
-                    ),
-            verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
+        SettingsNavRail(
+            active = activeSection,
+            selectedGroup = selectedGroup,
+            onSelect = { section ->
+                if (section.group != selectedGroup) {
+                    selectedGroup = section.group
+                    scope.launch {
+                        listState.scrollToItem(0)
+                        listState.animateScrollToItem(sectionScrollIndexInSection(section))
+                    }
+                } else {
+                    scope.launch { listState.animateScrollToItem(sectionScrollIndexInSection(section)) }
+                }
+            },
+            onSelectGroup = { group ->
+                if (group != selectedGroup) {
+                    selectedGroup = group
+                    scope.launch { listState.scrollToItem(0) }
+                }
+            },
+        )
+        // The rail's trailing edge, drawn by the page rather than by the rail: the rail is the thing
+        // being scrolled past, and a rule that belonged to it would scroll with it.
+        Box(modifier = Modifier.width(RAIL_RULE_WIDTH).fillMaxHeight().background(colors.border))
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f),
+            contentPadding = PAGE_PADDING,
+            verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
         ) {
-            SettingsHeader(onClose = onClose)
-            AzkarTabStrip(tabs = settingsTabs(), selectedIndex = selectedTab, onSelect = { selectedTab = it })
-            SettingsTabBody(selectedTab, state, notificationValues, notificationState)
+            item(key = "header") {
+                SettingsPageHeader(onClose = onClose, modifier = Modifier.fillMaxWidth())
+            }
+            settingsSections(state, notificationState, notificationValues, selectedGroup)
+        }
+    }
+}
+
+/** Keeps the scroll declaration's body about the shell, with each settings block in its own item. */
+private fun LazyListScope.settingsSections(
+    state: AzkarAppState,
+    notificationState: NotificationSettingsState,
+    notificationValues: NotificationSettingsValues,
+    selectedGroup: SettingsGroup,
+) {
+    selectedGroup.sections.forEach { section ->
+        item(key = section.name) {
+            SettingsColumn {
+                when (section) {
+                    SettingsSection.LANGUAGE -> SettingsLanguageSection(state = state)
+                    SettingsSection.STARTUP ->
+                        SettingsStartupSection(
+                            startOnLogin = notificationValues.startOnLogin,
+                            settings = notificationState,
+                        )
+                    SettingsSection.THEME -> SettingsThemeSection(state = state)
+                    SettingsSection.TEXT -> SettingsTypographySection(state = state)
+                    SettingsSection.REMINDER_CARD ->
+                        SettingsReminderCardSection(
+                            presentation = notificationValues.presentation,
+                            settings = notificationState,
+                            enabled = notificationValues.queue.enabled,
+                        )
+                    SettingsSection.REMINDER_SCHEDULE ->
+                        SettingsReminderScheduleSection(
+                            queue = notificationValues.queue,
+                            settings = notificationState,
+                        )
+                    SettingsSection.PRAYER_LOCATION -> SettingsPrayerLocationSection(settings = notificationState)
+                    SettingsSection.PRAYER_CALCULATION ->
+                        SettingsPrayerCalculationSection(
+                            location = notificationValues.prayerLocation,
+                            settings = notificationState,
+                        )
+                }
+            }
         }
     }
 }
 
 /**
- * The three sections, named by index.
+ * Every block's [SettingsSectionBlock], taking the whole pane beside the rail.
  *
- * Order is General, Notifications, Prayer: the first two are preferences about the app and its
- * reminders, the third is a location the app reads from and belongs to no other setting, so it reads
- * as the odd one out at the end rather than interrupting the two that are related.
+ * These used to be capped at 900dp and held to the left of it, which was defensible for a settings row —
+ * one short sentence beside one control does not want a 1200dp pane. But the cap was doing its work in
+ * the wrong place: it kept the block itself narrow while leaving the pane's extra width as an empty
+ * margin beside it, so the page read as a column of cards with the window's half missing rather than as
+ * a page. Letting the block fill the pane it was given costs nothing at this size, because the text in
+ * it is set beside its control and not run out to a measure, and the cards then line up with the page
+ * header and the rail's rule instead of floating inside them.
  */
 @Composable
-private fun settingsTabs(): List<String> =
-    listOf(
-        stringResource(Res.string.settingsTabGeneral),
-        stringResource(Res.string.settingsTabNotifications),
-        stringResource(Res.string.settingsTabPrayer),
-    )
+private fun SettingsColumn(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Column(modifier = modifier.fillMaxWidth()) { content() }
+}
 
 /**
- * Which tab is showing, and the state that tab needs.
+ * Which block the reader is inside, for the rail to mark.
  *
- * Split out purely for length: the routing itself is three lines, but inlining it pushed
- * [SettingsScreen] past the point where it was readable as a layout. Nothing here holds state — the
- * tab index stays in the caller because it is the thing the tab strip writes to.
+ * Derived from the scroll position rather than remembered: the scroll position is already state, and
+ * keeping a second copy of "where am I" in sync with it is the sort of thing that survives a change to
+ * the list order and then quietly highlights the wrong row.
+ *
+ * The last block is the awkward one. [LazyListState.firstVisibleItemIndex] names the block at the top of
+ * the viewport, and the final block is short enough — with the page's bottom padding under it — that the
+ * list runs out of scroll before it ever reaches the top. So reading the topmost item gave the same
+ * answer for the whole of the last screenful, and "Prayer times" could not be highlighted however far
+ * down the reader went: the rail said they were still in the block above. `canScrollForward` is what
+ * distinguishes that case, because it is false exactly when there is nothing below left to reach.
+ *
+ * [OFFSET_FOR_HEADER] is why this is not just `entries[index]`. The first item is the page header, not a
+ * block, so the arithmetic would be off by one for the whole list — and off-by-one here does not crash,
+ * it just marks the wrong row, which is the failure that would have shipped.
  */
 @Composable
-private fun SettingsTabBody(
-    selectedTab: Int,
-    state: AzkarAppState,
-    values: NotificationSettingsValues,
-    notificationState: NotificationSettingsState,
+private fun activeSettingsSection(
+    listState: LazyListState,
+    selectedGroup: SettingsGroup,
+): SettingsSection {
+    val visible = listState.layoutInfo.visibleItemsInfo
+    val index =
+        when {
+            visible.isEmpty() -> 0
+            listState.canScrollForward -> visible.first().index
+            else -> visible.last().index
+        }
+    val sections = selectedGroup.sections
+    return sections.getOrElse(index - OFFSET_FOR_HEADER) { sections.first() }
+}
+
+/** The number of items that are not blocks: the page header. */
+private const val OFFSET_FOR_HEADER = 1
+
+/** Where a block sits in the list, header included. */
+private fun sectionScrollIndexInSection(section: SettingsSection): Int =
+    section.group.sections.indexOf(section) + OFFSET_FOR_HEADER
+
+/**
+ * The page's identity and its way out.
+ *
+ * The close is a round dismiss with a key caption rather than a labelled button, because the rail has
+ * already taken the job a "Back" button used to do here: it is the first thing on the page and it names
+ * where you are. What is left is a way out, and a way out that reads as one is not owed a sentence.
+ */
+@Composable
+private fun SettingsPageHeader(
+    onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    when (selectedTab) {
-        TAB_NOTIFICATIONS ->
-            SettingsNotificationsTab(
-                queue = values.queue,
-                presentation = values.presentation,
-                startOnLogin = values.startOnLogin,
-                settings = notificationState,
-                modifier = modifier,
+    val colors = AzkarTheme.colors
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.xl),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(top = 4.dp)) {
+            Text(
+                text = stringResource(Res.string.settingsTitle),
+                color = colors.textPrimary,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
             )
-        TAB_PRAYER ->
-            SettingsPrayerTab(
-                location = values.prayerLocation,
-                settings = notificationState,
-                modifier = modifier,
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(Res.string.settingsSubtitle),
+                color = colors.textSecondary,
+                fontSize = 13.sp,
             )
-        else -> SettingsGeneralTab(state = state, modifier = modifier)
+        }
+        SettingsCloseButton(onClick = onClose)
     }
 }
 
 /**
- * The holder behind the two moved tabs.
+ * The holder behind the notification and prayer blocks.
  *
  * Both of the platform capabilities are injected here rather than taken from a parameter: the settings
- * page is the only screen that needs them, and a screen that is handed a detector it does not own
- * would let a caller pass one that is not the one the runtime uses. They are still nullable on the
- * holder so a preview host with no network and no login manager still draws every row.
+ * page is the only screen that needs them, and a screen that is handed a detector it does not own would
+ * let a caller pass one that is not the one the runtime uses. They are still nullable on the holder so a
+ * preview host with no network and no login manager still draws every row.
  */
 @Composable
 private fun rememberNotificationSettingsState(): NotificationSettingsState {
     val preferences = koinInject<NotificationPreferencesRepository>()
     val locationDetector = koinInject<LocationDetector>()
     val startupRegistration = koinInject<StartupRegistration>()
+    val geocodingClient = koinInject<GeocodingClient>()
     val scope = rememberCoroutineScope()
-    return remember(preferences, locationDetector, startupRegistration) {
+    return remember(preferences, locationDetector, startupRegistration, geocodingClient) {
         NotificationSettingsState(
             scope = scope,
             preferences = preferences,
             locationDetector = locationDetector,
             startupRegistration = startupRegistration,
+            geocodingClient = geocodingClient,
         )
     }
 }
 
 /**
- * Everything persisted on the moved tabs, snapshotted into one value.
+ * Everything persisted on the moved blocks, snapshotted into one value.
  *
- * Four `collectAsState` calls would have left four locals to thread by hand into the tab bodies, and
- * a single immutable holder means a tab only recomposes when the settings it actually reads change —
- * the prayer tab does not recompose when the start-on-login flag is toggled on the one beside it.
+ * Four `collectAsState` calls would have left four locals to thread by hand into the blocks, and a single
+ * immutable holder means a block only recomposes when the settings it actually reads change — the prayer
+ * block does not recompose when the start-on-login flag is toggled far above it.
  *
- * [queue] joined them when the reminder schedule card moved here from the reminders screen. It is the
- * one value on this page the reminders screen also draws, which is the point of reading it from the
- * repository rather than from a local: the summary at the top of that screen and the card at the top
- * of this one are two readings of one record, and neither holds a copy.
+ * [queue] joined them when the reminder schedule card moved here from the reminders screen. It is the one
+ * value on this page the reminders screen also draws, which is the point of reading it from the repository
+ * rather than from a local: the summary at the top of that screen and the card at the top of this one are
+ * two readings of one record, and neither holds a copy.
  */
 @Immutable
 private data class NotificationSettingsValues(
@@ -240,76 +340,15 @@ private fun rememberNotificationSettingsValues(): NotificationSettingsValues {
 private fun SettingsScreenPreview() {
     AzkarThemePreview {
         // Assembled from the parts rather than by calling [SettingsScreen], because that composable
-        // reaches Koin for the moved tabs' holder and a preview has no container to resolve it
-        // against. The two tabs below it each carry their own preview for the same reason.
+        // reaches Koin for the notification holder and a preview has no container to resolve it against.
         Column(
-            modifier =
-                Modifier
-                    .widthIn(max = SETTINGS_MAX_WIDTH)
-                    .padding(AzkarSpacing.screenPaddingHorizontal),
-            verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
+            modifier = Modifier.fillMaxWidth().padding(40.dp),
+            verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
         ) {
-            SettingsHeader(onClose = {})
-            AzkarTabStrip(
-                tabs = listOf("General", "Notifications", "Prayer"),
-                selectedIndex = TAB_GENERAL,
-                onSelect = {},
-            )
-            SettingsGeneralTab(state = previewAzkarAppState())
+            SettingsPageHeader(onClose = {})
+            SettingsLanguageSection(state = previewAzkarAppState())
+            SettingsThemeSection(state = previewAzkarAppState())
+            SettingsTypographySection(state = previewAzkarAppState())
         }
-    }
-}
-
-/**
- * The screen's identity and its way out.
- *
- * The badge and the title-over-subtitle pairing are `LibraryHeader`'s, deliberately: the two screens
- * are siblings, and a header that is a different shape on one of them makes the app look like it has a
- * third place in it.
- *
- * [onClose] pops rather than navigating home. Settings is pushed onto whichever screen opened it, so
- * going home instead would throw away the library the user had open — a "Back" that changes screen is a
- * "Home" wearing the wrong label.
- */
-@Composable
-private fun SettingsHeader(
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = AzkarTheme.colors
-    Row(
-        modifier = modifier.padding(top = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(colors.primary),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = AzkarIcons.Settings,
-                contentDescription = null,
-                tint = colors.onPrimary,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(Res.string.settingsTitle),
-                color = colors.textPrimary,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = stringResource(Res.string.settingsSubtitle),
-                color = colors.textSecondary,
-                fontSize = 13.sp,
-            )
-        }
-        AzkarOutlinedButton(text = stringResource(Res.string.settingsBack), onClick = onClose)
     }
 }

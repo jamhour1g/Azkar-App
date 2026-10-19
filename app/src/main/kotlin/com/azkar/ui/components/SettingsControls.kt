@@ -91,6 +91,7 @@ fun SettingRow(
     label: String,
     modifier: Modifier = Modifier,
     hint: String? = null,
+    enabled: Boolean = true,
     trailing: @Composable () -> Unit,
 ) {
     val colors = AzkarTheme.colors
@@ -100,7 +101,12 @@ fun SettingRow(
         horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.md),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, color = colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                text = label,
+                color = if (enabled) colors.textPrimary else colors.textSecondary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
             if (hint != null) {
                 Text(text = hint, color = colors.textSecondary, fontSize = 11.sp)
             }
@@ -120,14 +126,16 @@ fun <T> SelectRow(
     modifier: Modifier = Modifier,
     hint: String? = null,
     fieldWidth: Dp = 210.dp,
+    enabled: Boolean = true,
 ) {
-    SettingRow(label = label, modifier = modifier, hint = hint) {
+    SettingRow(label = label, modifier = modifier, hint = hint, enabled = enabled) {
         AzkarDropdown(
             selected = selected,
             options = options,
             label = optionLabel,
             onSelect = onSelect,
             fieldWidth = fieldWidth,
+            enabled = enabled,
         )
     }
 }
@@ -148,9 +156,10 @@ fun StepperRow(
     range: IntRange,
     modifier: Modifier = Modifier,
     hint: String? = null,
+    enabled: Boolean = true,
 ) {
-    SettingRow(label = label, modifier = modifier, hint = hint) {
-        StepperControl(value = value, onValueChange = onValueChange, range = range)
+    SettingRow(label = label, modifier = modifier, hint = hint, enabled = enabled) {
+        StepperControl(value = value, onValueChange = onValueChange, range = range, enabled = enabled)
     }
 }
 
@@ -167,6 +176,7 @@ fun StepperControl(
     value: Int,
     onValueChange: (Int) -> Unit,
     range: IntRange,
+    enabled: Boolean = true,
 ) {
     val colors = AzkarTheme.colors
     Row(
@@ -177,11 +187,11 @@ fun StepperControl(
             icon = Icons.Filled.Remove,
             contentDescription = stringResource(Res.string.settingsStepperDecrease),
             onClick = { onValueChange((value - 1).coerceIn(range)) },
-            enabled = value > range.first,
+            enabled = enabled && value > range.first,
         )
         Text(
             text = value.toString(),
-            color = colors.textPrimary,
+            color = if (enabled) colors.textPrimary else colors.textSecondary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.width(34.dp),
@@ -191,7 +201,7 @@ fun StepperControl(
             icon = Icons.Filled.Add,
             contentDescription = stringResource(Res.string.settingsStepperIncrease),
             onClick = { onValueChange((value + 1).coerceIn(range)) },
-            enabled = value < range.last,
+            enabled = enabled && value < range.last,
         )
     }
 }

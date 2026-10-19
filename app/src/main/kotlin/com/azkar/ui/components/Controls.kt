@@ -605,6 +605,7 @@ fun IconActionButton(
     selected: Boolean = false,
     iconSize: Dp = 20.dp,
     tint: Color = AzkarTheme.colors.textPrimary,
+    enabled: Boolean = true,
 ) {
     val colors = AzkarTheme.colors
     val interaction = remember { MutableInteractionSource() }
@@ -627,6 +628,7 @@ fun IconActionButton(
             onClick = onClick,
             shapes = AzkarExpressive.iconButtonShapes,
             modifier = Modifier.fillMaxSize(),
+            enabled = enabled,
             interactionSource = interaction,
             colors =
                 IconButtonDefaults.iconButtonColors(
@@ -1000,6 +1002,7 @@ fun TooltipIconActionButton(
     selected: Boolean = false,
     iconSize: Dp = 20.dp,
     tint: Color = AzkarTheme.colors.textPrimary,
+    enabled: Boolean = true,
 ) {
     AzkarTooltip(tooltip = tooltip, modifier = modifier) {
         IconActionButton(
@@ -1009,6 +1012,7 @@ fun TooltipIconActionButton(
             selected = selected,
             iconSize = iconSize,
             tint = tint,
+            enabled = enabled,
         )
     }
 }
@@ -1179,12 +1183,14 @@ fun AzkarFilterChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
+    enabled: Boolean = true,
 ) {
     val colors = AzkarTheme.colors
     FilterChip(
         selected = selected,
         onClick = onClick,
         modifier = modifier,
+        enabled = enabled,
         shapes = AzkarExpressive.chipShapes,
         label = { Text(text = text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) },
         leadingIcon =
@@ -1447,12 +1453,14 @@ fun AzkarOutlinedField(
      * Compose. Null leaves Material's own defaults, which is what all but one field wants.
      */
     keyboardOptions: KeyboardOptions? = null,
+    enabled: Boolean = true,
 ) {
     val colors = AzkarTheme.colors
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.heightIn(min = minHeight),
+        enabled = enabled,
         singleLine = singleLine,
         maxLines = maxLines,
         keyboardOptions = keyboardOptions ?: KeyboardOptions.Default,
