@@ -32,6 +32,11 @@ import java.util.Locale
  * a mirror identified by its name would quietly stop mirroring the day they did. `null` is a real
  * answer — the settings file can outlive the database it names — and a caller that gets it must treat
  * the mirror as absent rather than falling back to a lookup.
+ *
+ * [reminderPicksCollectionId] names the reserved shelf that holds the passages the user asked to be
+ * reminded about one at a time. It is `null` until the first pick and becomes `null` again when the
+ * last one goes, so its presence is the answer to "is there anything picked" and a caller never has
+ * to count members to find out.
  */
 data class CollectionsSnapshot(
     val collections: List<RemembranceCollection>,
@@ -40,6 +45,7 @@ data class CollectionsSnapshot(
     val refreshedAt: Instant,
     val favoritesCollectionId: Long? = null,
     val uncategorizedCollectionId: Long? = null,
+    val reminderPicksCollectionId: Long? = null,
 )
 
 /**
@@ -81,6 +87,15 @@ enum class CollectionScope {
      * has nothing left to come back to, so neither answers "in progress".
      */
     IN_PROGRESS,
+
+    /**
+     * Only the collections the queue reminds from.
+     *
+     * The one scope that answers from the queue's own source list rather than from the collection's
+     * row: whether a collection is reminded is a fact about the queue, which lives in the settings
+     * file, so the shelf has to be handed the list of reminded collections alongside it.
+     */
+    IN_REMINDERS,
     ;
 
     /** Whether this scope needs the shelf to be narrowed at all, rather than shown whole. */
@@ -91,10 +106,10 @@ enum class CollectionScope {
             ALL -> true
             OFFICIAL -> kind == CollectionKind.OFFICIAL
             CUSTOM -> kind == CollectionKind.CUSTOM
-            // Pinning, starring and progress are all properties a collection carries whatever kind it
-            // is, so there is nothing for a kind predicate to say about any of them. The filter
-            // answers them.
-            PINNED, FAVORITE, IN_PROGRESS -> true
+            // Pinning, starring, progress and being reminded are all properties a collection carries
+            // whatever kind it is, so there is nothing for a kind predicate to say about any of them.
+            // The filter answers them.
+            PINNED, FAVORITE, IN_PROGRESS, IN_REMINDERS -> true
         }
 }
 
@@ -117,6 +132,15 @@ enum class CollectionSort {
      * you", and also the one that puts what is nearly finished at the top.
      */
     PROGRESS,
+
+    /**
+     * The order the user arranged their library in.
+     *
+     * The one sort the user owns rather than chooses from a list: the shelf's own order is written
+     * by dragging a card, and picking this sort is what a drag does. It is also the order the
+     * reminder queue recites in, so the two cannot drift apart.
+     */
+    CUSTOM,
 }
 
 /**
@@ -182,6 +206,14 @@ data class CollectionTile(
      * settled.
      */
     val tagIds: Set<Long> = emptySet(),
+    /**
+     * Whether the queue draws from this collection.
+     *
+     * Carried for the same reason [isPinned] and [isFavorite] are: a per-collection claim that a
+     * card, a menu or a filter has to be able to see, and a surface that cannot see it has to
+     * either guess or reach back for the domain object to find out which one is set.
+     */
+    val inReminders: Boolean = false,
 ) {
     /**
      * How far through the collection this is, from nothing to all of it.

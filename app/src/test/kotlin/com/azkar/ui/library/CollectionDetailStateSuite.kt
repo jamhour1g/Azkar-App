@@ -215,6 +215,6 @@ private fun detailWith(
     return CollectionDetailState(
         collections = collections,
         collectionId = COLLECTION_ID,
-        reminders = CollectionReminderState(scope, gateway),
+        reminders = CollectionReminderState(FakeReminderSources()),
     )
 }

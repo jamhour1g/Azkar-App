@@ -69,6 +69,7 @@ class LibrarySeedStore(
             remove(seededKey)
             remove(favoritesCollectionIdKey)
             remove(uncategorizedCollectionIdKey)
+            remove(reminderPicksCollectionIdKey)
         }
     }
 
@@ -92,6 +93,22 @@ class LibrarySeedStore(
         settings.edit { this[uncategorizedCollectionIdKey] = collectionId }
     }
 
+    /**
+     * The id of the "Reminder picks" shelf, or `null` when the user has not picked a passage yet.
+     *
+     * The shelf is created on the first pick, so `null` is the ordinary answer on a fresh
+     * installation and on one that has never asked for a single-passage reminder.
+     */
+    override suspend fun reminderPicksCollectionId(): Long? = settings.read(reminderPicksCollectionIdKey)
+
+    override suspend fun setReminderPicksCollectionId(collectionId: Long) {
+        settings.edit { this[reminderPicksCollectionIdKey] = collectionId }
+    }
+
+    override suspend fun clearReminderPicksCollectionId() {
+        settings.edit { remove(reminderPicksCollectionIdKey) }
+    }
+
     internal companion object {
         /**
          * On-disk keys, `internal` for the same reason [com.azkar.i18n.LocaleStore]'s is: the literal
@@ -106,5 +123,8 @@ class LibrarySeedStore(
 
         @VisibleForTesting
         val uncategorizedCollectionIdKey = longPreferencesKey("uncategorized_collection_id")
+
+        @VisibleForTesting
+        val reminderPicksCollectionIdKey = longPreferencesKey("reminder_picks_collection_id")
     }
 }

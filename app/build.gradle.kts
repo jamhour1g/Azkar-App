@@ -1,5 +1,4 @@
 import org.gradle.api.artifacts.ExternalModuleDependency
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.util.jar.JarFile
 
 plugins {
@@ -22,6 +21,20 @@ plugins {
 }
 
 version = "0.1.0"
+
+// The desktop entry point, in one place.
+//
+// Three separate things have to agree on this string, and none of them can check
+// the others:
+//   - the launcher inside the package (`app.jvm.gui.main-class`),
+//   - the `StartupWMClass` the Linux desktop entry declares, which the desktop
+//     manager matches against the running window's `WM_CLASS`, and
+//   - the `WM_CLASS` AWT reports, which it derives from the class that owns `main`.
+//
+// Conveyor derives the first two from the Compose plugin's `mainClass` below, so
+// what is left to keep true is the third, and `Main.kt` owns that. The test
+// `DesktopWindowClassSuite` holds the two sides to that agreement.
+val desktopMainClass = "com.azkar.MainKt"
 
 kotlin {
     compilerOptions {
@@ -92,12 +105,12 @@ dependencies {
     // draw — a due reminder is announced by the app's own overlay window, so there is no notification
     // service dependency here.
     //
-    // The tray reaches the OS through JNA and D-Bus rather than through the JDK, so the packaging tasks
-    // below are the only thing that has to care: `packageDeb`/`packageMsi`/`packageDmg` ship a plain
-    // jar and a JVM, and nothing here shrinks or rewrites bytecode. If an uber-jar task is ever added
-    // it will need the library's documented keep rules (`com.sun.jna.**` and
-    // `dev.nucleusframework.composenativetray.**`) -- JNA resolves its native functions by reflection at
-    // call time, so a shrinking build would break the tray silently at runtime.
+    // The tray reaches the OS through JNA and D-Bus rather than through the JDK, so the packaging
+    // tasks below are the only thing that has to care: the Linux package ships a plain jar and a
+    // JVM, and nothing here shrinks or rewrites bytecode. If an uber-jar task is ever added it
+    // will need the library's documented keep rules (`com.sun.jna.**` and
+    // `dev.nucleusframework.composenativetray.**`) -- JNA resolves its native functions by
+    // reflection at call time, so a shrinking build would break the tray silently at runtime.
     implementation(libs.dev.nucleusframework.compose.native.tray)
 
     // App settings (locale, notification switches). DataStore replaces `java.util.prefs`: it is
@@ -191,7 +204,7 @@ tasks.jar {
     archiveFileName.set("azkar-app.jar")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    manifest { attributes["Main-Class"] = "com.azkar.MainKt" }
+    manifest { attributes["Main-Class"] = desktopMainClass }
 
     // Include resources (bundles, fonts, etc.)
     from(sourceSets.main.get().output)
@@ -267,18 +280,43 @@ tasks.register<JavaExec>("runScreenshot") {
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     // Match the desktop runtime flags so UI and persistence tests do not emit JDK access warnings.
     jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow")
+    // The Compose plugin's `mainClass` is the single source of truth for the packaged entry
+    // point, and Conveyor derives the Linux `StartupWMClass` from it. The desktop-entry test
+    // needs that exact value rather than a copy of it, so it is handed over instead of
+    // being re-typed in the test.
+    systemProperty("azkar.desktop.mainClass", desktopMainClass)
 }
 
 // ---------------------------------------------------------------------------
-// Native packaging via the Compose Multiplatform plugin (jpackage under the
-// hood). Per-host-OS task names are suffixed, so on Linux you get
-// `packageDeb` / `packageUberJarForCurrentOS`; on Windows `packageMsi` /
-// `packageExe`; on macOS `packageDmg` / `packagePkg`.
+// Packaging.
 //
-//   ./gradlew :app:run                          — run from the IDE/classpath
-//   ./gradlew :app:packageUberJarForCurrentOS   — fat jar for the current OS
-//   ./gradlew :app:packageDeb                   — native installer (Linux)
-//   ./gradlew :app:packageDistributionForCurrentOS — unsigned native image
+// Hydraulic Conveyor is the only thing that packages this app. `conveyor.conf`
+// at the repository root describes the packages and the update feeds, and
+// `.github/workflows/release.yml` runs it.
+//
+// The Compose Multiplatform plugin's own `nativeDistributions` block used to sit
+// here as a second, jpackage-based packager. It has been removed, and the reason
+// is Linux-only and not cosmetic.
+//
+// jpackage builds its desktop entry from
+// `classes/jdk/jpackage/internal/resources/template.desktop` inside the JDK, and
+// that template has no `StartupWMClass` key at all. A desktop entry without one
+// can never be matched to the running window -- the desktop manager matches on the
+// window's `WM_CLASS` -- so a jpackage-built .deb puts the app in the dock as an
+// unassociated window: a generic Java icon, and the window's raw `WM_CLASS` as
+// the label. Conveyor's desktop entry does carry `StartupWMClass`, and the
+// Conveyor Gradle plugin derives it from the Compose `mainClass` below, so the
+// two agree by construction.
+//
+// The Compose extension is still the source of everything Conveyor needs:
+//   - `mainClass`  -> `app.jvm.gui.main-class` and `StartupWMClass`
+//   - `jvmArgs`    -> `app.jvm.options`
+//   - `buildTypes` -> the ProGuard-shrunk jars that Conveyor packages
+//
+// The jpackage-only settings went with it: `targetFormats`, the per-OS icon
+// files (Conveyor derives .ico/.icns/hicolor sizes from the one PNG named in
+// `conveyor.conf`) and the `modules()` list (Conveyor bundles a full JDK, so
+// there is no jlink image to select modules for).
 // ---------------------------------------------------------------------------
 
 // Compose Multiplatform's own resource system, which replaces the hand-rolled
@@ -334,9 +372,10 @@ val collectProguardRules =
                         }
                 }
             }
-            val uncovered = providers.filterTo(sortedSetOf()) { provider ->
-                alreadyKeptProviders.none { provider.startsWith(it) }
-            }
+            val uncovered =
+                providers.filterTo(sortedSetOf()) { provider ->
+                    alreadyKeptProviders.none { provider.startsWith(it) }
+                }
             output.get().asFile.apply {
                 parentFile.mkdirs()
                 writeText(
@@ -360,7 +399,7 @@ val collectProguardRules =
 
 compose.desktop {
     application {
-        mainClass = "com.azkar.MainKt"
+        mainClass = desktopMainClass
         // Skiko loads its native library through System.loadLibrary; DataStore's bundled protobuf
         // currently uses sun.misc.Unsafe on Java 25.
         jvmArgs += "--enable-native-access=ALL-UNNAMED"
@@ -373,68 +412,15 @@ compose.desktop {
             proguard {
                 isEnabled.set(true)
                 optimize.set(false)
+                // `obfuscate` is off on purpose, and it is load-bearing rather than
+                // cosmetic. ProGuard would rename `com.azkar.MainKt`, and the window's
+                // `WM_CLASS` is derived from that class name, while the packaged
+                // `StartupWMClass` is derived from the Gradle `mainClass` above. Rename
+                // one side and the dock stops matching the window to its desktop entry:
+                // the app still runs, it just shows up with a generic Java icon.
                 obfuscate.set(false)
                 configurationFiles.from(project.file("proguard-rules.pro"))
                 configurationFiles.from(collectProguardRules)
-            }
-        }
-
-        nativeDistributions {
-            // `AppImage` is deliberately excluded: it needs FUSE at runtime, which is
-            // unavailable on most CI runners. `Deb` is the portable Linux artifact.
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-
-            // Debian package names must be lowercase, so the package is `azkar`
-            // while the user-visible application name stays `Azkar`.
-            packageName = "Azkar"
-            packageVersion = project.version.toString()
-            description =
-                "Azkar — a companion app for daily adhkar: prayer times, remembrances, and reminders."
-            vendor = "jamhour1g"
-            copyright = "© 2025 jamhour1g"
-
-            // Skiko draws through AWT, so `java.desktop` (which transitively pulls
-            // java.datatransfer, java.xml and java.prefs) is mandatory. H2/Hikari/Exposed
-            // need java.sql + java.naming, and Logback needs java.logging.
-            //
-            // `jdk.security.auth` is there for the file dialog and only for the file dialog: the
-            // XDG Desktop Portal authenticates the requester against the session bus over
-            // GSSAPI, and this is the module that speaks it. Running from the classpath resolves
-            // it anyway -- the unnamed module's default root set is every module in the image that
-            // exports something -- so the packaged builds are the only ones where leaving it out
-            // would be felt, which is exactly the case nobody would otherwise catch.
-            modules(
-                "java.desktop",
-                "java.sql",
-                "java.naming",
-                "java.logging",
-                "jdk.unsupported",
-                "jdk.security.auth",
-            )
-
-            // The app mark, rasterised from `AzkarIcons.Brand` — the same `ImageVector` the header
-            // lockup draws, so the taskbar entry, the dock tile, the desktop shortcut and the
-            // window's own title bar all show one mark rather than four. Without these jpackage
-            // falls back to the generic Java coffee cup, which is what the taskbar showed before.
-            // `Main.kt` sets the in-app window icon from the vector directly, so these three files
-            // exist only for the packager, which needs real image files rather than draw commands.
-            val iconDirectory = rootProject.layout.projectDirectory.dir("assets/icons")
-            linux {
-                // Debian package names must be lowercase; the user-visible name stays
-                // `Azkar` via `packageName` on the distribution above.
-                packageName = "azkar"
-                shortcut = true
-                iconFile = iconDirectory.file("azkar.png").asFile
-            }
-            windows {
-                iconFile = iconDirectory.file("azkar.ico").asFile
-                menu = true
-                perUserInstall = true
-            }
-            macOS {
-                bundleID = "com.azkar.app"
-                dockName = "Azkar"
-                iconFile = iconDirectory.file("azkar.icns").asFile
             }
         }
     }

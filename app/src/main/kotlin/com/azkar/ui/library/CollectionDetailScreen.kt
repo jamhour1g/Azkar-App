@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionDetailActionReminderChance
+import com.azkar.generated.resources.collectionDetailActionReminderChanceHint
 import com.azkar.generated.resources.collectionDetailEmptyHint
 import com.azkar.generated.resources.collectionDetailEmptyTitle
 import com.azkar.generated.resources.collectionDetailMissingHint
@@ -33,12 +35,14 @@ import com.azkar.generated.resources.collectionDetailMissingTitle
 import com.azkar.generated.resources.collectionDetailSearchHint
 import com.azkar.generated.resources.collectionShareCopied
 import com.azkar.generated.resources.collectionsActionAddMembers
+import com.azkar.generated.resources.collectionsActionAddToReminders
 import com.azkar.generated.resources.collectionsActionDelete
 import com.azkar.generated.resources.collectionsActionDuplicate
 import com.azkar.generated.resources.collectionsActionEdit
 import com.azkar.generated.resources.collectionsActionFavorite
 import com.azkar.generated.resources.collectionsActionHideFromHome
 import com.azkar.generated.resources.collectionsActionPin
+import com.azkar.generated.resources.collectionsActionRemoveFromReminders
 import com.azkar.generated.resources.collectionsActionShare
 import com.azkar.generated.resources.collectionsActionShowOnHome
 import com.azkar.generated.resources.collectionsActionUnfavorite
@@ -48,8 +52,11 @@ import com.azkar.generated.resources.collectionsToastTitle
 import com.azkar.generated.resources.libraryActionCopyCopied
 import com.azkar.generated.resources.remembranceCreateActionOpen
 import com.azkar.ui.components.ActionIcons
+import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarMenuItem
 import com.azkar.ui.components.AzkarOutlinedField
+import com.azkar.ui.components.SettingRow
+import com.azkar.ui.components.StepperControl
 import com.azkar.ui.library.CollectionDetailState
 import com.azkar.ui.library.data.CollectionPresenter.Companion.ARABIC_LOCALE
 import com.azkar.ui.library.data.TransferFormat
@@ -95,7 +102,6 @@ fun CollectionDetailScreen(
     onStartSession: (Long) -> Unit,
     onOpenRemembrance: (Long) -> Unit,
     showToast: ShowToast,
-    onManageReminders: (Long) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     CollectionDetailContent(
@@ -106,7 +112,6 @@ fun CollectionDetailScreen(
                 onBack = onBack,
                 onStartSession = onStartSession,
                 onOpenRemembrance = onOpenRemembrance,
-                onManageReminders = onManageReminders,
             ),
         showToast = showToast,
         modifier = modifier,
@@ -164,11 +169,23 @@ internal fun CollectionRegion(
         collection = collection,
         memberCount = detail.memberCount,
         stats = detail.stats,
-        reminder = CollectionHeroReminder.None,
+        inReminders = detail.inReminders,
         actions = detailHeroActions(detail = detail, collection = collection, title = title, navigation = navigation),
     )
 
     Spacer(Modifier.height(DETAIL_REGION_GAP))
+
+    // How likely this collection is to be skipped, when the queue is weighted. It sits on the
+    // collection's own page rather than in the settings because it is a fact about this collection
+    // rather than about the queue — a shelf of long passages and a shelf of short ones are not
+    // equally worth interrupting a reader for, and only the user knows which is which.
+    if (detail.inReminders && detail.reminderState.isWeighted) {
+        CollectionChanceRow(
+            chance = detail.reminderState.dropChance(detail.collectionId),
+            onChanceChange = { detail.reminderState.setDropChance(detail.collectionId, it) },
+        )
+        Spacer(Modifier.height(DETAIL_REGION_GAP))
+    }
 
     // Progress is printed here rather than in a card of its own between the band and the members: it
     // is a fact about the collection rather than a way of changing it, so it sits with the other
@@ -199,6 +216,34 @@ internal fun CollectionRegion(
             placeholder = stringResource(Res.string.collectionDetailSearchHint),
             leadingIcon = Icons.Filled.Search,
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * How likely the queue is to skip this collection, as a number the user can turn.
+ *
+ * A percentage rather than a sentence, because it is a weight: the queue's weighted mode drops a
+ * passage when a die says so, and the die is this number. The settings hold the default for the
+ * collections nobody has an opinion about; this is the opinion.
+ *
+ * The stepper is the same control the settings use, because it is the same bounded integer: a
+ * chance cannot leave 0..100, and two buttons and a number cannot hold a value the queue would
+ * refuse.
+ */
+@Composable
+private fun CollectionChanceRow(
+    chance: Int,
+    onChanceChange: (Int) -> Unit,
+) {
+    SettingRow(
+        label = stringResource(Res.string.collectionDetailActionReminderChance),
+        hint = stringResource(Res.string.collectionDetailActionReminderChanceHint),
+    ) {
+        StepperControl(
+            value = chance,
+            onValueChange = onChanceChange,
+            range = 0..100,
         )
     }
 }
@@ -254,7 +299,6 @@ private fun CollectionDetailContentPreview() {
                     onBack = {},
                     onStartSession = {},
                     onOpenRemembrance = {},
-                    onManageReminders = {},
                 ),
             showToast = { _, _, _ -> },
         )
@@ -327,6 +371,10 @@ internal fun memberActions(
                 }
             },
         onRequestDelete = { dialogs.pendingRemembranceDelete = it },
+        onToggleReminder = { id ->
+            collections.setReminderPick(id, !collections.isPicked(id))
+        },
+        isPicked = collections::isPicked,
     )
 }
 
@@ -353,18 +401,6 @@ internal class DetailDialogState {
      * shows what the catalogue now holds instead of what it held when the editor was first opened.
      */
     var editingRemembrance by mutableStateOf<Remembrance?>(null)
-
-    /**
-     * The schedule being written, or `null` when the reminder editor is closed.
-     *
-     * A draft rather than a pair of booleans because the editor has four controls that depend on one
-     * another — a weekly schedule has a day a daily one does not — and a set of loose states is how
-     * one of them ends up showing for the wrong cadence.
-     */
-    var reminderDraft by mutableStateOf<ReminderDraft?>(null)
-
-    /** Whether dropping the schedule is waiting to be confirmed. */
-    var pendingReminderRemoval by mutableStateOf(false)
 
     /**
      * Which encoding the share dialog is showing.
@@ -420,15 +456,6 @@ private fun DetailDialogs(
         )
     }
 
-    dialogs.reminderDraft?.let { draft ->
-        DetailReminderHost(
-            detail = detail,
-            dialogs = dialogs,
-            collections = collections,
-            draft = draft,
-        )
-    }
-
     val editing = dialogs.editingRemembrance
     val editingId = editing?.id
     if (editing != null && editingId != null) {
@@ -466,86 +493,6 @@ private fun DetailRemembranceCreateHost(
             )
         },
     )
-}
-
-/**
- * The reminder editor and its removal confirmation, wired to the page's notice.
- *
- * Hosted here rather than inside the dialog for the same reason the share dialog is: the toast that
- * tells the user the schedule was saved has to come from one place, and a dialog that also raises
- * notices is a dialog that cannot be told which of them to raise.
- *
- * This is also where pausing is wired, which is the whole reason the function still exists. The control
- * lived on a card that the band replaced, and the band reaches the reminder only through the bell that
- * opens this dialog — so the editor is now the one place a schedule can be silenced as well as written,
- * and both writes come through the same notice.
- */
-@Composable
-private fun DetailReminderHost(
-    detail: CollectionDetailState,
-    dialogs: DetailDialogState,
-    collections: CollectionsCatalogue,
-    draft: ReminderDraft,
-) {
-    val collection = detail.collection ?: return
-    val reminders = detail.reminderState
-    val stored = detail.reminder?.reminder
-    CollectionReminderDialog(
-        draft = draft,
-        collectionName = collection.name,
-        isExisting = stored != null,
-        isEnabled = stored?.enabled != false,
-        callbacks =
-            ReminderEditorCallbacks(
-                onSave = { cadence, minuteOfDay, dayOfWeek ->
-                    dialogs.reminderDraft = null
-                    reminders.save(
-                        collectionId = detail.collectionId,
-                        cadence = cadence,
-                        minuteOfDay = minuteOfDay,
-                        dayOfWeek = dayOfWeek,
-                        collectionName = collection.name,
-                        memberCount = collection.members.size,
-                        onSuccess = {
-                            collections.onNotice = CollectionNotice.Message(CollectionNoticeKey.REMINDER_SAVED)
-                        },
-                        onFailure = { collections.onNotice = CollectionNotice.Message(CollectionNoticeKey.FAILED) },
-                    )
-                },
-                onRemove = {
-                    dialogs.reminderDraft = null
-                    dialogs.pendingReminderRemoval = true
-                },
-                onDismiss = { dialogs.reminderDraft = null },
-                // Deliberately not closing the dialog. The switch has already moved and the state has
-                // already said what it thinks happened, and a dialog that shut itself the moment a
-                // toggle was touched would hide the one thing the user needs to check: whether the
-                // change survived. The write reports itself through the page's notice if it did not.
-                onToggleEnabled = { enabled ->
-                    reminders.setEnabled(
-                        collectionId = detail.collectionId,
-                        enabled = enabled,
-                        onFailure = { collections.onNotice = CollectionNotice.Message(CollectionNoticeKey.FAILED) },
-                    )
-                },
-            ),
-    )
-
-    if (dialogs.pendingReminderRemoval) {
-        ConfirmReminderRemovalDialog(
-            onDismiss = { dialogs.pendingReminderRemoval = false },
-            onConfirm = {
-                dialogs.pendingReminderRemoval = false
-                reminders.remove(
-                    collectionId = detail.collectionId,
-                    onSuccess = {
-                        collections.onNotice = CollectionNotice.Message(CollectionNoticeKey.REMINDER_REMOVED)
-                    },
-                    onFailure = { collections.onNotice = CollectionNotice.Message(CollectionNoticeKey.FAILED) },
-                )
-            },
-        )
-    }
 }
 
 /**
@@ -683,6 +630,8 @@ private fun headerActions(
         },
         onDelete = { dialogs.pendingDelete = true },
         onShare = { dialogs.shareTarget = it },
+        inReminders = detail.inReminders,
+        onToggleReminders = { detail.setInReminders(!detail.inReminders) },
     )
 }
 
@@ -714,7 +663,7 @@ private fun detailHeroActions(
             detail.remembranceDraft = detail.remembranceDraft ?: RemembranceCreateDraft(ARABIC_LOCALE)
         },
         onTogglePin = title.onTogglePin,
-        onEditReminder = { navigation.onManageReminders(detail.collectionId) },
+        onToggleReminder = { detail.setInReminders(!detail.inReminders) },
         menuItems =
             detailMenuItems(
                 collection = collection,
@@ -854,6 +803,8 @@ internal fun memberTileActions(
         onEdit = { actions.onRequestEdit(tile.id) },
         onRemoveFromCollection = actions.onRequestRemove?.let { onRemove -> { onRemove(tile.id) } },
         onDelete = { actions.onRequestDelete(tile.id) },
+        onToggleReminder = { actions.onToggleReminder(tile.id) },
+        inReminders = actions.isPicked(tile.id),
     )
 
 /**
@@ -872,6 +823,16 @@ private data class DetailActions(
     val onToggleFavorite: () -> Unit,
     val onDelete: () -> Unit,
     val onShare: (RemembranceCollection) -> Unit,
+    /**
+     * Whether the queue draws from this collection, and the way to change that.
+     *
+     * The two travel together because they are one fact and one way to change it: a menu entry that
+     * says "remove from reminders" and a menu entry that says "add to reminders" are the same entry
+     * read twice, and holding them apart is how a menu ends up offering to add a collection that is
+     * already in the queue.
+     */
+    val inReminders: Boolean,
+    val onToggleReminders: () -> Unit,
 )
 
 /**
@@ -886,7 +847,6 @@ internal data class DetailNavigation(
     val onBack: () -> Unit,
     val onStartSession: (Long) -> Unit,
     val onOpenRemembrance: (Long) -> Unit,
-    val onManageReminders: (Long) -> Unit,
 )
 
 /** What one member tile can be asked to do. */
@@ -897,6 +857,8 @@ internal data class MemberActions(
     val onRequestEdit: (Long) -> Unit,
     val onRequestRemove: ((Long) -> Unit)?,
     val onRequestDelete: (Long) -> Unit,
+    val onToggleReminder: (Long) -> Unit,
+    val isPicked: (Long) -> Boolean,
 )
 
 /** The rename / duplicate form, dispatched on which of the two it was opened as. */
@@ -1013,7 +975,12 @@ private fun detailMenuItems(
                 isUncategorized = isUncategorized,
             ),
         )
-        addAll(preferenceMenuItems(collection = collection, actions = actions))
+        addAll(
+            preferenceMenuItems(
+                collection = collection,
+                actions = actions,
+            ),
+        )
         if (!isUncategorized && !isFavoritesCollection) {
             add(
                 AzkarMenuItem(
@@ -1090,11 +1057,24 @@ private fun preferenceMenuItems(
                 Res.string.collectionsActionFavorite
             },
         )
+    val reminderLabel =
+        stringResource(
+            if (actions.inReminders) {
+                Res.string.collectionsActionRemoveFromReminders
+            } else {
+                Res.string.collectionsActionAddToReminders
+            },
+        )
     return listOf(
         AzkarMenuItem(
             label = pinLabel,
             onClick = actions.onTogglePin,
             icon = ActionIcons.pin(collection.isPinned),
+        ),
+        AzkarMenuItem(
+            label = reminderLabel,
+            onClick = actions.onToggleReminders,
+            icon = if (actions.inReminders) AzkarIcons.Bell else AzkarIcons.BellOff,
         ),
         AzkarMenuItem(
             label = homeLabel,

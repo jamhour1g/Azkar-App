@@ -348,7 +348,7 @@ private fun harnessWith(
         CollectionSessionState(
             collections = collections,
             collectionId = COLLECTION_ID,
-            reminders = CollectionReminderState(CoroutineScope(TestDispatchers.unconfined), gateway),
+            reminders = CollectionReminderState(FakeReminderSources()),
         )
     session.loadProgress()
     return SessionHarness(session = session, collections = collections, gateway = gateway)

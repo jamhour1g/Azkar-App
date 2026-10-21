@@ -92,11 +92,42 @@ private const val OVERLAY_PROOF_OF_CONSENT_FLAG = "--overlay-poc"
  * Quit action shuts the process down.
  */
 suspend fun main(args: Array<String>) {
+    pinDesktopWindowClass()
     logger.info { "Starting Azkar" }
     startKoin { modules(dataModule, appModule) }
     val koin = KoinPlatform.getKoin()
     val startup = prepareDesktopStartup(koin)
     runDesktopApplication(args, koin, startup)
+}
+
+/**
+ * Build the AWT toolkit here, on the main thread, so the window claims to be this application.
+ *
+ * A desktop window is matched to the `.desktop` entry that launched it by its `WM_CLASS`, and
+ * AWT decides what that class is by looking at the bottom frame of the stack that happened to
+ * build the toolkit first: `sun.awt.X11.XToolkit` takes the last frame of its own stack trace,
+ * turns the dots into hyphens and uses that as the application class. The toolkit is a
+ * process-wide singleton, so whichever thread gets there first decides what every window of this
+ * process calls itself, for the rest of the run.
+ *
+ * Left to itself that thread is a coroutine worker. The startup work suspends (the database
+ * warm-up and the stores read), so AWT is first touched back on a `Dispatchers.Default` worker,
+ * whose class name is `kotlinx.coroutines.scheduling.CoroutineScheduler$Worker` — and the window
+ * then announced itself as `kotlinx-coroutines-scheduling-CoroutineScheduler$Worker`. No installed
+ * `.desktop` entry says that, so the window manager could not tell the window apart from the
+ * application it belongs to: the dock grew a second entry for it, under a Java icon and under
+ * that class name, instead of showing the Azkar one.
+ *
+ * Doing it here fixes the name at the source. The body of a `suspend fun main` starts on the
+ * calling thread, so the bottom frame is `com.azkar.MainKt`, the class becomes
+ * `com-azkar-MainKt`, and that is exactly what the packager writes into the `.desktop` entry's
+ * `StartupWMClass` — the two are derived from the same class name and cannot drift apart. The
+ * toolkit is headless-only on a machine with no display, where there is no window to name, so the
+ * failure is logged and ignored.
+ */
+private fun pinDesktopWindowClass() {
+    runCatching { Toolkit.getDefaultToolkit() }
+        .onFailure { failure -> logger.debug(failure) { "Unable to initialise the AWT toolkit" } }
 }
 
 private data class DesktopStartup(
@@ -191,7 +222,7 @@ private fun DesktopApplicationRoot(
     // The overlay is its own window, created once and hidden when there is nothing to say. It is
     // composed beside the main window rather than inside it, so a reminder still arrives while the
     // app has no visible surface at all — which is the state the tray leaves it in.
-    NotificationOverlayHost(appState, preferences, overlay, actionRouter)
+    NotificationOverlayHost(appState, preferences, overlay, actionRouter, runtime)
 
     if (proofOfConcept) {
         OverlayProofOfConcept(dispatcher)
@@ -269,8 +300,29 @@ private fun NotificationOverlayHost(
     preferences: NotificationPreferencesRepository,
     overlay: OverlayNotificationPresenter,
     actionRouter: NotificationActionRouter,
+    runtime: NotificationRuntime,
 ) {
     val settings by preferences.presentation.collectAsState()
+    // The star, written from the overlay and told to the tree.
+    //
+    // The write goes through the runtime, which holds the same gateway the library writes through, so
+    // it is the same write rather than a second one that happens to touch the same column. The tree
+    // is then told, because the library keeps its own copy of the flag and a tile that still shows
+    // the old star would make the next press write back what the shelf believed.
+    //
+    // Neither half goes through [NotificationActionRouter.dispatch], because dispatching an action
+    // brings the app forward — and starring a passage is not a request to be taken somewhere.
+    val onToggleFavorite: (suspend (Long, Boolean) -> Boolean) =
+        remember(runtime, actionRouter) {
+            val toggle: suspend (Long, Boolean) -> Boolean = { id, favorite ->
+                val written = runtime.setFavorite(id, favorite)
+                if (written) {
+                    actionRouter.dispatchFavoriteChanged(id, favorite)
+                }
+                written
+            }
+            toggle
+        }
     NotificationOverlayWindow(
         presenter = overlay,
         settings = settings,
@@ -286,6 +338,7 @@ private fun NotificationOverlayHost(
         // Through the router rather than straight to the navigator, because the overlay window can be
         // clicked before the main tree has ever composed — the autostart path is exactly that case.
         onOpen = { action -> actionRouter.dispatch(action) },
+        onToggleFavorite = onToggleFavorite,
     )
 }
 

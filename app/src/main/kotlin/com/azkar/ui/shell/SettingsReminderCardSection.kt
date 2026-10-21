@@ -565,6 +565,10 @@ private fun CardSizePreview(
                         Modifier.size(presentation.cardWidth, presentation.cardHeight)
                     },
                 sizing = presentation.cardSizing,
+                // The star, drawn as the overlay draws it. The preview is a real card rather than a
+                // drawing of one, so it has to carry the control too — a preview that quietly left
+                // the star out would be showing a smaller card than the reader is being offered.
+                onToggleFavorite = { _, _ -> true },
             )
         }
     }

@@ -27,15 +27,14 @@ import com.azkar.ui.library.CollectionsScreen
 import com.azkar.ui.library.RemembranceReaderScreen
 import com.azkar.ui.library.TagsScreen
 import com.azkar.ui.library.TagsState
-import com.azkar.ui.library.data.CollectionReminderGateway
 import com.azkar.ui.library.data.CollectionsGateway
+import com.azkar.ui.library.data.ReminderSources
 import com.azkar.ui.library.data.TagGateway
 import com.azkar.ui.library.rememberCollectionDetailState
 import com.azkar.ui.library.rememberCollectionSessionState
 import com.azkar.ui.library.rememberRemembranceReaderState
 import com.azkar.ui.notifications.NotificationAction
 import com.azkar.ui.notifications.NotificationActionRouter
-import com.azkar.ui.notifications.ReminderManagerScreen
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.LocalWindowSizeClass
 import com.azkar.ui.theme.isRtlLayout
@@ -76,12 +75,10 @@ fun AzkarApp(
     // belong to the app rather than to a language, so a language switch must not re-arm a reminder
     // that has already been announced, nor drop the badges for the ones that are waiting.
     val reminderScope = rememberCoroutineScope()
-    // Both halves of the shelf come out of the container rather than being built here, so the
-    // reminder ticker and the catalogue read and write through one gateway instead of two
-    // independently constructed ones — and neither of them reaches into the data layer to do it.
-    // The same object answers for both seams, which is what makes a reminder added on the settings
-    // screen show up on the ticker's badges without either side knowing the other exists.
-    val reminderGateway = koinInject<CollectionReminderGateway>()
+    // The shelf comes out of the container rather than being built here, and the reminder sources
+    // come out of it the same way: the library is told which collections the queue draws from
+    // through a seam it does not own, so the queue's storage stays on the notifications side.
+    val reminderSources = koinInject<ReminderSources>()
     val gateway = koinInject<CollectionsGateway>()
     // The tag vocabulary is read and written through a seam of its own rather than through
     // `CollectionsGateway`: the Manage tags screen outlives every collection screen, and a tag is
@@ -91,13 +88,13 @@ fun AzkarApp(
     // language switch must not make fourteen collections decode the same fourteen files again.
     val coverStorage = koinInject<CoverStorage>()
     val covers = remember(coverStorage) { CollectionCoverCache(coverStorage) }
-    val reminders = remember(reminderScope, reminderGateway) { CollectionReminderState(reminderScope, reminderGateway) }
+    val reminders = remember(reminderSources) { CollectionReminderState(reminderSources) }
     // Inside the locale key, because it is the locale that decides: the rows behind this holder are
     // language-free, but the strings the shelf renders them as are not, so switching language has to
     // rebuild the presenter even though the read itself could be kept.
     val catalogue = remember(state.locale) { CollectionsCatalogue(reminderScope, state.locale, gateway, covers) }
 
-    RouteNotificationActions(actionRouter, navigator, reminderScope)
+    RouteNotificationActions(actionRouter, navigator, reminderScope, catalogue)
 
     AzkarTheme(darkTheme = darkTheme, uiLocale = state.locale, typography = state.typography) {
         key(state.locale) {
@@ -118,7 +115,6 @@ fun AzkarApp(
                                     HeaderCallbacks(
                                         onHome = navigator::showHome,
                                         onLibrary = navigator::showLibrary,
-                                        onNotifications = { navigator.showNotifications() },
                                         onSettings = navigator::showSettings,
                                     ),
                             )
@@ -160,11 +156,26 @@ fun rememberAzkarDarkTheme(preference: ThemePreference): Boolean {
     }
 }
 
+/**
+ * Hands the notification router the two things only this tree can answer.
+ *
+ * Where a notification sends the reader, and the fact that a star was flipped somewhere the library
+ * cannot see. The second is not a navigation at all — it is the shelf being told that its copy of
+ * the flag is out of date — which is why it is a channel of the router rather than an action
+ * dispatched through it: dispatching an action brings the app forward, and a reader who stars a
+ * passage from a reminder has not asked to be taken anywhere.
+ *
+ * Both are installed on every composition rather than once, because the tree owns the objects they
+ * touch: the navigator is rebuilt when the tree is, and the catalogue is rebuilt when the language
+ * is, and a handler left pointing at the previous one would answer for a screen that no longer
+ * exists.
+ */
 @Composable
 private fun RouteNotificationActions(
     actionRouter: NotificationActionRouter?,
     navigator: AzkarNavigator,
     scope: kotlinx.coroutines.CoroutineScope,
+    catalogue: CollectionsCatalogue,
 ) {
     SideEffect {
         actionRouter?.setNavigator { action ->
@@ -175,6 +186,7 @@ private fun RouteNotificationActions(
                 }
             }
         }
+        actionRouter?.setFavoriteListener { _, _ -> catalogue.favoriteChanged() }
     }
 }
 
@@ -237,12 +249,7 @@ private fun ColumnScope.AzkarContent(
                         onManageTags = navigator::showTags,
                         showToast = showToast,
                         catalogue = catalogue,
-                    )
-                }
-                entry<AzkarDestination.Notifications> { destination ->
-                    ReminderManagerScreen(
-                        initialCollectionId = destination.initialCollectionId,
-                        onClose = navigator::back,
+                        reminders = reminders,
                     )
                 }
                 collectionEntries(navigator, showToast, reminders, catalogue)
@@ -330,10 +337,6 @@ private fun EntryProviderScope<AzkarDestination>.collectionEntries(
     catalogue: CollectionsCatalogue,
 ) {
     entry<AzkarDestination.CollectionDetail> { destination ->
-        // Opening the collection is what the badge was asking for, so the reminder is
-        // marked dealt with here rather than by the page: a user who clicks through and
-        // does not read it has still answered the question the badge asked.
-        reminders.acknowledge(destination.id)
         val detail = rememberCollectionDetailState(catalogue, destination.id, reminders)
         CollectionDetailScreen(
             detail = detail,
@@ -341,7 +344,6 @@ private fun EntryProviderScope<AzkarDestination>.collectionEntries(
             onStartSession = navigator::showSession,
             onOpenRemembrance = navigator::showRemembrance,
             showToast = showToast,
-            onManageReminders = navigator::showNotifications,
         )
     }
     entry<AzkarDestination.CollectionSession> { destination ->
@@ -351,7 +353,6 @@ private fun EntryProviderScope<AzkarDestination>.collectionEntries(
             onBack = navigator::back,
             onOpenRemembrance = navigator::showRemembrance,
             showToast = showToast,
-            onManageReminders = navigator::showNotifications,
         )
     }
 }

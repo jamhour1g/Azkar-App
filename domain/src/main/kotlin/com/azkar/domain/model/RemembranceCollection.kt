@@ -141,6 +141,19 @@ interface RemembranceCollection {
      */
     val members: List<Remembrance>
 
+    /**
+     * Where this collection sits in the user's own order of their library, or `null` when it has
+     * none.
+     *
+     * The shelf's "My order" sort reads it, and the reminder queue recites the collections in it —
+     * so this one number is what makes "the queue follows the library" true rather than aspirational.
+     *
+     * `null` rather than a number for a collection that has never been placed, because a collection
+     * the user has not ordered has no place, and inventing one would put it in the order by
+     * accident. Collections without a position sort after the ones that have one.
+     */
+    val position: Int?
+
     /** Whether the user pinned this collection to the top of the shelf. */
     val isPinned: Boolean
         get() = pinnedAt != null

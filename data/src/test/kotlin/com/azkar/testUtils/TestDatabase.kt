@@ -54,13 +54,12 @@ object TestDatabase {
 
     private val TABLES_IN_FOREIGN_KEY_ORDER =
         listOf(
-            // Progress points at both a collection and a remembrance, so it has to go before either,
-            // and so does a reminder, which points only at the collection. A membership row likewise
-            // points at a remembrance, so the parent cannot be deleted out from under it. A translation
-            // points at the thing it names for the same reason: listing the parent without its
-            // translations would leave a foreign key pointing at nothing and fail the whole reset.
+            // Progress points at both a collection and a remembrance, so it has to go before either.
+            // A membership row likewise points at a remembrance, so the parent cannot be deleted out
+            // from under it. A translation points at the thing it names for the same reason: listing
+            // the parent without its translations would leave a foreign key pointing at nothing and
+            // fail the whole reset.
             "recitation_progress",
-            "collection_reminder",
             "collection_remembrance",
             "collection_tag",
             "collection_translation",

@@ -1,6 +1,5 @@
 package com.azkar.testUtils
 
-import com.azkar.data.repo.exposed.ExposedCollectionReminderRepository
 import com.azkar.data.repo.exposed.ExposedCollectionRepository
 import com.azkar.data.repo.exposed.ExposedRecitationRepository
 import com.azkar.data.repo.exposed.ExposedRemembranceRepository
@@ -29,8 +28,7 @@ typealias TestLevelFixtureScope<Value> = TestFixture.Scope<suspend Test.Executio
  * independent of the other two: it resolves an official collection's members through its own
  * statements rather than through a repository. [ExposedRecitationRepository] is likewise
  * independent — it holds no reference to the others, and the service layer is what tells it which
- * collections exist. [ExposedCollectionReminderRepository] is independent in the same way: it is
- * told which collections exist by the service, and reads and writes one row per collection.
+ * collections exist.
  */
 class ExposedRepositories(
     val database: Database,
@@ -38,7 +36,6 @@ class ExposedRepositories(
     val remembrances: ExposedRemembranceRepository,
     val collections: ExposedCollectionRepository,
     val recitations: ExposedRecitationRepository,
-    val collectionReminders: ExposedCollectionReminderRepository,
 )
 
 /**
@@ -109,7 +106,6 @@ private fun repositories(database: Database): ExposedRepositories {
         remembrances = ExposedRemembranceRepository(tags, transactions),
         collections = ExposedCollectionRepository(transactions, tags),
         recitations = ExposedRecitationRepository(transactions),
-        collectionReminders = ExposedCollectionReminderRepository(transactions),
     )
 }
 

@@ -6,12 +6,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
-import com.azkar.ui.library.data.CollectionReminderRow
 import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.data.nextMember
 import com.azkar.ui.library.data.upcomingMembers
-import java.time.LocalDateTime
 
 /**
  * The state behind a recitation session: one member at a time, and where the session is.
@@ -222,19 +220,11 @@ class CollectionSessionState(
     val canStepBack: Boolean
         get() = position > SESSION_FIRST_POSITION
 
-    /** The reminder schedule for this collection, or `null` when it has none. */
-    val reminder: CollectionReminderRow? get() = detail.reminder
+    /** Whether the queue draws from the collection being recited. */
+    val inReminders: Boolean get() = detail.inReminders
 
-    /** The store the schedule above lives in, so the page can save, pause and drop it. */
+    /** The store the membership above lives in, so the page can add the collection or take it out. */
     val reminders: CollectionReminderState get() = detail.reminderState
-
-    /**
-     * When the schedule next fires, or `null` when there is none or it is paused.
-     *
-     * Forwarded from the same detail state rather than recomputed, so the time the session's bell prints
-     * and the time the ticker will act on cannot be read two different ways.
-     */
-    fun nextReminderAt(now: LocalDateTime): LocalDateTime? = detail.nextReminderAt(now)
 
     /**
      * Stars or unstars the collection being recited.

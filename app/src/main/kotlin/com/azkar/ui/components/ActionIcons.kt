@@ -148,4 +148,18 @@ internal object ActionIcons {
     /** Where a passage came from. A book, everywhere it is printed. */
     val source: ImageVector
         @Composable get() = AzkarIcons.BookOpen
+
+    /**
+     * Whether the queue draws from this thing.
+     *
+     * A bell, and a bell with a slash when it is off — the same pair the notification overlay uses,
+     * because "the reminder is on" and "the reminder is off" are the same claim in both places and
+     * one claim should wear one face.
+     *
+     * A bell rather than the star: the star already means favourite, and a collection can be both
+     * starred and reminded about at once. Two claims, two shapes, or the reader has to learn that
+     * one of them changed meaning.
+     */
+    @Composable
+    fun reminder(on: Boolean): ImageVector = if (on) AzkarIcons.Bell else AzkarIcons.BellOff
 }

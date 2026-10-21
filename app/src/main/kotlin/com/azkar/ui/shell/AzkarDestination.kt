@@ -27,11 +27,6 @@ sealed interface AzkarDestination : NavKey {
     /** `ui/library` — the collections shelf, and the only view the library has. */
     data object Library : AzkarDestination
 
-    /** Shared queue, notification cadence, prayer settings and startup behavior. */
-    data class Notifications(
-        val initialCollectionId: Long? = null,
-    ) : AzkarDestination
-
     /**
      * `ui/library/CollectionDetailScreen.kt` — one collection, opened from a tile on the shelf.
      *
@@ -154,12 +149,6 @@ class AzkarNavigator(
 
     /** Shows the library, whether or not it is already on screen. */
     fun showLibrary() = showTopLevel(AzkarDestination.Library)
-
-    /** Opens the shared reminder manager; an optional collection is selected on first entry. */
-    fun showNotifications(initialCollectionId: Long? = null) {
-        val destination = AzkarDestination.Notifications(initialCollectionId)
-        if (backStack.last() != destination) backStack.add(destination)
-    }
 
     /**
      * Opens the settings screen on top of whatever is already on screen.

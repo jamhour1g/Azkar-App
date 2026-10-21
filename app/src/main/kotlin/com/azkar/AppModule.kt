@@ -7,20 +7,18 @@ import com.azkar.settings.SettingsStore
 import com.azkar.ui.home.DomainHomeGateway
 import com.azkar.ui.home.HomeGateway
 import com.azkar.ui.library.data.CollectionHomeGateway
-import com.azkar.ui.library.data.CollectionReminderGateway
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.CollectionsGatewayDependencies
 import com.azkar.ui.library.data.DomainCollectionsGateway
-import com.azkar.ui.library.data.DomainReminderGateway
 import com.azkar.ui.library.data.DomainTagsGateway
+import com.azkar.ui.library.data.ReminderSources
 import com.azkar.ui.library.data.TagGateway
-import com.azkar.ui.library.model.CollectionsSnapshot
 import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationActionRouter
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.NotificationRuntime
-import com.azkar.ui.notifications.ReminderCatalogueSource
+import com.azkar.ui.notifications.QueueReminderSources
 import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationDispatcher
 import com.azkar.ui.notifications.presentation.NotificationPublisher
@@ -134,26 +132,23 @@ val appModule =
         // reach around the seam and read the keys itself.
         single<LibrarySeedState> { LibrarySeedStore(get()) }
 
-        single<CollectionReminderGateway> { DomainReminderGateway(get(), get()) }
-
         single<CollectionsGateway> {
             DomainCollectionsGateway(
                 CollectionsGatewayDependencies(get(), get(), get(), get(), get(), get(), get()),
             )
         } bind CollectionHomeGateway::class
 
-        single<HomeGateway> { DomainHomeGateway(get(), get()) }
-
-        // The reminders screen's own seam over the same gateway. It reads one snapshot and writes
-        // nothing, and giving it the whole library interface for that single call would make it the
-        // one screen that can reach past `CollectionsGateway` by accident — the thing the `bind`
-        // above exists to prevent.
-        single<ReminderCatalogueSource> {
-            val gateway = get<CollectionsGateway>()
-            object : ReminderCatalogueSource {
-                override suspend fun snapshot(): CollectionsSnapshot = gateway.fetchSnapshot()
-            }
+        // The library's view of the queue's source list. Registered behind the seam rather than as
+        // the concrete class so the shelf cannot reach into the notification preferences itself, and
+        // so the one object that knows how the queue is stored stays the only one that knows.
+        single<ReminderSources> {
+            QueueReminderSources(
+                preferences = get(),
+                scope = get(named("notificationScope")),
+            )
         }
+
+        single<HomeGateway> { DomainHomeGateway(get(), get()) }
 
         // Under its own seam rather than added to `CollectionsGateway`, because a tag outlives the
         // screens that attach one to a collection: deleting or renaming one is a job the library has

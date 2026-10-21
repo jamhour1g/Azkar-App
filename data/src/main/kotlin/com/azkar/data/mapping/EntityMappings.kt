@@ -1,16 +1,11 @@
 package com.azkar.data.mapping
 
-import com.azkar.data.table.entity.CollectionReminderEntity
 import com.azkar.data.table.entity.RecitationProgressEntity
 import com.azkar.data.table.entity.TagEntity
-import com.azkar.domain.model.CollectionReminder
 import com.azkar.domain.model.RecitationProgress
-import com.azkar.domain.model.ReminderCadence
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.TagSummary
 import com.azkar.domain.model.impl.TagImpl
-import io.github.oshai.kotlinlogging.KotlinLogging
-import java.time.DayOfWeek
 import java.util.Locale
 
 // Entity -> domain. Three extensions, one per entity whose fields are the whole of a domain value.
@@ -29,8 +24,6 @@ import java.util.Locale
 // The translations ride in as an argument for the same reason the counts do below: they are a second
 // table, and a mapper that went back for them itself would be issuing a statement per row of whatever
 // list it is mapping.
-private val logger = KotlinLogging.logger {}
-
 internal fun TagEntity.toTag(translations: Map<Locale, String> = emptyMap()): Tag =
     TagImpl(
         id = id.value,
@@ -83,30 +76,3 @@ internal fun RecitationProgressEntity.toProgress(): RecitationProgress =
         repeatCount = repeatCount,
         lastRecitedAt = lastRecitedAt?.toInstant(),
     )
-
-/**
- * `collection_reminder` — the standing nudge to come back to one collection.
- *
- * Returns `null` rather than throwing for a weekly schedule whose `day_of_week` does not name a day.
- * The column is free text and the schema cannot constrain it to `DayOfWeek` names, so a row written
- * by an import or an older release can hold something unparseable; a reminder that cannot say which
- * day it fires is not a reminder, and the caller's answer to that is "no such reminder", not a crash
- * in the middle of the tick that reads every one of them.
- */
-internal fun CollectionReminderEntity.toReminder(): CollectionReminder? {
-    val day =
-        dayOfWeek?.let { stored ->
-            runCatching { DayOfWeek.valueOf(stored) }
-                .onFailure { failure -> logger.warn(failure) { "Unable to parse the stored day of week [$stored]" } }
-                .getOrNull()
-        }
-    if (cadence == ReminderCadence.WEEKLY && day == null) return null
-    return CollectionReminder(
-        collectionId = collectionId,
-        cadence = cadence,
-        minuteOfDay = minuteOfDay,
-        dayOfWeek = day,
-        enabled = enabled,
-        lastTriggeredAt = lastTriggeredAt?.toInstant(),
-    )
-}

@@ -2,7 +2,6 @@ package com.azkar.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
@@ -23,17 +21,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionsActionInReminders
 import com.azkar.generated.resources.collectionsTitle
 import com.azkar.generated.resources.homeCollectionActionContinue
 import com.azkar.generated.resources.homeCollectionActionDone
 import com.azkar.generated.resources.homeCollectionActionStart
 import com.azkar.generated.resources.homeCollectionProgressFormat
+import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarSurfaceCard
 import com.azkar.ui.components.CompletionTrack
 import com.azkar.ui.components.IconTint
@@ -95,7 +94,7 @@ class HomeRailState {
 @Composable
 fun HomeCollectionRail(
     cards: List<HomeCollection>,
-    dueIds: Set<Long>,
+    reminderIds: Set<Long>,
     onOpen: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -113,7 +112,7 @@ fun HomeCollectionRail(
         cards.forEach { card ->
             HomeCollectionCard(
                 card = card,
-                isDue = card.id in dueIds,
+                inReminders = card.id in reminderIds,
                 onClick = { onOpen(card.id) },
             )
         }
@@ -130,10 +129,10 @@ private fun HomeCollectionRailPreview() {
         ) {
             HomeCollectionRail(
                 cards = previewRailCards(),
-                dueIds = previewDueCollectionIds(),
+                reminderIds = previewDueCollectionIds(),
                 onOpen = {},
             )
-            HomeCollectionRail(cards = emptyList(), dueIds = emptySet(), onOpen = {})
+            HomeCollectionRail(cards = emptyList(), reminderIds = emptySet(), onOpen = {})
         }
     }
 }
@@ -149,7 +148,7 @@ private fun HomeCollectionRailPreview() {
 @Composable
 private fun HomeCollectionCard(
     card: HomeCollection,
-    isDue: Boolean,
+    inReminders: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -161,8 +160,8 @@ private fun HomeCollectionCard(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isDue) {
-                    RailDueBadge()
+                if (inReminders) {
+                    RailReminderMark()
                     Spacer(Modifier.width(NAME_GAP))
                 }
                 RailProgressLabel(card)
@@ -173,21 +172,20 @@ private fun HomeCollectionCard(
 }
 
 /**
- * The mark that a schedule here has come round and not been looked at.
+ * The mark that the queue draws from this collection.
  *
- * A dot rather than a count of what is owed, for the reason the detail page's badge is a dot: the
- * app knows the reminder fired and nothing more. It does not know how much of the collection is still
- * unread, and a badge claiming a number would be one the user could open the collection and find
- * wrong.
+ * A bell rather than the dot the old "due" badge was, because the question the rail answers has
+ * changed: the dot stood for "a schedule came round", which nothing in the app ever decided, and the
+ * bell says the thing the app does know — this collection is one of the sources the reminders come
+ * from.
  */
 @Composable
-private fun RailDueBadge() {
-    Box(
-        modifier =
-            Modifier
-                .size(DUE_BADGE_SIZE)
-                .clip(CircleShape)
-                .background(AzkarTheme.colors.accent),
+private fun RailReminderMark() {
+    Icon(
+        imageVector = AzkarIcons.Bell,
+        contentDescription = stringResource(Res.string.collectionsActionInReminders),
+        modifier = Modifier.size(REMINDER_MARK_SIZE),
+        tint = AzkarTheme.colors.accent,
     )
 }
 
@@ -281,7 +279,7 @@ private fun RailTrack(card: HomeCollection) {
  * glance. A dot rather than a count, because the app knows a reminder fired and nothing more — it
  * does not know how many passages are waiting.
  */
-private val DUE_BADGE_SIZE = 8.dp
+private val REMINDER_MARK_SIZE = 16.dp
 
 /** Wide enough that two adjacent words never read as one, narrow enough for a 380dp rail. */
 private val NAME_GAP = 10.dp

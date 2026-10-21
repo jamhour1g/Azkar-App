@@ -82,6 +82,34 @@ class NotificationPreferencesRepository(
             settings.edit { this[QUEUE_KEY] = json.encodeToString(next) }
         }
 
+    /**
+     * Adds a collection to the queue's sources, or takes it out.
+     *
+     * Reads the *stored* document rather than the in-memory copy, and does it under the same lock
+     * as [updateQueue], because this is the one write that can arrive before the first read has
+     * landed: a user can open the library and click "add to reminders" before the settings file has
+     * been read even once. Transforming the in-memory copy then would write a queue that had lost
+     * every source the user already had.
+     */
+    suspend fun setQueueCollectionEnabled(
+        collectionId: Long,
+        enabled: Boolean,
+    ) = mutex.withLock {
+        val stored = decode(settings.read(QUEUE_KEY), ReminderQueueConfig())
+        val next =
+            stored
+                .copy(
+                    collectionIds =
+                        if (enabled) {
+                            (stored.collectionIds + collectionId).distinct()
+                        } else {
+                            stored.collectionIds - collectionId
+                        },
+                ).validated()
+        _queue.value = next
+        settings.edit { this[QUEUE_KEY] = json.encodeToString(next) }
+    }
+
     suspend fun saveQueueProgress(progress: ReminderQueueProgress) =
         mutex.withLock {
             _queueProgress.value = progress
@@ -128,8 +156,6 @@ class NotificationPreferencesRepository(
     private fun ReminderQueueConfig.validated(): ReminderQueueConfig =
         copy(
             collectionIds = collectionIds.filter { it > 0 }.distinct(),
-            individualRemembranceIds = individualRemembranceIds.filter { it > 0 }.distinct(),
-            manualOrder = manualOrder.filter { it > 0 }.distinct(),
             windowStartMinute = windowStartMinute.coerceIn(0, 1439),
             windowEndMinute =
                 windowEndMinute.coerceIn(0, 1439).let { end ->
@@ -139,7 +165,6 @@ class NotificationPreferencesRepository(
             activeDays = activeDays.ifEmpty { ReminderQueueConfig.ALL_DAYS },
             defaultDropChance = defaultDropChance.coerceIn(0, 100),
             collectionDropChances = collectionDropChances.mapValues { it.value.coerceIn(0, 100) },
-            remembranceDropOverrides = remembranceDropOverrides.mapValues { it.value.coerceIn(0, 100) },
         )
 
     private fun prayerKey(key: PrayerKey) = booleanPreferencesKey("prayer.${key.id}.enabled")

@@ -7,7 +7,6 @@ import androidx.compose.runtime.setValue
 import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.Remembrance
 import com.azkar.ui.library.data.CollectionFiltering
-import com.azkar.ui.library.data.CollectionReminderRow
 import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.data.nextMember
@@ -17,7 +16,6 @@ import com.azkar.ui.library.model.CollectionMemberSort
 import com.azkar.ui.library.model.CollectionMemberView
 import com.azkar.ui.library.model.RemembranceTile
 import java.time.Duration
-import java.time.LocalDateTime
 import java.util.Locale
 
 /**
@@ -32,9 +30,10 @@ import java.util.Locale
  * Mutations are forwarded to [CollectionsCatalogue] for the same reason, and because the notice the
  * screen raises has to come from one place.
  *
- * The reminder schedule is read through the app-wide [CollectionReminderState] rather than kept
- * here, for the same reason: one schedule per collection is a fact about the collection rather than
- * a thing this screen owns, and the tick that fires it lives above the screens.
+ * Whether a collection feeds the reminder queue is read through the app-wide
+ * [CollectionReminderState] rather than kept here, for the same reason: membership is a fact about
+ * the collection rather than a thing this screen owns, and the runtime that draws from it lives above
+ * the screens.
  */
 @Stable
 class CollectionDetailState(
@@ -149,37 +148,28 @@ class CollectionDetailState(
      */
     fun loadProgress() = collections.progress.load(collectionId)
 
-    // ---- reminder ------------------------------------------------------------------------------
-
-    /** This collection's schedule, or `null` when none has been set. */
-    val reminder: CollectionReminderRow? get() = reminders.forCollection(collectionId)
+    // ---- reminders -----------------------------------------------------------------------------
 
     /**
-     * The schedule holder, for the page's dialogs.
+     * Whether the queue draws from this collection.
      *
-     * Exposed rather than passed alongside this state so a dialog raised from the header, the row or
-     * the menu can reach the one schedule store without the page threading a second object through
-     * every function between them.
+     * One question with one answer, because the queue has exactly one question to ask about a
+     * collection. The page's own bell and its menu both read this one fact, so they cannot disagree
+     * about whether a collection is in the reminders.
+     */
+    val inReminders: Boolean get() = reminders.contains(collectionId)
+
+    /**
+     * The reminder holder, for the page's controls.
+     *
+     * Exposed rather than passed alongside this state so a control raised from the header or the menu
+     * can reach the one reminder store without the page threading a second object through every
+     * function between them.
      */
     val reminderState: CollectionReminderState get() = reminders
 
-    /**
-     * When the schedule next comes round, for the row's "next at" line.
-     *
-     * Read against a moment the page has to supply rather than against the clock, so a screenshot
-     * harness can hand the row a fixed answer. A paused reminder comes back as `null`: it has no next
-     * time at all, and an "after you resume, it will be…" line reads as though the user had already
-     * decided to resume.
-     */
-    fun nextReminderAt(now: LocalDateTime): LocalDateTime? = reminders.nextTriggerAt(collectionId, now)
-
-    /**
-     * Reads every schedule once.
-     *
-     * The whole set rather than just this collection's, because the tick needs all of them anyway and
-     * a read narrowed to one id would leave the page waiting on a query the app is going to make.
-     */
-    fun loadReminder() = reminders.load()
+    /** Adds this collection to the queue's sources, or takes it out again. */
+    fun setInReminders(enabled: Boolean) = reminders.setEnabled(collectionId, enabled)
 
     // ---- member tiles --------------------------------------------------------------------------
 

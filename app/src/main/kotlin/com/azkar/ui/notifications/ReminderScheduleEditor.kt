@@ -8,19 +8,18 @@ import java.time.DayOfWeek
 /**
  * Writes for the queue's schedule, and nothing else.
  *
- * These used to be an inner class of [ReminderManagerState], which is the only correct place for the
- * ones that need to read the catalogue. But most of them do not: turning the queue on, choosing its
- * order, its cadence, its weekdays and its window are edits to a [ReminderQueueConfig] and to nothing
- * else, and they are now made from the settings page rather than from the reminders screen. Keeping
- * them nested under a state holder that loads collections and passages meant the settings page had to
- * construct the whole reminders-screen holder — a twenty-method gateway and a catalogue read — to
- * render one card.
+ * These used to be an inner class of the reminders screen's state holder, which was the only correct
+ * place for the ones that need to read the catalogue. But most of them do not: turning the queue on,
+ * choosing its order, its cadence, its weekdays and its window are edits to a [ReminderQueueConfig] and
+ * to nothing else, and they are made from the settings page. Keeping them nested under a state holder
+ * that loaded collections and passages meant the settings page had to construct the whole holder — a
+ * twenty-method gateway and a catalogue read — to render one card.
  *
- * So the split follows the data, not the screen. What needs the catalogue stays on
- * [ReminderManagerState]: `availableIds`, and with it `moveInManualOrder`, which cannot rank a
- * sequence it cannot see the members of. Everything else moved here, and both screens now write
- * through one instance type over the same [NotificationPreferencesRepository] singleton — so the
- * switch flipped on the settings page is the switch the runtime and the reminders summary read.
+ * So the split follows the data, not the screen. What needed the catalogue was the passage picker,
+ * and the picker is gone: a single passage is reminded by joining the reserved "Reminder picks"
+ * collection, which is an ordinary collection and is toggled like any other. Everything else writes
+ * through one instance type over the same [NotificationPreferencesRepository] singleton — so the switch
+ * flipped on the settings page is the switch the runtime and the library read.
  *
  * Nothing is held here. Every method reads the current config from `preferences.queue.value` inside
  * its own write rather than taking one as an argument, which is safe because that repository is
@@ -153,39 +152,6 @@ class ReminderScheduleEditor(
                 config.copy(
                     collectionDropChances =
                         config.collectionDropChances +
-                            (id.toString() to chance.coerceIn(0, 100)),
-                )
-            }
-        }
-    }
-
-    fun setRemembranceSelected(
-        id: Long,
-        selected: Boolean,
-    ) {
-        scope.launch {
-            preferences.updateQueue { config ->
-                config.copy(
-                    individualRemembranceIds =
-                        if (selected) {
-                            (config.individualRemembranceIds + id).distinct()
-                        } else {
-                            config.individualRemembranceIds - id
-                        },
-                )
-            }
-        }
-    }
-
-    fun setRemembranceDropChance(
-        id: Long,
-        chance: Int,
-    ) {
-        scope.launch {
-            preferences.updateQueue { config ->
-                config.copy(
-                    remembranceDropOverrides =
-                        config.remembranceDropOverrides +
                             (id.toString() to chance.coerceIn(0, 100)),
                 )
             }

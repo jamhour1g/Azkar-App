@@ -43,9 +43,8 @@ import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionDetailActionRemindMe
 import com.azkar.generated.resources.collectionDetailBackLink
 import com.azkar.generated.resources.collectionDetailDurationFormat
-import com.azkar.generated.resources.collectionDetailRemindAtFormat
-import com.azkar.generated.resources.collectionReminderPaused
 import com.azkar.generated.resources.collectionsActionAddMembers
+import com.azkar.generated.resources.collectionsActionInReminders
 import com.azkar.generated.resources.collectionsActionPin
 import com.azkar.generated.resources.collectionsActionUnpin
 import com.azkar.generated.resources.collectionsMemberCount
@@ -94,19 +93,19 @@ import org.jetbrains.compose.resources.stringResource
  * being spread across four boxes. Nothing is invented to fill the space; the band's job is to make
  * these legible at once, and a collection with no description simply has one fewer line in it.
  *
- * [reminder] is the one thing here that is not about the collection but about this device's schedule
- * for it. It arrives as the three-way answer rather than as a nullable time, because a paused schedule
- * and no schedule at all look identical from the outside — both have no next firing — and the band has
- * to be able to tell the user which one it is showing. It is printed on the bell rather than in a row
- * of its own for the same reason everything else moved up here: a strip below the band that says one
- * thing the bell already offers is a second place to look for the answer to "have I scheduled this?".
+ * [inReminders] is the one thing here that is not about the collection but about whether the queue
+ * draws from it. It is a plain yes or no, because the queue has exactly one question to answer about
+ * a collection — "does it feed the reminders?" — and a schedule of its own no longer exists. It is
+ * printed on the bell rather than in a row of its own for the same reason everything else moved up
+ * here: a strip below the band that says one thing the bell already offers is a second place to look
+ * for the answer to "is this in my reminders?".
  */
 @Composable
 internal fun CollectionDetailHero(
     collection: RemembranceCollection,
     memberCount: Int,
     stats: CollectionStats,
-    reminder: CollectionHeroReminder,
+    inReminders: Boolean,
     actions: CollectionHeroActions,
     modifier: Modifier = Modifier,
 ) {
@@ -143,7 +142,7 @@ internal fun CollectionDetailHero(
 
         HeroActions(
             isPinned = collection.isPinned,
-            reminder = reminder,
+            inReminders = inReminders,
             actions = actions,
             modifier =
                 Modifier
@@ -292,21 +291,21 @@ private fun CollectionDetailHeroPreview() {
                 collection = previewCollection(),
                 memberCount = 54,
                 stats = previewCollectionStats(),
-                reminder = CollectionHeroReminder.At("06:30"),
+                inReminders = true,
                 actions = previewCollectionHeroActions(),
             )
             CollectionDetailHero(
                 collection = previewCollection(homePinnedAt = null, iconKey = "compass"),
                 memberCount = 12,
                 stats = previewCollectionStatsVariants().last(),
-                reminder = CollectionHeroReminder.Paused,
+                inReminders = false,
                 actions = previewCollectionHeroActions(),
             )
             CollectionDetailHero(
                 collection = previewCollection(),
                 memberCount = 54,
                 stats = previewCollectionStatsVariants()[1],
-                reminder = CollectionHeroReminder.None,
+                inReminders = false,
                 actions = previewCollectionHeroActions(),
             )
         }
@@ -328,42 +327,9 @@ internal data class CollectionHeroActions(
     val onAddMembers: (() -> Unit)?,
     val onCreateRemembrance: () -> Unit,
     val onTogglePin: () -> Unit,
-    val onEditReminder: () -> Unit,
+    val onToggleReminder: () -> Unit,
     val menuItems: List<AzkarMenuItem>,
 )
-
-/**
- * What the band's bell has to say about this collection's schedule, reduced to the three answers it can
- * honestly give.
- *
- * A sealed type rather than a `String?` of the next firing time, and that is the whole point of it. A
- * schedule the user has switched off has no next firing, so `null` cannot tell "you never set one"
- * apart from "you set one and turned it off" — and the bell, which is the only place the page mentions
- * reminders at all, would then claim there is no reminder moments after the user paused one. Two of the
- * three cases therefore have to be told apart before a time is ever computed, and naming the cases is
- * what makes that possible.
- *
- * [None] and [Paused] are objects rather than flags on one class because neither of them carries any
- * information beyond which case it is; [At] carries the time because that is the whole difference
- * between one reminder and another.
- */
-internal sealed interface CollectionHeroReminder {
-    /** No schedule has ever been set for this collection. */
-    data object None : CollectionHeroReminder
-
-    /** A schedule that is set and will come round, at [time] on the clock face. */
-    data class At(
-        val time: String,
-    ) : CollectionHeroReminder
-
-    /**
-     * A schedule the user has switched off.
-     *
-     * Kept rather than discarded because it is the only thing standing between "paused on purpose" and
-     * "never set", and the pause itself is reachable only from inside the editor this bell opens.
-     */
-    data object Paused : CollectionHeroReminder
-}
 
 /**
  * The three figures under the description: how many, how long, and who put it here.
@@ -522,15 +488,15 @@ private fun HeroFactDividerPreview() {
  * Keeping the edit up here is also what let the toolbar keep a single line, since the three-dot chip
  * that used to hold it had nowhere else to go when the category chips came out.
  *
- * [reminderAt] is the scheduled time, or `null` when nothing is scheduled. It goes on the bell's own
- * label rather than onto a row underneath the band, so the answer to "have I set a reminder?" is on
- * the control that sets one — and the bell switches to the "on" ink when it is answered, which is the
+ * [inReminders] says whether the queue draws from this collection. It goes on the bell's own label
+ * rather than onto a row underneath the band, so the answer to "is this in my reminders?" is on the
+ * control that changes it — and the bell switches to the "on" ink when it is answered, which is the
  * same treatment the pin pill gets.
  */
 @Composable
 private fun HeroActions(
     isPinned: Boolean,
-    reminder: CollectionHeroReminder,
+    inReminders: Boolean,
     actions: CollectionHeroActions,
     modifier: Modifier = Modifier,
 ) {
@@ -538,7 +504,7 @@ private fun HeroActions(
     // reading them twice was the reason this grew a parameter list longer than it could carry. A value
     // rather than six more arguments also means a label can never be spelled one way in the compact
     // band and another way in the wide one.
-    val labels = heroActionLabels(isPinned = isPinned, reminder = reminder)
+    val labels = heroActionLabels(isPinned = isPinned, inReminders = inReminders)
     if (AzkarWindowSize.isCompactWidth) {
         CompactHeroActions(
             actions = actions,
@@ -560,8 +526,8 @@ private fun HeroActions(
 /**
  * The five things the band's controls have to say, decided once for both widths.
  *
- * [pin] switches on whether the collection is pinned and [reminderLive] on whether the schedule will
- * actually come round, because those are the two answers that change a pill's ink rather than its
+ * [pin] switches on whether the collection is pinned and [reminderLive] on whether the collection
+ * feeds the queue, because those are the two answers that change a pill's ink rather than its
  * label, and a caller that passed only strings would have to derive them again.
  */
 @Immutable
@@ -576,29 +542,25 @@ private data class HeroActionLabels(
 @Composable
 private fun heroActionLabels(
     isPinned: Boolean,
-    reminder: CollectionHeroReminder,
+    inReminders: Boolean,
 ): HeroActionLabels {
     val pinLabel =
         stringResource(
             if (isPinned) Res.string.collectionsActionUnpin else Res.string.collectionsActionPin,
         )
-    // Two questions in one pill, answered together: what is the schedule, and is it live. The wording
-    // is chosen per case rather than derived from a nullable time because "paused" and "not set" have
-    // no next firing to derive anything from — and the pill only reads as switched-on when the schedule
-    // will actually come round, so a paused bell is glass while a live one is inked.
-    val (reminderLabel, reminderLive) =
-        when (reminder) {
-            CollectionHeroReminder.None -> stringResource(Res.string.collectionDetailActionRemindMe) to false
-            CollectionHeroReminder.Paused -> stringResource(Res.string.collectionReminderPaused) to false
-            is CollectionHeroReminder.At ->
-                stringResource(Res.string.collectionDetailRemindAtFormat, reminder.time) to true
-        }
+    // One question in one pill: is this collection one of the sources the queue draws from. The
+    // wording is chosen per case rather than derived, because the answer is a membership question
+    // and not a time — the schedule that used to live here belongs to the whole queue now.
+    val reminderLabel =
+        stringResource(
+            if (inReminders) Res.string.collectionsActionInReminders else Res.string.collectionDetailActionRemindMe,
+        )
     return HeroActionLabels(
         addMembers = stringResource(Res.string.collectionsActionAddMembers),
         createRemembrance = stringResource(Res.string.remembranceCreateActionOpen),
         pin = pinLabel,
         reminder = reminderLabel,
-        reminderLive = reminderLive,
+        reminderLive = inReminders,
     )
 }
 
@@ -640,7 +602,7 @@ private fun WideHeroActions(
         HeroPill(
             icon = AzkarIcons.Bell,
             label = labels.reminder,
-            onClick = actions.onEditReminder,
+            onClick = actions.onToggleReminder,
             selected = labels.reminderLive,
         )
         AzkarOverflowMenu(
@@ -688,7 +650,7 @@ private fun CompactHeroActions(
         CompactHeroAction(
             icon = AzkarIcons.Bell,
             label = labels.reminder,
-            onClick = actions.onEditReminder,
+            onClick = actions.onToggleReminder,
             selected = labels.reminderLive,
         )
         AzkarTooltip(tooltip = stringResource(Res.string.libraryActionMore)) {

@@ -18,6 +18,7 @@ import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -49,9 +50,16 @@ import java.util.Locale
  *
  * The card used to carry considerably more than this, and most of these cases are the absence of
  * something: there is no title beside the passage, no translation of it, no citation, no grade, no
- * collection name, no tags and no controls. Those absences are the feature — a reminder is a glance,
- * and a card about a passage has to be read past to reach the passage — so they are asserted rather
- * than merely left out of the fixtures. A fixture that could not produce them would prove nothing.
+ * collection name, no tags and no other controls. Those absences are the feature — a reminder is a
+ * glance, and a card about a passage has to be read past to reach the passage — so they are asserted
+ * rather than merely left out of the fixtures. A fixture that could not produce them would prove
+ * nothing.
+ *
+ * The one control that came back is the star, and the cases below are about it rather than about its
+ * absence: whether it is offered at all, whether it keeps the passage it belongs to, and what it
+ * does when the write behind it fails. The rest of the card's economy is unchanged, and the gesture
+ * count is asserted as a count so that anything else added back is caught even if it is a control
+ * this test has never heard of.
  *
  * Three bodies are covered because the card draws three: a passage, a prayer time, and the
  * payload-less notice the proof-of-concept harness still publishes. The last of those is why the
@@ -101,6 +109,11 @@ private const val NEXT_PRAYER_LABEL = "Next: Isha at 6:41 PM"
 /** The rendered name of the dismiss target in each language under test. */
 private const val ENGLISH_DISMISS_LABEL = "Dismiss"
 private const val ARABIC_DISMISS_LABEL = "إخفاء"
+
+/** The rendered name of the star, in the two states it can be in. */
+private const val ENGLISH_ADD_FAVORITE_LABEL = "Add to Favorites"
+private const val ENGLISH_REMOVE_FAVORITE_LABEL = "Remove from Favorites"
+private const val ARABIC_ADD_FAVORITE_LABEL = "إضافة إلى المفضلة"
 
 /** The cycle counter, written out in both languages rather than looked up. */
 private const val ENGLISH_POSITION_LABEL = "1 of 3"
@@ -194,16 +207,25 @@ private fun passageCard(
     passage: String = ARABIC_PASSAGE,
     total: Int = 3,
     position: Int = 1,
+    isFavorite: Boolean = false,
     onOpen: () -> Unit = {},
     onDismiss: () -> Unit = {},
     remaining: () -> Float = { 1f },
+    onToggleFavorite: (suspend (Long, Boolean) -> Boolean)? = { _, _ -> true },
 ) {
     NotificationCard(
-        item = passageNotice(passage = passage, position = position, total = total),
+        item =
+            passageNotice(
+                passage = passage,
+                position = position,
+                total = total,
+                isFavorite = isFavorite,
+            ),
         onOpen = onOpen,
         onDismiss = onDismiss,
         onPauseChanged = {},
         remaining = remaining,
+        onToggleFavorite = onToggleFavorite,
     )
 }
 
@@ -219,6 +241,28 @@ private fun prayerCard(
         onPauseChanged = {},
     )
 }
+
+/**
+ * The written name of a target, asked as a question rather than as an assertion.
+ *
+ * A predicate has to be safe to call again and again — [waitUntil] calls it until it says yes — so
+ * it cannot assert. This asks the tree what is in it instead, which is what makes it usable for
+ * "the star is back" as well as for "the star is there".
+ */
+@OptIn(ExperimentalTestApi::class)
+private fun SkikoComposeUiTest.showsTargetNamed(description: String): Boolean =
+    onAllNodes(hasContentDescription(description)).fetchSemanticsNodes().isNotEmpty()
+
+/**
+ * What the card asked the app to write, and about which passage.
+ *
+ * A pair rather than two counters, because the two are one fact: a star that fired for the wrong
+ * passage would look exactly like a star that fired at all.
+ */
+private data class FavoriteToggle(
+    val id: Long,
+    val favorite: Boolean,
+)
 
 @OptIn(ExperimentalTestApi::class)
 val NotificationCardSuite by testSuite("The overlay notification card") {
@@ -307,16 +351,136 @@ val NotificationCardSuite by testSuite("The overlay notification card") {
         }
     }
 
-    test("a passage card offers exactly two gestures: open it and close it") {
-        // Copy, favourite and next were the three verbs the card used to carry. Each has a home the
-        // click already opens, and each cost the passage the room it is read in; a reminder that can be
-        // acted on without being opened is a reminder about the app rather than the azkar.
+    test("a passage card offers exactly three gestures: open it, keep it and close it") {
+        // Copy and next are gone for good. They were controls about *the app* — one acted on the
+        // clipboard, the other on the queue — and every one of them had a home the click already
+        // opens. The star is the exception, and the reason it is not: whether a passage is kept has
+        // no home the click opens, so a reader who keeps a passage in the library and then meets that
+        // same passage in the queue has to be able to keep it from the queue too.
         //
-        // Asserted as a *count* rather than as three separate absences so that anything added back is
+        // Asserted as a *count* rather than as separate absences so that anything added back is
         // caught even if it is a control this test has never heard of — a menu, a dismiss-all, a
-        // starred state. Two means the body and the cross and nothing else.
+        // play button. Three means the body, the star and the cross, and nothing else.
         cardTest(content = { passageCard() }) {
+            onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick)).assertCountEquals(3)
+        }
+    }
+
+    test("a card with nowhere to write the star offers no star at all") {
+        // The star is offered only where it can be honest. A caller with no way to write the flag
+        // would be putting a claim on screen that nothing behind it agrees with, so the card draws
+        // no star rather than a dead one — and a passage that cannot be kept is still fully openable.
+        cardTest(content = { passageCard(onToggleFavorite = null) }) {
             onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick)).assertCountEquals(2)
+            onNodeWithContentDescription(ENGLISH_ADD_FAVORITE_LABEL).assertDoesNotExist()
+        }
+    }
+
+    test("the star keeps the passage it belongs to") {
+        val toggles = mutableListOf<FavoriteToggle>()
+        cardTest(
+            content = {
+                passageCard(
+                    onToggleFavorite = { id, favorite ->
+                        toggles += FavoriteToggle(id = id, favorite = favorite)
+                        true
+                    },
+                )
+            },
+        ) {
+            onNodeWithContentDescription(ENGLISH_ADD_FAVORITE_LABEL).performClick()
+            waitUntil(timeoutMillis = BAR_TEST_TIMEOUT_MILLIS) { toggles.isNotEmpty() }
+        }
+
+        assertThat(toggles).containsExactly(FavoriteToggle(id = REMEMBRANCE_ID, favorite = true))
+    }
+
+    test("the star unkeeps a passage that was already kept") {
+        val toggles = mutableListOf<FavoriteToggle>()
+        cardTest(
+            content = {
+                passageCard(
+                    isFavorite = true,
+                    onToggleFavorite = { id, favorite ->
+                        toggles += FavoriteToggle(id = id, favorite = favorite)
+                        true
+                    },
+                )
+            },
+        ) {
+            onNodeWithContentDescription(ENGLISH_REMOVE_FAVORITE_LABEL).performClick()
+            waitUntil(timeoutMillis = BAR_TEST_TIMEOUT_MILLIS) { toggles.isNotEmpty() }
+        }
+
+        assertThat(toggles).containsExactly(FavoriteToggle(id = REMEMBRANCE_ID, favorite = false))
+    }
+
+    test("the star does not open the app, because keeping a passage is not a request to be taken somewhere") {
+        var opened = 0
+        cardTest(content = { passageCard(onOpen = { opened++ }) }) {
+            onNodeWithContentDescription(ENGLISH_ADD_FAVORITE_LABEL).performClick()
+        }
+
+        assertThat(opened).isZero()
+    }
+
+    test("the star answers the press at once, rather than waiting for the write to come back") {
+        // The write is a database round trip, and a star that only appeared once the database had
+        // agreed would put a visible delay between the press and the picture. So the glyph moves
+        // first and the answer, if there is one, comes afterwards.
+        cardTest(content = { passageCard() }) {
+            onNodeWithContentDescription(ENGLISH_ADD_FAVORITE_LABEL).performClick()
+            waitUntil(timeoutMillis = BAR_TEST_TIMEOUT_MILLIS) {
+                showsTargetNamed(ENGLISH_REMOVE_FAVORITE_LABEL)
+            }
+        }
+    }
+
+    test("a write that fails takes the star back, rather than leaving a claim nothing agrees with") {
+        // The flip happens before the write, so for the length of a round trip the picture claims
+        // something the database has not agreed to. A failed write is the only thing that can close
+        // that gap, and closing it means putting the star back.
+        var attempts = 0
+        cardTest(content = {
+            passageCard(onToggleFavorite = { _, _ ->
+                attempts++
+                false
+            })
+        }) {
+            onNodeWithContentDescription(ENGLISH_ADD_FAVORITE_LABEL).performClick()
+            waitUntil(timeoutMillis = BAR_TEST_TIMEOUT_MILLIS) { attempts > 0 }
+            waitUntil(timeoutMillis = BAR_TEST_TIMEOUT_MILLIS) {
+                showsTargetNamed(ENGLISH_ADD_FAVORITE_LABEL)
+            }
+            onNodeWithContentDescription(ENGLISH_REMOVE_FAVORITE_LABEL).assertDoesNotExist()
+        }
+    }
+
+    test("a passage that is already kept shows the star filled, and offers to unkeep it") {
+        cardTest(content = { passageCard(isFavorite = true) }) {
+            onNodeWithContentDescription(ENGLISH_REMOVE_FAVORITE_LABEL).assertExists()
+            onNodeWithContentDescription(ENGLISH_ADD_FAVORITE_LABEL).assertDoesNotExist()
+        }
+    }
+
+    test("the star is named in the language the app is in") {
+        val previous = Locale.getDefault()
+        Locale.setDefault(ARABIC)
+        try {
+            cardTest(locale = ARABIC, content = { passageCard() }) {
+                onNodeWithContentDescription(ARABIC_ADD_FAVORITE_LABEL).assertExists()
+            }
+        } finally {
+            Locale.setDefault(previous)
+        }
+    }
+
+    test("a prayer time and a bare notice carry no star, because neither is a passage to keep") {
+        cardTest(content = { prayerCard() }) {
+            onNodeWithContentDescription(ENGLISH_ADD_FAVORITE_LABEL).assertDoesNotExist()
+        }
+        cardTest(content = { plainCard() }) {
+            onNodeWithContentDescription(ENGLISH_ADD_FAVORITE_LABEL).assertDoesNotExist()
         }
     }
 
@@ -448,6 +612,7 @@ private fun passageNotice(
     passage: String,
     position: Int,
     total: Int,
+    isFavorite: Boolean = false,
 ) = PresentedNotice(
     id = 1L,
     title = COLLECTION,
@@ -458,6 +623,7 @@ private fun passageNotice(
             text = passage,
             position = position,
             total = total,
+            isFavorite = isFavorite,
         ),
 )
 

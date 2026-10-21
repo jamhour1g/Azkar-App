@@ -61,6 +61,7 @@ class CollectionPresenter(
         collection: RemembranceCollection,
         inCustomCollections: Int = 0,
         recitedCount: Int = 0,
+        inReminders: Boolean = false,
     ): CollectionTile =
         CollectionTile(
             id = collection.id ?: MISSING_ID,
@@ -78,24 +79,27 @@ class CollectionPresenter(
             inCustomCollections = inCustomCollections,
             recitedCount = recitedCount.coerceAtLeast(0),
             tagIds = collection.tags.mapNotNullTo(mutableSetOf()) { it.id },
+            inReminders = inReminders,
         )
 
     /**
-     * The tile the shelf draws: [toTile] plus the one figure that lives on the state layer.
+     * The tile the shelf draws: [toTile] plus the figures that live on the state layer.
      *
-     * A separate method rather than a third argument threaded to every caller, because the count
-     * lives in a map on the shelf's state and the callers — the cards, the chips, the search
-     * results — are three views of one shelf that must not each go looking it up. A collection
+     * A separate method rather than a third argument threaded to every caller, because the counts
+     * live in maps on the shelf's state and the callers — the cards, the chips, the search
+     * results — are three views of one shelf that must not each go looking them up. A collection
      * absent from `recitedCounts` has recorded nothing, which is why the fallback is zero.
      */
     fun shelfTile(
         collection: RemembranceCollection,
         recitedCounts: Map<Long, Int>,
+        inReminders: Boolean = false,
     ): CollectionTile =
         toTile(
             collection = collection,
             inCustomCollections = 0,
             recitedCount = recitedCounts[collection.id ?: MISSING_ID] ?: 0,
+            inReminders = inReminders,
         )
 
     /** Flattens a remembrance into its grid tile. */

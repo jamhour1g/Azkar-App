@@ -383,7 +383,7 @@ private fun HomeRailColumn(
     ) {
         HomeCollectionRail(
             cards = inputs.rail.cards,
-            dueIds = inputs.reminders.dueCollections,
+            reminderIds = inputs.reminders.enabledCollectionIds,
             onOpen = inputs.navigation.onOpenCollection,
         )
         HomeFavoritesCard(inputs, modifier = Modifier.fillMaxWidth())

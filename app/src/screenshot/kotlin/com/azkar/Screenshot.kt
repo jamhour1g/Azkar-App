@@ -35,6 +35,7 @@ import com.azkar.ui.library.rememberCollectionDetailState
 import com.azkar.ui.library.rememberCollectionSessionState
 import com.azkar.ui.library.rememberRemembranceReaderState
 import com.azkar.ui.notifications.NotificationAction
+import com.azkar.ui.notifications.NotificationContent
 import com.azkar.ui.notifications.presentation.NotificationCard
 import com.azkar.ui.notifications.presentation.PresentedNotice
 import com.azkar.ui.preview.previewRailCards
@@ -321,25 +322,51 @@ private fun ScreenshotScreen(
     }
 }
 
-/** Three cards at once, which is the stack cap and the layout that has to hold. */
+/**
+ * Three cards at once, which is the stack cap and the layout that has to hold.
+ *
+ * The first of them is a real passage card rather than a bare notice, because the bare notice is the
+ * one body the overlay almost never shows: the scheduler publishes a passage or a prayer time, and
+ * the passage is the body that carries the star. A screenshot of three bare notices would show
+ * exactly the cards that cannot have the new control on them.
+ */
 @Composable
 private fun NotificationStackShot() {
     Column(
         modifier = Modifier.width(380.dp).padding(AzkarSpacing.screenPaddingHorizontal),
         verticalArrangement = Arrangement.spacedBy(AzkarSpacing.dashboard),
     ) {
+        NotificationCard(
+            item =
+                PresentedNotice(
+                    id = 0L,
+                    title = "Azkar reminder",
+                    message = "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
+                    action = NotificationAction.Remembrance(0L),
+                    content =
+                        NotificationContent.Remembrance(
+                            text = "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
+                            position = 1,
+                            total = 3,
+                            isFavorite = true,
+                        ),
+                ),
+            onOpen = {},
+            onDismiss = {},
+            onPauseChanged = {},
+            onToggleFavorite = { _, _ -> true },
+        )
         listOf(
-            "Fajr is due" to "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
             "After Fajr" to "Say it once, slowly, and mean it.",
             "Asr is due in 20 minutes" to "Reminder queued from your morning collection.",
         ).forEachIndexed { index, (title, message) ->
             NotificationCard(
                 item =
                     PresentedNotice(
-                        id = index.toLong(),
+                        id = (index + 1).toLong(),
                         title = title,
                         message = message,
-                        action = NotificationAction.Remembrance(index.toLong()),
+                        action = NotificationAction.Remembrance((index + 1).toLong()),
                     ),
                 onOpen = {},
                 onDismiss = {},

@@ -206,6 +206,7 @@ internal object CollectionAggregates {
             lastOpenedAt = lastOpenedAt?.toInstant(),
             homePinnedAt = homePinnedAt?.toInstant(),
             isFavorite = isFavorite,
+            position = position,
             translations = translations,
         )
 

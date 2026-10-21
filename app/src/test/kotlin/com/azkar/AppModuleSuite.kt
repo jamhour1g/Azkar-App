@@ -1,19 +1,17 @@
 package com.azkar
 
 import com.azkar.data.config.LibraryBootstrapper
-import com.azkar.data.repo.exposed.ExposedCollectionReminderRepository
 import com.azkar.data.repo.exposed.ExposedCollectionRepository
 import com.azkar.data.repo.exposed.ExposedRecitationRepository
 import com.azkar.data.repo.exposed.ExposedRemembranceRepository
 import com.azkar.data.repo.exposed.ExposedTagRepository
 import com.azkar.data.storage.CoverStorage
-import com.azkar.domain.repo.CollectionReminderRepository
 import com.azkar.domain.repo.CollectionRepository
 import com.azkar.domain.repo.LibrarySeedState
 import com.azkar.domain.repo.RecitationRepository
 import com.azkar.domain.repo.RemembranceRepository
 import com.azkar.domain.repo.TagRepository
-import com.azkar.domain.service.CollectionReminderService
+import com.azkar.domain.service.CollectionOrderService
 import com.azkar.domain.service.CollectionService
 import com.azkar.domain.service.RecitationService
 import com.azkar.domain.service.RemembranceService
@@ -24,18 +22,16 @@ import com.azkar.settings.SettingsStore
 import com.azkar.ui.home.DomainHomeGateway
 import com.azkar.ui.home.HomeGateway
 import com.azkar.ui.library.data.CollectionHomeGateway
-import com.azkar.ui.library.data.CollectionReminderGateway
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.DomainCollectionsGateway
-import com.azkar.ui.library.data.DomainReminderGateway
 import com.azkar.ui.library.data.DomainTagsGateway
+import com.azkar.ui.library.data.ReminderSources
 import com.azkar.ui.library.data.TagGateway
 import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationActionRouter
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.NotificationRuntime
-import com.azkar.ui.notifications.ReminderCatalogueSource
 import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationPublisher
 import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
@@ -88,7 +84,7 @@ val AppModuleSuite by testSuite("AppModule") {
             assertThat(
                 listOf(
                     koin.get<SettingsStore>(),
-                    koin.get<CollectionReminderGateway>(),
+                    koin.get<ReminderSources>(),
                     koin.get<CollectionsGateway>(),
                     koin.get<CollectionHomeGateway>(),
                     koin.get<HomeGateway>(),
@@ -120,7 +116,7 @@ val AppModuleSuite by testSuite("AppModule") {
             val koin = graph.koin
             assertThat(koin.get<SettingsStore>()).isSameAs(koin.get<SettingsStore>())
             assertThat(koin.get<HomeGateway>()).isSameAs(koin.get<HomeGateway>())
-            assertThat(koin.get<CollectionReminderGateway>()).isSameAs(koin.get<CollectionReminderGateway>())
+            assertThat(koin.get<ReminderSources>()).isSameAs(koin.get<ReminderSources>())
             assertThat(koin.get<CollectionsGateway>()).isSameAs(koin.get<CollectionsGateway>())
             assertThat(koin.get<TagGateway>()).isSameAs(koin.get<TagGateway>())
             assertThat(koin.get<HttpClient>()).isSameAs(koin.get<HttpClient>())
@@ -136,14 +132,13 @@ val AppModuleSuite by testSuite("AppModule") {
             assertThat(koin.get<CollectionHomeGateway>()).isSameAs(koin.get<CollectionsGateway>())
         }
 
-        test("the reminder gateway is a single in its own right") { graph ->
+        test("the reminder sources are a single in their own right") { graph ->
             val koin = graph.koin
             // Distinct from the collections gateway on purpose, and this is where that is pinned: the
-            // shelf delegates its six reminder methods to this instance, and the reminder editor is
-            // handed only this one. Both are stateless adapters over the same service, so a second
-            // copy of either would cost nothing but a second thing to keep in step.
-            assertThat(koin.get<CollectionReminderGateway>()).isSameAs(koin.get<CollectionReminderGateway>())
-            assertThat(koin.get<CollectionReminderGateway>()).isNotSameAs(koin.get<CollectionsGateway>())
+            // shelf asks the queue's own seam which collections are sources, and the library's
+            // gateway is about the library's rows. One copy of each, or the two would drift apart.
+            assertThat(koin.get<ReminderSources>()).isSameAs(koin.get<ReminderSources>())
+            assertThat(koin.get<ReminderSources>()).isNotSameAs(koin.get<CollectionsGateway>())
         }
 
         test("the adapters cannot be reached past the seam they are registered under") { graph ->
@@ -152,7 +147,6 @@ val AppModuleSuite by testSuite("AppModule") {
             // ever names the seam, so registering one under its own class would add a way in for
             // whoever comes next without changing a single call site.
             assertThat(koin.getOrNull<DomainCollectionsGateway>()).isNull()
-            assertThat(koin.getOrNull<DomainReminderGateway>()).isNull()
             assertThat(koin.getOrNull<DomainHomeGateway>()).isNull()
             assertThat(koin.getOrNull<DomainTagsGateway>()).isNull()
         }
@@ -165,11 +159,10 @@ val AppModuleSuite by testSuite("AppModule") {
                     LocaleStore::class,
                     TypographyStore::class,
                     LibrarySeedState::class,
-                    CollectionReminderGateway::class,
+                    ReminderSources::class,
                     CollectionsGateway::class,
                     HomeGateway::class,
                     TagGateway::class,
-                    ReminderCatalogueSource::class,
                     HttpClient::class,
                     LocationDetector::class,
                     GeocodingClient::class,
@@ -291,7 +284,6 @@ private val storagePortModule =
 
         single<CollectionRepository> { ExposedCollectionRepository(get(), get()) }
         single<RecitationRepository> { ExposedRecitationRepository(get()) }
-        single<CollectionReminderRepository> { ExposedCollectionReminderRepository(get()) }
         single { ExposedTagRepository(get()) } bind TagRepository::class
         single<RemembranceRepository> { ExposedRemembranceRepository(get(), get()) }
 
@@ -299,7 +291,7 @@ private val storagePortModule =
         single { RemembranceService(get(), get()) }
         single { CollectionService(get(), get()) }
         single { RecitationService(get(), get(), get()) }
-        single { CollectionReminderService(get(), get(), get()) }
+        single { CollectionOrderService(get(), get()) }
 
         // Neither of these touches the filesystem or a connection at construction, so they are
         // mirrored verbatim. What the bootstrapper *reads* — the gate — is a `LibrarySeedState`,

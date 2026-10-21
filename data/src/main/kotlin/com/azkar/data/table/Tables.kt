@@ -2,7 +2,6 @@ package com.azkar.data.table
 
 import com.azkar.domain.model.CollectionKind
 import com.azkar.domain.model.HadithGrade
-import com.azkar.domain.model.ReminderCadence
 import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.Table
 import org.jetbrains.exposed.v1.core.charLength
@@ -62,17 +61,14 @@ val ALL_TABLES: Set<Table> =
         CollectionMemberTable,
         CollectionTagTable,
         RecitationProgressTable,
-        CollectionReminderTable,
     )
 
 /**
  * The base of every single-key table in the schema, carrying the two audit columns.
  *
- * `IdTable<Long>` rather than `LongIdTable`, because [CollectionReminderTable] needs a key the
- * database does not generate: its id is the collection's, handed in by the application.
- * `LongIdTable` declares `id` and `primaryKey` final and unconditionally auto-incrementing, so
- * there is no way to take its key and use it for something else — and a schema with both shapes
- * would end up with two base classes differing only in who numbers the rows.
+ * `IdTable<Long>` rather than `LongIdTable`, so a table is free to name its key column itself
+ * instead of taking the `id`/`primaryKey` pair that `LongIdTable` declares final and
+ * unconditionally auto-incrementing.
  */
 abstract class TimestampedIdTable(
     name: String,
@@ -346,6 +342,13 @@ object CollectionTable : TimestampedIdTable("collection") {
     // reads as not favourited, which is the truth about all of them.
     val isFavorite = bool("is_favorite").default(false)
 
+    // Where the collection sits in the user's own order of their library, or null when it has none.
+    // Nullable and without a default, for the same reason as `last_opened_at`: a collection the user
+    // has never placed reads as null rather than as "placed at creation time", which would put every
+    // shipped collection in the order the moment the app was opened. Nulls sort last, so the ones the
+    // user did arrange come first and the rest keep a stable order among themselves.
+    val position = integer("position").nullable()
+
     init {
         // The hub's default sort is "recently updated", and a user's own shelves are the rows
         // that move; either way the scan starts here.
@@ -478,51 +481,6 @@ object RecitationProgressTable : TimestampedCompositeIdTable("recitation_progres
         // counted for, across every collection it belongs to.
         index("idx_recitation_progress__by_remembrance", isUnique = false, remembranceId)
     }
-}
-
-// `collection_reminder` — the standing nudge to come back to one collection.
-//
-// A row exists only for a collection the user asked to be reminded about, and the collection's id is
-// the whole key: two schedules for one collection would be two rows racing to be the one that
-// fires, so a second row cannot be written at all rather than being prevented by a constraint.
-//
-// CASCADE, so a reminder can never outlive its collection. A schedule left ticking for a shelf that
-// no longer exists is the one failure this feature cannot have: the user would be nudged about
-// something they cannot open, indefinitely.
-//
-// The key column is declared here rather than inherited from `LongIdTable` for that reason, and it
-// keeps its own name in the database: `id` is the property name because an `IdTable` is obliged to
-// have one, and `collection_id` is the column name because that is what the schema has always
-// called it and what every existing row and index is named against.
-//
-// No index beyond the primary key. The tick asks about every enabled row a few times a minute, and
-// the table is at most one row per collection the user scheduled — a handful. An index over a
-// boolean on a table that size would be structure without a reason.
-object CollectionReminderTable : TimestampedIdTable("collection_reminder") {
-    override val id =
-        long("collection_id")
-            .references(CollectionTable.id, onDelete = ReferenceOption.CASCADE)
-            .entityId()
-
-    override val primaryKey = PrimaryKey(id)
-
-    val cadence = enumerationByName<ReminderCadence>("cadence", MAX_ENUM_LENGTH)
-
-    // The day of the week, by `DayOfWeek` name, for a weekly reminder only. Null on the others,
-    // which the domain model enforces: a daily reminder that named a day would be a schedule that
-    // silently skips six days a week.
-    val dayOfWeek = varchar("day_of_week", MAX_NAME_LENGTH).nullable()
-
-    // Minutes into the day rather than a timestamp. A time of day is not a moment until a zone is
-    // attached, and the zone belongs to the machine doing the reminding, not to the reminder.
-    val minuteOfDay = integer("minute_of_day")
-
-    // Separate from the row's existence so a schedule can be paused without being retyped.
-    val enabled = bool("enabled").default(true)
-
-    // What stops a reminder being asked about every thirty seconds from answering every thirty
-    // seconds. Null until it first fires.
-    val lastTriggeredAt = timestampWithTimeZone("last_triggered_at").nullable()
 }
 
 private const val CREATED_AT = "created_at"

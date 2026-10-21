@@ -75,6 +75,7 @@ private fun brandIconFor(iconKey: String): ImageVector? =
         "star" -> AzkarIcons.Star
         "library" -> AzkarIcons.Library
         "book" -> AzkarIcons.BookOpen
+        "bell" -> AzkarIcons.Bell
         else -> null
     }
 

@@ -241,6 +241,27 @@ class ExposedCollectionRepository(
         }
     }
 
+    /**
+     * Writes the user's own order of their collections.
+     *
+     * The listed ids get a dense zero-based position in the order they were given; everything else
+     * keeps the position it had, or none. A collection the user has never placed therefore stays out
+     * of the order rather than being pushed to the end of it by a number it did not earn.
+     *
+     * One update per id rather than one statement over the whole table, because the positions are
+     * not consecutive and a single `CASE` expression would have to spell the whole mapping out in
+     * SQL. The ids that are not in the list are left alone rather than pushed to the end: a drag
+     * that ended over a card that has since been deleted should not fail the whole reorder.
+     */
+    override suspend fun reorder(orderedIds: List<Long>) {
+        transactions.tx("Failed to reorder the collections") {
+            val positions = orderedIds.distinct().mapIndexed { index, id -> id to index }
+            positions.forEach { (id, position) ->
+                CollectionEntity.findById(id)?.updateAndFlush { this.position = position }
+            }
+        }
+    }
+
     override suspend fun findHomePinned(): List<RemembranceCollection> =
         transactions.tx("Failed to find the collections shown on the Home screen") {
             loadHomePinned()
@@ -285,6 +306,7 @@ class ExposedCollectionRepository(
     private fun loadAll(): List<RemembranceCollection> =
         CollectionEntity
             .all()
+            .orderBy(CollectionTable.position to SortOrder.ASC_NULLS_LAST)
             .orderBy(CollectionTable.id to SortOrder.ASC)
             .toList()
             .load()

@@ -30,16 +30,15 @@ val QueueScheduleSuite by testSuite("The shared reminder queue schedule") {
         assertThat(slot).isEqualTo(LocalDateTime.parse("2026-10-15T01:00:00"))
     }
 
-    test("manual mode honors the saved sequence, ignores duplicates, and appends new sources") {
+    test("manual mode keeps the order it was given, ignoring duplicates") {
         val order =
             QueueSchedule.cycleOrder(
                 itemIds = listOf(4, 2, 4, 1),
                 mode = QueueMode.MANUAL,
-                manualOrder = listOf(1, 4, 99, 1),
                 dropChance = { 0 },
             )
 
-        assertThat(order).containsExactly(1, 4, 2)
+        assertThat(order).containsExactly(4, 2, 1)
     }
 
     test("weighted mode treats the value as a per-cycle skip chance") {
@@ -47,7 +46,6 @@ val QueueScheduleSuite by testSuite("The shared reminder queue schedule") {
             QueueSchedule.cycleOrder(
                 itemIds = listOf(1, 2, 3),
                 mode = QueueMode.WEIGHTED,
-                manualOrder = emptyList(),
                 dropChance = { 0 },
                 random = Random(7),
             )
@@ -55,7 +53,6 @@ val QueueScheduleSuite by testSuite("The shared reminder queue schedule") {
             QueueSchedule.cycleOrder(
                 itemIds = listOf(1, 2, 3),
                 mode = QueueMode.WEIGHTED,
-                manualOrder = emptyList(),
                 dropChance = { if (it == 3L) 0 else 100 },
                 random = Random(7),
             )
@@ -63,7 +60,6 @@ val QueueScheduleSuite by testSuite("The shared reminder queue schedule") {
             QueueSchedule.cycleOrder(
                 itemIds = listOf(1, 2, 3),
                 mode = QueueMode.WEIGHTED,
-                manualOrder = emptyList(),
                 dropChance = { 100 },
                 random = Random(7),
             )

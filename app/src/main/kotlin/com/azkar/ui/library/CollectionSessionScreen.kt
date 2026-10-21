@@ -87,7 +87,6 @@ fun CollectionSessionScreen(
     onBack: () -> Unit,
     onOpenRemembrance: (Long) -> Unit,
     showToast: ShowToast,
-    onManageReminders: (Long) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val catalogue = session.catalogue
@@ -108,7 +107,6 @@ fun CollectionSessionScreen(
         session = session,
         onBack = onBack,
         onOpenRemembrance = onOpenRemembrance,
-        onManageReminders = onManageReminders,
         showToast = showToast,
         modifier = modifier,
     )
@@ -140,7 +138,6 @@ internal fun CollectionSessionContent(
     session: CollectionSessionState,
     onBack: () -> Unit,
     onOpenRemembrance: (Long) -> Unit,
-    onManageReminders: (Long) -> Unit,
     showToast: ShowToast,
     modifier: Modifier = Modifier,
 ) {
@@ -191,7 +188,6 @@ internal fun CollectionSessionContent(
                     session = session,
                     onBack = onBack,
                     onOpenRemembrance = onOpenRemembrance,
-                    onManageReminders = onManageReminders,
                     showToast = showToast,
                 )
         }
@@ -207,7 +203,6 @@ private fun CollectionSessionContentPreview() {
             session = CollectionSessionState(catalogue, PREVIEW_COLLECTION_ID, previewReminders()),
             onBack = {},
             onOpenRemembrance = {},
-            onManageReminders = {},
             showToast = { _, _, _ -> },
         )
     }
@@ -229,7 +224,6 @@ private fun SessionReading(
     session: CollectionSessionState,
     onBack: () -> Unit,
     onOpenRemembrance: (Long) -> Unit,
-    onManageReminders: (Long) -> Unit,
     showToast: ShowToast,
 ) {
     val collection = session.collection ?: return
@@ -246,13 +240,13 @@ private fun SessionReading(
             collection = collection,
             publisher = session.publisherLabel(),
             stats = session.stats,
-            reminder = CollectionHeroReminder.None,
+            inReminders = session.inReminders,
             actions =
                 SessionHeroActions(
                     onBack = onBack,
                     onNext = session::complete,
                     onToggleFavorite = { session.setFavorite(!collection.isFavorite) },
-                    onEditReminder = { onManageReminders(session.collectionId) },
+                    onToggleReminder = { session.reminders.setEnabled(session.collectionId, !session.inReminders) },
                     menuItems = sessionOverflowItems(session, onOpenRemembrance),
                 ),
         )

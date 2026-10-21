@@ -33,6 +33,7 @@ data class RemembranceCollectionImpl private constructor(
     override val isFavorite: Boolean,
     override val members: List<Remembrance>,
     override val translations: Map<Locale, LocalizedPair>,
+    override val position: Int?,
 ) : RemembranceCollection {
     init {
         require(name.isNotBlank()) { "Collection name must not be blank" }
@@ -68,6 +69,7 @@ data class RemembranceCollectionImpl private constructor(
             members: List<Remembrance> = emptyList(),
             translations: Map<Locale, LocalizedPair> = emptyMap(),
             nameLocale: Locale = Locale.ENGLISH,
+            position: Int? = null,
         ): RemembranceCollectionImpl =
             RemembranceCollectionImpl(
                 id = id,
@@ -86,6 +88,7 @@ data class RemembranceCollectionImpl private constructor(
                 isFavorite = isFavorite,
                 members = members.toList(),
                 translations = translations.toMap(),
+                position = position,
             )
     }
 }

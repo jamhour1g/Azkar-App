@@ -3,6 +3,7 @@ package com.azkar.ui.library
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,22 +29,31 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionDragHandle
+import com.azkar.generated.resources.collectionsActionAddToReminders
 import com.azkar.generated.resources.collectionsActionDelete
 import com.azkar.generated.resources.collectionsActionDuplicate
 import com.azkar.generated.resources.collectionsActionEdit
 import com.azkar.generated.resources.collectionsActionFavorite
 import com.azkar.generated.resources.collectionsActionOpen
 import com.azkar.generated.resources.collectionsActionPin
+import com.azkar.generated.resources.collectionsActionRemoveFromReminders
 import com.azkar.generated.resources.collectionsActionUnfavorite
 import com.azkar.generated.resources.collectionsActionUnpin
 import com.azkar.generated.resources.collectionsDuplicateNameSuffix
@@ -129,7 +141,15 @@ private fun ShelfColumn(
             controls =
                 LibraryHeroControls(
                     query = state.collectionQuery,
-                    onQueryChanged = { state.collectionQuery = it },
+                    // One field, two questions. A collection by its name, and a passage by its
+                    // text — the second is what makes a single remembrance reachable, which is the
+                    // only way to ask for one passage to be reminded about rather than a whole
+                    // collection. The shelf keeps filtering by name while the passage search settles,
+                    // so the cards never vanish under the pointer.
+                    onQueryChanged = { value ->
+                        state.collectionQuery = value
+                        state.onRemembranceQueryChanged(value)
+                    },
                     narrowing =
                         ShelfNarrowing(
                             scope = state.scopeFilter,
@@ -145,6 +165,12 @@ private fun ShelfColumn(
                 ),
             compact = compact,
         )
+        Spacer(Modifier.height(HUB_GAP))
+        // What the queue will say next, and how much of the library it is drawing on. It sits under
+        // the banner rather than behind a bell in the header because the answer changed when the
+        // management of the reminders moved into the library, and a page that owns the answer should
+        // be the page that shows it.
+        LibraryReminderStrip(state = state)
         Spacer(Modifier.height(HUB_GAP))
         // Nothing is rendered when no collection carries a label, so a shelf the user has not
         // organised does not grow a row of chips that narrow it to nothing.
@@ -373,14 +399,26 @@ internal fun CollectionShelf(
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val columns = fittedColumns(available = maxWidth, gap = HUB_GAP, minWidth = SHELF_CARD_MIN_WIDTH)
         val cardWidth = fittedCellWidth(available = maxWidth, columns = columns, gap = HUB_GAP)
+        val visible = state.visibleCollections
+        // The one piece of state a drag needs, and it is the same engine the collection's own
+        // members are rearranged with: the shelf is a grid, the members are a grid, and the two
+        // differ only in what a drop means.
+        val reorder = remember { MemberReorderState() }
+        reorder.columns = columns
         Column(verticalArrangement = Arrangement.spacedBy(HUB_GAP)) {
-            state.visibleCollections.chunked(columns).forEach { row ->
+            visible.chunked(columns).forEachIndexed { rowIndex, row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(HUB_GAP)) {
-                    row.forEach { collection ->
+                    row.forEachIndexed { columnIndex, collection ->
                         ShelfCard(
                             state = state,
                             callbacks = callbacks,
                             collection = collection,
+                            placement =
+                                ShelfPlacement(
+                                    index = rowIndex * columns + columnIndex,
+                                    count = visible.size,
+                                    reorder = reorder,
+                                ),
                             modifier = Modifier.width(cardWidth),
                         )
                     }
@@ -389,6 +427,19 @@ internal fun CollectionShelf(
         }
     }
 }
+
+/**
+ * Where a card sits on the shelf, and the engine that moves it.
+ *
+ * The three travel together because they are one arrangement: an index without a count is a
+ * position with no shelf to be a position in, and a count without an index says nothing about
+ * which card it is counting.
+ */
+private class ShelfPlacement(
+    val index: Int,
+    val count: Int,
+    val reorder: MemberReorderState,
+)
 
 /**
  * One card, at the width the grid worked out for it.
@@ -402,10 +453,20 @@ private fun ShelfCard(
     state: CollectionsState,
     callbacks: ShelfCallbacks,
     collection: RemembranceCollection,
+    placement: ShelfPlacement,
     modifier: Modifier = Modifier,
 ) {
-    val tile = state.presenter.shelfTile(collection, state.recitedCounts)
+    val tile =
+        state.presenter.shelfTile(
+            collection = collection,
+            recitedCounts = state.recitedCounts,
+            inReminders = collection.id in state.reminderCollectionIds,
+        )
     val id = collection.id
+    // The app's own shelves are not the user's to move: the favourites shelf, the uncategorised
+    // shelf and the reminder picks shelf are furniture, and dragging one of them along the shelf
+    // would be moving a piece of the app rather than a piece of the library.
+    val draggable = id != null && !state.catalogue.isSystemCollection(id)
     CollectionCard(
         tile = tile,
         preview = collectionPreview(state.presenter, collection),
@@ -418,9 +479,102 @@ private fun ShelfCard(
         // The height is the card's own contract. A row is sized by its tallest item, so without it
         // one card whose preview needed a third line would make every card beside it taller than its
         // own content.
-        modifier = modifier.height(COLLECTION_CARD_HEIGHT),
+        modifier =
+            modifier
+                .height(COLLECTION_CARD_HEIGHT)
+                .onGloballyPositioned { coordinates ->
+                    placement.reorder.measure(placement.index, coordinates.boundsInRoot(), placement.count)
+                }.shelfDragLayer(placement.reorder, placement.index),
+        trailingAction = {
+            ShelfGrip(
+                reorder = placement.reorder,
+                index = placement.index,
+                count = placement.count,
+                enabled = draggable,
+                onReordered = { from, to -> state.reorderVisible(from, to) },
+            )
+        },
     )
 }
+
+/**
+ * The handle a collection is picked up by.
+ *
+ * A handle rather than the card itself, for the reason the members' handle exists: the card is one
+ * big press target that opens the collection, and a drag detector on the card would be downstream of
+ * that clickable — which either swallows the press or fights it. A control that is both "open this"
+ * and "move this" is a control that does neither well.
+ *
+ * Nothing is drawn for a collection that cannot be moved, and the space it would have taken is not
+ * reserved either: the footer row is laid out by what is in it, so a shelf with nothing to reorder
+ * looks exactly as it did before the handle arrived.
+ */
+@Composable
+private fun ShelfGrip(
+    reorder: MemberReorderState,
+    index: Int,
+    count: Int,
+    enabled: Boolean,
+    onReordered: (Int, Int) -> Unit,
+) {
+    if (!enabled) return
+    var handleAt by remember(index, count) { mutableStateOf(Offset.Zero) }
+    val gesture =
+        Modifier
+            .onGloballyPositioned { handleAt = it.positionInRoot() }
+            .pointerInput(index, count) {
+                detectDragGestures(
+                    onDragStart = { local -> reorder.begin(index, HUB_GAP.toPx(), handleAt + local) },
+                    onDragEnd = { reorder.release()?.let { (from, to) -> onReordered(from, to) } },
+                    onDragCancel = { reorder.cancel() },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        reorder.drag(amount)
+                    },
+                )
+            }
+    TooltipIconButton(
+        icon = Icons.Filled.DragHandle,
+        tooltip = stringResource(Res.string.collectionDragHandle),
+        onClick = {},
+        modifier = gesture.padding(start = GRIP_GAP),
+        buttonSize = GRIP_SIZE,
+        iconSize = GRIP_GLYPH,
+    )
+}
+
+/**
+ * Draws the card under the pointer on top of its neighbours, and steps the cards it displaces one
+ * slot along.
+ *
+ * Reading the reorder state inside [graphicsLayer] rather than composing with it is the same bargain
+ * the members' tiles make: the offset changes on every pointer move, and a layer block is evaluated
+ * in the draw phase, so a drag costs draw invalidations instead of a recomposition per frame.
+ */
+private fun Modifier.shelfDragLayer(
+    reorder: MemberReorderState,
+    index: Int,
+): Modifier =
+    graphicsLayer {
+        val offset = reorder.offsetFor(index)
+        translationX = offset.x
+        translationY = offset.y
+        if (reorder.liftedFor(index)) {
+            scaleX = SHELF_DRAG_SCALE
+            scaleY = SHELF_DRAG_SCALE
+            shadowElevation = SHELF_DRAG_SHADOW.toPx()
+        }
+    }.zIndex(if (reorder.liftedFor(index)) DRAGGED_Z else 0f)
+
+/** The z-order a dragged card rides at, and how much larger it is drawn. */
+private const val DRAGGED_Z = 1f
+private const val SHELF_DRAG_SCALE = 1.03f
+private val SHELF_DRAG_SHADOW = 16.dp
+
+/** The gap between the arrow and the grip, and the grip's own size. */
+private val GRIP_GAP = 4.dp
+private val GRIP_SIZE = 26.dp
+private val GRIP_GLYPH = 12.dp
 
 /**
  * How many columns of at least [minWidth] fit across [available].
@@ -493,6 +647,7 @@ private fun CollectionTile.overflowItems(
     val isProtectedFromDeletion = isUncategorized || id == state.catalogue.favoritesCollectionId
     return identityItems(callbacks, collection, isUncategorized) +
         preferenceItems(state, collection) +
+        reminderItems(state, collection) +
         destructiveItems(callbacks, collection, isProtectedFromDeletion)
 }
 
@@ -592,6 +747,40 @@ private fun CollectionTile.preferenceItems(
             ),
         )
     }
+}
+
+/**
+ * Whether the queue draws from this collection.
+ *
+ * Its own group, after the preferences and before the destructive entry, because it is the one menu
+ * item that changes what the app says rather than what it shows: turning it on is what puts this
+ * collection's passages in the queue.
+ *
+ * The reserved "Reminder picks" shelf has no entry here. It is a source by virtue of holding the
+ * passages the user picked one at a time, so a menu offering to take it out would be offering to
+ * contradict a rule the user never set.
+ */
+@Composable
+private fun CollectionTile.reminderItems(
+    state: CollectionsState,
+    collection: RemembranceCollection,
+): List<AzkarMenuItem> {
+    val id = collection.id
+    if (id == null || id == state.catalogue.reminderPicksCollectionId) return emptyList()
+    return listOf(
+        AzkarMenuItem(
+            label =
+                stringResource(
+                    if (inReminders) {
+                        Res.string.collectionsActionRemoveFromReminders
+                    } else {
+                        Res.string.collectionsActionAddToReminders
+                    },
+                ),
+            onClick = { state.reminders.setEnabled(id, !inReminders) },
+            icon = ActionIcons.reminder(inReminders),
+        ),
+    )
 }
 
 /**

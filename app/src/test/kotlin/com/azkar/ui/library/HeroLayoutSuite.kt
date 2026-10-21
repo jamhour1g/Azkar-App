@@ -97,7 +97,7 @@ val HeroLayoutSuite by testSuite("the collection band holds its own copy") {
                         collection = previewCollection(description = twoLineDescription),
                         memberCount = 54,
                         stats = previewCollectionStats(),
-                        reminder = CollectionHeroReminder.None,
+                        inReminders = false,
                         actions = previewCollectionHeroActions(),
                         modifier = Modifier.testTag(BAND),
                     )
@@ -184,7 +184,7 @@ val HeroLayoutSuite by testSuite("the collection band holds its own copy") {
                             collection = previewCollection(),
                             memberCount = 54,
                             stats = previewCollectionStats(),
-                            reminder = CollectionHeroReminder.None,
+                            inReminders = false,
                             actions = previewCollectionHeroActions(),
                         )
                     }

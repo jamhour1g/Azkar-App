@@ -46,6 +46,9 @@ class NotificationActionRouter {
     @Volatile
     private var navigate: (NotificationAction) -> Unit = {}
 
+    @Volatile
+    private var favoriteChanged: (Long, Boolean) -> Unit = { _, _ -> }
+
     /** Installed once by the application root, before any window exists. */
     fun setBeforeNavigate(handler: (NotificationAction) -> Unit) {
         beforeNavigate = handler
@@ -56,9 +59,37 @@ class NotificationActionRouter {
         navigate = handler
     }
 
+    /**
+     * Installed by the library tree, and re-installed whenever it recomposes.
+     *
+     * A star can be flipped on a surface the library cannot see — the overlay's card — and the
+     * library keeps its own copy of the flag, because the tiles it draws come from that copy rather
+     * than from the database. Without this the tile behind the overlay would still show the old star,
+     * and the next press would write back the value the library believed rather than the one the
+     * reader meant, which reads as a button that does nothing.
+     */
+    fun setFavoriteListener(handler: (Long, Boolean) -> Unit) {
+        favoriteChanged = handler
+    }
+
     fun dispatch(target: NotificationAction) {
         beforeNavigate(target)
         navigate(target)
+    }
+
+    /**
+     * Tells the tree that a star was flipped somewhere it cannot see.
+     *
+     * Deliberately not part of [dispatch]: dispatching an action *brings the app forward*, and
+     * starring a passage is not a request to be taken somewhere. A reader who stars a passage from a
+     * reminder and is thrown into the reader screen has been told the wrong thing about what the
+     * button does.
+     */
+    fun dispatchFavoriteChanged(
+        id: Long,
+        favorite: Boolean,
+    ) {
+        favoriteChanged(id, favorite)
     }
 }
 
@@ -313,35 +344,56 @@ class NotificationRuntime(
             text = remembrance.passageText(locale),
             position = cycle.nextIndex + 1,
             total = cycle.cycleOrder.size,
+            isFavorite = remembrance.isFavorite,
         )
 
+    /**
+     * Keeps or unkeeps a passage, on behalf of the card that is showing it.
+     *
+     * The overlay's card is the one place in the app where a star can be pressed without the library
+     * being on screen at all, so the write has to work from the runtime rather than from a screen
+     * state that may never have been composed. The runtime already holds the same
+     * [CollectionsGateway] the library writes through, which is what makes this the same write rather
+     * than a second, parallel one: the flag lands in the column *and* the passage joins or leaves
+     * the starred mirror, exactly as it would from the library.
+     *
+     * Reported as a plain [Boolean] because the caller has something to do with the failure: the card
+     * flips its star before the write, and a star that stays flipped after a failed write is a lie
+     * the reader cannot see through.
+     */
+    suspend fun setFavorite(
+        id: Long,
+        favorite: Boolean,
+    ): Boolean =
+        runCatching { collections.setFavorite(id, favorite) }
+            .onFailure { failure ->
+                logger.error(failure) { "Unable to persist the favorite flag for remembrance $id" }
+            }.isSuccess
+
+    /**
+     * The queue's sources, in the order the library holds them.
+     *
+     * The selection itself is [QueueSources]' work, shared with the library's preview so the two
+     * cannot disagree; this only drops the passages the catalogue has not loaded, which is the one
+     * thing the runtime knows that the selection does not.
+     */
     private fun resolveQueueSources(
         snapshot: CollectionsSnapshot,
         config: ReminderQueueConfig,
-    ): QueueSources? {
-        val selectedCollections = snapshot.collections.filter { it.id in config.collectionIds }
-        val memberCollections = mutableMapOf<Long, MutableList<Long>>()
-        selectedCollections.forEach { collection ->
-            val collectionId = collection.id ?: return@forEach
-            collection.members.mapNotNull { it.id }.forEach { remembranceId ->
-                memberCollections.getOrPut(remembranceId) { mutableListOf() }.add(collectionId)
-            }
-        }
-        val availableIds =
-            (memberCollections.keys + config.individualRemembranceIds)
-                .filter { id -> snapshot.remembrances.any { it.id == id } }
-                .distinct()
+    ): ResolvedQueueSources? {
+        val selection = QueueSources.select(snapshot.collections, config, snapshot.reminderPicksCollectionId)
+        val availableIds = selection.orderedIds.filter { id -> snapshot.remembrances.any { it.id == id } }
         return if (availableIds.isEmpty()) {
             null
         } else {
-            QueueSources(memberCollections, availableIds)
+            ResolvedQueueSources(selection.owningCollections, availableIds)
         }
     }
 
     private suspend fun ensureQueueCycle(
         progress: ReminderQueueProgress,
         config: ReminderQueueConfig,
-        sources: QueueSources,
+        sources: ResolvedQueueSources,
         fingerprint: String,
     ): ReminderQueueProgress {
         if (progress.sourceFingerprint == fingerprint && progress.nextIndex in progress.cycleOrder.indices) {
@@ -351,13 +403,11 @@ class NotificationRuntime(
             QueueSchedule.cycleOrder(
                 itemIds = sources.availableIds,
                 mode = config.mode,
-                manualOrder = config.manualOrder,
                 dropChance = { id ->
-                    config.remembranceDropOverrides[id.toString()]?.coerceIn(0, 100)
-                        ?: sources.memberCollections[id]
-                            ?.mapNotNull { collectionId -> config.collectionDropChances[collectionId.toString()] }
-                            ?.minOrNull()
-                            ?.coerceIn(0, 100)
+                    sources.memberCollections[id]
+                        ?.mapNotNull { collectionId -> config.collectionDropChances[collectionId.toString()] }
+                        ?.minOrNull()
+                        ?.coerceIn(0, 100)
                         ?: config.defaultDropChance
                 },
             )
@@ -365,22 +415,27 @@ class NotificationRuntime(
             .also { preferences.saveQueueProgress(it) }
     }
 
-    private data class QueueSources(
+    private data class ResolvedQueueSources(
         val memberCollections: Map<Long, List<Long>>,
         val availableIds: List<Long>,
     )
 
+    /**
+     * What the current cycle was built from.
+     *
+     * The ids are joined in order rather than sorted, because the order is part of the source now:
+     * rearranging the library changes the sequence the queue recites, and a sorted fingerprint would
+     * not notice.
+     */
     private fun fingerprint(
         config: ReminderQueueConfig,
         ids: List<Long>,
     ): String =
         listOf(
-            ids.sorted().joinToString(","),
+            ids.joinToString(","),
             config.mode.name,
-            config.manualOrder.joinToString(","),
             config.defaultDropChance,
             config.collectionDropChances.toSortedMap(),
-            config.remembranceDropOverrides.toSortedMap(),
         ).joinToString("|")
 
     /**

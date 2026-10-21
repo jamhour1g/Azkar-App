@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,18 +44,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.notificationAddFavorite
 import com.azkar.generated.resources.notificationCardPosition
 import com.azkar.generated.resources.notificationDismiss
+import com.azkar.generated.resources.notificationRemoveFavorite
 import com.azkar.i18n.textDirectionOf
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarSurfaceCard
 import com.azkar.ui.components.mirrorHorizontalGradient
 import com.azkar.ui.components.pressableClick
+import com.azkar.ui.notifications.NotificationAction
 import com.azkar.ui.notifications.NotificationContent
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.isRtlLayout
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -68,11 +73,10 @@ import org.jetbrains.compose.resources.stringResource
  *
  * ## What a card says, and what it does not
  *
- * Three things, and nothing else: where you are in the cycle, the passage, and the way to close it.
- * An earlier revision said considerably more — which collection the passage was drawn from, how the
- * tradition grades it, where it is filed, whether it is kept, plus a row of controls to copy it,
- * star it and move to the next one — and the result was a card *about* a passage that had to be read
- * past in order to reach it.
+ * Where you are in the cycle, the passage, the way to close it, and the way to keep it. An earlier
+ * revision said considerably more — which collection the passage was drawn from, how the tradition
+ * grades it, where it is filed, plus a row of controls to copy it, star it and move to the next one
+ * — and the result was a card *about* a passage that had to be read past in order to reach it.
  * Every one of those facts is answered by the screen the click opens. Which is not a reason to
  * economise; it is the reason the card can be the passage. A reminder is something you glance at on
  * the way to something else, and the only thing worth spending that glance on is the thing the
@@ -80,12 +84,21 @@ import org.jetbrains.compose.resources.stringResource
  * the passage means — it tells a reader who has already read this cycle that they are being walked
  * through it again, which is the difference between a nagging and a queue.
  *
+ * The star is the one control that came back, and it came back for a reason the others did not have.
+ * Copy and next were controls about *the app* — they acted on the queue and on a clipboard, and
+ * every one of them had a home the click already opens. Whether a passage is kept does not: it is
+ * the one thing a reader can want to do *at* a reminder rather than *after* it. A reader who stars a
+ * passage in the library and then meets that same passage in the queue has to be able to star it from
+ * the queue too, or the passage behaves differently depending on which surface it happened to turn
+ * up on. It is one glyph in the corner, it costs the passage no room, and it is the only gesture on
+ * the card that does not also open the app.
+ *
  * Neither does the card carry a translation, a source, a grade or a play button. A translation is a
  * *reading* of the passage and belongs to the screen the reader chooses to open; a source and a grade
  * are references rather than parts of what is being said; and there is no audio in this app, so a
  * speaker would be a control that does nothing.
  *
- * What it does carry along the top is a bar, and it is not one of the three: it is the card saying
+ * What it does carry along the top is a bar, and it is not one of those four: it is the card saying
  * how long it intends to stay, which a card that silently removes itself cannot do.
  *
  * ## Size
@@ -121,9 +134,23 @@ fun NotificationCard(
     modifier: Modifier = Modifier,
     remaining: () -> Float = { FULL_REMAINING },
     sizing: OverlayCardSizing = OverlayCardSizing.FIXED,
+    /**
+     * Keeps or unkeeps the passage this card is about, and reports whether the write landed.
+     *
+     * `null` means the card cannot offer a star at all, and the star is then not drawn — which is
+     * the right answer for a prayer time, for a bare notice, and for a caller that has no way to
+     * write. The overlay always supplies it, so a real reminder is always starable.
+     *
+     * Suspend, and asked whether the write succeeded, because the card flips its star before the
+     * write rather than after it: a star that only appears once the database has agreed would put a
+     * round trip between the press and the picture. The answer is what lets a failed write take the
+     * star back, rather than leaving a claim on screen that nothing behind it agrees with.
+     */
+    onToggleFavorite: (suspend (Long, Boolean) -> Boolean)? = null,
 ) {
     var hovered by remember { mutableStateOf(false) }
     LaunchedEffect(hovered) { onPauseChanged(hovered) }
+    val favorite = rememberFavoriteControl(item, onToggleFavorite)
     val colors = AzkarTheme.colors
     // A fixed card is handed a bounded box and the passage takes what is left of it; a fitted card is
     // handed only a width and every part of it is as tall as it needs to be. `fillMaxSize` rather than
@@ -151,7 +178,12 @@ fun NotificationCard(
             ) {
                 when (val content = item.content) {
                     is NotificationContent.Remembrance ->
-                        RemembranceBody(content = content, onDismiss = onDismiss, fillsSlot = fillsSlot)
+                        RemembranceBody(
+                            content = content,
+                            favorite = favorite,
+                            onDismiss = onDismiss,
+                            fillsSlot = fillsSlot,
+                        )
 
                     is NotificationContent.Prayer ->
                         PrayerBody(content = content, onDismiss = onDismiss, fillsSlot = fillsSlot)
@@ -162,6 +194,56 @@ fun NotificationCard(
         }
     }
 }
+
+/**
+ * The star on this card, or nothing at all when it cannot have one.
+ *
+ * The state lives here rather than in the notice because the notice is the scheduler's answer — a
+ * snapshot of the flag as it was when the passage was published, and a snapshot cannot answer a
+ * question asked after it. The card keeps its own copy, seeded from that snapshot, and moves it
+ * optimistically so the glyph answers the press immediately.
+ *
+ * A failed write takes the copy back. It only does so if the copy is still the one it set: a reader
+ * who presses the star twice while the first write is still in flight has asked for something else
+ * in the meantime, and a rollback that ignored that would answer the second press with the first
+ * press's failure.
+ */
+@Composable
+private fun rememberFavoriteControl(
+    item: PresentedNotice,
+    onToggleFavorite: (suspend (Long, Boolean) -> Boolean)?,
+): FavoriteControl? {
+    val scope = rememberCoroutineScope()
+    val id = (item.action as? NotificationAction.Remembrance)?.id
+    val content = item.content as? NotificationContent.Remembrance
+    var favorite by remember(item.id) { mutableStateOf(content?.isFavorite ?: false) }
+    val toggle = onToggleFavorite
+    if (id == null || content == null || toggle == null) return null
+    return FavoriteControl(
+        isFavorite = favorite,
+        onToggle = {
+            val next = !favorite
+            favorite = next
+            scope.launch {
+                val written = toggle(id, next)
+                if (!written && favorite == next) {
+                    favorite = !next
+                }
+            }
+        },
+    )
+}
+
+/**
+ * The star, and the passage it belongs to.
+ *
+ * A pair rather than two parameters, because the two only ever make sense together: there is no
+ * star without a passage to star, and no passage to star without a star.
+ */
+private class FavoriteControl(
+    val isFavorite: Boolean,
+    val onToggle: () -> Unit,
+)
 
 /**
  * The card's clock, along its top edge: how much of the reminder's on-screen time is left.
@@ -244,10 +326,11 @@ private fun CountdownRule(remaining: () -> Float) {
 @Composable
 private fun ColumnScope.RemembranceBody(
     content: NotificationContent.Remembrance,
+    favorite: FavoriteControl?,
     onDismiss: () -> Unit,
     fillsSlot: Boolean,
 ) {
-    CardHeader(onDismiss = onDismiss) {
+    CardHeader(onDismiss = onDismiss, favorite = favorite) {
         if (content.total > 1) {
             Text(
                 text = stringResource(Res.string.notificationCardPosition, content.position, content.total),
@@ -415,17 +498,23 @@ private fun PassageBox(
 }
 
 /**
- * The header: whatever this card has to say about itself, then the cross.
+ * The header: whatever this card has to say about itself, then the star and the cross.
  *
  * [claims] is a scope rather than a parameter because the three callers make different claims — a
  * passage says where it is in the cycle, a prayer names itself, a bare notice names itself as a
  * title — and a parameter list for "whatever text goes on the leading side" would be a worse way of
  * saying that than a slot is. The cross is pinned to the trailing edge by the weight rather than by
  * an arrangement, so the three stay together when the card is mirrored.
+ *
+ * The star sits between the two, and only for a passage that can be starred. Putting it next to the
+ * cross rather than next to the cycle counter is deliberate: the counter is a claim the card makes
+ * about itself, and the star is a claim the reader makes about the passage, and the reader's own
+ * claim belongs on the reader's side of the card.
  */
 @Composable
 private fun CardHeader(
     onDismiss: () -> Unit,
+    favorite: FavoriteControl? = null,
     claims: @Composable RowScope.() -> Unit,
 ) {
     Row(
@@ -435,7 +524,53 @@ private fun CardHeader(
     ) {
         claims()
         Spacer(Modifier.weight(1f))
+        favorite?.let { FavoriteButton(it) }
         DismissButton(onDismiss = onDismiss)
+    }
+}
+
+/**
+ * The star, and the only control on the card that does something other than open or close it.
+ *
+ * Drawn the way the cross is drawn — a bare glyph in a fixed target rather than a button with a
+ * surface — because the card's own chrome is quiet, and a filled circle next to a line of text would
+ * out-shout the passage it is attached to. The target is the cross's size for the same reason the
+ * cross is that size: a reader aiming at a corner of a card is aiming at the corner, and a target
+ * that is much larger than the glyph would sit on top of the passage.
+ *
+ * The two states are the app's two states everywhere else: a filled star when the passage is kept
+ * and an outline when it is not, in the accent when it is on. The accent is the one place the card
+ * uses a colour other than the quiet ink, and it is spent on the one thing the reader chose.
+ */
+@Composable
+private fun FavoriteButton(control: FavoriteControl) {
+    val label =
+        stringResource(
+            if (control.isFavorite) {
+                Res.string.notificationRemoveFavorite
+            } else {
+                Res.string.notificationAddFavorite
+            },
+        )
+    Box(
+        modifier =
+            Modifier
+                .semantics { contentDescription = label }
+                .size(FAVORITE_TOUCH_TARGET)
+                .pressableClick(scale = FAVORITE_PRESS_SCALE, onClick = control.onToggle),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = ActionIcons.favorite(control.isFavorite),
+            contentDescription = null,
+            tint =
+                if (control.isFavorite) {
+                    AzkarTheme.colors.accent
+                } else {
+                    AzkarTheme.colors.textSecondary
+                },
+            modifier = Modifier.size(FAVORITE_ICON),
+        )
     }
 }
 
@@ -504,6 +639,19 @@ private val CARD_BLOCK_GAP = 8.dp
 private val DISMISS_TOUCH_TARGET = 32.dp
 private val DISMISS_ICON = 14.dp
 private const val DISMISS_PRESS_SCALE = 0.9f
+
+/**
+ * The star's target and glyph, matched to the cross's.
+ *
+ * Same size on purpose: the two sit side by side in the same corner, and a reader who has learned
+ * to aim for one of them should not have to aim differently for the other. The glyph is a touch
+ * smaller than the cross's because a star at the cross's size fills its target — the cross is a
+ * stroke and the star is a shape, and the shape has to be a little smaller to read as a mark rather
+ * than as a blot.
+ */
+private val FAVORITE_TOUCH_TARGET = 32.dp
+private val FAVORITE_ICON = 13.dp
+private const val FAVORITE_PRESS_SCALE = 0.9f
 
 private val PassageBoxShape = RoundedCornerShape(12.dp)
 private val PASSAGE_BOX_BORDER_WIDTH = 1.dp

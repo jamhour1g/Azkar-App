@@ -183,24 +183,24 @@ object QueueSchedule {
     private fun atTime(minuteOfDay: Int): LocalTime = LocalTime.of(minuteOfDay / 60, minuteOfDay % 60)
 
     /**
-     * Prepares one cycle. Weighted mode uses per-item overrides, otherwise the lowest configured
-     * source drop chance for an item present in overlapping collections. That prevents overlap from
-     * multiplying an item's influence; a higher drop chance only makes it more likely to be skipped.
+     * Prepares one cycle.
+     *
+     * [QueueMode.MANUAL] keeps the order it was given, which is the library's own order: the
+     * collections the user arranged, and within each of them the passages the collection holds.
+     * Weighted mode uses the lowest configured source drop chance for an item present in
+     * overlapping collections, which prevents overlap from multiplying an item's influence — a
+     * higher drop chance only makes it more likely to be skipped.
      */
     fun cycleOrder(
         itemIds: List<Long>,
         mode: QueueMode,
-        manualOrder: List<Long>,
         dropChance: (Long) -> Int,
         random: kotlin.random.Random = kotlin.random.Random.Default,
     ): List<Long> {
         val unique = itemIds.distinct()
         if (unique.isEmpty()) return emptyList()
         return when (mode) {
-            QueueMode.MANUAL -> {
-                val available = unique.toSet()
-                manualOrder.distinct().filter { it in available } + unique.filterNot { it in manualOrder }
-            }
+            QueueMode.MANUAL -> unique
 
             QueueMode.RANDOM -> unique.shuffled(random)
 

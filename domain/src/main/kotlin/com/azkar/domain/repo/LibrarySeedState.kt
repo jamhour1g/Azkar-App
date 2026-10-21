@@ -55,4 +55,19 @@ interface LibrarySeedState {
 
     /** Records the id of the system Uncategorized shelf. */
     suspend fun setUncategorizedCollectionId(collectionId: Long)
+
+    /**
+     * The system shelf that holds the passages the user asked to be reminded on their own, or `null`
+     * when they have not asked for any yet.
+     *
+     * The shelf is created on the first pick rather than at bootstrap, so an installation that has
+     * never picked a passage does not carry an empty row on its library shelf.
+     */
+    suspend fun reminderPicksCollectionId(): Long?
+
+    /** Records the id of the system "Reminder picks" shelf. */
+    suspend fun setReminderPicksCollectionId(collectionId: Long)
+
+    /** Forgets the id of the "Reminder picks" shelf, for a shelf that is no longer there. */
+    suspend fun clearReminderPicksCollectionId()
 }

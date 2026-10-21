@@ -4,15 +4,12 @@ import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
-import com.azkar.domain.model.ReminderCadence
-import com.azkar.ui.library.data.CollectionReminderRow
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.HomeCollection
 import com.azkar.ui.library.data.ImportReport
 import com.azkar.ui.library.data.TransferCollection
 import com.azkar.ui.library.model.CollectionsSnapshot
 import java.nio.file.Path
-import java.time.DayOfWeek
 import java.time.Instant
 import java.util.Locale
 
@@ -159,28 +156,14 @@ internal class PreviewCollectionsGateway(
             )
         }
 
-    override suspend fun fetchReminders(): List<CollectionReminderRow> = emptyList()
+    /** A preview has no order to keep: the shelf shows the fixture's own order. */
+    override suspend fun reorderCollections(orderedIds: List<Long>) = Unit
 
-    override suspend fun fetchReminder(collectionId: Long): CollectionReminderRow? = null
-
-    override suspend fun saveReminder(
-        collectionId: Long,
-        cadence: ReminderCadence,
-        minuteOfDay: Int,
-        dayOfWeek: DayOfWeek?,
-    ): CollectionReminderRow = error("a preview never opens the reminder editor, so nothing can be saved")
-
-    override suspend fun setReminderEnabled(
-        collectionId: Long,
-        enabled: Boolean,
-    ): CollectionReminderRow = error("a preview never opens the reminder editor, so nothing can be toggled")
-
-    override suspend fun deleteReminder(collectionId: Long) = Unit
-
-    override suspend fun markReminderTriggered(
-        collectionId: Long,
-        at: Instant,
-    ) = Unit
+    /** A preview has no picks shelf to write to. */
+    override suspend fun setReminderPick(
+        remembranceId: Long,
+        picked: Boolean,
+    ): Boolean = picked
 
     private fun find(id: Long): RemembranceCollection =
         collections.firstOrNull { it.id == id }

@@ -87,6 +87,37 @@ Settings live in **Reminders → Notification appearance**: duration, placement,
 sizing and the language the reminder is written in. They are separate from the queue's own settings
 on purpose — turning a reminder off is not the same decision as changing how a reminder looks.
 
+## What the card offers
+
+The card carries three gestures: the body opens the passage, the cross closes the card, and a star
+keeps the passage.
+
+The star is the only one of the three that is not about the app. Copy and next — controls this card
+carried once — acted on the clipboard and on the queue, and both had a home the click already
+opens; they cost the passage the room it is read in, so they are gone. Keeping a passage has no such
+home: a reader who keeps a passage in the library and then meets that same passage in the queue has
+to be able to keep it from the queue too, or the passage behaves differently depending on which
+surface it happened to turn up on. It is one glyph in the corner, it costs the passage no room, and
+it is the only gesture on the card that does not also open the app.
+
+Three things follow from that, and they are the whole of the star's behaviour:
+
+- **It writes through the same door the library writes through.** `NotificationRuntime` already holds
+  a `CollectionsGateway`, and the star uses it, so starring from the overlay and starring from the
+  library are the same write rather than two that can disagree. The favourites mirror collection is
+  updated by that write, exactly as it is from the library.
+- **It is not a navigation.** The overlay's actions travel through `NotificationActionRouter`, which
+  has two halves: showing the window and moving the reader to a screen. Starring is neither, so it
+  has a channel of its own — a listener the library tree installs — and pressing the star never
+  brings the app forward.
+- **It is optimistic, and it admits it.** The glyph moves on the press, before the database has
+  answered, because a round trip between the press and the picture is visible. If the write fails,
+  the star goes back. A card that left a claim on screen that nothing behind it agreed with would be
+  worse than one that never lit up.
+
+The star is offered only where it can be honest: a prayer time and a bare notice have no passage to
+keep, and a card with no way to write the flag draws no star rather than a dead one.
+
 ## Platform behaviour
 
 The overlay is an ordinary top-level window that asks the window manager to keep it above other
@@ -138,7 +169,8 @@ Work down this table once per platform:
 6. While a text field has focus — typing continues, the caret does not jump, the field keeps focus.
 7. Hover a card for ten seconds — it stays; move away and it leaves on schedule.
 8. Click the body — the window opens at that passage. Click × — the card goes and the next one
-   arrives on its own schedule.
+   arrives on its own schedule. Click the star — the app stays where it is, the star fills in, and
+   the passage is in **Library → Favorites** when the app is next opened.
 9. Two monitors, app hidden on the second — the card appears on the second.
 10. Arabic (RTL) and dark mode — the card reads correctly; the corners of the window are transparent.
 11. Tray → Quit — the overlay window disappears with the app, and nothing fires afterwards.
@@ -148,7 +180,10 @@ Work down this table once per platform:
 `./gradlew :app:test` covers the parts with a right answer: the stack cap and replacement order,
 de-duplication, per-card expiry on an injected clock, hover pause and resume, dismissal leaving the
 scheduler alone, disposal, and the dispatcher's forwarding (`OverlayPresenterSuite`,
-`NotificationDispatcherSuite`, `NotificationCardSuite`).
+`NotificationDispatcherSuite`, `NotificationCardSuite`). The card's own gestures are asserted
+through the semantics tree, which is the only place that can say "the body, the star and the cross,
+and nothing else" — that the star keeps the passage it belongs to, that it does not open the app,
+that it is offered only where it can be written, and that a failed write takes it back.
 
 None of it can answer "is it on top". That is rows 2–5 and 9 of the table above, and they stay a
 manual check by design.

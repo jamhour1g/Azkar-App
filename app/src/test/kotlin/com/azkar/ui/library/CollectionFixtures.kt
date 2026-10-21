@@ -2,31 +2,30 @@ package com.azkar.ui.library
 
 import com.azkar.data.storage.CoverStorage
 import com.azkar.domain.model.CollectionKind
-import com.azkar.domain.model.CollectionReminder
 import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
-import com.azkar.domain.model.ReminderCadence
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.domain.model.impl.RemembranceImpl
 import com.azkar.domain.model.impl.TagImpl
 import com.azkar.ui.library.data.CollectionFiltering
 import com.azkar.ui.library.data.CollectionImport
-import com.azkar.ui.library.data.CollectionReminderRow
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.HomeCollection
 import com.azkar.ui.library.data.ImportPlan
 import com.azkar.ui.library.data.ImportReport
+import com.azkar.ui.library.data.ReminderSources
 import com.azkar.ui.library.data.TransferCollection
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.data.withFavorite
 import com.azkar.ui.library.model.CollectionsSnapshot
+import com.azkar.ui.notifications.ReminderQueueConfig
+import com.azkar.ui.notifications.ReminderQueueProgress
 import kotlinx.coroutines.CompletableDeferred
 import java.nio.file.Files
 import java.nio.file.Path
-import java.time.DayOfWeek
 import java.time.Instant
 import java.util.Locale
 
@@ -100,6 +99,7 @@ internal fun officialCollection(
     homePinnedAt: Instant? = null,
     translations: Map<Locale, LocalizedPair> = emptyMap(),
     isFavorite: Boolean = false,
+    position: Int? = null,
 ): RemembranceCollection =
     RemembranceCollectionImpl(
         id = id,
@@ -117,6 +117,7 @@ internal fun officialCollection(
         isFavorite = isFavorite,
         members = members,
         translations = translations,
+        position = position,
     )
 
 /** A collection the user made: custom, unpinned until they say otherwise, and owning its own membership. */
@@ -135,6 +136,7 @@ internal fun customCollection(
     translations: Map<Locale, LocalizedPair> = emptyMap(),
     isFavorite: Boolean = false,
     nameLocale: Locale = Locale.ENGLISH,
+    position: Int? = null,
 ): RemembranceCollection =
     RemembranceCollectionImpl(
         id = id,
@@ -153,6 +155,7 @@ internal fun customCollection(
         isFavorite = isFavorite,
         members = members,
         translations = translations,
+        position = position,
     )
 
 /**
@@ -176,6 +179,7 @@ private fun RemembranceCollection.copyWith(
     isFavorite: Boolean = this.isFavorite,
     members: List<Remembrance> = this.members,
     translations: Map<Locale, LocalizedPair> = this.translations,
+    position: Int? = this.position,
 ): RemembranceCollection =
     RemembranceCollectionImpl(
         id = id,
@@ -194,6 +198,7 @@ private fun RemembranceCollection.copyWith(
         isFavorite = isFavorite,
         members = members,
         translations = translations,
+        position = position,
     )
 
 /**
@@ -280,16 +285,16 @@ internal class FakeCollectionsGateway(
     val recitationWrites: MutableList<Pair<Long, Map<Long, Int>>> = mutableListOf()
 
     /**
-     * The schedules held, keyed by collection id, exactly as the gateway serves them.
+     * The passages the user asked to be reminded about, by id.
      *
-     * A separate map from [collections] because a schedule outlives the shelf it was set on — a test
-     * that deletes a collection and then reads the reminder for its id is asking a question about the
-     * reminder, and a fake that silently dropped it with the collection would answer it wrongly.
+     * A set rather than a collection id, because the shelf that holds them is created on the first
+     * pick and deleted when the last one goes — so there is no id to point at until there is
+     * something picked, and [reminderPicksCollectionId] is the answer to "is there a shelf yet".
      */
-    var reminders: Map<Long, CollectionReminder> = emptyMap()
+    val reminderPicks: MutableSet<Long> = mutableSetOf()
 
-    /** The name and size a reminder is announced with, when a fixture has not supplied its own. */
-    var reminderDetails: Map<Long, Pair<String, Int>> = emptyMap()
+    /** The id of the reserved shelf that holds the picks, or null while there is nothing picked. */
+    var reminderPicksCollectionId: Long? = null
 
     /** Ids handed to the next created collection, so a fixture's own ids are never reused. */
     private var nextId: Long = (collections.mapNotNull { it.id }.maxOrNull() ?: 0L) + 1L
@@ -306,6 +311,7 @@ internal class FakeCollectionsGateway(
         checkNotFailing()
         snapshotReads++
         reconcileUncategorizedMembers()
+        reconcilePicksShelf()
         // Read the shelf before waiting, so a parked read still serves the shelf as it was when it
         // was asked for. That is what makes the stale result a test can assert on.
         val snapshot =
@@ -316,6 +322,7 @@ internal class FakeCollectionsGateway(
                 refreshedAt = FixtureInstant,
                 favoritesCollectionId = favoritesCollectionId,
                 uncategorizedCollectionId = uncategorizedCollectionId,
+                reminderPicksCollectionId = reminderPicksCollectionId,
             )
         readGates[snapshotReads]?.await()
         return snapshot
@@ -387,6 +394,8 @@ internal class FakeCollectionsGateway(
             collections.map { collection ->
                 collection.copyWith(members = collection.members.filterNot { it.id == id })
             }
+        // The real shelf is emptied by the cascade, and the pick goes with it.
+        reminderPicks -= id
     }
 
     override suspend fun createCollection(
@@ -648,83 +657,64 @@ internal class FakeCollectionsGateway(
     }
 
     /**
-     * Every schedule the gateway will serve, rebuilt with a collection's name and size.
+     * Picks or unpicks a passage, and keeps the reserved shelf in step with the picks.
      *
-     * A missing collection yields an unnamed reminder rather than dropping it, matching the real
-     * gateway: a schedule whose collection vanished should have been cascaded away, so the absence
-     * means the shelf changed mid-read and the reminder is the thing that must survive it.
+     * The shelf appears on the first pick and is deleted with the last one, because an empty shelf
+     * on the library's own shelf is a row that says nothing. Its membership is exactly the picks.
      */
-    override suspend fun fetchReminders(): List<CollectionReminderRow> {
+    override suspend fun setReminderPick(
+        remembranceId: Long,
+        picked: Boolean,
+    ): Boolean {
         checkNotFailing()
-        return reminders.values.map(::rowFor)
+        val shelfId = reminderPicksCollectionId
+        if (picked) {
+            reminderPicks += remembranceId
+            val id = shelfId ?: nextId++.also { reminderPicksCollectionId = it }
+            if (collections.none { it.id == id }) {
+                collections = collections + customCollection(id = id, name = "Reminder picks")
+            }
+            val pickedRemembrance = remembrances.firstOrNull { it.id == remembranceId }
+            if (pickedRemembrance != null) {
+                collections =
+                    collections.map { collection ->
+                        if (collection.id != id) {
+                            collection
+                        } else if (collection.members.any { it.id == remembranceId }) {
+                            collection
+                        } else {
+                            collection.copyWith(members = collection.members + pickedRemembrance)
+                        }
+                    }
+            }
+        } else {
+            reminderPicks -= remembranceId
+            if (reminderPicks.isEmpty()) {
+                reminderPicksCollectionId = null
+                collections = collections.filterNot { it.id == shelfId }
+            } else if (shelfId != null) {
+                collections =
+                    collections.map { collection ->
+                        if (collection.id == shelfId) {
+                            collection.copyWith(members = collection.members.filterNot { it.id == remembranceId })
+                        } else {
+                            collection
+                        }
+                    }
+            }
+        }
+        return picked
     }
 
-    override suspend fun fetchReminder(collectionId: Long): CollectionReminderRow? {
+    /** Stores the order the user gave the shelf, as a dense position per collection. */
+    override suspend fun reorderCollections(orderedIds: List<Long>) {
         checkNotFailing()
-        return reminders[collectionId]?.let(::rowFor)
-    }
-
-    /**
-     * Stores a schedule, carrying over the two things the real service preserves.
-     *
-     * Preserved here as well so a test cannot pass against a fake that quietly re-arms a reminder the
-     * editing screen deliberately did not re-arm.
-     */
-    override suspend fun saveReminder(
-        collectionId: Long,
-        cadence: ReminderCadence,
-        minuteOfDay: Int,
-        dayOfWeek: DayOfWeek?,
-    ): CollectionReminderRow {
-        checkNotFailing()
-        val existing = reminders[collectionId]
-        val stored =
-            CollectionReminder(
-                collectionId = collectionId,
-                cadence = cadence,
-                minuteOfDay = minuteOfDay,
-                dayOfWeek = dayOfWeek,
-                enabled = existing?.enabled ?: true,
-                lastTriggeredAt = existing?.lastTriggeredAt,
-            )
-        reminders += collectionId to stored
-        return rowFor(stored)
-    }
-
-    override suspend fun setReminderEnabled(
-        collectionId: Long,
-        enabled: Boolean,
-    ): CollectionReminderRow {
-        checkNotFailing()
-        val stored =
-            requireNotNull(reminders[collectionId]).copy(enabled = enabled)
-        reminders += collectionId to stored
-        return rowFor(stored)
-    }
-
-    override suspend fun deleteReminder(collectionId: Long) {
-        checkNotFailing()
-        reminders -= collectionId
-    }
-
-    /** Acknowledges a firing. Records nothing else — the real write touches one column and no more. */
-    override suspend fun markReminderTriggered(
-        collectionId: Long,
-        at: Instant,
-    ) {
-        checkNotFailing()
-        reminders += collectionId to
-            requireNotNull(reminders[collectionId]).copy(lastTriggeredAt = at)
-    }
-
-    /** One schedule plus whatever the fixture knows about the collection it belongs to. */
-    private fun rowFor(reminder: CollectionReminder): CollectionReminderRow {
-        val details = reminderDetails[reminder.collectionId]
-        return CollectionReminderRow(
-            reminder = reminder,
-            collectionName = details?.first.orEmpty(),
-            memberCount = details?.second ?: 0,
-        )
+        val positions = orderedIds.distinct().mapIndexed { index, id -> id to index }.toMap()
+        collections =
+            collections.map { collection ->
+                val id = collection.id ?: return@map collection
+                collection.copyWith(position = positions[id])
+            }
     }
 
     /** Replaces one collection in place and returns it, so a caller can both store and return it. */
@@ -756,6 +746,36 @@ internal class FakeCollectionsGateway(
                 if (collection.id == id) collection.copyWith(members = members) else collection
             }
     }
+
+    /**
+     * Applies the rule the real gateway applies on every read: a picks shelf with nothing in it is
+     * deleted, and the id that pointed at it is forgotten.
+     *
+     * The real shelf is emptied by the database's cascade when a passage is deleted, so without this
+     * the fake would keep a shelf the real app would have taken away — and a test would pass against
+     * a state the app never reaches.
+     */
+    private fun reconcilePicksShelf() {
+        val shelfId = reminderPicksCollectionId ?: return
+        val shelf = collections.findById(shelfId)
+        when {
+            shelf == null -> {
+                reminderPicksCollectionId = null
+                reminderPicks.clear()
+            }
+            shelf.members.isEmpty() -> {
+                reminderPicksCollectionId = null
+                reminderPicks.clear()
+                collections = collections.filterNot { it.id == shelfId }
+            }
+            else -> {
+                // The shelf is the truth about what is picked: the passage list and the shelf cannot
+                // both be right and disagree, and the shelf is the one the database keeps.
+                reminderPicks.clear()
+                reminderPicks += shelf.members.mapNotNull { it.id }
+            }
+        }
+    }
 }
 
 /**
@@ -768,3 +788,31 @@ internal class FakeCollectionsGateway(
  */
 internal fun fakeCovers(): CollectionCoverCache =
     CollectionCoverCache(CoverStorage(Files.createTempDirectory("azkar-test-covers")))
+
+/**
+ * The queue's source list, as a plain set, for a test that only has to know what is in it.
+ *
+ * The real one reads the notification preferences, and a test that asserted against a real
+ * preference file would be asserting against the storage rather than against the rule. The writes
+ * are no-ops, because the rules under test here are the ones that read the set.
+ */
+internal class FakeReminderSources(
+    override val enabledCollectionIds: Set<Long> = emptySet(),
+) : ReminderSources {
+    override val queueConfig: ReminderQueueConfig
+        get() = ReminderQueueConfig(collectionIds = enabledCollectionIds.toList())
+
+    override val queueProgress: ReminderQueueProgress get() = ReminderQueueProgress()
+
+    override val isWeighted: Boolean get() = false
+
+    override fun setEnabled(
+        collectionId: Long,
+        enabled: Boolean,
+    ) = Unit
+
+    override fun setDropChance(
+        collectionId: Long,
+        chance: Int,
+    ) = Unit
+}

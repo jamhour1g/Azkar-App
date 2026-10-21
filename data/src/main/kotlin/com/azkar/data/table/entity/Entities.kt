@@ -1,7 +1,6 @@
 package com.azkar.data.table.entity
 
 import com.azkar.data.table.CollectionMemberTable
-import com.azkar.data.table.CollectionReminderTable
 import com.azkar.data.table.CollectionTable
 import com.azkar.data.table.CollectionTagTable
 import com.azkar.data.table.CollectionTranslationTable
@@ -14,7 +13,6 @@ import com.azkar.data.table.TagTable
 import com.azkar.data.table.TagTranslationTable
 import com.azkar.domain.model.CollectionKind
 import com.azkar.domain.model.HadithGrade
-import com.azkar.domain.model.ReminderCadence
 import org.jetbrains.exposed.v1.core.dao.id.CompositeID
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.CompositeEntity
@@ -229,6 +227,8 @@ class CollectionEntity(
 
     var isFavorite: Boolean by CollectionTable.isFavorite
 
+    var position: Int? by CollectionTable.position
+
     var createdAt: OffsetDateTime by CollectionTable.createdAt
 
     var updatedAt: OffsetDateTime by CollectionTable.updatedAt
@@ -309,36 +309,6 @@ class RecitationProgressEntity(
     var createdAt: OffsetDateTime by RecitationProgressTable.createdAt
 
     var updatedAt: OffsetDateTime by RecitationProgressTable.updatedAt
-}
-
-/**
- * The standing nudge to come back to one collection.
- *
- * The key is the collection's own id, so [id] is not generated: [EntityID.value] is the collection
- * this reminder belongs to, and [CollectionReminderEntity.collectionId] below is the same number
- * under a name that says so.
- */
-class CollectionReminderEntity(
-    id: EntityID<Long>,
-) : LongEntity(id) {
-    companion object : LongEntityClass<CollectionReminderEntity>(CollectionReminderTable)
-
-    /** The collection this reminder is about — the table's identity column, read more plainly. */
-    val collectionId: Long get() = id.value
-
-    var cadence: ReminderCadence by CollectionReminderTable.cadence
-
-    var dayOfWeek: String? by CollectionReminderTable.dayOfWeek
-
-    var minuteOfDay: Int by CollectionReminderTable.minuteOfDay
-
-    var enabled: Boolean by CollectionReminderTable.enabled
-
-    var lastTriggeredAt: OffsetDateTime? by CollectionReminderTable.lastTriggeredAt
-
-    var createdAt: OffsetDateTime by CollectionReminderTable.createdAt
-
-    var updatedAt: OffsetDateTime by CollectionReminderTable.updatedAt
 }
 
 /**

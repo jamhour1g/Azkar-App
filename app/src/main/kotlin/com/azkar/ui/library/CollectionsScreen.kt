@@ -33,7 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionsActionAddToReminders
 import com.azkar.generated.resources.collectionsActionNew
+import com.azkar.generated.resources.collectionsActionRemoveFromReminders
 import com.azkar.generated.resources.collectionsMemberCount
 import com.azkar.generated.resources.collectionsNoMatchesHint
 import com.azkar.generated.resources.collectionsNoMatchesTitle
@@ -87,9 +89,13 @@ fun CollectionsScreen(
     showToast: ShowToast,
     modifier: Modifier = Modifier,
     catalogue: CollectionsCatalogue,
+    reminders: CollectionReminderState = CollectionReminderState.empty(),
 ) {
     val scope = rememberCoroutineScope()
-    val state = remember(catalogue) { CollectionsState(scope = scope, catalogue = catalogue) }
+    val state =
+        remember(catalogue, reminders) {
+            CollectionsState(scope = scope, catalogue = catalogue, reminders = reminders)
+        }
     CollectionsScreenContent(
         state = state,
         onOpenCollection = onOpenCollection,
@@ -258,9 +264,6 @@ internal fun ShelfBody(
             state.loading && state.allCollections.isEmpty() ->
                 CollectionsLoadingState(modifier = Modifier.height(STATE_BOX_HEIGHT))
 
-            state.isSearchingRemembrances ->
-                SearchResultsPane(state = state, onRead = callbacks.onRead, onCopy = callbacks.onCopy)
-
             state.isEmpty ->
                 CollectionsEmptyState(
                     title = EmptyShelfTitle,
@@ -275,14 +278,25 @@ internal fun ShelfBody(
                     },
                 )
 
-            state.visibleCollections.isEmpty() ->
-                CollectionsEmptyState(
-                    title = stringResource(Res.string.collectionsNoMatchesTitle),
-                    hint = stringResource(Res.string.collectionsNoMatchesHint),
-                    modifier = Modifier.height(STATE_BOX_HEIGHT),
-                )
+            else ->
+                Column(verticalArrangement = Arrangement.spacedBy(SEARCH_RESULTS_GAP)) {
+                    // The passage hits sit above the shelf rather than replacing it: the same word
+                    // can name a collection and appear inside a passage, and a search that answered
+                    // one of those and hid the other would be answering a question nobody asked.
+                    if (state.searchGroups.isNotEmpty()) {
+                        SearchResultsPane(state = state, onRead = callbacks.onRead, onCopy = callbacks.onCopy)
+                    }
 
-            else -> CollectionShelf(state = state, callbacks = callbacks)
+                    if (state.visibleCollections.isEmpty()) {
+                        CollectionsEmptyState(
+                            title = stringResource(Res.string.collectionsNoMatchesTitle),
+                            hint = stringResource(Res.string.collectionsNoMatchesHint),
+                            modifier = Modifier.height(STATE_BOX_HEIGHT),
+                        )
+                    } else {
+                        CollectionShelf(state = state, callbacks = callbacks)
+                    }
+                }
         }
     }
 }
@@ -423,7 +437,7 @@ private fun SearchResultsPane(
     val colors = AzkarTheme.colors
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(SEARCH_RESULTS_GAP),
     ) {
         groups.forEach { group ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -451,9 +465,14 @@ private fun SearchResultsPane(
                     val tile = state.presenter.toTile(hit, state.membershipCounts.collectionsIn(hit.id ?: -1L))
                     SearchResultRow(
                         tile = tile,
-                        onRead = { onRead(tile.id) },
-                        onToggleFavorite = { state.toggleFavorite(tile.id) },
-                        onCopy = { onCopy(tile.primaryPreview) },
+                        actions =
+                            SearchHitActions(
+                                onRead = { onRead(tile.id) },
+                                onToggleFavorite = { state.toggleFavorite(tile.id) },
+                                onCopy = { onCopy(tile.primaryPreview) },
+                                onToggleReminder = { state.setReminderPick(tile.id, !state.isPicked(tile.id)) },
+                                inReminders = state.isPicked(tile.id),
+                            ),
                     )
                 }
             }
@@ -461,20 +480,39 @@ private fun SearchResultsPane(
     }
 }
 
-/** One hit: enough of the remembrance to recognise it, and the two things you can do to it. */
+/**
+ * What one search hit can be asked to do.
+ *
+ * Gathered into one value because five callbacks in a row is a signature nobody reads correctly, and
+ * because the bell's label and the bell's action are one fact: a button that says "add to reminders"
+ * next to a bell that says "in reminders" is a button that lies.
+ */
+private data class SearchHitActions(
+    val onRead: () -> Unit,
+    val onToggleFavorite: () -> Unit,
+    val onCopy: () -> Unit,
+    val onToggleReminder: () -> Unit,
+    val inReminders: Boolean,
+)
+
+/**
+ * One hit: enough of the remembrance to recognise it, and the things you can do to it.
+ *
+ * The bell is the one that matters most here. A hit in this pane is usually a single passage the
+ * user found by its text, and "remind me about this one" is the whole reason a passage is worth
+ * searching for — a collection can be reminded about from its own card without ever being found.
+ */
 @Composable
 private fun SearchResultRow(
     tile: RemembranceTile,
-    onRead: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onCopy: () -> Unit,
+    actions: SearchHitActions,
 ) {
     val colors = AzkarTheme.colors
     AzkarCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .pressableClick(scale = 1f, onClick = onRead),
+                .pressableClick(scale = 1f, onClick = actions.onRead),
         size = CardSize.SM,
         shape = RoundedCornerShape(12.dp),
         contentPadding = 12.dp,
@@ -500,15 +538,27 @@ private fun SearchResultRow(
             }
             Spacer(Modifier.width(10.dp))
             TooltipIconButton(
+                icon = ActionIcons.reminder(actions.inReminders),
+                tooltip =
+                    stringResource(
+                        if (actions.inReminders) {
+                            Res.string.collectionsActionRemoveFromReminders
+                        } else {
+                            Res.string.collectionsActionAddToReminders
+                        },
+                    ),
+                onClick = actions.onToggleReminder,
+            )
+            TooltipIconButton(
                 icon = ActionIcons.favorite(tile.isFavorite),
                 tooltip = stringResource(Res.string.libraryActionFavorite),
-                onClick = onToggleFavorite,
+                onClick = actions.onToggleFavorite,
                 favorite = tile.isFavorite,
             )
             TooltipIconButton(
                 icon = Icons.Filled.ContentCopy,
                 tooltip = stringResource(Res.string.libraryActionCopy),
-                onClick = onCopy,
+                onClick = actions.onCopy,
             )
         }
     }
@@ -522,3 +572,6 @@ private fun SearchResultRow(
  * a sentence of explanation and the button that acts on it.
  */
 private val STATE_BOX_HEIGHT = 300.dp
+
+/** The gap between one group of passage hits and the next, and between the hits and the shelf. */
+private val SEARCH_RESULTS_GAP = 16.dp

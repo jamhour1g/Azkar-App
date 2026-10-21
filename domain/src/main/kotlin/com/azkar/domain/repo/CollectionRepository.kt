@@ -10,15 +10,17 @@ import com.azkar.domain.model.Tag
  * Like the other repositories, absence is `null` and failure is a
  * [com.azkar.domain.exception.DataAccessException].
  *
- * Extends [CollectionHomeRepository] and [CollectionMembershipRepository] rather than declaring
- * their methods itself. One concern per interface is what has kept this one readable; and because
- * they are *supertypes* rather than siblings, every existing `CollectionRepository` parameter — the
- * service, the test fixtures, the data adapters — keeps working without a second argument. A sibling
- * would have needed one, since Kotlin rejects an intersection type on a constructor parameter.
+ * Extends [CollectionHomeRepository], [CollectionMembershipRepository] and [CollectionOrderRepository]
+ * rather than declaring their methods itself. One concern per interface is what has kept this one
+ * readable; and because they are *supertypes* rather than siblings, every existing
+ * `CollectionRepository` parameter — the service, the test fixtures, the data adapters — keeps working
+ * without a second argument. A sibling would have needed one, since Kotlin rejects an intersection
+ * type on a constructor parameter.
  */
 interface CollectionRepository :
     CollectionHomeRepository,
-    CollectionMembershipRepository {
+    CollectionMembershipRepository,
+    CollectionOrderRepository {
     /** Returns every known collection, each with its members and tags loaded. */
     suspend fun findAll(): List<RemembranceCollection>
 

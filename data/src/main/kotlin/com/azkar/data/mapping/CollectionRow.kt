@@ -29,6 +29,7 @@ internal data class CollectionRow(
     val lastOpenedAt: Instant?,
     val homePinnedAt: Instant?,
     val isFavorite: Boolean,
+    val position: Int?,
     val translations: Map<Locale, LocalizedPair> = emptyMap(),
     val nameLocale: Locale = Locale.ENGLISH,
 ) {
@@ -53,5 +54,6 @@ internal data class CollectionRow(
             isFavorite = isFavorite,
             members = members,
             translations = translations,
+            position = position,
         )
 }

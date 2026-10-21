@@ -317,7 +317,71 @@ val CollectionFilteringSuite by testSuite("Narrowing, ordering and searching the
         // quietly passing it: a new narrowing scope that nobody has declared narrowing yet is the
         // one this assertion exists to catch.
         assertThat(CollectionScope.entries.map { it.isNarrowing })
-            .containsExactly(false, true, true, true, true, true)
+            .containsExactly(false, true, true, true, true, true, true)
+    }
+
+    test("the in-reminders scope keeps only the collections the queue draws from") {
+        val shelf =
+            CollectionFiltering.shelf(
+                collections = listOf(morningCollection, carCollection),
+                scope = CollectionScope.IN_REMINDERS,
+                query = "",
+                sort = CollectionSort.NAME,
+                reminderCollectionIds = setOf(20L),
+            )
+
+        assertThat(shelf.map { it.name }).containsExactly("For the car")
+    }
+
+    test("the in-reminders scope is empty when nothing is in the queue") {
+        val shelf =
+            CollectionFiltering.shelf(
+                collections = listOf(morningCollection, carCollection),
+                scope = CollectionScope.IN_REMINDERS,
+                query = "",
+                sort = CollectionSort.NAME,
+                reminderCollectionIds = emptySet(),
+            )
+
+        assertThat(shelf).isEmpty()
+    }
+
+    test("the custom sort is the order the user gave, and it is not the pinned one") {
+        val ordered =
+            listOf(
+                customCollection(id = 20L, name = "For the car", position = 0),
+                officialCollection(id = 10L, name = "Morning Azkar", position = 1),
+            )
+        val shelf =
+            CollectionFiltering.shelf(
+                collections = ordered,
+                scope = CollectionScope.ALL,
+                query = "",
+                sort = CollectionSort.CUSTOM,
+            )
+
+        // The pinned shortcut is skipped for the custom sort: the order the user owns is the order
+        // the shelf shows, and the queue recites in that same order.
+        assertThat(shelf.map { it.name }).containsExactly("For the car", "Morning Azkar")
+    }
+
+    test("a collection nobody has moved sorts last under the custom sort") {
+        val shelf =
+            CollectionFiltering.shelf(
+                collections =
+                    listOf(
+                        officialCollection(id = 10L, name = "Morning Azkar", position = 3),
+                        customCollection(id = 20L, name = "For the car"),
+                    ),
+                scope = CollectionScope.ALL,
+                query = "",
+                sort = CollectionSort.CUSTOM,
+            )
+
+        // The one with no position has never been dragged, so it goes after the one that has —
+        // otherwise a brand-new collection would jump to the front of the shelf the moment it was
+        // created.
+        assertThat(shelf.map { it.name }).containsExactly("Morning Azkar", "For the car")
     }
 
     testSuite("labelling a collection keeps only what carries the chosen label") {

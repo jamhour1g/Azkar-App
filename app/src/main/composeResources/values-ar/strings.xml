@@ -6,8 +6,6 @@
     <string name="yourCompanion">رفيقك الروحي</string>
     <string name="azkarLibrary">مكتبة الاذكار</string>
     <string name="home">الرئيسية</string>
-    <string name="reminderManagerTitle">التذكيرات</string>
-    <string name="reminderManagerSubtitle">أنشئ قائمة موحدة للمجموعات والأذكار الفردية.</string>
     <!-- Tray menu -->
     <string name="trayMenuOpen">فتح الأذكار</string>
     <string name="trayMenuPause">إيقاف التذكيرات مؤقتًا</string>
@@ -317,35 +315,22 @@
     <string name="collectionsNoticeProgressReset">صُفِّر تقدّم الذِّكر</string>
     <string name="collectionsNoticeOnHome">ظاهرة في الرئيسية</string>
     <string name="collectionsNoticeOffHome">مخفية عن الرئيسية</string>
-    <string name="collectionsNoticeReminderSaved">حُفظ التذكير</string>
-    <string name="collectionsNoticeReminderRemoved">حُذف التذكير</string>
+    <string name="collectionsNoticeReminderAdded">أُضيف إلى التذكيرات</string>
+    <string name="collectionsNoticeReminderRemoved">أُزيل من التذكيرات</string>
+    <string name="collectionsNoticeReminderPickAdded">أُضيف إلى مختاراتك</string>
+    <string name="collectionsNoticeReminderPickRemoved">أُزيل من مختاراتك</string>
 
-    <string name="collectionReminderNone">لا تذكير بعد</string>
-    <string name="collectionReminderSet">يذكّرك الآن</string>
-    <string name="collectionReminderDialogTitle">ذكّرني بهذه المجموعة</string>
-    <string name="collectionReminderDialogHint">سيصلك إشعار على سطح المكتب، وإشعار هنا، عند حلول الموعد.</string>
-    <string name="collectionReminderCadenceLabel">كم مرة</string>
-    <string name="collectionReminderDayLabel">في أي يوم</string>
-    <string name="collectionReminderTimeLabel">في أي وقت</string>
-    <string name="collectionReminderCadenceDaily">كل يوم</string>
-    <string name="collectionReminderCadenceWeekdays">أيام الأسبوع</string>
-    <string name="collectionReminderCadenceWeekly">مرة في الأسبوع</string>
-    <string name="collectionReminderDayMonday">الاثنين</string>
-    <string name="collectionReminderDayTuesday">الثلاثاء</string>
-    <string name="collectionReminderDayWednesday">الأربعاء</string>
-    <string name="collectionReminderDayThursday">الخميس</string>
-    <string name="collectionReminderDayFriday">الجمعة</string>
-    <string name="collectionReminderDaySaturday">السبت</string>
-    <string name="collectionReminderDaySunday">الأحد</string>
-    <string name="collectionReminderRunning">التذكير مُفعَّل</string>
-    <string name="collectionReminderPaused">التذكير مُوقوف مؤتًاً</string>
-    <string name="collectionReminderPauseHint">أطفه للاحتفاط بالموعد دون التنبيهات.</string>
-    <string name="collectionReminderRemove">احذف التذكير</string>
-    <string name="collectionReminderRemoveTitle">حذف هذا التذكير؟</string>
-    <string name="collectionReminderRemoveBody">تحتفظ المجموعة بكل ذكر فيها. ستُحذف الجدولة فقط.</string>
-    <string name="collectionReminderFiredTitle">حان وقت الذكر</string>
-    <string name="collectionReminderFiredFormat">%1$s — %2$d ذكرًا في انتظارك</string>
-    <string name="collectionReminderFiredEmpty">%1$s لا تحوي أي ذكر بعد</string>
+    <string name="collectionsActionAddToReminders">أضِف إلى التذكيرات</string>
+    <string name="collectionsActionRemoveFromReminders">أزِل من التذكيرات</string>
+    <string name="collectionsActionInReminders">ضمن التذكيرات</string>
+    <string name="collectionsScopeInReminders">ضمن التذكيرات</string>
+    <string name="collectionsSortCustom">ترتيبي</string>
+    <string name="collectionDetailActionReminderChance">احتمال التخطي</string>
+    <string name="collectionDetailActionReminderChanceHint">مدى احتمال تخطّي الطابور لهذه المجموعة في النسبة الموزونة.</string>
+    <string name="libraryReminderStripOff">التذكيرات موقوفة</string>
+    <string name="libraryReminderStripEmpty">اختر ما تُذكَّر به</string>
+    <string name="libraryReminderStripCount">%1$d مجموعة · %2$d ذكرًا</string>
+    <string name="libraryReminderStripUpNext">التالي: %1$s</string>
     <string name="collectionSessionActionAgain">أعِده</string>
     <string name="collectionSessionActionSkip">تخطَّ</string>
     <string name="collectionSessionActionResume">عُد إلى موضعك</string>
@@ -403,7 +388,6 @@
     <string name="collectionDetailPositionFormat">%1$d / %2$d</string>
     <string name="collectionDetailContinueReading">متابعة القراءة</string>
     <string name="collectionDetailActionRemindMe">ذكِّرني</string>
-    <string name="collectionDetailRemindAtFormat">ذكِّرني في %1$s</string>
     <string name="collectionMembersSortBy">ترتيب حسب</string>
     <string name="collectionMembersViewGrid">شبكة</string>
     <string name="collectionMembersViewList">قائمة</string>
@@ -525,6 +509,8 @@
     </plurals>
 
     <string name="notificationDismiss">إخفاء</string>
+    <string name="notificationAddFavorite">إضافة إلى المفضلة</string>
+    <string name="notificationRemoveFavorite">إزالة من المفضلة</string>
     <string name="notificationDurationTitle">المدة</string>
     <string name="notificationDuration">يظهر على الشاشة %1$d ثانية</string>
     <string name="notificationDurationReading">بحسب القراءة</string>
@@ -561,34 +547,6 @@
     <string name="notificationLanguageHint">اللغة التي يُكتب بها التذكير نفسه. ويبقى التطبيق باللغة التي اخترتها.</string>
     <string name="notificationLanguageSameAsApp">نفس لغة التطبيق</string>
 
-    <!-- Reminders screen -->
-    <string name="reminderManagerBack">رجوع</string>
-    <!-- Live summary at the top of the reminders screen -->
-    <string name="reminderManagerHeroTitle">القادم</string>
-    <string name="reminderManagerHeroQueueLabel">الذكرى القادمة</string>
-    <string name="reminderManagerHeroQueueOff">الطابور متوقف</string>
-    <string name="reminderManagerHeroQueueEmpty">اختر مجموعة أو ذكرى لملء الطابور</string>
-    <string name="reminderManagerHeroCountdownHours">بعد %1$dh و%2$dm</string>
-    <string name="reminderManagerHeroCountdownDays">بعد %1$d يوم و%2$d ساعة</string>
-    <string name="reminderManagerHeroCountdownMinutes">بعد %1$dm</string>
-    <string name="reminderManagerHeroCountdownNow">الآن</string>
-    <string name="reminderManagerHeroWindow">من %1$s إلى %2$s</string>
-    <!-- Reminders screen: sources -->
-    <string name="reminderManagerSourcesTitle">المصادر</string>
-    <string name="reminderManagerSourcesHint">المجموعات والأذكار التي يختار منها الطابور.</string>
-    <string name="reminderManagerSourcesEmpty">لا توجد مجموعات بعد.</string>
-    <string name="reminderManagerSearchPlaceholder">ابحث في الأذكار</string>
-    <string name="reminderManagerPassagesTitle">الأذكار</string>
-    <string name="reminderManagerPassagesEmpty">لا يطابق أي ذكرٍ بحثك.</string>
-    <string name="reminderManagerPassagesTruncated">تُعرض أول %1$d نتيجة. ضيّق البحث للوصول إلى الباقي.</string>
-    <string name="reminderManagerPassageUnnamed">ذكرى %1$d</string>
-    <string name="reminderManagerDropChance">احتمال التخطي</string>
-    <!-- Reminders screen: manual order -->
-    <string name="reminderManagerManualOrderTitle">الترتيب اليدوي</string>
-    <string name="reminderManagerManualOrderHint">يسير الطابور على هذه القائمة من أعلى إلى أسفل ثم يبدأ من جديد.</string>
-    <string name="reminderManagerManualOrderEmpty">اختر بعض الأذكار أولًا لتظهر هنا.</string>
-    <string name="reminderManagerMoveUp">تحريك لأعلى</string>
-    <string name="reminderManagerMoveDown">تحريك لأسفل</string>
     <!-- Settings screen -->
     <!-- Settings screen: the reminder queue's schedule, which moved off the reminders page -->
     <string name="reminderManagerScheduleTitle">الجدولة</string>
@@ -597,7 +555,7 @@
     <string name="reminderManagerQueueEnableHint">فعّله لبدء عرض أذكار من المصادر أدناه.</string>
     <string name="reminderManagerQueueModeLabel">الترتيب</string>
     <string name="reminderManagerQueueModeHint">كيفية اختيار النصوص من مصادر.</string>
-    <string name="reminderManagerQueueModeManual">يدوي</string>
+    <string name="reminderManagerQueueModeInLibraryOrder">حسب ترتيب المكتبة</string>
     <string name="reminderManagerQueueModeRandom">عشوائي</string>
     <string name="reminderManagerQueueModeWeighted">مرجّح</string>
     <string name="reminderManagerQueueModeWeightedHint">كلما زاد احتمال التخطي زاد احتمال تجاوز الذكرى.</string>
@@ -661,14 +619,6 @@
         <item quantity="few">%1$d دقائق</item>
         <item quantity="many">%1$d دقيقة</item>
         <item quantity="other">%1$d دقيقة</item>
-    </plurals>
-    <plurals name="reminderManagerPassageCount">
-        <item quantity="zero">لا مصادر</item>
-        <item quantity="one">مصدر واحد</item>
-        <item quantity="two">مصدران</item>
-        <item quantity="few">%1$d مصادر</item>
-        <item quantity="many">%1$d مصدرًا</item>
-        <item quantity="other">%1$d مصدر</item>
     </plurals>
     <string name="reminderManagerTimePickerTitle">اختر وقتًا</string>
     <string name="reminderManagerTimePickerClock">فتح قرص الساعة</string>

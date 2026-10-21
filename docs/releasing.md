@@ -14,6 +14,82 @@ Conveyor also generates the download-page HTML and uploads everything into the
 Release assets (`make copied-site` in
 [.github/workflows/release.yml](../.github/workflows/release.yml)).
 
+## One packaging path
+
+Conveyor is the only thing that packages this app.
+
+The Compose Multiplatform plugin's own `nativeDistributions` block used to sit
+next to it in [app/build.gradle.kts](../app/build.gradle.kts) as a second,
+jpackage-based packager, and it has been removed. The reason is Linux-only and
+it is not cosmetic.
+
+jpackage builds its desktop entry from
+`classes/jdk/jpackage/internal/resources/template.desktop` inside the JDK, and
+that template has **no `StartupWMClass` key at all**. A desktop entry without
+one cannot be matched to the running window — the desktop manager matches on
+the window's `WM_CLASS` — so a jpackage-built `.deb` puts the app in the dock
+as an unassociated window: a generic Java icon, and the window's raw
+`WM_CLASS` as the label. Conveyor's desktop entry does carry
+`StartupWMClass`, and the Conveyor Gradle plugin derives it from the Compose
+plugin's `mainClass`, so the two agree by construction.
+
+Do not re-add a jpackage packaging path. If a second packager is ever needed,
+it has to generate the desktop entry itself.
+
+What the Compose extension still contributes to Conveyor:
+
+| Compose setting | Becomes                                     |
+|-----------------|---------------------------------------------|
+| `mainClass`     | `app.jvm.gui.main-class`, `StartupWMClass`  |
+| `jvmArgs`       | `app.jvm.options`                           |
+| `buildTypes`    | the ProGuard-shrunk jars that get packaged  |
+
+## The Linux desktop entry
+
+A Linux desktop manager matches a running window to its `.desktop` entry
+through two strings that have to be equal:
+
+- the `StartupWMClass` in the desktop entry, and
+- the window's `WM_CLASS`.
+
+They are computed independently, which is what makes the agreement fragile:
+
+- Conveyor writes `StartupWMClass` by taking the packaged entry point's class
+  name and replacing its dots with hyphens (`com.azkar.MainKt` becomes
+  `com-azkar-MainKt`),
+- AWT reports `WM_CLASS` from the class name of the **bottom stack frame** of
+  whichever thread first constructed the AWT toolkit, with the same
+  dots-to-hyphens substitution.
+
+`Main.kt` therefore calls `Toolkit.getDefaultToolkit()` as the first statement
+of `main`, on the main thread, so the class AWT sees is `com.azkar.MainKt` and
+the window reports `com-azkar-MainKt` — the same value Conveyor writes. Both
+sides derive from one class name, so they cannot drift.
+
+Two things follow, and both are easy to break by accident:
+
+- **The toolkit must be initialised on the main thread, before any suspension
+  point.** The startup sequence suspends (database warm-up, settings stores), and
+  a coroutine worker touching AWT first would report
+  `kotlinx-coroutines-scheduling-CoroutineScheduler$Worker` instead — which is
+  exactly what the dock used to display.
+- **ProGuard must not obfuscate.** `obfuscate` is off in the release build
+  type, and that is load-bearing: renaming `com.azkar.MainKt` would change the
+  window's `WM_CLASS` while the packaged `StartupWMClass` stayed as it is.
+
+`DesktopWindowClassSuite` in
+[app/src/test/kotlin/com/azkar](../app/src/test/kotlin/com/azkar) asserts this
+agreement, so a refactor that breaks it fails the build rather than the dock.
+
+A window with no matching desktop entry has no icon either. Running
+`./gradlew :app:run` from source installs no `.desktop` file, so the dock shows
+the unassociated-window appearance even when everything is correct. Install the
+package to see the real thing:
+
+```bash
+sudo dpkg -i output/jamhour1g-azkar_<version>_amd64.deb
+```
+
 ## One-time setup
 
 1. Install the Conveyor CLI (see the [website](https://conveyor.hydraulic.dev)).

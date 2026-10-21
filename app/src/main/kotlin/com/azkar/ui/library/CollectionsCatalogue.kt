@@ -73,8 +73,10 @@ enum class CollectionNoticeKey {
     OFF_HOME,
     FAVORITED,
     UNFAVORITED,
-    REMINDER_SAVED,
+    REMINDER_ADDED,
     REMINDER_REMOVED,
+    REMINDER_PICK_ADDED,
+    REMINDER_PICK_REMOVED,
     TAG_RENAMED,
     TAG_DELETED,
     TAG_RESTORED,
@@ -284,6 +286,38 @@ class CollectionsCatalogue(
         private set
 
     /**
+     * The shelf holding the passages the user asked to be reminded about on their own, or `null`
+     * when there are none.
+     *
+     * `null` until the first pick and `null` again when the last one goes, so its presence is the
+     * answer to "is there anything picked" without a second count to keep in step with the first.
+     */
+    var reminderPicksCollectionId: Long? by mutableStateOf(null)
+        private set
+
+    /** Whether a passage is one of the user's own reminder picks. */
+    fun isPicked(remembranceId: Long): Boolean {
+        val shelfId = reminderPicksCollectionId ?: return false
+        return allCollections
+            .firstOrNull { it.id == shelfId }
+            ?.members
+            ?.any { it.id == remembranceId } == true
+    }
+
+    /**
+     * Whether a collection is one the app owns rather than one the user made.
+     *
+     * The favourites shelf, the uncategorised shelf and the reminder picks shelf are the app's own
+     * furniture: they exist because the app needs them to exist, their contents are derived from
+     * something else, and moving them around the user's shelf would be moving a piece of the app
+     * rather than a piece of their library.
+     */
+    fun isSystemCollection(collectionId: Long): Boolean =
+        collectionId == favoritesCollectionId ||
+            collectionId == uncategorizedCollectionId ||
+            collectionId == reminderPicksCollectionId
+
+    /**
      * How far through each collection the user has got.
      *
      * A separate holder rather than four more members of this class: progress is per (collection,
@@ -358,6 +392,7 @@ class CollectionsCatalogue(
                 recitedCounts = emptyMap()
                 favoritesCollectionId = null
                 uncategorizedCollectionId = null
+                reminderPicksCollectionId = null
                 membershipCounts = MembershipCounts.EMPTY
                 loading = false
                 infoLine = loadFailedLabel
@@ -368,6 +403,7 @@ class CollectionsCatalogue(
         recitedCounts = snapshot.recitedCounts
         favoritesCollectionId = snapshot.favoritesCollectionId
         uncategorizedCollectionId = snapshot.uncategorizedCollectionId
+        reminderPicksCollectionId = snapshot.reminderPicksCollectionId
         membershipCounts = membershipCountsOf(snapshot.collections, uncategorizedCollectionId)
         loading = false
         // Cleared rather than set to a success sentence: see [infoLine]. A read that worked says
@@ -736,6 +772,28 @@ class CollectionsCatalogue(
     }
 
     /**
+     * Puts a passage into the user's own reminder picks, or takes it out again.
+     *
+     * The passage becomes a member of the reserved picks shelf, and that membership *is* the pick:
+     * the queue draws from every collection it has been given, and the picks shelf is one of them
+     * for as long as it holds anything. There is no second list of ids to write and no rule that
+     * could disagree with the first one.
+     *
+     * The shelf is created the first time a passage is picked and deleted when the last one goes,
+     * so an empty shelf is never on the shelf to be looked at.
+     */
+    fun setReminderPick(
+        remembranceId: Long,
+        picked: Boolean,
+    ) = mutate(
+        description = if (picked) "remind about $remembranceId" else "stop reminding about $remembranceId",
+        onSuccess = if (picked) CollectionNoticeKey.REMINDER_PICK_ADDED else CollectionNoticeKey.REMINDER_PICK_REMOVED,
+    ) {
+        gateway.setReminderPick(remembranceId, picked)
+        reloadQuietly()
+    }
+
+    /**
      * Puts the member at [fromIndex] where [toIndex] was, in the order the user arranged.
      *
      * The local patch comes first and the read comes after, which is the opposite of every other
@@ -758,6 +816,37 @@ class CollectionsCatalogue(
             onSuccess = null,
         ) {
             gateway.moveMember(collectionId, fromIndex, toIndex)
+            reloadQuietly()
+        }
+    }
+
+    /**
+     * Writes the order the user arranged the shelf in.
+     *
+     * [orderedVisibleIds] is the order of the collections that were on screen, most important first.
+     * The collections that were filtered out of the shelf keep the positions they already had, after
+     * the visible ones — so narrowing the shelf and dragging something does not silently move the
+     * collections the user could not see, and the positions written are always a complete order
+     * rather than a partial one that would leave two collections sharing a slot.
+     *
+     * The local list is re-ordered first, for the same reason [moveMember] does it: a tile that
+     * snapped back to its old slot while the database caught up would read as the drop having failed.
+     */
+    fun reorderCollections(orderedVisibleIds: List<Long>) {
+        val visible = orderedVisibleIds.distinct()
+        val hidden = allCollections.mapNotNull { it.id }.filter { it !in visible }
+        val order = visible + hidden
+        val byId = order.withIndex().associate { (index, id) -> id to index }
+        allCollections =
+            allCollections.sortedWith(
+                compareBy<RemembranceCollection> { byId[it.id] ?: Int.MAX_VALUE }
+                    .thenBy { it.id ?: Long.MAX_VALUE },
+            )
+        mutate(
+            description = "reorder the library",
+            onSuccess = null,
+        ) {
+            gateway.reorderCollections(order)
             reloadQuietly()
         }
     }
@@ -826,6 +915,23 @@ class CollectionsCatalogue(
      * so the shelf keeps asking its own gateway for the shelf's own facts.
      */
     fun tagsChanged() {
+        reloadQuietly()
+    }
+
+    /**
+     * Re-reads the shelf because a star was flipped on a surface the shelf cannot see.
+     *
+     * The overlay's card can keep a passage while the library is behind it, and the tiles this
+     * catalogue draws come from its own copy of the flag rather than from the database. Without this
+     * the tile would keep showing the old star, and the next press would write back the value the
+     * shelf believed rather than the one the reader wanted — which reads to the reader as a button
+     * that does nothing.
+     *
+     * A re-read rather than a local patch, for the same reason [tagsChanged] is one: the mirror
+     * collection's membership changed with the flag, and the shelf's own counts have to agree with
+     * it.
+     */
+    fun favoriteChanged() {
         reloadQuietly()
     }
 

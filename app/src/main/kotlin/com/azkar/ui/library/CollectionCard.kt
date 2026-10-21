@@ -91,6 +91,7 @@ fun CollectionCard(
     onOpen: () -> Unit,
     covers: CollectionCoverCache?,
     modifier: Modifier = Modifier,
+    trailingAction: (@Composable () -> Unit)? = null,
 ) {
     AzkarCard(
         modifier =
@@ -125,7 +126,7 @@ fun CollectionCard(
                     modifier = Modifier.padding(top = 4.dp).height(PREVIEW_BLOCK_HEIGHT),
                 )
             }
-            CardFooter(tile = tile, onOpen = onOpen)
+            CardFooter(tile = tile, onOpen = onOpen, trailingAction = trailingAction)
         }
     }
 }
@@ -192,25 +193,27 @@ private fun CardCover(
             coverImagePath = tile.coverImagePath,
             covers = covers,
         )
-        // The pin and the star share the leading corner because both are marks *about* the card
-        // rather than controls on it: nothing to press, nothing to open, only a claim about where the
-        // collection sits or whether the user wants it. They stack left to right in a fixed order —
-        // pin first, because it is the older of the two claims and the one that moves the card — and
-        // the row is as wide as it needs to be, so a card that is pinned but not starred does not
-        // reserve room for a star it is not showing.
-        if (tile.isPinned || tile.isFavorite) {
+        // The pin, the star and the bell share the leading corner because all three are marks *about*
+        // the card rather than controls on it: nothing to press, nothing to open, only a claim about
+        // where the collection sits, whether the user wants it, or whether the queue draws from it.
+        // They stack left to right in a fixed order — pin first, because it is the older of the claims
+        // and the one that moves the card, and the bell last because it is the newest — and the row is
+        // as wide as it needs to be, so a card that is pinned but not starred does not reserve room for
+        // a star it is not showing.
+        val marks =
+            listOfNotNull(
+                if (tile.isPinned) ActionIcons.pin(true) else null,
+                if (tile.isFavorite) ActionIcons.favorite(true) else null,
+                if (tile.inReminders) ActionIcons.reminder(true) else null,
+            )
+        if (marks.isNotEmpty()) {
             Row(
                 modifier = Modifier.align(Alignment.TopStart).padding(CORNER_INSET),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(COVER_MARK_GAP),
             ) {
-                if (tile.isPinned) {
-                    CoverMark(icon = ActionIcons.pin(true))
-                }
-                if (tile.isFavorite) {
-                    if (tile.isPinned) {
-                        Spacer(Modifier.width(COVER_MARK_GAP))
-                    }
-                    CoverMark(icon = ActionIcons.favorite(true))
+                marks.forEach { mark ->
+                    CoverMark(icon = mark)
                 }
             }
         }
@@ -348,6 +351,7 @@ private fun CollectionBadge(
 private fun CardFooter(
     tile: CollectionTile,
     onOpen: () -> Unit,
+    trailingAction: (@Composable () -> Unit)? = null,
 ) {
     val colors = AzkarTheme.colors
     val count =
@@ -384,6 +388,11 @@ private fun CardFooter(
                 buttonSize = 26.dp,
                 iconSize = 12.dp,
             )
+            // The slot the shelf's own extra control sits in, when it has one. It is a slot rather
+            // than a boolean because the control is the caller's — the grip that reorders the shelf
+            // lives in this footer, but the card itself has no opinion about what a card can be asked
+            // to do.
+            trailingAction?.invoke()
         }
     }
 }

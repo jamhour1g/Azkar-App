@@ -91,6 +91,7 @@ object CollectionFiltering {
         categoryId: Long? = null,
         recitedCounts: Map<Long, Int> = emptyMap(),
         tagIds: Set<Long> = emptySet(),
+        reminderCollectionIds: Set<Long> = emptySet(),
         uiLocale: Locale = Locale.getDefault(),
     ): List<RemembranceCollection> {
         val normalized = query.trim().lowercase(Locale.ROOT)
@@ -104,6 +105,9 @@ object CollectionFiltering {
                 // than anything about its kind — and it is read here for the same reason.
                 CollectionScope.FAVORITE -> collections.filter { it.isFavorite }
                 CollectionScope.IN_PROGRESS -> collections.filter { it.isPartlyRecited(recitedCounts) }
+                // Being reminded is a fact about the queue rather than about the collection, so it
+                // is answered from the list the queue carries.
+                CollectionScope.IN_REMINDERS -> collections.filter { it.id in reminderCollectionIds }
                 else -> collections.filter { scope.accepts(it.kind) }
             }
         // The category narrows to a single collection, so it is applied before the query rather
@@ -127,21 +131,37 @@ object CollectionFiltering {
                 categorised.filter { collection -> collection.tags.any { it.id in tagIds } }
             }
         val narrowed = labelled.filter { matchesQuery(it, normalized) }
-        if (scope == CollectionScope.PINNED) {
-            // Everything left is pinned, so the "pinned first" half of the comparator has nothing to
-            // do and the chosen sort alone decides the order.
-            return narrowed.sortedWith(comparatorFor(sort, recitedCounts = recitedCounts, uiLocale = uiLocale))
-        }
-        // Starred collections deliberately do not get that shortcut. One can be starred and unpinned,
-        // and the shelf's standing promise is that pinned collections come first whatever the scope
-        // says — so a starred shelf still sorts its pinned rows ahead of the rest, and only the
-        // "which of the two halves of a tie does the sort decide" half collapses into one pass.
-        // The two halves are sorted separately and then concatenated. Sorting the concatenation
-        // would be a single pass over a mixed list, and any comparator that does not also order by
-        // `isPinned` would interleave the two halves again.
         val comparator = comparatorFor(sort, pinnedFirst = false, recitedCounts = recitedCounts, uiLocale = uiLocale)
-        return narrowed.filter { it.isPinned }.sortedWith(comparator) +
-            narrowed.filterNot { it.isPinned }.sortedWith(comparator)
+        val ordered =
+            when {
+                scope == CollectionScope.PINNED -> {
+                    // Everything left is pinned, so the "pinned first" half of the comparator has
+                    // nothing to do and the chosen sort alone decides the order.
+                    narrowed.sortedWith(
+                        comparatorFor(sort, recitedCounts = recitedCounts, uiLocale = uiLocale),
+                    )
+                }
+                sort == CollectionSort.CUSTOM -> {
+                    // The custom order is the user's own order, and hoisting a pinned card out of it
+                    // would contradict that: the shelf would show one order and the reminder queue
+                    // — which recites in the stored order — another. The pinned shortcut is for the
+                    // sorts the user picked from a list, not for the one they wrote.
+                    narrowed.sortedWith(comparator)
+                }
+                else -> {
+                    // Starred collections deliberately do not get the pinned shortcut. One can be
+                    // starred and unpinned, and the shelf's standing promise is that pinned
+                    // collections come first whatever the scope says — so a starred shelf still sorts
+                    // its pinned rows ahead of the rest, and only the "which of the two halves of a
+                    // tie does the sort decide" half collapses into one pass. The two halves are
+                    // sorted separately and then concatenated. Sorting the concatenation would be a
+                    // single pass over a mixed list, and any comparator that does not also order by
+                    // `isPinned` would interleave the two halves again.
+                    narrowed.filter { it.isPinned }.sortedWith(comparator) +
+                        narrowed.filterNot { it.isPinned }.sortedWith(comparator)
+                }
+            }
+        return ordered
     }
 
     /**
@@ -244,6 +264,11 @@ object CollectionFiltering {
                         completed(second, recitedCounts).toLong() * first.members.size
                     secondShare.compareTo(firstShare)
                 }.then(byName)
+            // The user's own order, which the drag wrote. A collection with no position has never been
+            // dragged, and sorts after every one that has — otherwise a brand-new collection would
+            // jump to the front of the shelf the moment it was created.
+            CollectionSort.CUSTOM ->
+                compareBy<RemembranceCollection> { it.position ?: Int.MAX_VALUE }.then(byName)
         }.let { base ->
             if (pinnedFirst) {
                 compareByDescending<RemembranceCollection> { it.isPinned }.then(base)

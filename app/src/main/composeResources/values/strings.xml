@@ -6,8 +6,6 @@
     <string name="yourCompanion">Your Spiritual Companion</string>
     <string name="azkarLibrary">Azkar Library</string>
     <string name="home">Home</string>
-    <string name="reminderManagerTitle">Reminders</string>
-    <string name="reminderManagerSubtitle">Build one queue for collections and individual remembrances.</string>
     <!-- Tray menu -->
     <string name="trayMenuOpen">Open Azkar</string>
     <string name="trayMenuPause">Pause reminders</string>
@@ -303,35 +301,22 @@
     <string name="collectionsNoticeProgressReset">Recitation progress reset</string>
     <string name="collectionsNoticeOnHome">Shown on Home</string>
     <string name="collectionsNoticeOffHome">Hidden from Home</string>
-    <string name="collectionsNoticeReminderSaved">Reminder saved</string>
-    <string name="collectionsNoticeReminderRemoved">Reminder removed</string>
+    <string name="collectionsNoticeReminderAdded">Added to reminders</string>
+    <string name="collectionsNoticeReminderRemoved">Removed from reminders</string>
+    <string name="collectionsNoticeReminderPickAdded">Added to your picks</string>
+    <string name="collectionsNoticeReminderPickRemoved">Removed from your picks</string>
 
-    <string name="collectionReminderNone">No reminder yet</string>
-    <string name="collectionReminderSet">Reminding you</string>
-    <string name="collectionReminderDialogTitle">Remind me about this collection</string>
-    <string name="collectionReminderDialogHint">You will get a notification on your desktop, and one here, when it comes round.</string>
-    <string name="collectionReminderCadenceLabel">How often</string>
-    <string name="collectionReminderDayLabel">On which day</string>
-    <string name="collectionReminderTimeLabel">At what time</string>
-    <string name="collectionReminderCadenceDaily">Every day</string>
-    <string name="collectionReminderCadenceWeekdays">Weekdays</string>
-    <string name="collectionReminderCadenceWeekly">Once a week</string>
-    <string name="collectionReminderDayMonday">Monday</string>
-    <string name="collectionReminderDayTuesday">Tuesday</string>
-    <string name="collectionReminderDayWednesday">Wednesday</string>
-    <string name="collectionReminderDayThursday">Thursday</string>
-    <string name="collectionReminderDayFriday">Friday</string>
-    <string name="collectionReminderDaySaturday">Saturday</string>
-    <string name="collectionReminderDaySunday">Sunday</string>
-    <string name="collectionReminderRunning">Reminder is on</string>
-    <string name="collectionReminderPaused">Reminder is paused</string>
-    <string name="collectionReminderPauseHint">Switch it off to keep the time without the notifications.</string>
-    <string name="collectionReminderRemove">Remove reminder</string>
-    <string name="collectionReminderRemoveTitle">Remove this reminder?</string>
-    <string name="collectionReminderRemoveBody">The collection keeps every remembrance it has. Only the schedule goes.</string>
-    <string name="collectionReminderFiredTitle">Time to recite</string>
-    <string name="collectionReminderFiredFormat">%1$s — %2$d remembrances waiting</string>
-    <string name="collectionReminderFiredEmpty">%1$s has nothing in it yet</string>
+    <string name="collectionsActionAddToReminders">Add to reminders</string>
+    <string name="collectionsActionRemoveFromReminders">Remove from reminders</string>
+    <string name="collectionsActionInReminders">In reminders</string>
+    <string name="collectionsScopeInReminders">In reminders</string>
+    <string name="collectionsSortCustom">My order</string>
+    <string name="collectionDetailActionReminderChance">Skip chance</string>
+    <string name="collectionDetailActionReminderChanceHint">How likely the queue is to skip this collection, in the weighted mode.</string>
+    <string name="libraryReminderStripOff">Reminders are off</string>
+    <string name="libraryReminderStripEmpty">Choose what to be reminded of</string>
+    <string name="libraryReminderStripCount">%1$d collections · %2$d passages</string>
+    <string name="libraryReminderStripUpNext">Next: %1$s</string>
     <string name="collectionSessionActionAgain">Recite again</string>
     <string name="collectionSessionActionSkip">Skip</string>
     <string name="collectionSessionActionResume">Back to where I was</string>
@@ -389,7 +374,6 @@
     <string name="collectionDetailPositionFormat">%1$d / %2$d</string>
     <string name="collectionDetailContinueReading">Continue Reading</string>
     <string name="collectionDetailActionRemindMe">Remind me</string>
-    <string name="collectionDetailRemindAtFormat">Remind at %1$s</string>
     <string name="collectionMembersSortBy">Sort by</string>
     <string name="collectionMembersViewGrid">Grid</string>
     <string name="collectionMembersViewList">List</string>
@@ -512,6 +496,8 @@
     </plurals>
 
     <string name="notificationDismiss">Dismiss</string>
+    <string name="notificationAddFavorite">Add to Favorites</string>
+    <string name="notificationRemoveFavorite">Remove from Favorites</string>
     <string name="notificationDurationTitle">Duration</string>
     <string name="notificationDuration">On screen for %1$d seconds</string>
     <string name="notificationDurationReading">Reading time</string>
@@ -548,35 +534,6 @@
     <string name="notificationLanguageHint">The language the reminder itself is written in. The app stays in the language you chose.</string>
     <string name="notificationLanguageSameAsApp">Same as app language</string>
 
-    <!-- Reminders screen -->
-    <string name="reminderManagerBack">Back</string>
-    <!-- Live summary at the top of the reminders screen -->
-    <string name="reminderManagerHeroTitle">Up next</string>
-    <string name="reminderManagerHeroQueueLabel">Next passage</string>
-    <string name="reminderManagerHeroQueueOff">The queue is off</string>
-    <string name="reminderManagerHeroQueueEmpty">Pick a collection or a passage to fill the queue</string>
-    <string name="reminderManagerHeroCountdownHours">in %1$dh %2$dm</string>
-    <string name="reminderManagerHeroCountdownDays">in %1$dd %2$dh</string>
-    <string name="reminderManagerHeroCountdownMinutes">in %1$dm</string>
-    <string name="reminderManagerHeroCountdownNow">now</string>
-    <string name="reminderManagerHeroWindow">%1$s to %2$s</string>
-    <!-- Reminders screen: sources -->
-    <string name="reminderManagerSourcesTitle">Sources</string>
-    <string name="reminderManagerSourcesHint">The collections and passages the queue draws from.</string>
-    <string name="reminderManagerSourcesEmpty">No collections yet.</string>
-    <string name="reminderManagerSearchPlaceholder">Search passages</string>
-    <string name="reminderManagerPassagesTitle">Passages</string>
-    <string name="reminderManagerPassagesEmpty">No passage matches that search.</string>
-    <string name="reminderManagerPassagesTruncated">Showing the first %1$d matches. Narrow the search to reach the rest.</string>
-    <string name="reminderManagerPassageUnnamed">Remembrance %1$d</string>
-    <string name="reminderManagerDropChance">Skip chance</string>
-    <!-- Reminders screen: manual order -->
-    <string name="reminderManagerManualOrderTitle">Manual order</string>
-    <string name="reminderManagerManualOrderHint">The queue walks this list from the top, then starts again.</string>
-    <string name="reminderManagerManualOrderEmpty">Choose some passages first and they will appear here.</string>
-    <string name="reminderManagerMoveUp">Move up</string>
-    <string name="reminderManagerMoveDown">Move down</string>
-
     <!-- Settings screen -->
     <!-- Settings screen: the reminder queue's schedule, which moved off the reminders page -->
     <string name="reminderManagerScheduleTitle">Schedule</string>
@@ -585,7 +542,7 @@
     <string name="reminderManagerQueueEnableHint">Turn this on to start showing passages from the sources below.</string>
     <string name="reminderManagerQueueModeLabel">Order</string>
     <string name="reminderManagerQueueModeHint">How passages are picked from your sources.</string>
-    <string name="reminderManagerQueueModeManual">Manual</string>
+    <string name="reminderManagerQueueModeInLibraryOrder">In library order</string>
     <string name="reminderManagerQueueModeRandom">Random</string>
     <string name="reminderManagerQueueModeWeighted">Weighted</string>
     <string name="reminderManagerQueueModeWeightedHint">A higher drop chance means a passage is more likely to be skipped.</string>
@@ -645,10 +602,6 @@
     <plurals name="reminderManagerQueueIntervalValue">
         <item quantity="one">%1$d minute</item>
         <item quantity="other">%1$d minutes</item>
-    </plurals>
-    <plurals name="reminderManagerPassageCount">
-        <item quantity="one">%1$d source</item>
-        <item quantity="other">%1$d sources</item>
     </plurals>
     <string name="reminderManagerTimePickerTitle">Choose a time</string>
     <string name="reminderManagerTimePickerClock">Open the clock dial</string>

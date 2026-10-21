@@ -3,11 +3,23 @@ package com.azkar.ui.notifications
 import kotlinx.serialization.Serializable
 import java.time.DayOfWeek
 
-/** The order in which an active queue cycle is prepared. */
+/**
+ * The order in which an active queue cycle is prepared.
+ *
+ * [MANUAL] keeps its name from the days when the order was a list the user typed. It no longer is:
+ * the order is the order of the library, so the queue recites the collections in the order the
+ * user arranged them and their passages in the order the collection holds them. The stored name
+ * stays so that a queue saved before the change keeps reading the way it was written.
+ */
 @Serializable
 enum class QueueMode {
+    /** In library order — the order the user arranged their collections in. */
     MANUAL,
+
+    /** Shuffled on every cycle. */
     RANDOM,
+
+    /** Every passage is eligible, but a collection's own chance decides how often it is drawn. */
     WEIGHTED,
 }
 
@@ -47,10 +59,14 @@ data class ReminderQueueConfig(
     val enabled: Boolean = false,
     val mode: QueueMode = QueueMode.MANUAL,
     val cadence: QueueCadence = QueueCadence.INTERVAL,
+    /**
+     * The collections the queue draws from.
+     *
+     * The only source list. A single passage is reminded by being a member of the reserved
+     * "Reminder picks" collection, which is itself one of these — so the queue has exactly one
+     * kind of source and the library has exactly one place to show it.
+     */
     val collectionIds: List<Long> = emptyList(),
-    val individualRemembranceIds: List<Long> = emptyList(),
-    /** Explicit passage order for manual mode; newly-added passages are appended. */
-    val manualOrder: List<Long> = emptyList(),
     /** The days the queue speaks at all. Every day unless narrowed; applies to both cadences. */
     val activeDays: Set<DayOfWeek> = ALL_DAYS,
     /** Opens the daily window. Read only when [cadence] is [QueueCadence.INTERVAL]. */
@@ -61,8 +77,8 @@ data class ReminderQueueConfig(
     val intervalMinutes: Int = 60,
     /** Larger values mean a greater chance of being skipped during a weighted cycle. */
     val defaultDropChance: Int = 0,
+    /** Per-collection skip chance, keyed by the collection's id as a string. */
     val collectionDropChances: Map<String, Int> = emptyMap(),
-    val remembranceDropOverrides: Map<String, Int> = emptyMap(),
 ) {
     init {
         require(windowStartMinute in 0..1439)
@@ -173,9 +189,16 @@ sealed interface NotificationAction {
  * source, the tags and the favourite flag, and the card drew all of them: which made a reminder into a
  * card about a passage rather than a passage. A card is glanced at on the way to something else, and
  * every one of those facts is answered by the screen the click opens — where it came from, how the
- * tradition grades it, where it is filed and whether it is kept. What is left here is the one thing
- * the reader cannot get anywhere else without opening the app, and the one line of context that says
- * where they are in it.
+ * tradition grades it, where it is filed. What is left here is the one thing the reader cannot get
+ * anywhere else without opening the app, the one line of context that says where they are in it, and
+ * the one flag the card can act on by itself.
+ *
+ * The favourite flag is the exception, and it is back on purpose. The others are *facts about* a
+ * passage, and every one of them is a reason to open the app. Whether a passage is kept is not: it is
+ * the one thing a reader can want to do *at* a reminder rather than *after* it, and a reader who
+ * starred a passage in the library and then met the same passage in the queue has to be able to star
+ * it from the queue too — otherwise the same passage behaves differently depending on which surface
+ * it happened to turn up on, which is the sort of thing nobody is meant to notice and everybody does.
  *
  * A prayer time and a queue passage are not the same kind of event and do not want the same card, so
  * the two answers are siblings here rather than one wide struct with a field per possibility.
@@ -198,11 +221,15 @@ sealed interface NotificationContent {
      * @param position 1-based, and [total] the length of the cycle. Not the size of the collection:
      *   the queue may be weighted, manual, or a union of several collections, so the only honest
      *   denominator is the cycle the scheduler actually built.
+     * @param isFavorite whether the reader has already kept this passage. Resolved by the scheduler
+     *   from the same snapshot the passage came out of, so the star on the card agrees with the star
+     *   in the library rather than being a second, private opinion about the same passage.
      */
     data class Remembrance(
         val text: String,
         val position: Int,
         val total: Int,
+        val isFavorite: Boolean = false,
     ) : NotificationContent
 
     /**

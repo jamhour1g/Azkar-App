@@ -1,18 +1,16 @@
 package com.azkar.data.config
 
-import com.azkar.data.repo.exposed.ExposedCollectionReminderRepository
 import com.azkar.data.repo.exposed.ExposedCollectionRepository
 import com.azkar.data.repo.exposed.ExposedRecitationRepository
 import com.azkar.data.repo.exposed.ExposedRemembranceRepository
 import com.azkar.data.repo.exposed.ExposedTagRepository
 import com.azkar.data.storage.CoverStorage
 import com.azkar.data.transaction.ExposedTransactionRunner
-import com.azkar.domain.repo.CollectionReminderRepository
 import com.azkar.domain.repo.CollectionRepository
 import com.azkar.domain.repo.RecitationRepository
 import com.azkar.domain.repo.RemembranceRepository
 import com.azkar.domain.repo.TagRepository
-import com.azkar.domain.service.CollectionReminderService
+import com.azkar.domain.service.CollectionOrderService
 import com.azkar.domain.service.CollectionService
 import com.azkar.domain.service.RecitationService
 import com.azkar.domain.service.RemembranceService
@@ -57,13 +55,11 @@ val dataModule =
         // how to do.
         single<CollectionRepository> { ExposedCollectionRepository(get(), get()) }
 
-        // Recitation progress and reminders each need the collection repository as well — recording a
-        // count has to be able to say the collection is not there rather than failing later on a
-        // foreign key, and a schedule has to be able to say its collection is not there rather than
-        // ticking on for a shelf the user has deleted. That dependency is resolved by the service
-        // below, which is also the one that opens the transaction.
+        // Recitation progress needs the collection repository as well — recording a count has to be
+        // able to say the collection is not there rather than failing later on a foreign key. That
+        // dependency is resolved by the service below, which is also the one that opens the
+        // transaction.
         single<RecitationRepository> { ExposedRecitationRepository(get()) }
-        single<CollectionReminderRepository> { ExposedCollectionReminderRepository(get()) }
 
         // The tag repository is registered behind its port like every other repository, and behind its
         // concrete type as well: `ExposedRemembranceRepository` calls the concrete class directly to
@@ -77,7 +73,11 @@ val dataModule =
         single { RemembranceService(get(), get()) }
         single { CollectionService(get(), get()) }
         single { RecitationService(get(), get(), get()) }
-        single { CollectionReminderService(get(), get(), get()) }
+
+        // The order the user gave their collections is its own service rather than another method on
+        // the collection service: the arrangement is not a property of any one collection, and the
+        // service that owns a collection's own fields had no business knowing about it.
+        single { CollectionOrderService(get(), get()) }
 
         // Cover images are loose files under `~/.azkar/covers`, not rows, so there is no repository and
         // no port for them: the directory is a fact about the installation rather than something the

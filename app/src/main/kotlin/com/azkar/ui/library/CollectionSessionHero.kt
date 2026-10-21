@@ -35,11 +35,10 @@ import androidx.compose.ui.unit.sp
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionDetailActionRemindMe
-import com.azkar.generated.resources.collectionDetailRemindAtFormat
-import com.azkar.generated.resources.collectionReminderPaused
 import com.azkar.generated.resources.collectionSessionActionNext
 import com.azkar.generated.resources.collectionsActionBack
 import com.azkar.generated.resources.collectionsActionFavorite
+import com.azkar.generated.resources.collectionsActionInReminders
 import com.azkar.generated.resources.collectionsActionUnfavorite
 import com.azkar.generated.resources.hero_day
 import com.azkar.generated.resources.hero_night
@@ -86,8 +85,8 @@ import org.jetbrains.compose.resources.stringResource
  * back link. Empty when no member carries a source, in which case the badge is not drawn rather than
  * being filled with a placeholder: a collection with no publisher is a fact, and a badge claiming
  * otherwise would be a small lie in the most prominent corner of the page.
- * @param reminder the bell's three-way answer about this collection's schedule. The same one the
- * collection page's bell gives, for the reason `CollectionHeroReminder` gives.
+ * @param inReminders whether the queue draws from this collection. The same yes or no the
+ * collection page's bell gives.
  *
  * Whether the collection itself is starred is read off [collection] rather than passed alongside it.
  * It is a fact about the collection rather than about the passage, which is why it is the same flag the
@@ -102,7 +101,7 @@ internal fun CollectionSessionHero(
     collection: RemembranceCollection,
     publisher: String,
     stats: CollectionStats,
-    reminder: CollectionHeroReminder,
+    inReminders: Boolean,
     actions: SessionHeroActions,
     modifier: Modifier = Modifier,
 ) {
@@ -150,7 +149,7 @@ internal fun CollectionSessionHero(
 
         SessionControls(
             isFavorite = isFavorite,
-            reminder = reminder,
+            inReminders = inReminders,
             actions = actions,
             modifier =
                 Modifier
@@ -171,7 +170,7 @@ internal data class SessionHeroActions(
     val onBack: () -> Unit,
     val onNext: () -> Unit,
     val onToggleFavorite: () -> Unit,
-    val onEditReminder: () -> Unit,
+    val onToggleReminder: () -> Unit,
     val menuItems: List<AzkarMenuItem>,
 )
 
@@ -231,7 +230,7 @@ private fun SessionCopy(
 @Composable
 private fun SessionControls(
     isFavorite: Boolean,
-    reminder: CollectionHeroReminder,
+    inReminders: Boolean,
     actions: SessionHeroActions,
     modifier: Modifier = Modifier,
 ) {
@@ -265,9 +264,9 @@ private fun SessionControls(
         )
         HeroPill(
             icon = AzkarIcons.Bell,
-            label = reminderLabel(reminder),
-            onClick = actions.onEditReminder,
-            selected = reminder is CollectionHeroReminder.At,
+            label = reminderLabel(inReminders),
+            onClick = actions.onToggleReminder,
+            selected = inReminders,
         )
         AzkarOverflowMenu(
             icon = Icons.Filled.MoreVert,
@@ -292,13 +291,13 @@ private fun CollectionSessionHeroPreview() {
                 collection = previewCollection(),
                 publisher = "Sahih al-Bukhari",
                 stats = previewCollectionStats(),
-                reminder = CollectionHeroReminder.At("06:30"),
+                inReminders = true,
                 actions =
                     SessionHeroActions(
                         onBack = {},
                         onNext = {},
                         onToggleFavorite = {},
-                        onEditReminder = {},
+                        onToggleReminder = {},
                         menuItems =
                             listOf(
                                 AzkarMenuItem(label = "Restart", onClick = {}, icon = ActionIcons.restart),
@@ -310,13 +309,13 @@ private fun CollectionSessionHeroPreview() {
                 collection = previewCollection(),
                 publisher = "Sahih al-Bukhari",
                 stats = previewCollectionStatsVariants()[1],
-                reminder = CollectionHeroReminder.None,
+                inReminders = false,
                 actions =
                     SessionHeroActions(
                         onBack = {},
                         onNext = {},
                         onToggleFavorite = {},
-                        onEditReminder = {},
+                        onToggleReminder = {},
                         menuItems = emptyList(),
                     ),
             )
@@ -332,13 +331,10 @@ private fun CollectionSessionHeroPreview() {
  * of the two it is rather than derived from a time that does not exist.
  */
 @Composable
-private fun reminderLabel(reminder: CollectionHeroReminder): String =
-    when (reminder) {
-        CollectionHeroReminder.None -> stringResource(Res.string.collectionDetailActionRemindMe)
-        CollectionHeroReminder.Paused -> stringResource(Res.string.collectionReminderPaused)
-        is CollectionHeroReminder.At ->
-            stringResource(Res.string.collectionDetailRemindAtFormat, reminder.time)
-    }
+private fun reminderLabel(inReminders: Boolean): String =
+    stringResource(
+        if (inReminders) Res.string.collectionsActionInReminders else Res.string.collectionDetailActionRemindMe,
+    )
 
 /**
  * The way out, drawn as a link rather than as an icon button.

@@ -3,13 +3,9 @@ package com.azkar.ui.preview
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import com.azkar.ui.library.model.CollectionsSnapshot
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.NotificationSettingsState
-import com.azkar.ui.notifications.ReminderCatalogueSource
-import com.azkar.ui.notifications.ReminderManagerState
 import com.azkar.ui.notifications.ReminderScheduleEditor
-import java.time.ZoneId
 
 /*
  * The notification-related screens' preview fixtures, split out of [PreviewFixtures].
@@ -19,29 +15,6 @@ import java.time.ZoneId
  * fixtures already ran [PreviewFixtures] past the per-file size limit, and because a screen's own
  * fixtures read better beside the screen than buried in a list of everything else's.
  */
-
-/**
- * The reminders screen's state holder, over [previewGateway] and a throwaway settings file.
- *
- * `remember`ed against the settings file so a re-render keeps whatever has been loaded — a preview
- * that rebuilt the repository every frame would never finish reading it.
- */
-@Composable
-fun rememberPreviewReminderManagerState(zone: ZoneId = ZoneId.of("UTC")): ReminderManagerState {
-    val scope = rememberCoroutineScope()
-    val settingsStore = rememberPreviewSettingsStore()
-    val gateway = remember { previewGateway() }
-    val catalogueSource = remember(gateway) { PreviewReminderCatalogueSource(gateway) }
-    val preferences = remember(settingsStore) { NotificationPreferencesRepository(settingsStore) }
-    return remember(scope, preferences, catalogueSource, zone) {
-        ReminderManagerState(
-            scope = scope,
-            preferences = preferences,
-            catalogueSource = catalogueSource,
-            zone = zone,
-        )
-    }
-}
 
 /**
  * The settings page's notification half, over a throwaway settings file.
@@ -78,16 +51,4 @@ fun rememberPreviewReminderScheduleEditor(): ReminderScheduleEditor {
     return remember(scope, preferences) {
         ReminderScheduleEditor(scope = scope, preferences = preferences)
     }
-}
-
-/**
- * The one-method adapter the screen wants instead of the whole [com.azkar.ui.library.data.CollectionsGateway].
- *
- * Named rather than an anonymous `object` so the fixture reads as what it is — a preview seam — and
- * so [remember] has a stable type to key on.
- */
-private class PreviewReminderCatalogueSource(
-    private val gateway: PreviewCollectionsGateway,
-) : ReminderCatalogueSource {
-    override suspend fun snapshot(): CollectionsSnapshot = gateway.fetchSnapshot()
 }

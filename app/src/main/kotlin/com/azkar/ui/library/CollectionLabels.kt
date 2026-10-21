@@ -8,8 +8,10 @@ import com.azkar.generated.resources.collectionsScopeAll
 import com.azkar.generated.resources.collectionsScopeCustom
 import com.azkar.generated.resources.collectionsScopeFavorite
 import com.azkar.generated.resources.collectionsScopeInProgress
+import com.azkar.generated.resources.collectionsScopeInReminders
 import com.azkar.generated.resources.collectionsScopeOfficial
 import com.azkar.generated.resources.collectionsScopePinned
+import com.azkar.generated.resources.collectionsSortCustom
 import com.azkar.generated.resources.collectionsSortItems
 import com.azkar.generated.resources.collectionsSortName
 import com.azkar.generated.resources.collectionsSortProgress
@@ -38,6 +40,7 @@ val CollectionScope.labelResource: StringResource
             CollectionScope.PINNED -> Res.string.collectionsScopePinned
             CollectionScope.FAVORITE -> Res.string.collectionsScopeFavorite
             CollectionScope.IN_PROGRESS -> Res.string.collectionsScopeInProgress
+            CollectionScope.IN_REMINDERS -> Res.string.collectionsScopeInReminders
         }
 
 /** Resolves [labelResource] for callers that build the text outside a composition. */
@@ -51,6 +54,7 @@ val CollectionSort.labelResource: StringResource
             CollectionSort.NAME -> Res.string.collectionsSortName
             CollectionSort.MOST_ITEMS -> Res.string.collectionsSortItems
             CollectionSort.PROGRESS -> Res.string.collectionsSortProgress
+            CollectionSort.CUSTOM -> Res.string.collectionsSortCustom
         }
 
 /** Resolves [labelResource] for callers that build the text outside a composition. */

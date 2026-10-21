@@ -100,12 +100,6 @@ fun MainScreenHeader(
                 onClick = callbacks.onLibrary,
                 leadingIcon = AzkarIcons.BookOpen,
             )
-            NavButton(
-                text = stringResource(Res.string.reminderManagerTitle),
-                selected = activeTab is AzkarDestination.Notifications,
-                onClick = callbacks.onNotifications,
-                leadingIcon = AzkarIcons.Bell,
-            )
         }
 
         TooltipIconActionButton(

@@ -26,10 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.azkar.data.storage.CoverStorage
 import com.azkar.domain.model.CollectionKind
-import com.azkar.domain.model.CollectionReminder
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
-import com.azkar.domain.model.ReminderCadence
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.domain.model.impl.RemembranceImpl
@@ -52,14 +50,15 @@ import com.azkar.ui.library.LibraryHeroControls
 import com.azkar.ui.library.MosaicSnippet
 import com.azkar.ui.library.RemembranceTileActions
 import com.azkar.ui.library.ShelfNarrowing
-import com.azkar.ui.library.data.CollectionReminderGateway
-import com.azkar.ui.library.data.CollectionReminderRow
 import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.library.data.HomeCollection
+import com.azkar.ui.library.data.ReminderSources
 import com.azkar.ui.library.model.CollectionScope
 import com.azkar.ui.library.model.CollectionSort
 import com.azkar.ui.library.model.CollectionTile
 import com.azkar.ui.library.model.RemembranceTile
+import com.azkar.ui.notifications.ReminderQueueConfig
+import com.azkar.ui.notifications.ReminderQueueProgress
 import com.azkar.ui.shell.AzkarAppState
 import com.azkar.ui.shell.ThemePreference
 import com.azkar.ui.theme.AppTypography
@@ -67,10 +66,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import java.nio.file.Files
-import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneId
 import java.util.Locale
 
 /** The instant fixtures are stamped with, so nothing shifts when the clock does. */
@@ -159,73 +156,37 @@ fun previewDueCollectionIds(): Set<Long> = setOf(2L, 4L)
 // ---------------------------------------------------------------------------
 
 /**
- * One schedule, already read.
+ * A [ReminderSources] holding a fixed set of collections, and never writing anywhere.
  *
- * A fake gateway rather than the real one, and only because a reminder cannot exist in the local
- * database: nothing writes one until a user opens the editor. What a preview or a screenshot has to
- * show is the row rendering with a cadence, a time and a next time — states the real screen reaches
- * only after an interaction neither can perform.
- *
- * Already acknowledged ([CollectionReminder.lastTriggeredAt] in the past) so the row does not also
- * show a due badge. "How a due badge looks" is a second question, and
- * [previewDueCollectionIds] covers it on the rail.
- *
- * The read happens inline because the scope is [Dispatchers.Unconfined] and the fake suspends
- * nothing, so the rows are in place by the time this returns. A caller would otherwise have to wait
- * a background coroutine out to photograph a loaded page — which a preview has no way to do at all,
- * since there is no assertion to wait on.
+ * The preview and the screenshot harness both need to show the bell lit on a collection that is in
+ * the queue, and the real holder reads that out of the notification preferences — a store neither of
+ * them has. A fake with one set in it is the whole of what they need.
  */
-fun previewReminders(collectionId: Long = PREVIEW_COLLECTION_ID): CollectionReminderState =
-    CollectionReminderState(
-        scope = CoroutineScope(Dispatchers.Unconfined),
-        gateway = PreviewReminderGateway(collectionId),
-        zone = ZoneId.of("UTC"),
-    )
+class PreviewReminderSources(
+    private val enabled: Set<Long> = setOf(PREVIEW_COLLECTION_ID),
+) : ReminderSources {
+    override val enabledCollectionIds: Set<Long> get() = enabled
 
-/** A reminder gateway holding a single schedule in memory, and never writing anywhere. */
-class PreviewReminderGateway(
-    private val collectionId: Long = PREVIEW_COLLECTION_ID,
-    private val collectionName: String = "Morning Azkar",
-    private val memberCount: Int = 28,
-) : CollectionReminderGateway {
-    private val schedule =
-        CollectionReminderRow(
-            reminder =
-                CollectionReminder(
-                    collectionId = collectionId,
-                    cadence = ReminderCadence.WEEKLY,
-                    minuteOfDay = 6 * 60 + 30,
-                    dayOfWeek = DayOfWeek.SUNDAY,
-                    lastTriggeredAt = Instant.parse("2026-02-15T06:30:00Z"),
-                ),
-            collectionName = collectionName,
-            memberCount = memberCount,
-        )
+    override val queueConfig: ReminderQueueConfig get() = ReminderQueueConfig(collectionIds = enabled.toList())
 
-    override suspend fun fetchReminders(): List<CollectionReminderRow> = listOf(schedule)
+    override val queueProgress: ReminderQueueProgress get() = ReminderQueueProgress()
 
-    override suspend fun fetchReminder(collectionId: Long): CollectionReminderRow? =
-        schedule.takeIf { it.reminder.collectionId == collectionId }
+    override val isWeighted: Boolean get() = false
 
-    override suspend fun saveReminder(
-        collectionId: Long,
-        cadence: ReminderCadence,
-        minuteOfDay: Int,
-        dayOfWeek: DayOfWeek?,
-    ): CollectionReminderRow = schedule
-
-    override suspend fun setReminderEnabled(
+    override fun setEnabled(
         collectionId: Long,
         enabled: Boolean,
-    ): CollectionReminderRow = schedule
+    ) = Unit
 
-    override suspend fun deleteReminder(collectionId: Long) = Unit
-
-    override suspend fun markReminderTriggered(
+    override fun setDropChance(
         collectionId: Long,
-        at: Instant,
+        chance: Int,
     ) = Unit
 }
+
+/** The reminder holder the previews and the harness use. */
+fun previewReminders(collectionId: Long = PREVIEW_COLLECTION_ID): CollectionReminderState =
+    CollectionReminderState(PreviewReminderSources(setOf(collectionId)))
 
 // ---------------------------------------------------------------------------
 // Home dashboard
@@ -633,7 +594,7 @@ internal fun previewCollectionHeroActions(): CollectionHeroActions =
         onAddMembers = {},
         onCreateRemembrance = {},
         onTogglePin = {},
-        onEditReminder = {},
+        onToggleReminder = {},
         menuItems =
             listOf(
                 AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),

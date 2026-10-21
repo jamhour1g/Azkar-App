@@ -34,8 +34,8 @@ import com.azkar.generated.resources.reminderManagerQueueIntervalHint
 import com.azkar.generated.resources.reminderManagerQueueIntervalLabel
 import com.azkar.generated.resources.reminderManagerQueueIntervalValue
 import com.azkar.generated.resources.reminderManagerQueueModeHint
+import com.azkar.generated.resources.reminderManagerQueueModeInLibraryOrder
 import com.azkar.generated.resources.reminderManagerQueueModeLabel
-import com.azkar.generated.resources.reminderManagerQueueModeManual
 import com.azkar.generated.resources.reminderManagerQueueModeRandom
 import com.azkar.generated.resources.reminderManagerQueueModeWeighted
 import com.azkar.generated.resources.reminderManagerQueueModeWeightedHint
@@ -288,7 +288,7 @@ private fun LabelledTimePicker(
 @Composable
 private fun queueModeLabel(mode: QueueMode): String =
     when (mode) {
-        QueueMode.MANUAL -> stringResource(Res.string.reminderManagerQueueModeManual)
+        QueueMode.MANUAL -> stringResource(Res.string.reminderManagerQueueModeInLibraryOrder)
         QueueMode.RANDOM -> stringResource(Res.string.reminderManagerQueueModeRandom)
         QueueMode.WEIGHTED -> stringResource(Res.string.reminderManagerQueueModeWeighted)
     }

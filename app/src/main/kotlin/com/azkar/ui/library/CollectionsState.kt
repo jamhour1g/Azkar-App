@@ -47,6 +47,13 @@ import java.util.Locale
 class CollectionsState(
     private val scope: CoroutineScope,
     val catalogue: CollectionsCatalogue,
+    /**
+     * Which collections the reminder queue draws from.
+     *
+     * Read here rather than kept here: the queue's source list belongs to the queue, and a second
+     * copy in the shelf's own state would be a second answer to "is this collection reminded".
+     */
+    val reminders: CollectionReminderState = CollectionReminderState.empty(),
 ) {
     // ---- the shared data, read straight through --------------------------------------------------
 
@@ -142,6 +149,55 @@ class CollectionsState(
      */
     suspend fun pickCoverImage(title: String): String? = catalogue.pickCoverImage(title)
 
+    // ---- reminder picks -------------------------------------------------------------------------
+
+    /**
+     * Whether a passage is one the user asked to be reminded about.
+     *
+     * A pick rather than a membership in a collection the user can see and edit, because the point of
+     * picking one passage is that it is one passage: it should not turn up on the shelf as a shelf of
+     * its own, and it should not be something the user has to keep tidy.
+     */
+    fun isPicked(remembranceId: Long): Boolean = catalogue.isPicked(remembranceId)
+
+    /** Asks for a passage to be reminded about, or to stop being reminded about. */
+    fun setReminderPick(
+        remembranceId: Long,
+        picked: Boolean,
+    ) = catalogue.setReminderPick(remembranceId, picked)
+
+    // ---- the shelf's own order -------------------------------------------------------------------
+
+    /**
+     * Puts a collection where the user dropped it.
+     *
+     * The drop is expressed as two places in the shelf the user was looking at, and the shelf the
+     * user was looking at is the answer: the order they dragged in is the order they meant, whether
+     * the shelf was sorted by name or by anything else. So the order that was on screen is what gets
+     * written, with one card moved — and the shelf then shows that order, because an order the user
+     * arranged and an order the shelf refuses to show are the same thing to them.
+     *
+     * Switching the sort to [CollectionSort.CUSTOM] is therefore part of the drop rather than a
+     * separate decision: the user has just told the library which order they want, and leaving the
+     * shelf sorted by name would throw that away the moment the page recomposed.
+     */
+    fun reorderVisible(
+        from: Int,
+        to: Int,
+    ) {
+        val visible = visibleCollections
+        if (from !in visible.indices || to !in visible.indices || from == to) return
+        val ids = visible.mapNotNull { it.id }
+        // A collection with no id cannot be written down, and one that has it cannot be half-moved:
+        // the order written has to be every card's, or the cards that were left out would keep
+        // positions that now belong to somebody else.
+        if (ids.size != visible.size) return
+        val reordered = ids.toMutableList()
+        reordered.add(to, reordered.removeAt(from))
+        sort = CollectionSort.CUSTOM
+        catalogue.reorderCollections(reordered)
+    }
+
     // ---- filters -------------------------------------------------------------------------------
 
     var scopeFilter: CollectionScope by mutableStateOf(CollectionScope.ALL)
@@ -182,6 +238,21 @@ class CollectionsState(
 
     // ---- derived, over the shared data -----------------------------------------------------------
 
+    /**
+     * The collections the queue draws from.
+     *
+     * The queue's own source list, plus the reserved "Reminder picks" shelf — which is a source by
+     * virtue of holding the passages the user picked one at a time, and is not in the list because
+     * nobody puts it there. The shelf appears and disappears with its contents, so asking the
+     * catalogue for its id is the same as asking whether anything is picked.
+     */
+    val reminderCollectionIds: Set<Long>
+        get() {
+            val enabled = reminders.enabledCollectionIds
+            val picks = catalogue.reminderPicksCollectionId
+            return if (picks == null) enabled else enabled + picks
+        }
+
     val visibleCollections: List<RemembranceCollection>
         get() =
             CollectionFiltering.shelf(
@@ -191,13 +262,21 @@ class CollectionsState(
                 sort = sort,
                 recitedCounts = catalogue.recitedCounts,
                 tagIds = labelFilter?.let { setOf(it) }.orEmpty(),
+                reminderCollectionIds = reminderCollectionIds,
                 // The name the sort breaks its ties on has to be the one on the cards, or a shelf
                 // sorted by anything else orders rows by a name nobody is reading.
                 uiLocale = uiLocale,
             )
 
     val shelfTiles: List<CollectionTile>
-        get() = visibleCollections.map { presenter.shelfTile(it, catalogue.recitedCounts) }
+        get() =
+            visibleCollections.map {
+                presenter.shelfTile(
+                    collection = it,
+                    recitedCounts = catalogue.recitedCounts,
+                    inReminders = it.id in reminderCollectionIds,
+                )
+            }
 
     /**
      * Every label in use on the shelf, for the label chips, alphabetically and with no duplicates.

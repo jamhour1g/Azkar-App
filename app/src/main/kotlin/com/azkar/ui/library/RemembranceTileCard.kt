@@ -36,6 +36,8 @@ import com.azkar.generated.resources.collectionDetailActionDeleteRemembrance
 import com.azkar.generated.resources.collectionDetailActionRemoveFromCollection
 import com.azkar.generated.resources.collectionDetailPositionFormat
 import com.azkar.generated.resources.collectionDragHandle
+import com.azkar.generated.resources.collectionsActionAddToReminders
+import com.azkar.generated.resources.collectionsActionRemoveFromReminders
 import com.azkar.generated.resources.libraryActionCopy
 import com.azkar.generated.resources.libraryActionFavorite
 import com.azkar.generated.resources.libraryActionMore
@@ -373,7 +375,7 @@ private fun TileOverflowMenu(
     actions: RemembranceTileActions,
     modifier: Modifier = Modifier,
 ) {
-    if (actions.onRemoveFromCollection == null && actions.onDelete == null) return
+    if (actions.onRemoveFromCollection == null && actions.onDelete == null && actions.onToggleReminder == null) return
     AzkarOverflowMenu(
         icon = Icons.Filled.MoreVert,
         contentDescription = stringResource(Res.string.libraryActionMore),
@@ -385,6 +387,22 @@ private fun TileOverflowMenu(
                             label = stringResource(Res.string.collectionDetailActionRemoveFromCollection),
                             onClick = onRemove,
                             icon = ActionIcons.removeFromCollection,
+                        ),
+                    )
+                }
+                actions.onToggleReminder?.let { onToggle ->
+                    add(
+                        AzkarMenuItem(
+                            label =
+                                stringResource(
+                                    if (actions.inReminders) {
+                                        Res.string.collectionsActionRemoveFromReminders
+                                    } else {
+                                        Res.string.collectionsActionAddToReminders
+                                    },
+                                ),
+                            onClick = onToggle,
+                            icon = ActionIcons.reminder(actions.inReminders),
                         ),
                     )
                 }

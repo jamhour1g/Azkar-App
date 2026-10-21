@@ -58,8 +58,8 @@ fun Database.migrateToLatestSchema() {
  *
  * Exposed diffs the schema it was given against the schema the database reports, so an index it
  * did not create is a candidate for removal. H2 creates indexes of its own to back foreign keys
- * — one under a name like `FK_COLLECTION_REMINDER_COLLECTION_ID__ID_INDEX_7` for the
- * `collection_reminder.collection_id` reference — and those names are generated, so they can never
+ * — one under a name like `FK_COLLECTION_MEMBER_COLLECTION_ID__ID_INDEX_7` for the
+ * `collection_remembrance.collection_id` reference — and those names are generated, so they can never
  * appear in the table objects. Exposed therefore asked H2 to drop an index that a live constraint
  * owns, and H2 refuses: it checks constraint ownership before it honours `IF EXISTS`, so
  * `DROP INDEX IF EXISTS` on one fails with error 90085 even though the `IF EXISTS` was written

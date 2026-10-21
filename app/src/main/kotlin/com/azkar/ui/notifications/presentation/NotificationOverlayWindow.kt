@@ -95,6 +95,7 @@ fun NotificationOverlayWindow(
     settings: NotificationPresentationSettings,
     theme: OverlayTheme,
     onOpen: (com.azkar.ui.notifications.NotificationAction) -> Unit,
+    onToggleFavorite: (suspend (Long, Boolean) -> Boolean)? = null,
 ) {
     val notices by presenter.notices.collectAsState()
     val windowState =
@@ -119,6 +120,7 @@ fun NotificationOverlayWindow(
             theme = theme,
             presenter = presenter,
             onOpen = onOpen,
+            onToggleFavorite = onToggleFavorite,
         )
     }
 }
@@ -139,6 +141,7 @@ private fun FrameWindowScope.ReminderOverlay(
     theme: OverlayTheme,
     presenter: NotificationPresenter,
     onOpen: (com.azkar.ui.notifications.NotificationAction) -> Unit,
+    onToggleFavorite: (suspend (Long, Boolean) -> Boolean)? = null,
 ) {
     val notices by presenter.notices.collectAsState()
     val density = LocalDensity.current
@@ -229,6 +232,7 @@ private fun FrameWindowScope.ReminderOverlay(
                         // in a 400-wide window until the next restart.
                         presentation = settings,
                         onOpen = onOpen,
+                        onToggleFavorite = onToggleFavorite,
                         // The stack does not dismiss or pause cards itself — the presenter owns the
                         // stack's own rules about when a card expires — so it is handed the thing
                         // that owns them rather than two bound references to it.
@@ -246,6 +250,7 @@ private fun NotificationStack(
     placement: OverlayPlacement,
     presentation: NotificationPresentationSettings,
     onOpen: (com.azkar.ui.notifications.NotificationAction) -> Unit,
+    onToggleFavorite: (suspend (Long, Boolean) -> Boolean)? = null,
     presenter: NotificationPresenter,
 ) {
     val isBottom = placement == OverlayPlacement.BOTTOM_END || placement == OverlayPlacement.BOTTOM_START
@@ -285,6 +290,9 @@ private fun NotificationStack(
                     // every card's: a shared flow would invalidate the whole stack on every tick to
                     // animate one three-pixel strip.
                     remaining = { presenter.remainingFraction(item.id) },
+                    // The star writes through the runtime rather than through the tree, because the
+                    // overlay can be on screen with no tree behind it at all — the tray case.
+                    onToggleFavorite = onToggleFavorite,
                 )
             }
         }

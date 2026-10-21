@@ -2,7 +2,6 @@ package com.azkar.ui.library.data
 
 import com.azkar.data.config.LibraryBootstrapper
 import com.azkar.data.storage.CoverStorage
-import com.azkar.domain.model.CollectionReminder
 import com.azkar.domain.model.CollectionSummary
 import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.RecitationProgress
@@ -10,13 +9,12 @@ import com.azkar.domain.model.RecitationSummary
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.Remembrance.Translations
 import com.azkar.domain.model.RemembranceCollection
-import com.azkar.domain.model.ReminderCadence
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.impl.RemembranceImpl
 import com.azkar.domain.model.impl.TagImpl
 import com.azkar.domain.model.withMembers
 import com.azkar.domain.repo.LibrarySeedState
-import com.azkar.domain.service.CollectionReminderService
+import com.azkar.domain.service.CollectionOrderService
 import com.azkar.domain.service.CollectionService
 import com.azkar.domain.service.RecitationService
 import com.azkar.domain.service.RemembranceService
@@ -25,7 +23,6 @@ import com.azkar.ui.library.data.CollectionPresenter.Companion.ENGLISH_LOCALE
 import com.azkar.ui.library.model.CollectionsSnapshot
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
-import java.time.DayOfWeek
 import java.time.Instant
 import java.util.Base64
 import java.util.Locale
@@ -237,68 +234,6 @@ interface CollectionHomeGateway {
 }
 
 /**
- * A schedule, together with enough of its collection to say anything about it.
- *
- * The reminder itself is a time of day and a cadence, which on their own name nothing: "it's six"
- * is not an announcement. Assembling the name and the size next to it here — rather than making the
- * tick or the reminder row go and read the shelf — means a notification can be written without a
- * second read, and without the tick holding a reference to the whole library.
- */
-data class CollectionReminderRow(
-    val reminder: CollectionReminder,
-    val collectionName: String,
-    val memberCount: Int,
-)
-
-/**
- * The schedule attached to a collection.
- *
- * A fifth concern, split for the same reason as the other four: the reminder editor reads and writes
- * six methods and shares nothing else with the shelf, so a caller that only shows a reminder row
- * does not have to be handed the whole library.
- *
- * There is deliberately no reminder id. A schedule is keyed on the collection it belongs to, so
- * saving a second one for the same collection replaces the first, and deleting a collection takes
- * its schedule with it.
- */
-interface CollectionReminderGateway {
-    /** Every stored schedule with its collection's name and size, keyed by the collection id. */
-    suspend fun fetchReminders(): List<CollectionReminderRow>
-
-    /** The schedule for one collection, or `null` when it has none. */
-    suspend fun fetchReminder(collectionId: Long): CollectionReminderRow?
-
-    /**
-     * Sets the time and the cadence [collectionId] comes round at, returning it as stored.
-     *
-     * Whether the schedule is paused, and when it last came round, are carried over from whatever
-     * was there: editing a time is not a request to resume a reminder the user put on hold, and
-     * re-arming one that has already fired today would announce it twice.
-     */
-    suspend fun saveReminder(
-        collectionId: Long,
-        cadence: ReminderCadence,
-        minuteOfDay: Int,
-        dayOfWeek: DayOfWeek?,
-    ): CollectionReminderRow
-
-    /** Pauses or resumes a schedule, returning it as stored. */
-    suspend fun setReminderEnabled(
-        collectionId: Long,
-        enabled: Boolean,
-    ): CollectionReminderRow
-
-    /** Forgets the schedule for [collectionId]. */
-    suspend fun deleteReminder(collectionId: Long)
-
-    /** Records that a schedule came round at [at], so the next tick does not announce it again. */
-    suspend fun markReminderTriggered(
-        collectionId: Long,
-        at: Instant,
-    )
-}
-
-/**
  * Editing what is inside a collection.
  *
  * A sixth concern, split for the same reason as the other five: the member picker reaches only for
@@ -434,6 +369,39 @@ interface CollectionWriteGateway {
 
 /** Records that the collection was opened just now, so the shelf can lead with it. */
     suspend fun touchCollectionOpened(id: Long)
+
+    /**
+     * Writes the user's own order of their collections.
+     *
+     * The list is the order the collections should sit in, most important first. Ids the library does
+     * not know are ignored, so a stale drag cannot write a row that does not exist.
+     */
+    suspend fun reorderCollections(orderedIds: List<Long>)
+}
+
+/**
+ * The passages the user asked to be reminded about one at a time.
+ *
+ * A single passage is reminded by joining the reserved "Reminder picks" shelf — a real collection,
+ * created the first time something is picked and deleted when the last pick goes. It is a source by
+ * itself rather than by being listed in the queue's config, so picking a passage writes one row and
+ * unpicking it writes one row, and there is no second list of ids to keep in step with the first.
+ *
+ * The shelf is the same kind of thing the starred mirror is: a consequence of what the user did,
+ * rather than a thing the user did directly. That is why these are writes to membership and not to
+ * the queue's settings.
+ */
+interface ReminderPicksGateway {
+    /**
+     * Picks a passage for reminding, or unpicks it, and reports whether it is picked afterwards.
+     *
+     * One call rather than two, because the state the passage is in is a fact the caller has to
+     * read back rather than assume: the shelf may not exist yet, and the passage may already be in it.
+     */
+    suspend fun setReminderPick(
+        remembranceId: Long,
+        picked: Boolean,
+    ): Boolean
 }
 
 /**
@@ -448,13 +416,13 @@ interface CollectionWriteGateway {
  * That is what lets the state layer tell "added three" from "added nothing because they were already
  * members" and say so, instead of reloading the shelf to find out.
  *
- * Extends the six concern interfaces above it — [CollectionWriteGateway],
- * [CollectionProgressGateway], [CollectionTransferGateway], [CollectionHomeGateway],
- * [CollectionReminderGateway] and [CollectionMembershipGateway]: creating and editing a collection,
- * how many times a passage has been said, what can be brought in from another machine, which
- * collection the Home screen leads with, when it comes round again and how its contents are edited
- * are all part of what the library needs from the database, and having the state classes take one
- * dependency rather than seven is worth more than a longer list of method names on one interface.
+ * Extends the five concern interfaces above it — [CollectionWriteGateway],
+ * [CollectionProgressGateway], [CollectionTransferGateway], [CollectionHomeGateway] and
+ * [CollectionMembershipGateway]: creating and editing a collection, how many times a passage has
+ * been said, what can be brought in from another machine, which collection the Home screen leads
+ * with and how its contents are edited are all part of what the library needs from the database, and
+ * having the state classes take one dependency rather than six is worth more than a longer list of
+ * method names on one interface.
  *
  * What is left here is the catalogue itself: read the shelf, mark a passage, write a passage's texts,
  * take a passage away. Those four have no narrower caller to be split out for, so they stay.
@@ -464,8 +432,8 @@ interface CollectionsGateway :
     CollectionProgressGateway,
     CollectionTransferGateway,
     CollectionHomeGateway,
-    CollectionReminderGateway,
-    CollectionMembershipGateway {
+    CollectionMembershipGateway,
+    ReminderPicksGateway {
     /** Reads the whole shelf plus the catalogue behind it. */
     suspend fun fetchSnapshot(): CollectionsSnapshot
 
@@ -503,8 +471,8 @@ interface CollectionsGateway :
 data class CollectionsGatewayDependencies(
     val remembranceService: RemembranceService,
     val collectionService: CollectionService,
+    val orderService: CollectionOrderService,
     val recitationService: RecitationService,
-    val reminders: CollectionReminderGateway,
     val bootstrapper: LibraryBootstrapper,
     val covers: CoverStorage,
     val seedState: LibrarySeedState,
@@ -518,15 +486,6 @@ data class CollectionsGatewayDependencies(
  * the domain ports are `suspend` and the data layer moves itself off the caller's thread, so the
  * UI's only job is to stay inside a coroutine scope.
  *
- * The reminder half is composed in from a [CollectionReminderGateway] rather than inherited.
- * Composition says what it means — this class answers for the whole shelf and re-exports one concern
- * it did not write — where the old base class left a reader to work out why a class with no state of
- * its own was the parent of one with a great deal.
- *
- * The parameter is the seam rather than [DomainReminderGateway] itself, so the container decides
- * which reminder implementation this shelf talks to and nothing in the delegation itself depends on
- * the answer.
- *
  * [bootstrapper] is here rather than called from `main` because the read has to wait for it. A fresh
  * install has an empty `collection` table until the shipped dataset is written, and the shelf's read
  * guard means a read that arrives too early is not retried — it would show an empty library for the
@@ -536,10 +495,10 @@ data class CollectionsGatewayDependencies(
  */
 class DomainCollectionsGateway(
     private val dependencies: CollectionsGatewayDependencies,
-) : CollectionsGateway,
-    CollectionReminderGateway by dependencies.reminders {
+) : CollectionsGateway {
     private val remembranceService = dependencies.remembranceService
     private val collectionService = dependencies.collectionService
+    private val orderService = dependencies.orderService
     private val recitationService = dependencies.recitationService
     private val bootstrapper = dependencies.bootstrapper
     private val covers = dependencies.covers
@@ -574,6 +533,10 @@ class DomainCollectionsGateway(
         if (removals.isNotEmpty() || additions.isNotEmpty()) {
             collections = collectionService.findAll()
         }
+        val picksId = reconcilePicksShelf(collections)
+        if (picksId != null) {
+            collections = collectionService.findAll()
+        }
         // One grouped read of the progress table for every collection on the shelf, because
         // every card now draws how far through its collection the user is. Reading it one
         // collection at a time would be a query per card on the screen the app opens first.
@@ -588,7 +551,38 @@ class DomainCollectionsGateway(
             refreshedAt = Instant.now(),
             favoritesCollectionId = seedState.favoritesCollectionId(),
             uncategorizedCollectionId = uncategorizedId,
+            reminderPicksCollectionId = picksId,
         )
+    }
+
+    /**
+     * Tidies the reserved "Reminder picks" shelf and reports whether it survives.
+     *
+     * The shelf exists exactly while it holds something. An empty one is deleted, because a shelf
+     * that reminds about nothing is a row the user has to look at and wonder about, and because the
+     * queue's "in reminders" answer would otherwise have to count its members to know.
+     *
+     * A recorded id whose row is gone is a settings file that outlived its database — the
+     * installation was replaced under the app — and the id is dropped rather than the row recreated,
+     * because recreating it would be a guess about what the user had picked.
+     */
+    private suspend fun reconcilePicksShelf(collections: List<RemembranceCollection>): Long? {
+        val recorded = seedState.reminderPicksCollectionId() ?: return null
+        val shelf = collections.firstOrNull { it.id == recorded }
+        val survives =
+            when {
+                shelf == null -> {
+                    seedState.clearReminderPicksCollectionId()
+                    false
+                }
+                shelf.members.isEmpty() -> {
+                    collectionService.deleteById(recorded)
+                    seedState.clearReminderPicksCollectionId()
+                    false
+                }
+                else -> true
+            }
+        return if (survives) recorded else null
     }
 
     /**
@@ -748,8 +742,76 @@ class DomainCollectionsGateway(
         collectionService.moveMember(collectionId, fromIndex, toIndex)
     }
 
+    /**
+     * Picks a passage for reminding, or unpicks it.
+     *
+     * Picking creates the reserved shelf if it is not there and adds the passage to it; unpicking
+     * takes the passage out and deletes the shelf when that leaves it empty. The shelf is therefore
+     * never a row the user has to look at and wonder about, and its presence is the answer to
+     * "is anything picked".
+     *
+     * The queue is not written here, and that is the point: the shelf *is* the queue's source for
+     * these passages, so a pick is one membership row rather than a membership row and a change to
+     * the queue's settings that would have to be kept in step with it.
+     */
+    override suspend fun setReminderPick(
+        remembranceId: Long,
+        picked: Boolean,
+    ): Boolean {
+        val shelfId =
+            if (picked) {
+                ensurePicksShelf()
+            } else {
+                seedState.reminderPicksCollectionId()
+            }
+        if (shelfId == null) {
+            // There was no shelf to pick into, and none to unpick from either.
+            return false
+        }
+        if (picked) {
+            collectionService.addMembers(shelfId, listOf(remembranceId))
+        } else {
+            collectionService.removeMembers(shelfId, listOf(remembranceId))
+            val shelf = collectionService.findById(shelfId)
+            if (shelf == null || shelf.members.isEmpty()) {
+                collectionService.deleteById(shelfId)
+                seedState.clearReminderPicksCollectionId()
+            }
+        }
+        return picked
+    }
+
+    /**
+     * The reserved shelf, created the first time a passage is picked.
+     *
+     * A recorded id whose row has gone is dropped rather than trusted: the settings file can outlive
+     * the database it names, and adding a member to a row that is not there would fail on the
+     * foreign key rather than quietly do nothing.
+     */
+    private suspend fun ensurePicksShelf(): Long? {
+        val recorded = seedState.reminderPicksCollectionId()
+        if (recorded != null) {
+            if (collectionService.findById(recorded) != null) return recorded
+            seedState.clearReminderPicksCollectionId()
+        }
+        val created =
+            collectionService.create(
+                name = PICKS_NAME,
+                description = PICKS_DESCRIPTION,
+                iconKey = PICKS_ICON_KEY,
+                translations = PICKS_TRANSLATIONS,
+            )
+        val id = checkNotNull(created.id) { "A just-created shelf must have an id" }
+        seedState.setReminderPicksCollectionId(id)
+        return id
+    }
+
     override suspend fun touchCollectionOpened(id: Long) {
         collectionService.touchLastOpened(id)
+    }
+
+    override suspend fun reorderCollections(orderedIds: List<Long>) {
+        orderService.reorderCollections(orderedIds)
     }
 
     /**
@@ -886,113 +948,28 @@ class DomainCollectionsGateway(
             pinnedAt = homePinnedAt,
             lastRecitedAt = progress?.lastRecitedAt,
         )
-}
 
-/**
- * The reminder half of [CollectionsGateway], against the database.
- *
- * Kept in this file rather than merged into [DomainCollectionsGateway] so the shelf's short
- * delegations stay readable next to the three helpers that join two tables and need their own
- * explanation. It is a collaborator there, and a gateway in its own right: the reminder editor
- * needs nothing else of the library's storage, and is handed this one instead of the whole shelf.
- *
- * Every read and write goes through [CollectionReminderService] rather than past it, which is what
- * keeps the "editing a time does not resume a paused reminder" rule in exactly one place: it is the
- * service that carries `enabled` and `lastTriggeredAt` over, and a gateway that wrote the row
- * itself would have to remember to do the same.
- */
-class DomainReminderGateway(
-    private val collectionReminderService: CollectionReminderService,
-    private val collectionService: CollectionService,
-) : CollectionReminderGateway {
-    override suspend fun fetchReminders(): List<CollectionReminderRow> = remindersWithCollections()
+    private companion object {
+        /**
+         * The reserved shelf's name, written once and stored.
+         *
+         * Hard-coded rather than drawn from the interface's resources because the shelf is created by
+         * the data layer, below the UI, and because the name is written to the row once and read back
+         * from there afterwards — a resource that changed later would not change the row.
+         */
+        const val PICKS_NAME = "Reminder picks"
+        const val PICKS_DESCRIPTION = "The remembrances you asked to be reminded about"
+        const val PICKS_ICON_KEY = "bell"
 
-    override suspend fun fetchReminder(collectionId: Long): CollectionReminderRow? = reminderFor(collectionId)
-
-    override suspend fun saveReminder(
-        collectionId: Long,
-        cadence: ReminderCadence,
-        minuteOfDay: Int,
-        dayOfWeek: DayOfWeek?,
-    ): CollectionReminderRow =
-        rowFor(
-            collectionReminderService.save(
-                id = collectionId,
-                cadence = cadence,
-                minuteOfDay = minuteOfDay,
-                dayOfWeek = dayOfWeek,
-            ),
-        )
-
-    override suspend fun setReminderEnabled(
-        collectionId: Long,
-        enabled: Boolean,
-    ): CollectionReminderRow {
-        collectionReminderService.setEnabled(id = collectionId, enabled = enabled)
-        return rowFor(
-            requireNotNull(collectionReminderService.findByCollection(collectionId)) {
-                "The reminder for collection $collectionId was there a moment ago and is not now"
-            },
-        )
+        /** Both languages, so the shelf reads in the language the user is reading the app in. */
+        val PICKS_TRANSLATIONS: Map<Locale, LocalizedPair> =
+            mapOf(
+                Locale.forLanguageTag("en") to
+                    LocalizedPair(PICKS_NAME, PICKS_DESCRIPTION),
+                Locale.forLanguageTag("ar") to
+                    LocalizedPair("مختارات التذكير", "الأذكار التي طلبت تذكيرها"),
+            )
     }
-
-    override suspend fun deleteReminder(collectionId: Long) {
-        collectionReminderService.delete(collectionId)
-    }
-
-    override suspend fun markReminderTriggered(
-        collectionId: Long,
-        at: Instant,
-    ) {
-        collectionReminderService.markTriggered(collectionId, at)
-    }
-
-    /**
-     * The names and sizes beside the stored schedules.
-     *
-     * Two reads rather than one, and joined here rather than in SQL because they are unrelated
-     * tables joined by a key rather than a query: the shelf already knows every collection's name
-     * and size, and asking the database to correlate two full tables to produce the same handful
-     * of rows would cost more than it saves. The summaries carry the name and the count without
-     * dragging each collection's members along behind them.
-     */
-    private suspend fun remindersWithCollections(): List<CollectionReminderRow> {
-        val reminders = collectionReminderService.findAll()
-        if (reminders.isEmpty()) return emptyList()
-        val names = collectionService.findSummaries().associateBy { it.id }
-        return reminders.map { it.toRow(names[it.collectionId]) }
-    }
-
-    /**
-     * One schedule with the collection it belongs to, asked for by key.
-     *
-     * The id is known before the read starts, so the database is asked for that schedule and that
-     * collection rather than being handed every one of each and filtered afterwards. Both halves
-     * are keyed lookups the index can serve directly.
-     */
-    private suspend fun reminderFor(collectionId: Long): CollectionReminderRow? =
-        collectionReminderService.findByCollection(collectionId)?.toRow(collectionService.findSummary(collectionId))
-
-    /**
-     * One schedule with the collection it belongs to, after a write.
-     *
-     * The same two keyed reads as [reminderFor], minus the schedule half — the caller is already
-     * holding the row it just saved.
-     *
-     * A schedule whose collection is gone would have been cascaded away, so a missing name means the
-     * shelf changed under us between the two reads. It is reported as an unnamed reminder rather
-     * than dropped, because a reminder that quietly stops existing is the failure this feature
-     * cannot have.
-     */
-    private suspend fun rowFor(reminder: CollectionReminder): CollectionReminderRow =
-        reminder.toRow(collectionService.findSummary(reminder.collectionId))
-
-    private fun CollectionReminder.toRow(collection: CollectionSummary?): CollectionReminderRow =
-        CollectionReminderRow(
-            reminder = this,
-            collectionName = collection?.name.orEmpty(),
-            memberCount = collection?.memberCount ?: 0,
-        )
 }
 
 /**

@@ -18,8 +18,10 @@ import com.azkar.generated.resources.collectionsNoticePinned
 import com.azkar.generated.resources.collectionsNoticeProgressReset
 import com.azkar.generated.resources.collectionsNoticeRemembranceCreated
 import com.azkar.generated.resources.collectionsNoticeRemembranceDeleted
+import com.azkar.generated.resources.collectionsNoticeReminderAdded
+import com.azkar.generated.resources.collectionsNoticeReminderPickAdded
+import com.azkar.generated.resources.collectionsNoticeReminderPickRemoved
 import com.azkar.generated.resources.collectionsNoticeReminderRemoved
-import com.azkar.generated.resources.collectionsNoticeReminderSaved
 import com.azkar.generated.resources.collectionsNoticeTagDeleted
 import com.azkar.generated.resources.collectionsNoticeTagRenamed
 import com.azkar.generated.resources.collectionsNoticeTagRestored
@@ -55,8 +57,10 @@ val CollectionNoticeKey.messageResource: StringResource
             CollectionNoticeKey.PROGRESS_RESET -> Res.string.collectionsNoticeProgressReset
             CollectionNoticeKey.ON_HOME -> Res.string.collectionsNoticeOnHome
             CollectionNoticeKey.OFF_HOME -> Res.string.collectionsNoticeOffHome
-            CollectionNoticeKey.REMINDER_SAVED -> Res.string.collectionsNoticeReminderSaved
+            CollectionNoticeKey.REMINDER_ADDED -> Res.string.collectionsNoticeReminderAdded
             CollectionNoticeKey.REMINDER_REMOVED -> Res.string.collectionsNoticeReminderRemoved
+            CollectionNoticeKey.REMINDER_PICK_ADDED -> Res.string.collectionsNoticeReminderPickAdded
+            CollectionNoticeKey.REMINDER_PICK_REMOVED -> Res.string.collectionsNoticeReminderPickRemoved
             CollectionNoticeKey.FAVORITE_ADDED -> Res.string.collectionsNoticeFavoriteAdded
             CollectionNoticeKey.FAVORITE_REMOVED -> Res.string.collectionsNoticeFavoriteRemoved
             CollectionNoticeKey.FAVORITED -> Res.string.collectionsNoticeCollectionStarred

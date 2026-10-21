@@ -4,12 +4,11 @@ import com.azkar.data.repo.exposed.ExposedTagRepository
 import com.azkar.data.seed.CollectionSeed
 import com.azkar.data.seed.SeedDataLoader
 import com.azkar.data.transaction.ExposedTransactionRunner
-import com.azkar.domain.repo.CollectionReminderRepository
 import com.azkar.domain.repo.CollectionRepository
 import com.azkar.domain.repo.RecitationRepository
 import com.azkar.domain.repo.RemembranceRepository
 import com.azkar.domain.repo.TagRepository
-import com.azkar.domain.service.CollectionReminderService
+import com.azkar.domain.service.CollectionOrderService
 import com.azkar.domain.service.CollectionService
 import com.azkar.domain.service.RecitationService
 import com.azkar.domain.service.RemembranceService
@@ -71,13 +70,12 @@ val DataModuleSuite by testSuite("DataModule") {
             assertThat(koin.get<TransactionRunner>()).isSameAs(koin.get<TransactionRunner>())
             assertThat(koin.get<CollectionRepository>()).isSameAs(koin.get<CollectionRepository>())
             assertThat(koin.get<RecitationRepository>()).isSameAs(koin.get<RecitationRepository>())
-            assertThat(koin.get<CollectionReminderRepository>()).isSameAs(koin.get<CollectionReminderRepository>())
             assertThat(koin.get<RemembranceRepository>()).isSameAs(koin.get<RemembranceRepository>())
             assertThat(koin.get<TagRepository>()).isSameAs(koin.get<TagRepository>())
             assertThat(koin.get<RemembranceService>()).isSameAs(koin.get<RemembranceService>())
             assertThat(koin.get<CollectionService>()).isSameAs(koin.get<CollectionService>())
+            assertThat(koin.get<CollectionOrderService>()).isSameAs(koin.get<CollectionOrderService>())
             assertThat(koin.get<RecitationService>()).isSameAs(koin.get<RecitationService>())
-            assertThat(koin.get<CollectionReminderService>()).isSameAs(koin.get<CollectionReminderService>())
         }
 
         test("a bound type is an index entry, not a second construction") { koin ->
@@ -122,12 +120,10 @@ private fun Koin.resolved(): List<Any> =
         get<TransactionRunner>(),
         get<CollectionRepository>(),
         get<RecitationRepository>(),
-        get<CollectionReminderRepository>(),
         get<RemembranceRepository>(),
         get<TagRepository>(),
         get<TagService>(),
         get<RemembranceService>(),
         get<CollectionService>(),
         get<RecitationService>(),
-        get<CollectionReminderService>(),
     )

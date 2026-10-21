@@ -249,6 +249,7 @@ private class InMemorySeedState : LibrarySeedState {
     private var seeded = false
     private var favoritesId: Long? = null
     private var uncategorizedId: Long? = null
+    private var picksId: Long? = null
 
     override suspend fun isSeeded(): Boolean = seeded
 
@@ -260,6 +261,7 @@ private class InMemorySeedState : LibrarySeedState {
         seeded = false
         favoritesId = null
         uncategorizedId = null
+        picksId = null
     }
 
     override suspend fun favoritesCollectionId(): Long? = favoritesId
@@ -272,5 +274,15 @@ private class InMemorySeedState : LibrarySeedState {
 
     override suspend fun setUncategorizedCollectionId(collectionId: Long) {
         uncategorizedId = collectionId
+    }
+
+    override suspend fun reminderPicksCollectionId(): Long? = picksId
+
+    override suspend fun setReminderPicksCollectionId(collectionId: Long) {
+        picksId = collectionId
+    }
+
+    override suspend fun clearReminderPicksCollectionId() {
+        picksId = null
     }
 }
