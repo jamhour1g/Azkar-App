@@ -5,6 +5,7 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,6 +38,9 @@ import androidx.compose.foundation.layout.height
  * - [FILL] is a bar growing. The slowest of all, and the only one that deliberately outlasts the
  *   gesture: the number it is drawing towards is the one the user just changed, so arriving late
  *   draws attention to the new total rather than letting it appear as a fact.
+ * - [COUNTDOWN] is a bar running out. The only band drawn on a straight line, because a clock has
+ *   no ease to speak of — and the only one that is *chased* rather than *approached*, since the
+ *   number it is drawing towards is already moving.
  *
  * [enter] and [exit] are Material's two standard curves, named once. Anything that arrives
  * decelerates; anything that leaves accelerates. Mixing them up is the single most common way a
@@ -58,6 +62,15 @@ object AzkarMotion {
     /** A progress bar growing towards a new total. */
     const val FILL = 420
 
+    /**
+     * A bar running out towards zero.
+     *
+     * Shorter than [FILL] because the bar is not arriving anywhere: it is chasing a number that is
+     * already on its way down, so the animation is there to take the edge off the polling rather
+     * than to draw attention to the movement.
+     */
+    const val COUNTDOWN = 120
+
     /** Decelerate curve — for motion that arrives. */
     val enter: Easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 
@@ -78,6 +91,15 @@ object AzkarMotion {
 
     /** [FILL] on the enter curve: a bar growing to its new total. */
     fun <T> fill(): FiniteAnimationSpec<T> = tween(FILL, easing = enter)
+
+    /**
+     * [COUNTDOWN] on a straight line: a bar running out towards zero.
+     *
+     * The one curve in here that is not a curve. A bar that is being read as a clock must move at
+     * one speed all the way down; easing it would make the drain look like it was slowing down,
+     * which is the opposite of what a clock does.
+     */
+    fun <T> countdown(): FiniteAnimationSpec<T> = tween(COUNTDOWN, easing = LinearEasing)
 
     /** [INSTANT] on the enter curve: a press tint. */
     fun <T> instant(): FiniteAnimationSpec<T> = tween(INSTANT, easing = enter)

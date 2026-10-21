@@ -1,5 +1,6 @@
 package com.azkar.ui.notifications.presentation
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,10 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,7 @@ import com.azkar.ui.components.mirrorHorizontalGradient
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.notifications.NotificationAction
 import com.azkar.ui.notifications.NotificationContent
+import com.azkar.ui.theme.AzkarMotion
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.isRtlLayout
 import kotlinx.coroutines.delay
@@ -269,11 +271,22 @@ private class FavoriteControl(
  * the same way in either language, like a reverse progress bar, instead of changing its motion when the
  * card switches between English and Arabic.
  *
- * The tick is a plain [delay] rather than `withFrameNanos` because the bar does not need to be
- * frame-accurate: thirty updates a second is past what a three-pixel strip can express, and a frame
- * clock is not something every composition this card appears in has — the settings preview and the
- * screenshot harness both draw it somewhere without one. Only this composable is invalidated, not the
- * stack around it, because the fraction is remembered here and read through [remaining].
+ * The tick is a plain [delay] rather than `withFrameNanos` because the *sampling* does not need to
+ * be frame-accurate: thirty readings a second is past what a three-pixel strip can express, and a
+ * frame clock is not something every composition this card appears in has — the settings preview and
+ * the screenshot harness both draw it somewhere without one. Only this composable is invalidated,
+ * not the stack around it, because the fraction is remembered here and read through [remaining].
+ *
+ * What is sampled is a *target*, not the number that is drawn. The drawn value chases that target
+ * on [AzkarMotion.countdown] — a straight line, short enough to be outrun by the next reading — so
+ * the strip slides at one speed instead of stepping once per poll. Thirty small jumps a second is a
+ * lot of jumps for a bar this thin, and on a three-pixel strip they read as a stutter rather than
+ * as a clock.
+ *
+ * The target only ever goes down, because [CountdownState] keeps the smallest fraction it has been
+ * told. A card on its way off the screen is still asking how much time it has, and the answer can
+ * come back as "all of it" from a reader that has already forgotten the card. Believing that would
+ * fill the bar up again on the way out, which is the one motion a countdown must never make.
  */
 @Composable
 private fun CountdownRule(remaining: () -> Float) {
@@ -288,13 +301,22 @@ private fun CountdownRule(remaining: () -> Float) {
             ),
             isRtl,
         )
-    var fraction by remember { mutableFloatStateOf(1f) }
-    LaunchedEffect(remaining) {
+    val countdown = remember { CountdownState() }
+    // The reader is remembered rather than the reading: the overlay hands the card a fresh lambda
+    // every time the stack is recomposed, and a loop keyed on that would be restarted by every
+    // card that arrives.
+    val sampler = rememberUpdatedState(remaining)
+    LaunchedEffect(Unit) {
         while (isActive) {
-            fraction = remaining()
+            countdown.sample(sampler.value())
             delay(COUNTDOWN_TICK_MILLIS)
         }
     }
+    val fraction by animateFloatAsState(
+        targetValue = countdown.target,
+        animationSpec = AzkarMotion.countdown(),
+        label = "notificationCountdownFill",
+    )
     Box(
         modifier =
             Modifier

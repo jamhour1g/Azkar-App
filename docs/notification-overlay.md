@@ -118,6 +118,25 @@ Three things follow from that, and they are the whole of the star's behaviour:
 The star is offered only where it can be honest: a prayer time and a bare notice have no passage to
 keep, and a card with no way to write the flag draws no star rather than a dead one.
 
+## The rule along the top edge
+
+The card carries a three-pixel gradient rule along its top edge, and it is a clock rather than a
+decoration: it empties as the card's on-screen time runs out, so a reader can see how long the
+reminder intends to stay instead of having to remember how long it usually stays.
+
+Two rules keep it honest:
+
+- **It only runs one way.** The bar keeps the smallest fraction it has been told. A card that is
+  fading off the screen is still asking how much time it has, and the answer can arrive after the
+  fact — the presenter has already let the card go, and a reader that has forgotten it answers "all
+  of it". Believing that would fill the bar back up on the way out.
+- **It slides.** The reading is sampled a few times a second and the bar *chases* it, so the strip
+  moves at one speed rather than stepping once per sample. Thirty small jumps a second is a lot of
+  jumps for a bar this thin, and they read as a stutter rather than as a clock.
+
+The presenter keeps the fraction a retired card was left at, so the answer it gives while a card is
+fading is the truth rather than a fresh full bar.
+
 ## Platform behaviour
 
 The overlay is an ordinary top-level window that asks the window manager to keep it above other

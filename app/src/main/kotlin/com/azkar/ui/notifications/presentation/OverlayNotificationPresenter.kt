@@ -70,6 +70,19 @@ class OverlayNotificationPresenter(
     private val deadlines = mutableMapOf<Long, Long>()
     private val durations = mutableMapOf<Long, Long>()
     private val frozenRemaining = mutableMapOf<Long, Long>()
+
+    /**
+     * Where each retired card's bar was left.
+     *
+     * A card that has been retired is off the stack but not off the screen: the overlay fades it
+     * out, and a card that is fading is still composed and still asking how much time it has. The
+     * answer it gets has to be the truth — a card that has run out must not claim a full bar on its
+     * way off the screen, which is what made the bar jump back to the top as it was leaving.
+     *
+     * A map rather than a flag on the card because the card is gone: this is the only record left of
+     * where its bar was, and it is kept only until the card has finished fading.
+     */
+    private val retiredRemaining = LinkedHashMap<Long, Float>()
     private val expiryJobs = mutableMapOf<Long, Job>()
 
     override fun present(notice: NotificationNotice): Long? =
@@ -141,24 +154,26 @@ class OverlayNotificationPresenter(
      * How much of [id]'s time is left, for the bar the card draws along its top edge.
      *
      * Read from the same deadline [setPaused] freezes and [nextWakeMillisLocked] sleeps against, so
-     * the bar and the expiry can only ever disagree by the length of a poll — and once the card is
-     * gone there is nothing left on screen to be wrong about.
+     * the bar and the expiry can only ever disagree by the length of a poll.
      *
      * The duration is remembered per card rather than read back out of the difference between "now
      * and the deadline", because a reader who opens the settings and changes the on-screen duration
      * mid-countdown would otherwise watch the bar jump: the card keeps the length it was accepted
      * with, exactly as it keeps the deadline it was accepted with.
      *
-     * A card the presenter no longer knows about answers with the interface's default rather than
-     * with zero, because the caller that asked is about to be taken off screen anyway and a bar at
-     * zero is a flash of the wrong colour on the way out.
+     * A card that has been retired answers with the fraction it was left at rather than with the
+     * interface's default. The default is right for a card this presenter has never heard of — it
+     * has no deadline, so all of its time is left — but it is wrong for a card it *did* have and has
+     * just let go of: that card is on its way off the screen and its bar is nearly empty, and
+     * answering "all of it" is what made the bar fill up again on the way out.
      */
-    override fun remainingFraction(id: Long): Float =
-        synchronized(lock) {
-            val duration = durations[id]?.toFloat() ?: return DEFAULT_REMAINING
-            val remaining = frozenRemaining[id] ?: (deadlines[id]?.minus(now()) ?: 0L)
-            (remaining / duration).coerceIn(0f, 1f)
-        }
+    override fun remainingFraction(id: Long): Float = synchronized(lock) { remainingFractionLocked(id) }
+
+    private fun remainingFractionLocked(id: Long): Float {
+        val duration = durations[id]?.toFloat() ?: return retiredRemaining[id] ?: DEFAULT_REMAINING
+        val remaining = frozenRemaining[id] ?: (deadlines[id]?.minus(now()) ?: 0L)
+        return (remaining / duration).coerceIn(0f, 1f)
+    }
 
     override fun clear() {
         synchronized(lock) {
@@ -221,12 +236,33 @@ class OverlayNotificationPresenter(
         }
     }
 
-    /** Cancels [id]'s job and forgets it. Only ever called with [lock] held. */
+    /**
+     * Cancels [id]'s job and forgets its deadline — but not where its bar was left.
+     *
+     * The card is on its way off the screen but is still composed for the length of the exit
+     * transition, and it will keep asking how much time it has. The answer has to be the truth, so
+     * the fraction is remembered before the deadline goes and handed back until the card is
+     * forgotten.
+     */
     private fun retire(id: Long) {
         expiryJobs.remove(id)?.cancel()
+        rememberRetired(id)
         deadlines.remove(id)
         durations.remove(id)
         frozenRemaining.remove(id)
+    }
+
+    /**
+     * Remembers where [id]'s bar was left, and forgets the oldest card once there are too many.
+     *
+     * Only ever called with [lock] held.
+     */
+    private fun rememberRetired(id: Long) {
+        retiredRemaining[id] = remainingFractionLocked(id)
+        while (retiredRemaining.size > RETIRED_HISTORY) {
+            val oldest = retiredRemaining.keys.firstOrNull() ?: return
+            retiredRemaining.remove(oldest)
+        }
     }
 
     private companion object {
@@ -245,5 +281,14 @@ class OverlayNotificationPresenter(
          * which grows a real answer later cannot end up disagreeing with the contract it implements.
          */
         const val DEFAULT_REMAINING = 1f
+
+        /**
+         * How many retired cards the presenter remembers.
+         *
+         * A retired card is only ever asked about while it is fading off the screen, and the stack
+         * holds three cards by default, so a handful is plenty. The bound is here so that an evening
+         * of cards coming and going does not leave a growing map behind.
+         */
+        const val RETIRED_HISTORY = 16
     }
 }

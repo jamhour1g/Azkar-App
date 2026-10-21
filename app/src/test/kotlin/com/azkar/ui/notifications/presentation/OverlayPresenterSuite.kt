@@ -121,9 +121,25 @@ val OverlayPresenterSuite by testSuite("The overlay notification presenter") {
 
             scope.advanceTimeBy(6_500)
             scope.runCurrent()
-            // The card is gone; a bar for an id nobody is asking about any more is an honest full bar
-            // rather than a division by a duration that has already been forgotten.
-            assertThat(presenter.remainingFraction(id)).isEqualTo(1f)
+            // The card is gone from the stack, but it is still on the screen on its way out and it is
+            // still asking how much time it has. The answer is the truth: a card that has run out
+            // must not claim a full bar while it fades, which is what made the bar jump back to the
+            // top as the card left.
+            assertThat(presenter.remainingFraction(id)).isEqualTo(0f)
+        }
+    }
+
+    test("a card that is dismissed keeps the bar it was dismissed with") {
+        runPresenterTest(durationSeconds = 8) { presenter, scope ->
+            val id = presenter.present(notice(1))!!
+            scope.advanceTimeBy(2_000)
+            scope.runCurrent()
+
+            presenter.dismiss(id)
+
+            // Where the reader left it: not full, because the card had already run for two seconds,
+            // and not empty, because the reader closed it before it ran out.
+            assertThat(presenter.remainingFraction(id)).isEqualTo(0.75f)
         }
     }
 
