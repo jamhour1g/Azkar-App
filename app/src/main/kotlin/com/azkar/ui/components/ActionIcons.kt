@@ -162,4 +162,19 @@ internal object ActionIcons {
      */
     @Composable
     fun reminder(on: Boolean): ImageVector = if (on) AzkarIcons.Bell else AzkarIcons.BellOff
+
+    /**
+     * The glyph an "add to reminders" action wears: the bell it will start ringing.
+     *
+     * The pair above answers "is this thing reminded about?"; a menu item answers "what will
+     * happen if I press this?" — so the menu wears the *result* of the action, not the state it
+     * will leave behind. Adding wears the bell that will ring; removing wears the bell that will
+     * stop.
+     */
+    val addReminder: ImageVector
+        @Composable get() = AzkarIcons.Bell
+
+    /** The glyph a "remove from reminders" action wears: the bell that will stop ringing. */
+    val removeReminder: ImageVector
+        @Composable get() = AzkarIcons.BellOff
 }

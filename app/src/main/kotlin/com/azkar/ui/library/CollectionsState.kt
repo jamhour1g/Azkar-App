@@ -54,6 +54,13 @@ class CollectionsState(
      * copy in the shelf's own state would be a second answer to "is this collection reminded".
      */
     val reminders: CollectionReminderState = CollectionReminderState.empty(),
+    /**
+     * Where the shelf's sort order is kept between runs.
+     *
+     * Optional because a shelf can be built without one — a preview, a test — and in that case the
+     * order is simply the default and is forgotten when the shelf goes.
+     */
+    private val sortStore: CollectionSortStore? = null,
 ) {
     // ---- the shared data, read straight through --------------------------------------------------
 
@@ -194,7 +201,7 @@ class CollectionsState(
         if (ids.size != visible.size) return
         val reordered = ids.toMutableList()
         reordered.add(to, reordered.removeAt(from))
-        sort = CollectionSort.CUSTOM
+        selectSort(CollectionSort.CUSTOM)
         catalogue.reorderCollections(reordered)
     }
 
@@ -202,7 +209,51 @@ class CollectionsState(
 
     var scopeFilter: CollectionScope by mutableStateOf(CollectionScope.ALL)
 
-    var sort: CollectionSort by mutableStateOf(CollectionSort.RECENTLY_UPDATED)
+    /**
+     * The order the shelf is sorted by.
+     *
+     * The default is the full shelves first: the biggest collections are the ones worth opening, and a
+     * shelf ordered by when a collection was last opened puts the emptiest ones in front of it.
+     *
+     * Written through [selectSort] rather than assigned, so the choice survives the next run — a sort
+     * control that forgets what it was told is a control the user has to set again every time they
+     * come back to the shelf.
+     */
+    var sort: CollectionSort by mutableStateOf(CollectionSort.MOST_ITEMS)
+        private set
+
+    /**
+     * Sorts the shelf by [next] and remembers the choice.
+     *
+     * A drag changes the order too, and it goes through here, so the order the user built by dragging
+     * is the order the shelf comes back to.
+     */
+    fun selectSort(next: CollectionSort) {
+        sortTouched = true
+        sort = next
+        sortStore?.persist(next)
+    }
+
+    /**
+     * Whether the user has chosen an order since this shelf was opened.
+     *
+     * The stored order is read asynchronously, so it can land after the user has already picked
+     * something. Without this the shelf would quietly undo a choice made in the first moments of
+     * opening it.
+     */
+    private var sortTouched = false
+
+    private var sortLoad: Job? = null
+
+    init {
+        sortStore?.let { store ->
+            sortLoad =
+                scope.launch {
+                    val stored = store.read()
+                    if (!sortTouched) sort = stored
+                }
+        }
+    }
 
     /** The shelf's own search field. Applied to names and descriptions only. */
     var collectionQuery: String by mutableStateOf("")
@@ -335,6 +386,8 @@ class CollectionsState(
     fun shutdown() {
         searchDebounce?.cancel()
         searchDebounce = null
+        sortLoad?.cancel()
+        sortLoad = null
     }
 
     private companion object {

@@ -52,7 +52,6 @@ import com.azkar.generated.resources.collectionsToastTitle
 import com.azkar.generated.resources.libraryActionCopyCopied
 import com.azkar.generated.resources.remembranceCreateActionOpen
 import com.azkar.ui.components.ActionIcons
-import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarMenuItem
 import com.azkar.ui.components.AzkarOutlinedField
 import com.azkar.ui.components.SettingRow
@@ -1074,7 +1073,7 @@ private fun preferenceMenuItems(
         AzkarMenuItem(
             label = reminderLabel,
             onClick = actions.onToggleReminders,
-            icon = if (actions.inReminders) AzkarIcons.Bell else AzkarIcons.BellOff,
+            icon = if (actions.inReminders) ActionIcons.removeReminder else ActionIcons.addReminder,
         ),
         AzkarMenuItem(
             label = homeLabel,

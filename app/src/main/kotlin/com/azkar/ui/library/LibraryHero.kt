@@ -402,8 +402,12 @@ private const val HERO_SHAPE = 14
  * Named here rather than read off `CollectionSort.entries.first()` so that reordering the enum —
  * which is a change nobody would think of as a change in meaning — cannot silently decide which
  * default the button stays quiet about.
+ *
+ * The full shelves first, because that is the order a library is browsed in: the biggest collections
+ * are the ones worth opening, and a shelf ordered by when a collection was last opened puts the
+ * emptiest ones in front of it.
  */
-private val DEFAULT_SORT = CollectionSort.RECENTLY_UPDATED
+private val DEFAULT_SORT = CollectionSort.MOST_ITEMS
 
 /**
  * Every button in the banner's control row, in one set of numbers.

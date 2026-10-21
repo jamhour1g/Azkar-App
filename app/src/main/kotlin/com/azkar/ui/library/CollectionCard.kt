@@ -44,9 +44,12 @@ import com.azkar.ui.components.AzkarCard
 import com.azkar.ui.components.AzkarMenuItem
 import com.azkar.ui.components.AzkarOverflowMenu
 import com.azkar.ui.components.CompletionTrack
+import com.azkar.ui.components.ContextMenuHost
 import com.azkar.ui.components.IconTint
 import com.azkar.ui.components.TooltipIconButton
+import com.azkar.ui.components.contextMenuTarget
 import com.azkar.ui.components.pressableClick
+import com.azkar.ui.components.rememberContextMenuState
 import com.azkar.ui.library.model.CollectionTile
 import com.azkar.ui.preview.previewCollectionTiles
 import com.azkar.ui.theme.AzkarTheme
@@ -93,9 +96,11 @@ fun CollectionCard(
     modifier: Modifier = Modifier,
     trailingAction: (@Composable () -> Unit)? = null,
 ) {
+    val menu = rememberContextMenuState()
     AzkarCard(
         modifier =
             modifier
+                .contextMenuTarget(menu)
                 .fillMaxWidth()
                 .pressableClick(scale = 1f, onClick = onOpen),
         size = CardSize.MD,
@@ -127,6 +132,7 @@ fun CollectionCard(
                 )
             }
             CardFooter(tile = tile, onOpen = onOpen, trailingAction = trailingAction)
+            ContextMenuHost(items = items, state = menu)
         }
     }
 }

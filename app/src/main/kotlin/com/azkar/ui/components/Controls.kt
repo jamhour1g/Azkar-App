@@ -38,7 +38,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
@@ -49,7 +48,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -1231,21 +1229,6 @@ private fun AzkarFilterChipPreview() {
 }
 
 /**
- * One row of a popup menu.
- *
- * [icon] is required rather than optional. It used to default to `null`, which meant a menu could
- * quietly come to be half-illustrated and half-bare depending on who wrote it — and a menu whose items
- * are inconsistent with each other is read as two different kinds of command rather than as one list.
- * Making it required puts the choice at every call site, where [ActionIcons] is the only place that
- * choice belongs.
- */
-data class AzkarMenuItem(
-    val label: String,
-    val onClick: () -> Unit,
-    val icon: ImageVector,
-)
-
-/**
  * `.row-overflow-menu` — the "…" affordance that hides row actions that do not fit inline.
  *
  * Follows the [AzkarSelect] trick: the visible button stays inert while a transparent overlay
@@ -1305,32 +1288,7 @@ fun AzkarOverflowMenu(
                 onDismissRequest = { expanded = false },
             ) {
                 items.forEach { item ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = item.label,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = null,
-                                modifier = Modifier.size(13.dp),
-                            )
-                        },
-                        colors =
-                            MenuDefaults.itemColors(
-                                textColor = AzkarTheme.colors.textPrimary,
-                                leadingIconColor = AzkarTheme.colors.textSecondary,
-                            ),
-                        onClick = {
-                            expanded = false
-                            item.onClick()
-                        },
-                    )
+                    AzkarMenuItemRow(item = item, onDismiss = { expanded = false })
                 }
             }
         }

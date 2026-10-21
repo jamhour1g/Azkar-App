@@ -12,17 +12,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
-import com.azkar.generated.resources.reminderManagerDayFriday
-import com.azkar.generated.resources.reminderManagerDayMonday
-import com.azkar.generated.resources.reminderManagerDaySaturday
-import com.azkar.generated.resources.reminderManagerDaySunday
-import com.azkar.generated.resources.reminderManagerDayThursday
-import com.azkar.generated.resources.reminderManagerDayTuesday
-import com.azkar.generated.resources.reminderManagerDayWednesday
-import com.azkar.generated.resources.reminderManagerQueueCadenceContinuous
 import com.azkar.generated.resources.reminderManagerQueueCadenceContinuousHint
 import com.azkar.generated.resources.reminderManagerQueueCadenceHint
-import com.azkar.generated.resources.reminderManagerQueueCadenceInterval
 import com.azkar.generated.resources.reminderManagerQueueCadenceLabel
 import com.azkar.generated.resources.reminderManagerQueueDaysHint
 import com.azkar.generated.resources.reminderManagerQueueDaysLabel
@@ -32,12 +23,8 @@ import com.azkar.generated.resources.reminderManagerQueueEnable
 import com.azkar.generated.resources.reminderManagerQueueEnableHint
 import com.azkar.generated.resources.reminderManagerQueueIntervalHint
 import com.azkar.generated.resources.reminderManagerQueueIntervalLabel
-import com.azkar.generated.resources.reminderManagerQueueIntervalValue
 import com.azkar.generated.resources.reminderManagerQueueModeHint
-import com.azkar.generated.resources.reminderManagerQueueModeInLibraryOrder
 import com.azkar.generated.resources.reminderManagerQueueModeLabel
-import com.azkar.generated.resources.reminderManagerQueueModeRandom
-import com.azkar.generated.resources.reminderManagerQueueModeWeighted
 import com.azkar.generated.resources.reminderManagerQueueModeWeightedHint
 import com.azkar.generated.resources.reminderManagerQueueWindowEnd
 import com.azkar.generated.resources.reminderManagerQueueWindowHint
@@ -54,13 +41,15 @@ import com.azkar.ui.notifications.QueueCadence
 import com.azkar.ui.notifications.QueueMode
 import com.azkar.ui.notifications.ReminderQueueConfig
 import com.azkar.ui.notifications.ReminderScheduleEditor
+import com.azkar.ui.notifications.activeDayLabel
+import com.azkar.ui.notifications.cadenceLabel
+import com.azkar.ui.notifications.intervalLabel
+import com.azkar.ui.notifications.queueModeLabel
 import com.azkar.ui.preview.rememberPreviewReminderScheduleEditor
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
-import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
-import java.time.DayOfWeek
 
 /*
  * The queue's schedule, on the settings page's notifications tab.
@@ -284,52 +273,6 @@ private fun LabelledTimePicker(
         AzkarTimePicker(minuteOfDay = minuteOfDay, onMinuteChange = onMinuteChange, enabled = enabled)
     }
 }
-
-@Composable
-private fun queueModeLabel(mode: QueueMode): String =
-    when (mode) {
-        QueueMode.MANUAL -> stringResource(Res.string.reminderManagerQueueModeInLibraryOrder)
-        QueueMode.RANDOM -> stringResource(Res.string.reminderManagerQueueModeRandom)
-        QueueMode.WEIGHTED -> stringResource(Res.string.reminderManagerQueueModeWeighted)
-    }
-
-@Composable
-private fun intervalLabel(minutes: Int): String =
-    pluralStringResource(Res.plurals.reminderManagerQueueIntervalValue, minutes, minutes)
-
-/**
- * A cadence as the user named it.
- *
- * "Keep running" rather than "Continuous", because the two words answer different questions and the
- * queue's own question is whether it ever stops. A user who reads "Continuous" as a density setting
- * will look for a number beside it; there is not one, and the sentence under the row is what tells
- * them so.
- */
-@Composable
-private fun cadenceLabel(cadence: QueueCadence): String =
-    when (cadence) {
-        QueueCadence.INTERVAL -> stringResource(Res.string.reminderManagerQueueCadenceInterval)
-        QueueCadence.CONTINUOUS -> stringResource(Res.string.reminderManagerQueueCadenceContinuous)
-    }
-
-/**
- * A weekday's short name for the day strip.
- *
- * Seven full names on one row overflow the card on any window narrower than the 760dp the settings
- * column is capped at, so these are abbreviations — except in Arabic, where the names are one or two
- * short words and shortening them would produce strings no reader would recognise.
- */
-@Composable
-private fun activeDayLabel(day: DayOfWeek): String =
-    when (day) {
-        DayOfWeek.MONDAY -> stringResource(Res.string.reminderManagerDayMonday)
-        DayOfWeek.TUESDAY -> stringResource(Res.string.reminderManagerDayTuesday)
-        DayOfWeek.WEDNESDAY -> stringResource(Res.string.reminderManagerDayWednesday)
-        DayOfWeek.THURSDAY -> stringResource(Res.string.reminderManagerDayThursday)
-        DayOfWeek.FRIDAY -> stringResource(Res.string.reminderManagerDayFriday)
-        DayOfWeek.SATURDAY -> stringResource(Res.string.reminderManagerDaySaturday)
-        DayOfWeek.SUNDAY -> stringResource(Res.string.reminderManagerDaySunday)
-    }
 
 @Preview
 @Composable

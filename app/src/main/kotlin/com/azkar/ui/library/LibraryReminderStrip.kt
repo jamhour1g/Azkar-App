@@ -24,6 +24,7 @@ import com.azkar.generated.resources.libraryReminderStripEmpty
 import com.azkar.generated.resources.libraryReminderStripOff
 import com.azkar.generated.resources.libraryReminderStripUpNext
 import com.azkar.ui.components.AzkarIcons
+import com.azkar.ui.components.pressableClick
 import com.azkar.ui.notifications.QueuePreview
 import com.azkar.ui.notifications.QueueReading
 import com.azkar.ui.notifications.QueueSources
@@ -49,13 +50,16 @@ import java.util.Locale
  * The passage it names is read from the runtime's own progress, so the strip cannot promise a
  * passage the queue is not about to show — see [queuePreview] for why the two are asked the same
  * question in the same order.
+ *
+ * Pressing it opens the look-ahead, which names the rest of the round and the schedule that decides
+ * when it comes. One line cannot hold both, and a user who has to trust the queue is a user who has
+ * to stop trusting it.
  */
 @Composable
 internal fun LibraryReminderStrip(
     state: CollectionsState,
     modifier: Modifier = Modifier,
 ) {
-    val colors = AzkarTheme.colors
     val config = state.reminders.queueConfig
     val progress = state.reminders.queueProgress
     val picksId = state.catalogue.reminderPicksCollectionId
@@ -80,16 +84,53 @@ internal fun LibraryReminderStrip(
             state.reminderCollectionIds.size,
             selection.orderedIds.size,
         )
+    var showQueue by remember { mutableStateOf(false) }
 
+    StripRow(
+        message = message,
+        sources = sources,
+        lit = config.enabled && preview.hasSources,
+        onClick = { showQueue = true },
+        modifier = modifier,
+    )
+
+    if (showQueue) {
+        LibraryQueuePreviewDialog(
+            config = config,
+            progress = progress,
+            reading = reading,
+            uiLocale = state.uiLocale,
+            onDismiss = { showQueue = false },
+        )
+    }
+}
+
+/**
+ * The line itself.
+ *
+ * The chevron at the end is the only thing that says the line opens something, and it is there
+ * because a line of text that happens to be pressable is not a control anybody can see. The count
+ * sits before it rather than after, so the eye reads what the queue will say before how much of it
+ * there is.
+ */
+@Composable
+private fun StripRow(
+    message: String,
+    sources: String,
+    lit: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = AzkarTheme.colors
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().pressableClick(scale = 1f, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(STRIP_GAP),
     ) {
         Icon(
             imageVector = AzkarIcons.Bell,
             contentDescription = null,
-            tint = if (config.enabled && preview.hasSources) colors.accent else colors.textSecondary,
+            tint = if (lit) colors.accent else colors.textSecondary,
             modifier = Modifier.size(STRIP_ICON_SIZE),
         )
         Text(
@@ -107,6 +148,12 @@ internal fun LibraryReminderStrip(
             fontSize = STRIP_META_SP,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+        )
+        Icon(
+            imageVector = AzkarIcons.ChevronRight,
+            contentDescription = null,
+            tint = colors.textSecondary,
+            modifier = Modifier.size(STRIP_ICON_SIZE),
         )
     }
 }

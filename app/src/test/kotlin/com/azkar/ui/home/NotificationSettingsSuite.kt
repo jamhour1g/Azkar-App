@@ -8,11 +8,14 @@ import com.azkar.settings.copyForNextLaunch
 import com.azkar.settings.withInMemorySettings
 import com.azkar.settings.withSettingsFile
 import de.infix.testBalloon.framework.core.testSuite
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.assertj.core.api.Assertions.assertThat
 import java.io.IOException
+import java.nio.file.Path
+import kotlin.io.path.exists
 
 /**
  * The notification switches, against the settings store.
@@ -145,6 +148,15 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
             // value is waiting for the disk.
             store.changes.first { it[storedFlagKey(PrayerKey.ASR)] == false }
 
+            // …and then waiting for the file, because the two are not the same moment. DataStore
+            // writes to a scratch file and moves it into place *after* it has published the new
+            // value, so for a moment the only file on disk is the `.tmp` one and the settings file
+            // this test is about to copy does not exist yet. The value says the commit happened;
+            // the file's existence says the move has finished. The test needs both, and in that
+            // order — and the old comment's objection to waiting for the file is answered by doing
+            // it *after* the value rather than instead of it.
+            awaitFileOnDisk(file)
+
             // DataStore allows one instance per file per process, so the round trip goes through a
             // copy: a store built on the copy parses what was actually written to disk, which is
             // the thing a second run of the app would read.
@@ -184,4 +196,22 @@ private suspend fun NotificationSettingsState.awaitFlags(
  */
 private fun storedFlagKey(key: PrayerKey) = booleanPreferencesKey("prayer.${key.id}.enabled")
 
+/**
+ * Waits until [file] is on disk, or gives up.
+ *
+ * DataStore publishes a committed value before it has moved the scratch file it wrote into place,
+ * so a test that has seen the value may still be looking at a settings file that does not exist.
+ * A poll is the only way to wait for a filesystem event — there is no flow to collect — and the
+ * timeout keeps a failure to move from hanging the run.
+ */
+private suspend fun awaitFileOnDisk(file: Path) {
+    withTimeout(TIMEOUT_MILLIS) {
+        while (!file.exists()) {
+            delay(FILE_POLL_MILLIS)
+        }
+    }
+}
+
 private const val TIMEOUT_MILLIS = 5_000L
+
+private const val FILE_POLL_MILLIS = 10L

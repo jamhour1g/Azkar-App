@@ -45,10 +45,15 @@ import com.azkar.generated.resources.collectionsToastTitle
 import com.azkar.generated.resources.libraryActionCopy
 import com.azkar.generated.resources.libraryActionCopyCopied
 import com.azkar.generated.resources.libraryActionFavorite
+import com.azkar.generated.resources.libraryActionRead
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarCard
+import com.azkar.ui.components.AzkarMenuItem
+import com.azkar.ui.components.ContextMenuHost
 import com.azkar.ui.components.TooltipIconButton
+import com.azkar.ui.components.contextMenuTarget
 import com.azkar.ui.components.pressableClick
+import com.azkar.ui.components.rememberContextMenuState
 import com.azkar.ui.library.CollectionsState
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.library.model.TagOption
@@ -80,6 +85,8 @@ import org.jetbrains.compose.resources.stringResource
  * filters and sort are built on top of it rather than alongside it, because three library screens
  * opened on one session would otherwise each read every collection and every remembrance for
  * themselves, and the shelf pushed under a collection would be read again on the way back.
+ * @param sortStore where the shelf's order is kept between runs. Optional, so a preview or a test
+ * can build a shelf with no store behind it and simply get the default order.
  */
 @Composable
 fun CollectionsScreen(
@@ -90,11 +97,17 @@ fun CollectionsScreen(
     modifier: Modifier = Modifier,
     catalogue: CollectionsCatalogue,
     reminders: CollectionReminderState = CollectionReminderState.empty(),
+    sortStore: CollectionSortStore? = null,
 ) {
     val scope = rememberCoroutineScope()
     val state =
-        remember(catalogue, reminders) {
-            CollectionsState(scope = scope, catalogue = catalogue, reminders = reminders)
+        remember(catalogue, reminders, sortStore) {
+            CollectionsState(
+                scope = scope,
+                catalogue = catalogue,
+                reminders = reminders,
+                sortStore = sortStore,
+            )
         }
     CollectionsScreenContent(
         state = state,
@@ -508,9 +521,11 @@ private fun SearchResultRow(
     actions: SearchHitActions,
 ) {
     val colors = AzkarTheme.colors
+    val menu = rememberContextMenuState()
     AzkarCard(
         modifier =
             Modifier
+                .contextMenuTarget(menu)
                 .fillMaxWidth()
                 .pressableClick(scale = 1f, onClick = actions.onRead),
         size = CardSize.SM,
@@ -560,9 +575,57 @@ private fun SearchResultRow(
                 tooltip = stringResource(Res.string.libraryActionCopy),
                 onClick = actions.onCopy,
             )
+            ContextMenuHost(items = searchHitMenuItems(tile = tile, actions = actions), state = menu)
         }
     }
 }
+
+/**
+ * The commands a search hit carries, for a right-click.
+ *
+ * A hit has no "⋯" of its own — it is a row of glyphs, not a card — so this list is the only menu
+ * it has, and it says everything the row's buttons say. The bell's label and the bell's action are
+ * one fact here too, for the same reason they are one fact on a tile.
+ */
+@Composable
+private fun searchHitMenuItems(
+    tile: RemembranceTile,
+    actions: SearchHitActions,
+): List<AzkarMenuItem> =
+    listOf(
+        AzkarMenuItem(
+            label = stringResource(Res.string.libraryActionRead),
+            onClick = actions.onRead,
+            icon = ActionIcons.read,
+        ),
+        AzkarMenuItem(
+            label = stringResource(Res.string.libraryActionFavorite),
+            onClick = actions.onToggleFavorite,
+            icon = ActionIcons.favorite(tile.isFavorite),
+        ),
+        AzkarMenuItem(
+            label = stringResource(Res.string.libraryActionCopy),
+            onClick = actions.onCopy,
+            icon = ActionIcons.copy,
+        ),
+        AzkarMenuItem(
+            label =
+                stringResource(
+                    if (actions.inReminders) {
+                        Res.string.collectionsActionRemoveFromReminders
+                    } else {
+                        Res.string.collectionsActionAddToReminders
+                    },
+                ),
+            onClick = actions.onToggleReminder,
+            icon =
+                if (actions.inReminders) {
+                    ActionIcons.removeReminder
+                } else {
+                    ActionIcons.addReminder
+                },
+        ),
+    )
 
 /**
  * How tall the shelf's own states are drawn inside the scrolling column.

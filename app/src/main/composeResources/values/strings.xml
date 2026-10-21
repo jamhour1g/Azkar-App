@@ -317,6 +317,10 @@
     <string name="libraryReminderStripEmpty">Choose what to be reminded of</string>
     <string name="libraryReminderStripCount">%1$d collections · %2$d passages</string>
     <string name="libraryReminderStripUpNext">Next: %1$s</string>
+    <string name="libraryReminderQueueTitle">What's coming</string>
+    <string name="libraryReminderQueueSchedule">Schedule</string>
+    <string name="libraryReminderQueueWindowValue">%1$s – %2$s</string>
+    <string name="libraryReminderQueuePosition">%1$d</string>
     <string name="collectionSessionActionAgain">Recite again</string>
     <string name="collectionSessionActionSkip">Skip</string>
     <string name="collectionSessionActionResume">Back to where I was</string>

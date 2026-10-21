@@ -46,8 +46,11 @@ import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarCard
 import com.azkar.ui.components.AzkarMenuItem
 import com.azkar.ui.components.AzkarOverflowMenu
+import com.azkar.ui.components.ContextMenuHost
 import com.azkar.ui.components.TooltipIconButton
+import com.azkar.ui.components.contextMenuTarget
 import com.azkar.ui.components.pressableClick
+import com.azkar.ui.components.rememberContextMenuState
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.preview.previewRemembranceTile
 import com.azkar.ui.preview.previewRemembranceTileActions
@@ -104,9 +107,11 @@ internal fun RemembranceTileCard(
     dragGesture: Modifier = Modifier,
 ) {
     val colors = AzkarTheme.colors
+    val menu = rememberContextMenuState()
     AzkarCard(
         modifier =
             modifier
+                .contextMenuTarget(menu)
                 .border(
                     width = if (selected) TILE_SELECTED_BORDER else TILE_BORDER,
                     color = if (selected) colors.primary else colors.border,
@@ -123,6 +128,7 @@ internal fun RemembranceTileCard(
                 memberCount = memberCount,
                 dragGesture = dragGesture,
             )
+            ContextMenuHost(items = tileMenuItems(actions), state = menu)
         }
     }
 }
@@ -366,61 +372,77 @@ private fun TileActions(
  *
  * Its own function, and returning early when there is nothing to put in it, so that [TileActions] stays
  * the short row of glyphs a reader learns the positions of rather than a nesting of `buildList` blocks.
- *
- * The order is the order of severity: taking this passage out of *this* collection comes first because it
- * is recoverable, deleting it outright comes last because it is not.
  */
 @Composable
 private fun TileOverflowMenu(
     actions: RemembranceTileActions,
     modifier: Modifier = Modifier,
 ) {
-    if (actions.onRemoveFromCollection == null && actions.onDelete == null && actions.onToggleReminder == null) return
+    val items = tileMenuItems(actions)
+    if (items.isEmpty()) return
     AzkarOverflowMenu(
         icon = Icons.Filled.MoreVert,
         contentDescription = stringResource(Res.string.libraryActionMore),
-        items =
-            buildList {
-                actions.onRemoveFromCollection?.let { onRemove ->
-                    add(
-                        AzkarMenuItem(
-                            label = stringResource(Res.string.collectionDetailActionRemoveFromCollection),
-                            onClick = onRemove,
-                            icon = ActionIcons.removeFromCollection,
-                        ),
-                    )
-                }
-                actions.onToggleReminder?.let { onToggle ->
-                    add(
-                        AzkarMenuItem(
-                            label =
-                                stringResource(
-                                    if (actions.inReminders) {
-                                        Res.string.collectionsActionRemoveFromReminders
-                                    } else {
-                                        Res.string.collectionsActionAddToReminders
-                                    },
-                                ),
-                            onClick = onToggle,
-                            icon = ActionIcons.reminder(actions.inReminders),
-                        ),
-                    )
-                }
-                actions.onDelete?.let { onDelete ->
-                    add(
-                        AzkarMenuItem(
-                            label = stringResource(Res.string.collectionDetailActionDeleteRemembrance),
-                            onClick = onDelete,
-                            icon = ActionIcons.delete,
-                        ),
-                    )
-                }
-            },
+        items = items,
         modifier = modifier,
         buttonSize = TILE_ACTION_SIZE,
         iconSize = TILE_ACTION_GLYPH,
     )
 }
+
+/**
+ * The commands a tile carries, in the order of severity.
+ *
+ * Its own function because there are two ways to reach them — the "⋯" button and a right-click — and
+ * the two must offer the same commands. A copy of the list would be free to drift from the original
+ * the first time one of the two gained a command the other did not.
+ *
+ * Taking this passage out of *this* collection comes first because it is recoverable; deleting it
+ * outright comes last because it is not.
+ */
+@Composable
+internal fun tileMenuItems(actions: RemembranceTileActions): List<AzkarMenuItem> =
+    buildList {
+        actions.onRemoveFromCollection?.let { onRemove ->
+            add(
+                AzkarMenuItem(
+                    label = stringResource(Res.string.collectionDetailActionRemoveFromCollection),
+                    onClick = onRemove,
+                    icon = ActionIcons.removeFromCollection,
+                ),
+            )
+        }
+        actions.onToggleReminder?.let { onToggle ->
+            add(
+                AzkarMenuItem(
+                    label =
+                        stringResource(
+                            if (actions.inReminders) {
+                                Res.string.collectionsActionRemoveFromReminders
+                            } else {
+                                Res.string.collectionsActionAddToReminders
+                            },
+                        ),
+                    onClick = onToggle,
+                    icon =
+                        if (actions.inReminders) {
+                            ActionIcons.removeReminder
+                        } else {
+                            ActionIcons.addReminder
+                        },
+                ),
+            )
+        }
+        actions.onDelete?.let { onDelete ->
+            add(
+                AzkarMenuItem(
+                    label = stringResource(Res.string.collectionDetailActionDeleteRemembrance),
+                    onClick = onDelete,
+                    icon = ActionIcons.delete,
+                ),
+            )
+        }
+    }
 
 /**
  * One remembrance in a collection, as a single horizontal row — the same tile in the list view.
@@ -449,9 +471,11 @@ internal fun RemembranceTileRow(
     dragGesture: Modifier = Modifier,
 ) {
     val colors = AzkarTheme.colors
+    val menu = rememberContextMenuState()
     AzkarCard(
         modifier =
             modifier
+                .contextMenuTarget(menu)
                 .border(
                     width = if (selected) TILE_SELECTED_BORDER else TILE_BORDER,
                     color = if (selected) colors.primary else colors.border,
@@ -481,6 +505,8 @@ internal fun RemembranceTileRow(
             Spacer(Modifier.width(ROW_ACTION_GAP))
 
             TileActions(tile = tile, actions = actions, dragGesture = dragGesture)
+
+            ContextMenuHost(items = tileMenuItems(actions), state = menu)
         }
     }
 }

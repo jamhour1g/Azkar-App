@@ -331,6 +331,10 @@
     <string name="libraryReminderStripEmpty">اختر ما تُذكَّر به</string>
     <string name="libraryReminderStripCount">%1$d مجموعة · %2$d ذكرًا</string>
     <string name="libraryReminderStripUpNext">التالي: %1$s</string>
+    <string name="libraryReminderQueueTitle">ما هو قادم</string>
+    <string name="libraryReminderQueueSchedule">الجدول</string>
+    <string name="libraryReminderQueueWindowValue">%1$s – %2$s</string>
+    <string name="libraryReminderQueuePosition">%1$d</string>
     <string name="collectionSessionActionAgain">أعِده</string>
     <string name="collectionSessionActionSkip">تخطَّ</string>
     <string name="collectionSessionActionResume">عُد إلى موضعك</string>

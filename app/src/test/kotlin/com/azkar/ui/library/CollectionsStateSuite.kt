@@ -666,7 +666,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
             )
         val (state, _) = loaded(gateway)
 
-        state.sort = CollectionSort.NAME
+        state.selectSort(CollectionSort.NAME)
 
         assertThat(state.visibleCollections.map { it.name }).containsExactly("Aaa", "Zzz")
     }
@@ -834,7 +834,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
                     ),
             )
         val (state, _) = loaded(gateway)
-        state.sort = CollectionSort.NAME
+        state.selectSort(CollectionSort.NAME)
 
         state.editCollection(
             id = 21L,
@@ -874,7 +874,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
                     ),
             )
         val (state, _) = loaded(gateway)
-        state.sort = CollectionSort.NAME
+        state.selectSort(CollectionSort.NAME)
 
         state.setDisplay(21L, CollectionDisplayPreference.PINNED, true)
 
@@ -896,7 +896,7 @@ val CollectionsStateSuite by testSuite("The collections shelf state") {
                     ),
             )
         val (state, _) = loaded(gateway)
-        state.sort = CollectionSort.NAME
+        state.selectSort(CollectionSort.NAME)
 
         state.setDisplay(21L, CollectionDisplayPreference.PINNED, false)
 

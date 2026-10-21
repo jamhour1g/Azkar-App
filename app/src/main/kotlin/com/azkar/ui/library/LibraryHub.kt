@@ -155,7 +155,7 @@ private fun ShelfColumn(
                             scope = state.scopeFilter,
                             onScopeChanged = { state.scopeFilter = it },
                             sort = state.sort,
-                            onSortSelected = { state.sort = it },
+                            onSortSelected = { state.selectSort(it) },
                             filtersOpen = filtersOpen,
                             onFiltersToggle = { filtersOpen = !filtersOpen },
                         ),
@@ -778,7 +778,7 @@ private fun CollectionTile.reminderItems(
                     },
                 ),
             onClick = { state.reminders.setEnabled(id, !inReminders) },
-            icon = ActionIcons.reminder(inReminders),
+            icon = if (inReminders) ActionIcons.removeReminder else ActionIcons.addReminder,
         ),
     )
 }

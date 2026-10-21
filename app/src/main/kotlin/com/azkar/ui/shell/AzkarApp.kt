@@ -22,6 +22,7 @@ import com.azkar.ui.library.CollectionCoverCache
 import com.azkar.ui.library.CollectionDetailScreen
 import com.azkar.ui.library.CollectionReminderState
 import com.azkar.ui.library.CollectionSessionScreen
+import com.azkar.ui.library.CollectionSortStore
 import com.azkar.ui.library.CollectionsCatalogue
 import com.azkar.ui.library.CollectionsScreen
 import com.azkar.ui.library.RemembranceReaderScreen
@@ -80,6 +81,9 @@ fun AzkarApp(
     // through a seam it does not own, so the queue's storage stays on the notifications side.
     val reminderSources = koinInject<ReminderSources>()
     val gateway = koinInject<CollectionsGateway>()
+    // The order the shelf opens in. Read from the settings file rather than kept in memory, because a
+    // shelf that forgets how it was sorted is a shelf the user has to sort again on every visit.
+    val sortStore = koinInject<CollectionSortStore>()
     // The tag vocabulary is read and written through a seam of its own rather than through
     // `CollectionsGateway`: the Manage tags screen outlives every collection screen, and a tag is
     // something the library draws rather than something it contains.
@@ -123,7 +127,7 @@ fun AzkarApp(
                                 navigator = navigator,
                                 state = state,
                                 showToast = showToast,
-                                library = LibraryContent(reminders, catalogue, tagsGateway),
+                                library = LibraryContent(reminders, catalogue, tagsGateway, sortStore),
                             )
                         }
 
@@ -250,6 +254,7 @@ private fun ColumnScope.AzkarContent(
                         showToast = showToast,
                         catalogue = catalogue,
                         reminders = reminders,
+                        sortStore = library.sortStore,
                     )
                 }
                 collectionEntries(navigator, showToast, reminders, catalogue)
@@ -322,6 +327,7 @@ private data class LibraryContent(
     val reminders: CollectionReminderState,
     val catalogue: CollectionsCatalogue,
     val tagsGateway: TagGateway,
+    val sortStore: CollectionSortStore,
 )
 
 /**

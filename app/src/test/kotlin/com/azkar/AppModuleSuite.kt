@@ -21,6 +21,7 @@ import com.azkar.i18n.LocaleStore
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.home.DomainHomeGateway
 import com.azkar.ui.home.HomeGateway
+import com.azkar.ui.library.CollectionSortStore
 import com.azkar.ui.library.data.CollectionHomeGateway
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.DomainCollectionsGateway
@@ -90,6 +91,7 @@ val AppModuleSuite by testSuite("AppModule") {
                     koin.get<HomeGateway>(),
                     koin.get<TagGateway>(),
                     koin.get<ThemePreferenceStore>(),
+                    koin.get<CollectionSortStore>(),
                     koin.get<LocaleStore>(),
                     koin.get<HttpClient>(),
                     koin.get<LocationDetector>(),
@@ -156,6 +158,7 @@ val AppModuleSuite by testSuite("AppModule") {
                 .containsExactlyInAnyOrder(
                     SettingsStore::class,
                     ThemePreferenceStore::class,
+                    CollectionSortStore::class,
                     LocaleStore::class,
                     TypographyStore::class,
                     LibrarySeedState::class,

@@ -114,6 +114,33 @@ private fun nextPassage(
 }
 
 /**
+ * The passages the queue will say next, in the order it will say them.
+ *
+ * The runtime's own cycle is asked first, because that is the order the queue will really use: the
+ * cycle is the rotation it built when it last ran, and [ReminderQueueProgress.nextIndex] says how
+ * far through it the queue has got. The library's own order is the fallback, for the two cases
+ * where the cycle cannot be trusted — a queue that has never run has no cycle, and a cycle left
+ * over from a set of sources the user has since changed would name passages the queue no longer has.
+ *
+ * The rotation wraps, so the list starts where the queue is rather than where the cycle began, and
+ * it never repeats itself: a queue of two passages asked for five answers with the two it has,
+ * because the queue will not say the same passage twice in a row.
+ */
+fun upcomingPassages(
+    progress: ReminderQueueProgress,
+    reading: QueueReading,
+    count: Int,
+): List<Remembrance> {
+    val cycle = progress.cycleOrder
+    val useCycle = cycle.isNotEmpty() && cycle.all { it in reading.orderedIds }
+    val order = if (useCycle) cycle else reading.orderedIds
+    if (order.isEmpty() || count <= 0) return emptyList()
+    val start = if (useCycle) progress.nextIndex.coerceIn(0, order.size) else 0
+    val ids = (order.drop(start) + order.take(start)).take(count)
+    return ids.mapNotNull { id -> reading.remembrances.firstOrNull { it.id == id } }
+}
+
+/**
  * The passage text as a single line, falling back through the translations and then to nothing.
  *
  * The old version ended in `"Remembrance ${remembrance.id}"` — an English sentence built by string

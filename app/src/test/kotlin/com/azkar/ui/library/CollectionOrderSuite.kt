@@ -74,7 +74,8 @@ val CollectionOrderSuite by testSuite("The order the user gives the library") {
         val gateway = gatewayWith(morning, evening, travel)
         val (state, _) = loaded(gateway)
 
-        // The shelf opens on the most recently touched first.
+        // The shelf opens on the fullest first; with no members in any of them the name decides,
+        // which puts the evening before the morning.
         assertThat(state.visibleCollections.map { it.id }).containsExactly(11L, 10L, 12L)
 
         state.reorderVisible(from = 2, to = 0)
@@ -142,7 +143,7 @@ val CollectionOrderSuite by testSuite("The order the user gives the library") {
 
         state.reorderVisible(from = 1, to = 1)
 
-        assertThat(state.sort).isEqualTo(CollectionSort.RECENTLY_UPDATED)
+        assertThat(state.sort).isEqualTo(CollectionSort.MOST_ITEMS)
         assertThat(gateway.collections.map { it.position }).containsOnlyNulls()
     }
 
@@ -152,7 +153,7 @@ val CollectionOrderSuite by testSuite("The order the user gives the library") {
 
         state.reorderVisible(from = 0, to = 9)
 
-        assertThat(state.sort).isEqualTo(CollectionSort.RECENTLY_UPDATED)
+        assertThat(state.sort).isEqualTo(CollectionSort.MOST_ITEMS)
         assertThat(gateway.collections.map { it.position }).containsOnlyNulls()
     }
 }

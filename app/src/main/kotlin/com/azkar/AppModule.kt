@@ -6,6 +6,7 @@ import com.azkar.settings.LibrarySeedStore
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.home.DomainHomeGateway
 import com.azkar.ui.home.HomeGateway
+import com.azkar.ui.library.CollectionSortStore
 import com.azkar.ui.library.data.CollectionHomeGateway
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.CollectionsGatewayDependencies
@@ -125,6 +126,10 @@ val appModule =
         single { TypographyStore(get()) }
 
         single { LocaleStore(get()) }
+
+        // The order the library shelf opens in. A preference about the shelf rather than about the
+        // app, so it is bound here but lives with the shelf's own state.
+        single { CollectionSortStore(get()) }
 
         // The one half of the dataset bootstrap that `:data` cannot supply for itself: the answer to
         // "has the shipped library been written yet?" has to outlive the database it describes, so it

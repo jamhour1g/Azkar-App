@@ -629,7 +629,7 @@ fun previewLibraryHeroControls(
         ShelfNarrowing(
             scope = CollectionScope.ALL,
             onScopeChanged = {},
-            sort = CollectionSort.RECENTLY_UPDATED,
+            sort = CollectionSort.MOST_ITEMS,
             onSortSelected = {},
             filtersOpen = false,
             onFiltersToggle = {},
