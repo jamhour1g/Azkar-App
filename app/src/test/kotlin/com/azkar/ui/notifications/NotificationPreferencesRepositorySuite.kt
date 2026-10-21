@@ -1,8 +1,7 @@
 package com.azkar.ui.notifications
 
 import com.azkar.settings.SettingsStore
-import com.azkar.settings.copyForNextLaunch
-import com.azkar.settings.withSettingsFile
+import com.azkar.settings.withInMemorySettings
 import com.azkar.ui.home.PrayerKey
 import com.azkar.ui.notifications.presentation.NotificationPresentationSettings
 import com.azkar.ui.notifications.presentation.OverlayPlacement
@@ -13,23 +12,23 @@ import org.assertj.core.api.Assertions.assertThat
  * That every value the manager screen writes is a value the next launch reads.
  *
  * The screens do not write files; they call `update…` on this repository, and the repository
- * serialises. Nothing between the switch in the UI and the bytes on disk is covered by a screen test
+ * serialises. Nothing between the switch in the UI and the stored bytes is covered by a screen test
  * or a model test, and the gap had a bug in it: the presentation settings carried a `private
  * companion object` for their bounds, and the generated serializer sits outside the class, so the
  * *first* time anybody moved a switch the write failed at runtime with an `IllegalAccessError` —
  * after a clean compile and a green suite. These tests are that gap, closed: each one writes through
- * the real repository against a real preferences file, then opens a second store over a copy of it,
- * which is what the next run of the app would do.
+ * the real repository, then opens a second store over the same settings, which is what the next run
+ * of the app would do.
  *
- * `update…` is awaited rather than fired off, which is the whole reason there is no waiting here:
- * DataStore commits the file before the call returns, so the copy below cannot race it. (The prayer
- * switches in [com.azkar.ui.home.NotificationSettingsState] are fire-and-forget, which is why that
- * suite does not assert through a file at all and runs against the in-memory store instead.)
+ * The settings are in memory because the bug was never about the disk. The serialiser is what
+ * failed, and it is what runs here: the repository encodes the value to JSON and the repository
+ * decodes that JSON again, in memory, exactly as it does when the bytes eventually land in a file.
+ * Whether they land is asked once, in [com.azkar.settings.SettingsStoreSuite].
  */
 val NotificationPreferencesRepositorySuite by testSuite("The notification preferences") {
     test("a fresh install has the overlay it is designed with") {
-        withSettingsFile { file, scope ->
-            val preferences = NotificationPreferencesRepository(SettingsStore.create(file, scope))
+        withInMemorySettings { _, store, _ ->
+            val preferences = NotificationPreferencesRepository(store)
             preferences.refresh()
 
             val presentation = preferences.presentation.value
@@ -40,8 +39,8 @@ val NotificationPreferencesRepositorySuite by testSuite("The notification prefer
     }
 
     test("a presentation change is what the next launch reads") {
-        withSettingsFile { file, scope ->
-            val preferences = NotificationPreferencesRepository(SettingsStore.create(file, scope))
+        withInMemorySettings { scope, store, dataStore ->
+            val preferences = NotificationPreferencesRepository(store)
             preferences.refresh()
             val chosen =
                 NotificationPresentationSettings(
@@ -51,7 +50,7 @@ val NotificationPreferencesRepositorySuite by testSuite("The notification prefer
                 )
             preferences.updatePresentation { chosen }
 
-            val nextLaunch = NotificationPreferencesRepository(SettingsStore.create(copyForNextLaunch(file), scope))
+            val nextLaunch = NotificationPreferencesRepository(SettingsStore(dataStore, scope))
             nextLaunch.refresh()
 
             assertThat(nextLaunch.presentation.value).isEqualTo(chosen)
@@ -60,13 +59,13 @@ val NotificationPreferencesRepositorySuite by testSuite("The notification prefer
     }
 
     test("a presentation change is kept beside the queue rather than replacing it") {
-        withSettingsFile { file, scope ->
-            val preferences = NotificationPreferencesRepository(SettingsStore.create(file, scope))
+        withInMemorySettings { scope, store, dataStore ->
+            val preferences = NotificationPreferencesRepository(store)
             preferences.refresh()
             preferences.updateQueue { it.copy(enabled = true, mode = QueueMode.RANDOM, intervalMinutes = 45) }
             preferences.updatePresentation { it.copy(durationSeconds = 15) }
 
-            val nextLaunch = NotificationPreferencesRepository(SettingsStore.create(copyForNextLaunch(file), scope))
+            val nextLaunch = NotificationPreferencesRepository(SettingsStore(dataStore, scope))
             nextLaunch.refresh()
 
             assertThat(nextLaunch.queue.value.enabled).isTrue()
@@ -77,12 +76,12 @@ val NotificationPreferencesRepositorySuite by testSuite("The notification prefer
     }
 
     test("a queue change is what the next launch reads") {
-        withSettingsFile { file, scope ->
-            val preferences = NotificationPreferencesRepository(SettingsStore.create(file, scope))
+        withInMemorySettings { scope, store, dataStore ->
+            val preferences = NotificationPreferencesRepository(store)
             preferences.refresh()
             preferences.updateQueue { it.copy(collectionIds = listOf(4L, 9L), intervalMinutes = 30) }
 
-            val nextLaunch = NotificationPreferencesRepository(SettingsStore.create(copyForNextLaunch(file), scope))
+            val nextLaunch = NotificationPreferencesRepository(SettingsStore(dataStore, scope))
             nextLaunch.refresh()
 
             assertThat(nextLaunch.queue.value.collectionIds).containsExactly(4L, 9L)
@@ -91,8 +90,8 @@ val NotificationPreferencesRepositorySuite by testSuite("The notification prefer
     }
 
     test("a prayer location is what the next launch calculates from") {
-        withSettingsFile { file, scope ->
-            val preferences = NotificationPreferencesRepository(SettingsStore.create(file, scope))
+        withInMemorySettings { scope, store, dataStore ->
+            val preferences = NotificationPreferencesRepository(store)
             preferences.refresh()
             val chosen =
                 PrayerLocationSettings(
@@ -105,7 +104,7 @@ val NotificationPreferencesRepositorySuite by testSuite("The notification prefer
                 )
             preferences.savePrayerLocation(chosen)
 
-            val nextLaunch = NotificationPreferencesRepository(SettingsStore.create(copyForNextLaunch(file), scope))
+            val nextLaunch = NotificationPreferencesRepository(SettingsStore(dataStore, scope))
             nextLaunch.refresh()
 
             assertThat(nextLaunch.prayerLocation.value).isEqualTo(chosen)
@@ -113,13 +112,13 @@ val NotificationPreferencesRepositorySuite by testSuite("The notification prefer
     }
 
     test("the five prayer switches are still the keys the home screen writes") {
-        withSettingsFile { file, scope ->
-            val preferences = NotificationPreferencesRepository(SettingsStore.create(file, scope))
+        withInMemorySettings { scope, store, dataStore ->
+            val preferences = NotificationPreferencesRepository(store)
             preferences.refresh()
             preferences.setPrayerEnabled(PrayerKey.ASR, false)
             preferences.setPrayerEnabled(PrayerKey.ISHA, false)
 
-            val nextLaunch = NotificationPreferencesRepository(SettingsStore.create(copyForNextLaunch(file), scope))
+            val nextLaunch = NotificationPreferencesRepository(SettingsStore(dataStore, scope))
             nextLaunch.refresh()
 
             assertThat(nextLaunch.prayerFlags.value[PrayerKey.ASR]).isFalse()

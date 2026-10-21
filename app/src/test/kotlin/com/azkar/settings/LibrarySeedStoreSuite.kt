@@ -3,93 +3,100 @@ package com.azkar.settings
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import de.infix.testBalloon.framework.core.testSuite
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import org.assertj.core.api.Assertions.assertThat
-import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.io.path.deleteIfExists
 
 /**
  * None of the shipping path used to write down that the dataset had been seeded, so a second
- * [CollectionSeed] run would restart the dataset. This suite pins the one place that now holds
- * those two answers — whether this installation was seeded, and which row is the starred shelf —
- * to a real preferences file, so nothing reaches the dev's actual settings.
+ * [com.azkar.data.seed.CollectionSeed] run would restart the dataset. This suite pins the one place
+ * that now holds those answers — whether this installation was seeded, and which row is the starred
+ * shelf — to a store that holds nothing but the answers.
+ *
+ * The settings are in memory because the question being asked is "does the next run read the same
+ * answer?", and the in-memory store answers it in full: the keys are written and read through the
+ * same code a file would go through. Whether those keys survive a restart on disk is asked once, in
+ * [SettingsStoreSuite].
+ *
+ * This suite used to carry its own copy of the file fixture, and that copy had the teardown the
+ * shared one warns about: it cancelled the scope and *then* unlinked the directory, in that order,
+ * which is a race against a reader that had not finished.
  */
 val LibrarySeedStoreSuite by testSuite("The seed bookkeeping") {
     test("a fresh install has not been seeded yet") {
-        withSeedFile { file, scope ->
-            val store = LibrarySeedStore(SettingsStore.create(file, scope))
+        withInMemorySettings { _, store, _ ->
+            val seedStore = LibrarySeedStore(store)
 
-            assertThat(store.isSeeded()).isFalse()
+            assertThat(seedStore.isSeeded()).isFalse()
         }
     }
 
     test("marking seeded is what the next launch reads back") {
-        withSeedFile { file, scope ->
-            val store = LibrarySeedStore(SettingsStore.create(file, scope))
-            store.markSeeded()
+        withInMemorySettings { scope, store, dataStore ->
+            val seedStore = LibrarySeedStore(store)
+            seedStore.markSeeded()
 
-            val copy = file.resolveSibling("copy.preferences_pb")
-            Files.copy(file, copy)
-            val nextRun = LibrarySeedStore(SettingsStore.create(copy, scope))
+            val nextRun = LibrarySeedStore(SettingsStore(dataStore, scope))
 
             assertThat(nextRun.isSeeded()).isTrue()
         }
     }
 
     test("a fresh install has no favourites shelf id") {
-        withSeedFile { file, scope ->
-            val store = LibrarySeedStore(SettingsStore.create(file, scope))
+        withInMemorySettings { _, store, _ ->
+            val seedStore = LibrarySeedStore(store)
 
-            assertThat(store.favoritesCollectionId()).isNull()
+            assertThat(seedStore.favoritesCollectionId()).isNull()
         }
     }
 
     test("an uncategorized shelf id survives a restart") {
-        withSeedFile { file, scope ->
-            val store = LibrarySeedStore(SettingsStore.create(file, scope))
-            store.setUncategorizedCollectionId(73L)
+        withInMemorySettings { scope, store, dataStore ->
+            val seedStore = LibrarySeedStore(store)
+            seedStore.setUncategorizedCollectionId(73L)
 
-            val copy = file.resolveSibling("copy.preferences_pb")
-            Files.copy(file, copy)
-            val nextRun = LibrarySeedStore(SettingsStore.create(copy, scope))
+            val nextRun = LibrarySeedStore(SettingsStore(dataStore, scope))
 
             assertThat(nextRun.uncategorizedCollectionId()).isEqualTo(73L)
         }
     }
 
     test("the favourites shelf id survives a restart") {
-        withSeedFile { file, scope ->
-            val store = LibrarySeedStore(SettingsStore.create(file, scope))
-            store.setFavoritesCollectionId(42L)
-            store.setUncategorizedCollectionId(73L)
+        withInMemorySettings { scope, store, dataStore ->
+            val seedStore = LibrarySeedStore(store)
+            seedStore.setFavoritesCollectionId(42L)
+            seedStore.setUncategorizedCollectionId(73L)
 
-            val copy = file.resolveSibling("copy.preferences_pb")
-            Files.copy(file, copy)
-            val nextRun = LibrarySeedStore(SettingsStore.create(copy, scope))
+            val nextRun = LibrarySeedStore(SettingsStore(dataStore, scope))
 
             assertThat(nextRun.favoritesCollectionId()).isEqualTo(42L)
         }
     }
 
-    test("forgetting drops the gate and the shelf id together") {
-        withSeedFile { file, scope ->
-            val store = LibrarySeedStore(SettingsStore.create(file, scope))
-            store.markSeeded()
-            store.setFavoritesCollectionId(42L)
-            store.setUncategorizedCollectionId(73L)
+    test("the reminder picks shelf id survives a restart") {
+        withInMemorySettings { scope, store, dataStore ->
+            val seedStore = LibrarySeedStore(store)
+            seedStore.setReminderPicksCollectionId(91L)
 
-            store.forget()
+            val nextRun = LibrarySeedStore(SettingsStore(dataStore, scope))
 
-            val copy = file.resolveSibling("copy.preferences_pb")
-            Files.copy(file, copy)
-            val nextRun = LibrarySeedStore(SettingsStore.create(copy, scope))
+            assertThat(nextRun.reminderPicksCollectionId()).isEqualTo(91L)
+        }
+    }
+
+    test("forgetting drops the gate and the shelf ids together") {
+        withInMemorySettings { scope, store, dataStore ->
+            val seedStore = LibrarySeedStore(store)
+            seedStore.markSeeded()
+            seedStore.setFavoritesCollectionId(42L)
+            seedStore.setUncategorizedCollectionId(73L)
+            seedStore.setReminderPicksCollectionId(91L)
+
+            seedStore.forget()
+
+            val nextRun = LibrarySeedStore(SettingsStore(dataStore, scope))
             assertThat(nextRun.isSeeded()).isFalse()
             assertThat(nextRun.favoritesCollectionId()).isNull()
             assertThat(nextRun.uncategorizedCollectionId()).isNull()
+            assertThat(nextRun.reminderPicksCollectionId()).isNull()
         }
     }
 
@@ -99,17 +106,7 @@ val LibrarySeedStoreSuite by testSuite("The seed bookkeeping") {
             .isEqualTo(longPreferencesKey("favorites_collection_id"))
         assertThat(LibrarySeedStore.uncategorizedCollectionIdKey)
             .isEqualTo(longPreferencesKey("uncategorized_collection_id"))
-    }
-}
-
-private inline fun withSeedFile(block: (Path, CoroutineScope) -> Unit) {
-    val directory = Files.createTempDirectory("azkar-seed")
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    try {
-        block(directory.resolve("settings.preferences_pb"), scope)
-    } finally {
-        scope.cancel()
-        runCatching { Files.list(directory).forEach { it.deleteIfExists() } }
-        runCatching { directory.deleteIfExists() }
+        assertThat(LibrarySeedStore.reminderPicksCollectionIdKey)
+            .isEqualTo(longPreferencesKey("reminder_picks_collection_id"))
     }
 }

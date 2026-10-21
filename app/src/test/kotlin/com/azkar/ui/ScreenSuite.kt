@@ -25,8 +25,8 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.azkar.settings.FakePreferencesDataStore
 import com.azkar.settings.SettingsStore
-import com.azkar.settings.deleteDirectoryWhenIdle
 import com.azkar.ui.home.HomeGateway
 import com.azkar.ui.home.HomeScreen
 import com.azkar.ui.library.CollectionDetailScreen
@@ -62,7 +62,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
-import java.nio.file.Files
 import java.util.Locale
 
 /**
@@ -214,7 +213,7 @@ private fun collectionCard(name: String): SemanticsMatcher =
  * dependencies as parameters, so [ScreenFixture] is the whole of the wiring. `HomeScreen` resolves its
  * own `SettingsStore` and `HomeGateway` from the container, which is a real difference in how the
  * screen is constructed and not something to work around — so this stands up the smallest container
- * that can satisfy it: the store on a temp file it will never meaningfully write, and the preview
+ * that can satisfy it: the store on settings it will never meaningfully write, and the preview
  * gateway that returns fixtures instead of querying.
  *
  * `SettingsScreen` joins it for a second, unrelated reason: the notification and prayer tabs resolve
@@ -232,20 +231,19 @@ private fun collectionCard(name: String): SemanticsMatcher =
  *
  * The container is torn down in a `finally`. A test that leaves Koin running leaks that state into
  * every suite that happens to run after it, which is the kind of failure that only shows up on a full
- * run and never in isolation. The teardown is ordered, though: the scratch directory outlives the
- * store's cancellation rather than racing it, and the `finally` says why.
+ * run and never in isolation. Nothing else has to be undone: the settings are in memory, so there is
+ * no file to unlink and therefore no teardown that could race a reader.
  *
  * It is a top-level function rather than one declared inside `testSuite { }` because Kotlin does not
  * allow a `private` local function, and a helper local to the suite body could not be.
  */
 private fun withScreenContainer(block: () -> Unit) {
-    val directory = Files.createTempDirectory("azkar-home-screen")
     val storeScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     try {
         startKoin {
             modules(
                 module {
-                    single { SettingsStore.create(directory.resolve("settings.preferences_pb"), storeScope) }
+                    single { SettingsStore(FakePreferencesDataStore(), storeScope) }
                     single { NotificationPreferencesRepository(get()) }
                     single<HomeGateway> { PreviewHomeGateway() }
                     // The settings page's two moved tabs resolve these themselves rather than taking
@@ -261,17 +259,6 @@ private fun withScreenContainer(block: () -> Unit) {
         }
         block()
     } finally {
-        // The scratch directory is removed only once the store's own work has actually stopped,
-        // rather than straight after asking it to. `cancel()` returns at once; the DataStore reading
-        // this file on its IO scope keeps running for a moment afterwards. Unlinking the file under a
-        // store that is still reading it makes `changes` fail, and `changes` answers a failure by
-        // emitting an empty snapshot — a write into the Compose state `HomeScreen` reads, on a
-        // thread that is not the one composing it, arriving as the composition is being torn down.
-        // That is the intermittent *"Unsupported concurrent change during composition"* this test used
-        // to fail with. The fix is the shared `deleteDirectoryWhenIdle`, not a private third copy of
-        // it: `cancel` followed by `delete` is a race that mostly wins, and `invokeOnCompletion` is
-        // what makes it deterministic without blocking the test thread on a join.
-        storeScope.deleteDirectoryWhenIdle(directory)
         stopKoin()
         storeScope.cancel()
     }

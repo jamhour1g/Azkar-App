@@ -2,60 +2,56 @@ package com.azkar.ui.shell
 
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.azkar.settings.SettingsStore
-import com.azkar.settings.copyForNextLaunch
-import com.azkar.settings.withSettingsFile
+import com.azkar.settings.withInMemorySettings
 import de.infix.testBalloon.framework.core.testSuite
-import kotlinx.coroutines.CoroutineScope
 import org.assertj.core.api.Assertions.assertThat
-import java.nio.file.Path
 
 /**
- * The stored colour preference, against a real DataStore on a real file.
+ * The stored colour preference, and the rules that govern a stored value nobody can honour.
  *
  * This is the fix for a toggle that changed the palette and forgot: `selectTheme` moved the state
  * and never wrote it, and nothing read the key back, so the next launch always opened following the
- * system. The round trip is asserted through a copy of the file rather than the same store, because
- * DataStore allows one instance per file per process and what a second run of the app reads is what
- * actually landed on disk.
+ * system.
  *
- * Each test gets its own file and its own store, so nothing reaches the developer's real settings.
- * The scope is the shared [withSettingsFile] one — a real [CoroutineScope] on
- * [kotlinx.coroutines.Dispatchers.IO] rather than a `runTest` one, because the value under test
- * arrives through file IO and virtual time would not advance it.
+ * The round trip is asserted through a second reader over the same settings rather than through a
+ * copy of a file. The question being asked here is "does the choice come back?", and the in-memory
+ * store answers it in full: it holds the same bytes a file would, and the store under test writes
+ * them through the same code. The question that *is* about the disk — does a value survive a
+ * restart, and what happens when the file is corrupt — has its own home, in
+ * [com.azkar.settings.SettingsStoreSuite], and is asked there.
  */
 val ThemePreferenceStoreSuite by testSuite("The stored colour preference") {
     test("a fresh install follows the system") {
-        withSettingsFile { file, scope ->
-            val store = themePreferences(file, scope)
+        withInMemorySettings { _, store, _ ->
+            val themeStore = ThemePreferenceStore(store)
 
-            assertThat(store.read()).isEqualTo(ThemePreference.SYSTEM)
+            assertThat(themeStore.read()).isEqualTo(ThemePreference.SYSTEM)
         }
     }
 
     test("a stored preference is what the next run opens with") {
-        withSettingsFile { file, scope ->
-            val store = themePreferences(file, scope)
-            store.persistAndAwait(ThemePreference.DARK)
+        withInMemorySettings { scope, store, dataStore ->
+            val themeStore = ThemePreferenceStore(store)
+            themeStore.persistAndAwait(ThemePreference.DARK)
 
-            // No waiting here: `edit` returns once DataStore has committed the file, so the copy
-            // cannot race the write. [persistAndAwait] exists precisely so this suite never has to
-            // guess.
-            val nextLaunch = themePreferences(copyForNextLaunch(file), scope)
+            // The next run is a new store over the same settings. An in-memory store has no
+            // one-instance-per-file rule, so there is nothing to copy first and nothing to race.
+            val nextLaunch = ThemePreferenceStore(SettingsStore(dataStore, scope))
 
             assertThat(nextLaunch.read()).isEqualTo(ThemePreference.DARK)
         }
     }
 
     test("a name this build does not know falls back to following the system") {
-        withSettingsFile { file, scope ->
-            val store = themePreferences(file, scope)
+        withInMemorySettings { _, store, _ ->
+            val themeStore = ThemePreferenceStore(store)
             // Seeded under the production key rather than through [ThemePreferenceStore.persist],
             // because no preference this build has can produce a name it does not know.
-            store.putStoredName("SEPIA")
+            themeStore.putStoredName("SEPIA")
 
             // A light window beats no window: a hand-edited file or a renamed constant must not take
             // the launch down with it.
-            assertThat(store.read()).isEqualTo(ThemePreference.SYSTEM)
+            assertThat(themeStore.read()).isEqualTo(ThemePreference.SYSTEM)
         }
     }
 
@@ -67,9 +63,3 @@ val ThemePreferenceStoreSuite by testSuite("The stored colour preference") {
             .isEqualTo(stringPreferencesKey("theme_preference"))
     }
 }
-
-/** The theme store over a store built for [file] and [scope]. */
-private fun themePreferences(
-    file: Path,
-    scope: CoroutineScope,
-): ThemePreferenceStore = ThemePreferenceStore(SettingsStore.create(file, scope))

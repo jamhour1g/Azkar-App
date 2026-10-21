@@ -1,11 +1,9 @@
 package com.azkar.ui.shell
 
 import com.azkar.settings.SettingsStore
-import com.azkar.settings.copyForNextLaunch
-import com.azkar.settings.withSettingsFile
+import com.azkar.settings.withInMemorySettings
 import com.azkar.ui.theme.AppTypography
 import de.infix.testBalloon.framework.core.testSuite
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 
 /**
@@ -18,40 +16,40 @@ import org.assertj.core.api.Assertions.assertThat
  * that a cosmetic problem, and the only way to test it is to write a name this machine does not have
  * — which is what `putStoredFamily` exists for.
  *
- * Round trips go through a copy of the file rather than a second store over the same path, because
- * DataStore allows one instance per file per process and the second one throws rather than reading.
+ * The round trip goes through a second reader over the same settings rather than a copy of the
+ * file. The question being asked is "does the choice come back?", and the in-memory store answers it
+ * in full; whether a value survives a restart on disk is asked once, in
+ * [com.azkar.settings.SettingsStoreSuite].
  */
 val TypographyStoreSuite by testSuite("The reader's typography") {
     test("a fresh install reads as the bundled pairing at full size") {
-        withSettingsFile { file, scope ->
-            val store = TypographyStore(SettingsStore.create(file, scope))
+        withInMemorySettings { _, store, _ ->
+            val typography = TypographyStore(store)
 
-            assertThat(runBlocking { store.read() }).isEqualTo(AppTypography())
+            assertThat(typography.read()).isEqualTo(AppTypography())
             assertThat(AppTypography().isAzkarFont).isTrue()
             assertThat(AppTypography().scale).isEqualTo(1f)
         }
     }
 
     test("a chosen face and size are what the next launch reads") {
-        withSettingsFile { file, scope ->
+        withInMemorySettings { scope, store, dataStore ->
             val chosen = AppTypography(family = "Georgia", scalePercent = 130)
-            TypographyStore(SettingsStore.create(file, scope)).persistAndAwait(chosen)
+            TypographyStore(store).persistAndAwait(chosen)
 
-            val nextLaunch = TypographyStore(SettingsStore.create(copyForNextLaunch(file), scope))
+            val nextLaunch = TypographyStore(SettingsStore(dataStore, scope))
 
-            assertThat(runBlocking { nextLaunch.read() }).isEqualTo(chosen)
+            assertThat(nextLaunch.read()).isEqualTo(chosen)
         }
     }
 
     test("a face this machine does not have still reads as a usable choice") {
-        withSettingsFile { file, scope ->
-            val store = TypographyStore(SettingsStore.create(file, scope))
-            runBlocking {
-                store.persistAndAwait(AppTypography(scalePercent = 110))
-                store.putStoredFamily("A Face Only The Author Had")
-            }
+        withInMemorySettings { _, store, _ ->
+            val typography = TypographyStore(store)
+            typography.persistAndAwait(AppTypography(scalePercent = 110))
+            typography.putStoredFamily("A Face Only The Author Had")
 
-            val read = runBlocking { store.read() }
+            val read = typography.read()
 
             // The size, which this build does understand, survives; the face is handed back as the
             // name that was stored, because deciding what to show for it is the settings screen's job
@@ -62,30 +60,30 @@ val TypographyStoreSuite by testSuite("The reader's typography") {
     }
 
     test("a stored size outside the slider's range is clamped rather than honoured") {
-        withSettingsFile { file, scope ->
-            val store = TypographyStore(SettingsStore.create(file, scope))
-            runBlocking { store.persistAndAwait(AppTypography(scalePercent = 4_000)) }
+        withInMemorySettings { _, store, _ ->
+            val typography = TypographyStore(store)
+            typography.persistAndAwait(AppTypography(scalePercent = 4_000))
 
-            assertThat(runBlocking { store.read() }.scalePercent).isEqualTo(AppTypography.MAX_SCALE_PERCENT)
+            assertThat(typography.read().scalePercent).isEqualTo(AppTypography.MAX_SCALE_PERCENT)
         }
     }
 
     test("a stored size below the slider's range is clamped the other way") {
-        withSettingsFile { file, scope ->
-            val store = TypographyStore(SettingsStore.create(file, scope))
-            runBlocking { store.persistAndAwait(AppTypography(scalePercent = -50)) }
+        withInMemorySettings { _, store, _ ->
+            val typography = TypographyStore(store)
+            typography.persistAndAwait(AppTypography(scalePercent = -50))
 
-            assertThat(runBlocking { store.read() }.scalePercent).isEqualTo(AppTypography.MIN_SCALE_PERCENT)
+            assertThat(typography.read().scalePercent).isEqualTo(AppTypography.MIN_SCALE_PERCENT)
         }
     }
 
     test("writing the bundled pairing back clears the face rather than storing a name for it") {
-        withSettingsFile { file, scope ->
-            val store = TypographyStore(SettingsStore.create(file, scope))
-            runBlocking { store.persistAndAwait(AppTypography(family = "Georgia", scalePercent = 130)) }
-            runBlocking { store.persistAndAwait(AppTypography()) }
+        withInMemorySettings { _, store, _ ->
+            val typography = TypographyStore(store)
+            typography.persistAndAwait(AppTypography(family = "Georgia", scalePercent = 130))
+            typography.persistAndAwait(AppTypography())
 
-            assertThat(runBlocking { store.read() }).isEqualTo(AppTypography())
+            assertThat(typography.read()).isEqualTo(AppTypography())
         }
     }
 }

@@ -1,60 +1,65 @@
 package com.azkar.ui.library
 
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.azkar.settings.SettingsStore
-import com.azkar.settings.copyForNextLaunch
-import com.azkar.settings.withSettingsFile
+import com.azkar.settings.withInMemorySettings
 import com.azkar.ui.library.model.CollectionSort
 import de.infix.testBalloon.framework.core.testSuite
-import kotlinx.coroutines.CoroutineScope
 import org.assertj.core.api.Assertions.assertThat
-import java.nio.file.Path
 
 /**
- * The stored order of the library, against a real DataStore on a real file.
+ * The stored order of the library.
  *
  * The shelf's sort is a choice the user makes once and expects to keep, the same way the colour
  * preference is: a shelf that reopened on a different order every launch would make the "My order"
- * sort — the one the queue recites in — a thing that has to be re-chosen every morning. The round
- * trip is asserted through a copy of the file rather than the same store, because DataStore allows
- * one instance per file per process and what a second run of the app reads is what actually landed
- * on disk.
+ * sort — the one the queue recites in — a thing that has to be re-chosen every morning.
  *
- * Each test gets its own file and its own store, so nothing reaches the developer's real settings.
+ * Nothing here touches the disk. What is being asked is how the order is *chosen and remembered*,
+ * not whether a byte reached a file, and the in-memory store answers that question without the file
+ * IO that would put a filesystem between the test and the thing it is testing. A round trip is a
+ * second reader over the same settings rather than a copy of a file: the in-memory store has no
+ * one-instance-per-file rule, so there is nothing to copy.
  */
 val CollectionSortStoreSuite by testSuite("The stored order of the library") {
     test("a fresh install opens on the fullest shelves first") {
-        withSettingsFile { file, scope ->
-            val store = collectionSorts(file, scope)
+        withInMemorySettings { _, store, _ ->
+            val sorts = CollectionSortStore(store)
 
-            assertThat(store.read()).isEqualTo(CollectionSort.MOST_ITEMS)
+            assertThat(sorts.read()).isEqualTo(CollectionSort.MOST_ITEMS)
         }
     }
 
     test("a stored order is what the next run opens with") {
-        withSettingsFile { file, scope ->
-            val store = collectionSorts(file, scope)
-            store.persistAndAwait(CollectionSort.NAME)
+        withInMemorySettings { _, store, _ ->
+            val sorts = CollectionSortStore(store)
+            sorts.persistAndAwait(CollectionSort.NAME)
 
-            // No waiting here: `edit` returns once DataStore has committed the file, so the copy
-            // cannot race the write. [persistAndAwait] exists precisely so this suite never has to
-            // guess.
-            val nextLaunch = collectionSorts(copyForNextLaunch(file), scope)
+            // The next launch is a second reader over the same settings.
+            val nextLaunch = CollectionSortStore(store)
 
             assertThat(nextLaunch.read()).isEqualTo(CollectionSort.NAME)
         }
     }
 
+    test("the order is written under the key the store reads back") {
+        withInMemorySettings { _, store, dataStore ->
+            CollectionSortStore(store).persistAndAwait(CollectionSort.NAME)
+
+            // The write itself, not the reader's memory of it: a store that moved the value somewhere
+            // else would still read back what it wrote, and the order would be lost between runs.
+            assertThat(dataStore.stored[CollectionSortStore.key]).isEqualTo(CollectionSort.NAME.name)
+        }
+    }
+
     test("a name this build does not know falls back to the fullest first") {
-        withSettingsFile { file, scope ->
-            val store = collectionSorts(file, scope)
+        withInMemorySettings { _, store, _ ->
+            val sorts = CollectionSortStore(store)
             // Seeded under the production key rather than through [CollectionSortStore.persist],
             // because no sort this build has can produce a name it does not know.
-            store.putStoredName("BY_VIBES")
+            sorts.putStoredName("BY_VIBES")
 
             // A known order beats no order: a hand-edited file or a renamed constant must not take
             // the launch down with it.
-            assertThat(store.read()).isEqualTo(CollectionSort.MOST_ITEMS)
+            assertThat(sorts.read()).isEqualTo(CollectionSort.MOST_ITEMS)
         }
     }
 
@@ -66,9 +71,3 @@ val CollectionSortStoreSuite by testSuite("The stored order of the library") {
             .isEqualTo(stringPreferencesKey("library_collection_sort"))
     }
 }
-
-/** The sort store over a store built for [file] and [scope]. */
-private fun collectionSorts(
-    file: Path,
-    scope: CoroutineScope,
-): CollectionSortStore = CollectionSortStore(SettingsStore.create(file, scope))

@@ -18,6 +18,7 @@ import com.azkar.domain.service.RemembranceService
 import com.azkar.domain.service.TagService
 import com.azkar.domain.service.TransactionRunner
 import com.azkar.i18n.LocaleStore
+import com.azkar.settings.FakePreferencesDataStore
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.home.DomainHomeGateway
 import com.azkar.ui.home.HomeGateway
@@ -53,9 +54,6 @@ import org.koin.core.context.stopKoin
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.koin.mp.KoinPlatform
-import java.nio.file.Files
-import java.nio.file.Path
-import kotlin.io.path.deleteIfExists
 import kotlin.reflect.KClass
 
 /**
@@ -222,14 +220,13 @@ private fun registeredTypes(): List<KClass<*>> =
 /**
  * The container, plus the one piece of scratch state the overrides need released afterwards.
  *
- * A class rather than a bare `Koin` because the settings store's scope and its temporary directory
- * both outlive the fixture block that creates them: `testFixture` and `closeWith` are sibling
- * lambdas, so a local declared in the first is not in scope in the second.
+ * A class rather than a bare `Koin` because the settings store's scope outlives the fixture block
+ * that creates it: `testFixture` and `closeWith` are sibling lambdas, so a local declared in the
+ * first is not in scope in the second.
  */
 private class StubbedGraph private constructor(
     val koin: Koin,
     private val settingsScope: CoroutineScope,
-    private val settingsDirectory: Path,
 ) {
     fun close() {
         // The notification scope outlives the fixture block for the same reason the settings scope
@@ -244,27 +241,24 @@ private class StubbedGraph private constructor(
         runCatching { koin.get<HttpClient>().close() }
         stopKoin()
         settingsScope.cancel()
-        runCatching { Files.list(settingsDirectory).forEach { it.deleteIfExists() } }
-        runCatching { settingsDirectory.deleteIfExists() }
     }
 
     companion object {
-        /** Starts the real [appModule] over stubbed storage and a settings file of its own. */
+        /** Starts the real [appModule] over stubbed storage and settings of its own. */
         fun start(): StubbedGraph {
             val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-            val settingsDirectory = Files.createTempDirectory("azkar-app-module")
-            val settingsFile = settingsDirectory.resolve("settings.preferences_pb")
             startKoin {
                 modules(
                     storagePortModule,
                     appModule,
                     // The production definition builds over `~/.azkar/settings.preferences_pb`.
-                    // Pointed at a scratch file instead, so a graph test never writes settings the
-                    // developer would then open the real app against.
-                    module { single { SettingsStore.create(settingsFile, settingsScope) } },
+                    // Pointed at a store of its own instead, so a graph test never writes settings
+                    // the developer would then open the real app against — and never writes them
+                    // to a disk at all.
+                    module { single { SettingsStore(FakePreferencesDataStore(), settingsScope) } },
                 )
             }
-            return StubbedGraph(KoinPlatform.getKoin(), settingsScope, settingsDirectory)
+            return StubbedGraph(KoinPlatform.getKoin(), settingsScope)
         }
     }
 }
