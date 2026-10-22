@@ -21,7 +21,9 @@ plugins {
     alias(libs.plugins.dev.hydraulic.conveyor)
 }
 
-version = "0.1.0"
+// The release tag has to match this number exactly, without the `v`: the release workflow
+// checks it and refuses to publish otherwise.
+version = "0.1.1"
 
 // The desktop entry point, in one place.
 //

@@ -142,23 +142,19 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
 
             first.onPrayerToggled(PrayerKey.ASR, false)
 
-            // Waiting on the store's own emission rather than on the file existing. This is the
-            // replacement for an `awaitFile` helper whose claim — "the file is there, so the write
-            // landed" — was wrong: existence proves *some* commit happened, not the one just made,
-            // and the suite only passed because the toggle under test happened to be the first write
-            // ever made to that file. DataStore re-emits only after committing, so waiting for the
-            // value is waiting for the disk.
-            awaitOnRealClock(TIMEOUT_MILLIS) {
-                store.changes.first { it[storedFlagKey(PrayerKey.ASR)] == false }
-            }
-
-            // …and then waiting for the file, because the two are not the same moment. DataStore
-            // writes to a scratch file and moves it into place *after* it has published the new
-            // value, so for a moment the only file on disk is the `.tmp` one and the settings file
-            // this test is about to copy does not exist yet. The value says the commit happened;
-            // the file's existence says the move has finished. The test needs both, and in that
-            // order — and the old comment's objection to waiting for the file is answered by doing
-            // it *after* the value rather than instead of it.
+            // Waiting for the file, not for the store to say the value arrived. A collection of the
+            // store's flow that starts now begins from the state the store is in now and then
+            // carries only what comes after it: DataStore drops the values that are no newer than
+            // the state the collection started from. A read that lands while a write is in flight
+            // adopts the write's version for the content it read — the content from before the
+            // write — and the write then commits with that same version, so the flow drops the
+            // write as stale. The write is on disk and in the store; that collection is blind to
+            // it, and the wait runs out on a store that is in fact correct.
+            //
+            // The file is the ground truth instead. DataStore writes to a scratch file and moves it
+            // into place at the end of the commit, so the file exists only once the write has
+            // landed — and the toggle is the only thing in this test that writes to this file, so
+            // the first file to appear is the toggle's.
             awaitFileOnDisk(file)
 
             // DataStore allows one instance per file per process, so the round trip goes through a
