@@ -129,7 +129,9 @@ jobs:
           agree_to_license: 1
           conveyor_version: '22.3'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # `make site` only needs this config substitution; the publishing step
+          # below receives the write token separately.
+          GITHUB_TOKEN: dummy
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
 
       - name: Publish GitHub prerelease
