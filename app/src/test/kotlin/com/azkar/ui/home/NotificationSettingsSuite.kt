@@ -8,9 +8,11 @@ import com.azkar.settings.copyForNextLaunch
 import com.azkar.settings.withInMemorySettings
 import com.azkar.settings.withSettingsFile
 import de.infix.testBalloon.framework.core.testSuite
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.assertj.core.api.Assertions.assertThat
 import java.io.IOException
@@ -146,7 +148,9 @@ val NotificationSettingsSuite by testSuite("The notification switches") {
             // and the suite only passed because the toggle under test happened to be the first write
             // ever made to that file. DataStore re-emits only after committing, so waiting for the
             // value is waiting for the disk.
-            store.changes.first { it[storedFlagKey(PrayerKey.ASR)] == false }
+            awaitOnRealClock(TIMEOUT_MILLIS) {
+                store.changes.first { it[storedFlagKey(PrayerKey.ASR)] == false }
+            }
 
             // …and then waiting for the file, because the two are not the same moment. DataStore
             // writes to a scratch file and moves it into place *after* it has published the new
@@ -186,7 +190,7 @@ private inline fun withSwitches(block: (NotificationSettingsState, FakePreferenc
  */
 private suspend fun NotificationSettingsState.awaitFlags(
     matches: (Map<PrayerKey, Boolean>) -> Boolean = { true },
-): Map<PrayerKey, Boolean> = withTimeout(TIMEOUT_MILLIS) { snapshotFlow { flags }.first(matches) }
+): Map<PrayerKey, Boolean> = awaitOnRealClock(TIMEOUT_MILLIS) { snapshotFlow { flags }.first(matches) }
 
 /**
  * The on-disk key for a prayer's switch.
@@ -205,12 +209,27 @@ private fun storedFlagKey(key: PrayerKey) = booleanPreferencesKey("prayer.${key.
  * timeout keeps a failure to move from hanging the run.
  */
 private suspend fun awaitFileOnDisk(file: Path) {
-    withTimeout(TIMEOUT_MILLIS) {
+    awaitOnRealClock(TIMEOUT_MILLIS) {
         while (!file.exists()) {
             delay(FILE_POLL_MILLIS)
         }
     }
 }
+
+/**
+ * Runs [block] on a real clock, and gives up after [timeoutMillis].
+ *
+ * The suite runs inside `runTest`, whose clock is virtual: a `withTimeout` there does not wait, it
+ * advances the scheduler, and a `delay` returns at once. A wait that never ends — a write that was
+ * lost, say — therefore hangs the whole run instead of failing the test, which is what happened on
+ * Windows, where the run spent a full minute on a test that had already failed.
+ *
+ * Leaving the virtual clock for a real dispatcher is what makes the timeout a timeout.
+ */
+private suspend fun <T> awaitOnRealClock(
+    timeoutMillis: Long,
+    block: suspend () -> T,
+): T = withContext(Dispatchers.IO) { withTimeout(timeoutMillis) { block() } }
 
 private const val TIMEOUT_MILLIS = 5_000L
 
