@@ -9,7 +9,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import java.io.IOException
 import java.nio.file.Files
-import kotlin.io.path.deleteIfExists
+import java.nio.file.Path
 
 /**
  * How the settings store answers a failure, which is the part no other suite could reach.
@@ -146,31 +146,28 @@ val SettingsStoreSuite by testSuite("The settings store") {
         }
     }
 
-    test("the settings home is a property, so no test can be redirected by loading order") {
-        val home = Files.createTempDirectory("azkar-settings-home")
-        val previous = System.getProperty(SettingsStore.SETTINGS_HOME_PROPERTY)
-        try {
-            System.setProperty(SettingsStore.SETTINGS_HOME_PROPERTY, home.toString())
-
-            val store = SettingsStore.create()
-            store.edit { this[TEST_KEY] = "in the redirected home" }
-
-            // The path used to be resolved when the class loaded, which meant it was fixed before
-            // anything could ask for a different one. Resolving it per call means a harness that
-            // does not own a `user.home` — CI, a container, a scratch directory — can say so instead
-            // of writing into the developer's real settings.
-            assertThat(Files.exists(home.resolve(SETTINGS_FILE_NAME))).isTrue()
-        } finally {
-            // The property is process-wide, so a test that set it and did not put it back would
-            // silently move the settings file for every test that ran after it.
-            if (previous == null) {
-                System.clearProperty(SettingsStore.SETTINGS_HOME_PROPERTY)
-            } else {
-                System.setProperty(SettingsStore.SETTINGS_HOME_PROPERTY, previous)
+    test("the settings home property resolves to its own settings file") {
+        val home = Path.of("settings-home")
+        val resolved =
+            SettingsStore.resolveSettingsFile { property ->
+                when (property) {
+                    SettingsStore.SETTINGS_HOME_PROPERTY -> home.toString()
+                    "user.home" -> error("The explicit settings home should take precedence")
+                    else -> null
+                }
             }
-            runCatching { Files.list(home).forEach { it.deleteIfExists() } }
-            runCatching { home.deleteIfExists() }
-        }
+
+        assertThat(resolved).isEqualTo(Path.of("settings-home", "settings.preferences_pb"))
+
+        val fallback =
+            SettingsStore.resolveSettingsFile { property ->
+                when (property) {
+                    "user.home" -> "user-home"
+                    else -> null
+                }
+            }
+
+        assertThat(fallback).isEqualTo(Path.of("user-home", ".azkar", "settings.preferences_pb"))
     }
 }
 

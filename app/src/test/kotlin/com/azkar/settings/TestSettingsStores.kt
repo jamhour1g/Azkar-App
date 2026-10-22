@@ -89,7 +89,7 @@ fun copyForNextLaunch(file: Path): Path =
  */
 fun CoroutineScope.deleteDirectoryWhenIdle(directory: Path) {
     coroutineContext.job.invokeOnCompletion {
-        runCatching { Files.list(directory).forEach { it.deleteIfExists() } }
+        runCatching { Files.list(directory).use { entries -> entries.forEach { it.deleteIfExists() } } }
         runCatching { directory.deleteIfExists() }
     }
 }

@@ -188,12 +188,21 @@ class SettingsStore(
          * when the class happens to load, and so no test can be surprised by a path that was
          * resolved from the developer's own home directory before the test got a say.
          */
-        private fun settingsFile(): Path =
-            Path.of(
-                System.getProperty(SETTINGS_HOME_PROPERTY)
-                    ?: Path.of(System.getProperty("user.home"), DIRECTORY).toString(),
-                FILE_NAME,
-            )
+        private fun settingsFile(): Path = resolveSettingsFile(System::getProperty)
+
+        /**
+         * Resolves the settings path from a property lookup.
+         *
+         * Keeping the lookup injectable lets the path rule be tested without mutating JVM-wide
+         * properties, which can redirect unrelated stores while a test is running.
+         */
+        internal fun resolveSettingsFile(property: (String) -> String?): Path {
+            val settingsHome = property(SETTINGS_HOME_PROPERTY)
+            val directory =
+                settingsHome
+                    ?: Path.of(requireNotNull(property("user.home")), DIRECTORY).toString()
+            return Path.of(directory, FILE_NAME)
+        }
 
         /**
          * Creates the settings directory, or fails the way the data layer's own config does.
