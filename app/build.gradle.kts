@@ -480,8 +480,15 @@ tasks.register("checkTagParity") {
 
 // Local rehearsal of .github/workflows/release.yml with act (https://github.com/nektos/act). It
 // builds and signs every platform, so give it half an hour, and it needs Docker plus the `conveyor`
-// CLI on PATH. The signing key is a throwaway under ~/.conveyor-acttest; publishing fails on the
-// dummy GITHUB_TOKEN, which is the point - everything up to that step is the real workflow.
+// CLI on PATH. The signing key is a throwaway under ~/.conveyor-acttest.
+//
+// The rehearsal does not publish. `act` hands the container the GitHub token it finds on this
+// host, which is a real one, and Conveyor would then create a real release signed with the
+// throwaway key - which is exactly what happened the first time this task was run. The staged
+// workflow therefore loses its credentials: the checkout stops writing its token into the git
+// config, and the publish step gets a token that cannot write. Everything before the publish -
+// the build, the signing, the packaging - is still the real workflow, and the run ends with a
+// failed publish step, which is the proof that nothing was published.
 val actKeyDirectory = file("${System.getProperty("user.home")}/.conveyor-acttest")
 val actWorkDirectory = layout.buildDirectory.dir("act")
 val releaseVersion = version.toString()
@@ -557,6 +564,26 @@ tasks.register<Exec>("verifyReleaseWorkflow") {
             }.result
             .get()
             .assertNormalExitValue()
+
+        // Take the credentials away from the staged workflow, so the rehearsal cannot publish.
+        val stagedWorkflow = stagedDirectory.resolve(".github/workflows/release.yml")
+        val original = stagedWorkflow.readText()
+        val patched =
+            original
+                .replace(
+                    "      - uses: actions/checkout@v5\n",
+                    "      - uses: actions/checkout@v5\n" +
+                        "        with:\n" +
+                        "          persist-credentials: false\n",
+                ).replace(
+                    "GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}",
+                    "GITHUB_TOKEN: rehearsal-token-without-write-access",
+                )
+        check(patched != original) {
+            "The release workflow no longer looks the way this task expects; the credential " +
+                "stripping would silently stop working."
+        }
+        stagedWorkflow.writeText(patched)
     }
 
     workingDir = staging.get().asFile

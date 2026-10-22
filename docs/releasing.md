@@ -193,6 +193,14 @@ Users install from the Release page (`download.html`); installed copies pick up
 later releases automatically (Windows background update, macOS Sparkle prompt,
 Linux `apt upgrade`).
 
+The download page is also published to GitHub Pages: `app.site.github.pages-branch`
+in [conveyor.conf](../conveyor.conf) points at the `gh-pages` branch, so the
+same `make copied-site` run leaves the page at
+`https://jamhour1g.github.io/Azkar-App/download.html`. The page is the
+storefront and the Release is the warehouse: the buttons on the page link
+straight to `releases/latest/download/…`, so the page is only useful once a
+release exists, and the auto-updates keep reading the Release either way.
+
 ## Caveats
 
 - **No pre-release tags.** The update feed reads
@@ -241,8 +249,13 @@ use act:
 
 It needs Docker and the `conveyor` CLI on PATH, generates a throwaway signing
 key in `~/.conveyor-acttest` on first use, and builds and signs for roughly half
-an hour. Publishing is the one step that cannot succeed: `GITHUB_TOKEN` is a
-dummy, which is what stops the rehearsal from touching a real release.
+an hour. Publishing is the one step that cannot succeed, and that is the
+point: the task strips the credentials from the staged workflow before the
+rehearsal runs, because `act` hands the container the GitHub token it finds
+on this host, and Conveyor would otherwise create a real release signed with
+the throwaway key. The run therefore ends with a failed publish step, which
+is the proof that nothing was published. Everything before it — the build, the
+signing, the packaging, the upload — is the real workflow.
 
 act copies its whole working directory into the runner container, and this
 repository is mostly `.git` and build output, so the task first mirrors a pruned
