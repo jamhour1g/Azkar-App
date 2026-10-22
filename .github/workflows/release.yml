@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     concurrency:
-      group: release-production
+      group: release-publishing
       cancel-in-progress: false
 
     steps:
@@ -69,7 +69,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     concurrency:
-      group: release-dev-preview
+      group: release-publishing
       cancel-in-progress: false
 
     steps:
@@ -150,3 +150,32 @@ jobs:
               gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/$asset_id"
             fi
           done < <(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$tag" --jq '.assets[] | [.id, .name] | @tsv')
+
+      - name: Point GitHub Pages to dev preview when no stable release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          stable_releases="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')"
+          if [[ -n "$stable_releases" ]]; then
+            echo "A stable release exists; keeping the production download page."
+            exit 0
+          fi
+
+          git fetch origin gh-pages
+          pages_dir="$(mktemp -d "$RUNNER_TEMP/gh-pages.XXXXXX")"
+          git worktree add --detach "$pages_dir" FETCH_HEAD
+          cp output/download.html "$pages_dir/download.html"
+          cp output/icon.png "$pages_dir/icon.png"
+          sed -i 's@/releases/download/dev-preview/debian/@/releases/download/dev-preview/@g' \
+            "$pages_dir/download.html"
+
+          git -C "$pages_dir" config user.name "github-actions[bot]"
+          git -C "$pages_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$pages_dir" add download.html icon.png
+          if git -C "$pages_dir" diff --cached --quiet; then
+            echo "The GitHub Pages dev preview is already current."
+          else
+            git -C "$pages_dir" commit -m "docs: point Pages downloads to dev preview"
+            git -C "$pages_dir" push origin HEAD:gh-pages
+          fi
