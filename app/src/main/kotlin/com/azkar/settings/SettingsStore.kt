@@ -10,9 +10,11 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -81,12 +83,33 @@ class SettingsStore(
      * next [changes] emission. DataStore commits atomically, so unlike the `java.util.prefs` flush
      * it replaces, a failure here cannot leave a partially applied setting behind.
      *
+     * A failure that is an [IOException] is retried before it is given up on. DataStore writes to a
+     * scratch file and then moves it over the target, and on Windows that move fails while anything
+     * else holds the file open — a virus scanner looking at the file the app has just written is
+     * the usual culprit, and the failure lasts for as long as the scan does. The failure is
+     * transient; the write is not. A setting that is quietly lost is a setting the user cannot get
+     * back, and the retry is what turns a lost write into a slow one.
+     *
      * Swallows the failure deliberately, unlike [degradingToEmpty]: a caller awaiting this has
      * usually already repainted, and there is nothing useful it could do with the exception.
      */
     suspend fun edit(block: MutablePreferences.() -> Unit) {
-        runCatching { dataStore.edit(block) }
-            .onFailure { failure -> logger.error(failure) { "Unable to persist a setting change" } }
+        var attempt = 0
+        while (true) {
+            val failure =
+                runCatching { dataStore.edit(block) }
+                    .exceptionOrNull() ?: return
+            if (failure is CancellationException) {
+                throw failure
+            }
+            if (failure is IOException && attempt < WRITE_ATTEMPTS - 1) {
+                attempt += 1
+                delay(WRITE_RETRY_MILLIS)
+                continue
+            }
+            logger.error(failure) { "Unable to persist a setting change" }
+            return
+        }
     }
 
     companion object {
@@ -102,6 +125,23 @@ class SettingsStore(
 
         private const val DIRECTORY = ".azkar"
         private const val FILE_NAME = "settings.preferences_pb"
+
+        /**
+         * How many times a write is attempted before it is given up on.
+         *
+         * Enough for the failures Windows produces on the way to the disk — a scanner that holds
+         * the file for a moment, a reader that has not closed it yet — and few enough that a disk
+         * that is genuinely broken is not turned into a long wait.
+         */
+        private const val WRITE_ATTEMPTS = 3
+
+        /**
+         * How long to wait between two attempts.
+         *
+         * Long enough for the handle that blocked the write to be released, short enough that the
+         * caller barely notices the wait.
+         */
+        private const val WRITE_RETRY_MILLIS = 100L
 
         /**
          * Builds a store over [file], defaulting to the app's own settings file.
