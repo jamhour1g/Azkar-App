@@ -1,5 +1,6 @@
 package com.azkar.data.repo.exposed
 
+import com.azkar.data.mapping.RemembranceMapper
 import com.azkar.data.repo.exposed.LikeUtils.lowerCaseContains
 import com.azkar.data.repo.exposed.RemembranceAggregates.load
 import com.azkar.data.table.ExplanationTranslationTable
@@ -60,6 +61,10 @@ import java.util.Locale
  * [logger] is the repository's own logger, handed to the transaction wrapper so a failed write
  * is reported under this repository rather than under a name the whole process shares.
  *
+ * [onDroppedExplanation] is where an explanation the mapping could not attach is reported. The
+ * default writes the line the application has always written; a caller that needs to know can
+ * supply a callback that records it instead.
+ *
  * Every method runs inside [transactions]; none of them opens a transaction of its own, so a
  * service-level transaction and the repository method nested inside it commit or roll back as one
  * unit rather than competing for the same rows.
@@ -68,6 +73,8 @@ class ExposedRemembranceRepository(
     private val tagRepository: ExposedTagRepository,
     private val transactions: TransactionRunner,
     private val logger: KLogger = KotlinLogging.logger {},
+    private val onDroppedExplanation: (Long, List<String>) -> Unit =
+        RemembranceMapper.droppedExplanationsReported(),
 ) : RemembranceRepository {
     override suspend fun save(remembrance: Remembrance): Remembrance =
         transactions.tx(logger, "Failed to save remembrance") {
@@ -219,7 +226,7 @@ class ExposedRemembranceRepository(
         load(RemembranceEntity.wrapRows(rows).toList())
 
     /** The full aggregate for a page of already-loaded parents, loading all children in bulk. */
-    private fun load(parents: List<RemembranceEntity>): List<Remembrance> = parents.load(logger)
+    private fun load(parents: List<RemembranceEntity>): List<Remembrance> = parents.load(onDroppedExplanation)
 
     /** Inserts the parent row and returns its generated id. */
     private fun insert(

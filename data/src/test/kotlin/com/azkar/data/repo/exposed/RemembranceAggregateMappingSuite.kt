@@ -1,13 +1,11 @@
 package com.azkar.data.repo.exposed
 
-import ch.qos.logback.classic.Level
 import com.azkar.domain.model.HadithGrade
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.impl.RemembranceImpl
 import com.azkar.domain.model.impl.TagImpl
 import com.azkar.testUtils.exposedRepositories
-import com.azkar.testing.captureLogs
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -120,25 +118,24 @@ val RemembranceAggregateMappingSuite by testSuite("Remembrance aggregate mapping
                 exec("DELETE FROM explanation_translation WHERE remembrance_id = $id AND locale_code = 'ar'")
             }
 
-            val logs =
-                captureLogs { logger ->
-                    val own = repositories.loggingTo(logger)
-                    val reloaded = requireNotNull(own.remembrances.findById(id))
+            val dropped = mutableListOf<Pair<Long, List<String>>>()
+            val own = repositories.reportingDropsTo { droppedId, locales -> dropped += droppedId to locales }
+            val reloaded = requireNotNull(own.remembrances.findById(id))
 
-                    assertThat(reloaded.translations).containsOnlyKeys(ENGLISH, ARABIC)
-                    assertThat(
-                        reloaded.translations
-                            .getValue(ARABIC)
-                            .translationPair.text,
-                    ).isEqualTo("ذكر")
-                    assertThat(
-                        reloaded.translations
-                            .getValue(ARABIC)
-                            .explanationPair.text,
-                    ).isEmpty()
-                }
-
-            assertThat(logs.messagesAt(Level.WARN)).isEmpty()
+            assertThat(reloaded.translations).containsOnlyKeys(ENGLISH, ARABIC)
+            assertThat(
+                reloaded.translations
+                    .getValue(ARABIC)
+                    .translationPair.text,
+            ).isEqualTo("ذكر")
+            assertThat(
+                reloaded.translations
+                    .getValue(ARABIC)
+                    .explanationPair.text,
+            ).isEmpty()
+            assertThat(dropped)
+                .describedAs("Nothing was discarded, so nothing was reported")
+                .isEmpty()
         }
 
         test("findById(): an explanation without a translation is dropped and reported") { repositories ->
@@ -151,18 +148,14 @@ val RemembranceAggregateMappingSuite by testSuite("Remembrance aggregate mapping
                 )
             }
 
-            val logs =
-                captureLogs { logger ->
-                    val own = repositories.loggingTo(logger)
-                    val reloaded = requireNotNull(own.remembrances.findById(id))
+            val dropped = mutableListOf<Pair<Long, List<String>>>()
+            val own = repositories.reportingDropsTo { droppedId, locales -> dropped += droppedId to locales }
+            val reloaded = requireNotNull(own.remembrances.findById(id))
 
-                    assertThat(reloaded.translations).containsOnlyKeys(ENGLISH)
-                }
-
-            assertThat(logs.messagesAt(Level.WARN)).containsExactly("Dropped explanations without translation")
-            assertThat(logs.payload.keys).containsExactlyInAnyOrder("remembranceId", "droppedExplanations")
-            assertThat(logs.payload["remembranceId"]).containsExactly(id.toString())
-            assertThat(logs.payload["droppedExplanations"]).containsExactly("[fr]")
+            assertThat(reloaded.translations).containsOnlyKeys(ENGLISH)
+            assertThat(dropped)
+                .describedAs("The report names the remembrance and the orphaned locale")
+                .containsExactly(id to listOf("fr"))
         }
     }
 }

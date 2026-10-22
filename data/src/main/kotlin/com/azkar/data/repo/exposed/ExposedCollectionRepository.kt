@@ -1,5 +1,6 @@
 package com.azkar.data.repo.exposed
 
+import com.azkar.data.mapping.RemembranceMapper
 import com.azkar.data.repo.exposed.CollectionAggregates.load
 import com.azkar.data.repo.exposed.CollectionAggregates.summaries
 import com.azkar.data.table.CollectionMemberTable
@@ -60,6 +61,10 @@ import java.util.Locale
  * [logger] is the repository's own logger, handed to the transaction wrapper so a failed write
  * is reported under this repository rather than under a name the whole process shares.
  *
+ * [onDroppedExplanation] is where an explanation the mapping could not attach is reported. The
+ * default writes the line the application has always written; a caller that needs to know can
+ * supply a callback that records it instead.
+ *
  * Every method runs inside [transactions]; none of them opens a transaction of its own, so a
  * service-level transaction and the repository method nested inside it commit or roll back as one
  * unit rather than competing for the same rows.
@@ -68,6 +73,8 @@ class ExposedCollectionRepository(
     private val transactions: TransactionRunner,
     private val tagRepository: ExposedTagRepository,
     private val logger: KLogger = KotlinLogging.logger {},
+    private val onDroppedExplanation: (Long, List<String>) -> Unit =
+        RemembranceMapper.droppedExplanationsReported(),
 ) : CollectionRepository {
     override suspend fun findAll(): List<RemembranceCollection> =
         transactions.tx(logger, "Failed to find all collections") {
@@ -318,11 +325,11 @@ class ExposedCollectionRepository(
             .orderBy(CollectionTable.position to SortOrder.ASC_NULLS_LAST)
             .orderBy(CollectionTable.id to SortOrder.ASC)
             .toList()
-            .load(logger)
+            .load(onDroppedExplanation)
 
     /** The collection with [id], with its members and tags loaded, or `null` when no such collection exists. */
     private fun loadOne(id: Long): RemembranceCollection? =
-        CollectionEntity.findById(id)?.let { listOf(it).load(logger) }?.firstOrNull()
+        CollectionEntity.findById(id)?.let { listOf(it).load(onDroppedExplanation) }?.firstOrNull()
 
     /**
      * The collections the user put on the Home screen, most recently pinned first.
@@ -335,7 +342,7 @@ class ExposedCollectionRepository(
             .find { CollectionTable.homePinnedAt.isNotNull() }
             .orderBy(CollectionTable.homePinnedAt to SortOrder.DESC)
             .toList()
-            .load(logger)
+            .load(onDroppedExplanation)
 
     /** Every collection as a [CollectionSummary]: what to put on a card, and how big it is. */
     private fun summarizeAll(): List<CollectionSummary> = CollectionEntity.all().summaries()

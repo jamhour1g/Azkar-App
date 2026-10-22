@@ -15,7 +15,6 @@ import com.azkar.domain.model.LocalizedPair
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
-import io.github.oshai.kotlinlogging.KLogger
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -54,11 +53,11 @@ internal object CollectionAggregates {
     /**
      * The full aggregate for a page of parents, loading all members and tags in bulk.
      *
-     * [logger] is the repository's own logger, handed down to the mapping: a logger reached
-     * through a name is a singleton the whole process shares, and a test that wants to see the
-     * line has to own the logger it was written to.
+     * [onDropped] is the caller's own channel for a discarded explanation, passed down rather than
+     * looked up here: the mapping the members go through loses data, and a loss has to be
+     * reported somewhere a program can read it, not only somewhere a person can.
      */
-    fun List<CollectionEntity>.load(logger: KLogger): List<RemembranceCollection> {
+    fun List<CollectionEntity>.load(onDropped: (Long, List<String>) -> Unit): List<RemembranceCollection> {
         if (this.isEmpty()) {
             return emptyList()
         }
@@ -66,7 +65,7 @@ internal object CollectionAggregates {
         val translations = translationsByCollection(ids)
         val rows = this.map { it.toCollectionRow(translations = translations[it.id.value].orEmpty()) }
         val memberIds = rows.membersByCollection()
-        val aggregates = loadAggregates(memberIds.values.flatten().distinct(), logger)
+        val aggregates = loadAggregates(memberIds.values.flatten().distinct(), onDropped)
         val tags = tagsByCollection(ids)
 
         return rows.map { parent ->
@@ -188,7 +187,7 @@ internal object CollectionAggregates {
     /** The whole aggregate for each of [ids], indexed by id for order-preserving reads. */
     private fun loadAggregates(
         ids: List<Long>,
-        logger: KLogger,
+        onDropped: (Long, List<String>) -> Unit,
     ): Map<Long, Remembrance> {
         if (ids.isEmpty()) {
             return emptyMap()
@@ -196,7 +195,7 @@ internal object CollectionAggregates {
         return RemembranceEntity
             .forIds(ids)
             .toList()
-            .load(logger)
+            .load(onDropped)
             .mapNotNull { aggregate -> aggregate.id?.let { it to aggregate } }
             .toMap()
     }

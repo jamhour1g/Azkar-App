@@ -15,7 +15,6 @@ import com.azkar.data.table.entity.TagEntity
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.TagUsageRemembrance
-import io.github.oshai.kotlinlogging.KLogger
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -46,11 +45,11 @@ internal object RemembranceAggregates {
     /**
      * The full aggregate for a page of already-loaded parents, loading all children in bulk.
      *
-     * [logger] is the repository's own logger, handed down to the mapping: a logger reached
-     * through a name is a singleton the whole process shares, and a test that wants to see the
-     * line has to own the logger it was written to.
+     * [onDropped] is the caller's own channel for a discarded explanation, passed down rather than
+     * looked up here: the mapping it ends in loses data, and a loss has to be reported somewhere a
+     * program can read it, not only somewhere a person can.
      */
-    fun List<RemembranceEntity>.load(logger: KLogger): List<Remembrance> {
+    fun List<RemembranceEntity>.load(onDropped: (Long, List<String>) -> Unit): List<Remembrance> {
         if (isEmpty()) {
             return emptyList()
         }
@@ -67,7 +66,7 @@ internal object RemembranceAggregates {
         return map { entity ->
             val id = entity.id.value
             entity.toRemembrance(
-                logger = logger,
+                onDropped = onDropped,
                 translations = translations[id].orEmpty(),
                 explanations = explanations[id].orEmpty(),
                 tags = tags[id].orEmpty(),

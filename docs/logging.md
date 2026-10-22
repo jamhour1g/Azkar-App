@@ -51,6 +51,9 @@ it, and the events in between are precisely the ones the code under test emitted
 code decide where a statement lands, which matters for the failures that are logged from a
 coroutine on `Dispatchers.IO` rather than on the thread that started the work.
 
+An exact capture is worth having, but it is still a capture of a *presentation channel*. What a test
+should assert is the method's own channel — see
+[Reporting what a method lost](#reporting-what-a-method-lost).
 
 The empty lambda lets kotlin-logging derive the name from the enclosing declaration, which is what
 makes `%logger` and `%method` resolve in the shipped pattern. Passing an explicit name works but
@@ -96,6 +99,60 @@ Note the field names describe the table a locale *survived* in, not the one that
 present only in `explanation_translation` shows up under `droppedTranslations`, because
 `droppedTranslations = translationKeys - explanationKeys`.
 
+## Reporting what a method lost
+
+A log line is a diagnostic for a human, not a contract. A test that asserts on one is asserting on
+a presentation channel: it breaks when the wording changes, and it keeps passing even when the
+method quietly stopped reporting. So a method that **loses data** or **swallows a failure** has to
+report it somewhere a program can read — through its **return value**, or through a **callback it
+accepts** — and the log becomes the second channel for the human rather than the only one.
+
+There are two shapes of it, and the codebase has one of each.
+
+**A return value.** `SeedDataLoader.load()` answers with the counts it seeded:
+
+```kotlin
+val counts = SeedDataLoader.load()
+```
+
+A test asks the work what it did, rather than reading a line that says it did it. The line is still
+written and still says the same thing, but nothing depends on its wording.
+
+**A callback.** A mapping that drops an explanation it cannot attach has to say so — but the
+mapping does not know who is listening, so it takes the listener:
+
+```kotlin
+fun RemembranceEntity.toRemembrance(
+    onDropped: (Long, List<String>) -> Unit,
+    translations: Map<Locale, LocalizedTextRow>,
+    explanations: Map<Locale, LocalizedTextRow>,
+    tags: Set<Tag>,
+): Remembrance
+```
+
+The application wires that callback to the line it has always written
+(`RemembranceMapper.droppedExplanationsReported()`), and a test wires it to a recorder that
+remembers what was dropped. The default keeps the production behaviour identical, and the test
+asserts the report rather than the line.
+
+The same shape covers a failure that happens where nobody is waiting. `DatabaseWarmUp.start()`
+returns before the warm-up has finished, and the job swallows whatever went wrong so the window
+still opens — so the caller gets a channel of its own:
+
+```kotlin
+internal class DatabaseWarmUp(
+    …,
+    private val logger: KLogger = KotlinLogging.logger {},
+    private val onFailure: (Throwable) -> Unit = { failure ->
+        logger.error(failure) { "Database warm-up failed" }
+    },
+)
+```
+
+A default value may use an earlier parameter, which is what makes both of these possible: the
+callback's default logs through the logger the class was given, and a repository's default callback
+logs through the mapper's.
+
 ## Choosing a level
 
 The level answers "how would anyone find out this happened", not "how bad does it feel".
@@ -112,7 +169,10 @@ localized sentence (a toast or an `infoLine`) and then keeps running; that messa
 diagnostic, so without an `error` the cause is gone. Conversely, a failure that is rethrown does not
 need `error` — the stack trace is already going somewhere.
 
-If a `runCatching` has no `.onFailure`, that is a gap, not a style choice: add one.
+If a `runCatching` has no `.onFailure`, that is a gap, not a style choice: add one. And if the
+failure is one that nothing else will ever see — a background job that has to swallow it — give the
+caller a channel for it as well, so the failure is not only a line: see
+[Reporting what a method lost](#reporting-what-a-method-lost).
 
 ## Runtime configuration
 
@@ -152,13 +212,25 @@ inherit the packaged `INFO` root level and silently discard the `debug` statemen
 target. It pins `com.azkar` to `DEBUG` and the root to `WARN` so test output stays quiet without
 making assertions depend on the shell that launched Gradle.
 
-`config/testing/com/azkar/testing/LogCapture.kt` is compiled into every module's test source set
-and provides the capture surface:
+**Production log lines are not asserted on.** A method that loses data or swallows a failure reports
+it through its return value or through a callback it accepts, and the test asserts that — see
+[Reporting what a method lost](#reporting-what-a-method-lost). A test that asserted on a log line
+would be asserting on a presentation channel, and it would break the moment the wording changed.
+
+What *is* asserted on is the **shipped configuration**: that the console pattern renders a
+structured payload the way a user would see it. `config/testing/com/azkar/testing/LogCapture.kt` is
+compiled into every module's test source set and provides that surface:
 
 ```kotlin
-val logs = captureLogs { logger -> SeedDataLoader.load(logger) }
+val logs = captureLogs { logger ->
+    logger.atWarn {
+        message = "Dropped locales missing counterpart"
+        payload = mapOf("remembranceId" to 7L)
+    }
+}
 
-logs.messagesAt(Level.WARN) containsExactly "Dropped explanations without translation"
+logs.messagesAt(Level.WARN) containsExactly "Dropped locales missing counterpart"
+logs.payload["remembranceId"] containsExactly "7"
 ```
 
 `captureLogs` is `suspend` because the code under test usually is. It creates a logger private to the
@@ -171,8 +243,9 @@ Nothing global is touched, and that is what makes the capture trustworthy. There
 is open. The events are collected whichever thread emitted them, so a statement logged from a
 coroutine on `Dispatchers.IO` is captured like any other.
 
-Because the logger belongs to the capture, the code under test has to be given it — the house rule
-above is what makes that possible — and the assertions that follow can be exact.
+The house rule above still holds — a test that wants to assert a diagnostic can hand the code a
+logger of its own and get an exact capture — but that is a last resort, not the first choice. The
+first choice is a method that reports through a channel a program can read.
 
 `renderAsProduction(event)` and `productionPattern()` read the pattern out of the shipped
 `logback.xml` and run an event through it, so a test can assert on the line a user would actually
@@ -210,8 +283,8 @@ justification.
 2. Log at the point where the information still exists, before a `runCatching` discards it.
 3. Pick the level from the table above, and prefer `error` whenever a throwable is being swallowed.
 4. Use `atX { … }` with a `payload` once a message needs more than a couple of fields.
-5. Give the code a logger to write to, as the house rule above says, so that a test can assert on
-   what it wrote.
-6. Assert the line it wrote, with the capture described in
-   [Logging in tests](#logging-in-tests). The suite that already covers the code is where the
-   assertion belongs.
+5. If the new code loses data or swallows a failure, give it a channel before it logs anything: a
+   return value, or a callback the caller supplies. See
+   [Reporting what a method lost](#reporting-what-a-method-lost).
+6. Assert the channel, not the line. The suite that already covers the code is where the assertion
+   belongs; see [Logging in tests](#logging-in-tests).

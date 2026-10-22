@@ -18,19 +18,23 @@ import java.util.Locale
  *
  * ### Why the report is a callback
  *
- * The discard is a loss of data, so it is reported. The report is a log line, which says what
- * happened to whoever is looking at the log.
+ * The discard is a loss of data, so it has to be reported somewhere a program can read, not only
+ * somewhere a person can read. A log line is a diagnostic: it says what happened to whoever is
+ * looking at the log, and nothing more. A caller that needs to know cannot ask a log — it has to
+ * read one, which means attaching to a logger that the whole process shares and then hoping that
+ * every line it collected was caused by its own call.
  *
- * ### Why the logger is a parameter
+ * So the mapper does not log. It hands the discard to [onDropped], and the caller decides what
+ * happens to it. The application wires that to a log through [droppedExplanationsReported], which
+ * is the line the application has always written, under the logger name it has always had. A test
+ * wires it to something it can assert on.
  *
- * The logger is handed in rather than looked up. A logger reached through a name is a singleton
- * that the whole process shares, so a test that wants to see this line has to own the logger it
- * was written to. The default keeps the production logger, and the name derived from this
- * enclosing declaration, exactly as they were.
+ * The default of [droppedExplanationsReported] keeps the production call — and the logger's name,
+ * which is derived from this enclosing declaration — exactly as they were.
  */
 internal object RemembranceMapper {
     fun RemembranceEntity.toRemembrance(
-        logger: KLogger = KotlinLogging.logger {},
+        onDropped: (Long, List<String>) -> Unit,
         translations: Map<Locale, LocalizedTextRow>,
         explanations: Map<Locale, LocalizedTextRow>,
         tags: Set<Tag>,
@@ -38,14 +42,7 @@ internal object RemembranceMapper {
         val id = id.value
         val droppedExplanations = explanations.keys - translations.keys
         if (droppedExplanations.isNotEmpty()) {
-            logger.atWarn {
-                message = "Dropped explanations without translation"
-                payload =
-                    mapOf(
-                        "remembranceId" to id,
-                        "droppedExplanations" to droppedExplanations,
-                    )
-            }
+            onDropped(id, droppedExplanations.map { it.toString() })
         }
 
         require(translations.isNotEmpty()) {
@@ -72,4 +69,29 @@ internal object RemembranceMapper {
             tags = tags,
         )
     }
+
+    /**
+     * The report the application makes when the mapper drops an explanation.
+     *
+     * The message and the payload are the ones the application has always written, so the line a
+     * person finds in a log is unchanged. What is new is that the report is a value the caller can
+     * hand to something else — a callback that records it, a callback that counts it — instead of a
+     * line that can only be read.
+     *
+     * The [logger] is a parameter for the same reason it is one everywhere else here: a logger
+     * reached through a name is a singleton, and a test that wants to see this line has to own the
+     * logger it was written to. The default keeps the production logger, and the name derived from
+     * this enclosing declaration, exactly as they were.
+     */
+    fun droppedExplanationsReported(logger: KLogger = KotlinLogging.logger {}): (Long, List<String>) -> Unit =
+        { id, dropped ->
+            logger.atWarn {
+                message = "Dropped explanations without translation"
+                payload =
+                    mapOf(
+                        "remembranceId" to id,
+                        "droppedExplanations" to dropped,
+                    )
+            }
+        }
 }

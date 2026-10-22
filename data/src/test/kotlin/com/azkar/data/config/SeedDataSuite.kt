@@ -1,14 +1,11 @@
 package com.azkar.data.config
 
-import ch.qos.logback.classic.Level
-import com.azkar.data.seed.SeedCounts
 import com.azkar.data.seed.SeedDataLoader
 import com.azkar.data.table.ExplanationTranslationTable
 import com.azkar.data.table.RemembranceTable
 import com.azkar.data.table.RemembranceTranslationTable
 import com.azkar.data.table.TagTable
 import com.azkar.testUtils.TestDatabase
-import com.azkar.testing.captureLogs
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.v1.core.eq
@@ -65,21 +62,26 @@ val SeedDataSuite by testSuite("Seed data") {
 
     // Deliberately outside the shared fixture: the fixture has already loaded the dataset by the
     // time a test starts, and this wants to watch the very call that does it.
-    test("a first start says how much of the dataset it just loaded") {
+    test("a first start reports what it loaded, and a second start loads nothing") {
         val database = TestDatabase.bootstrapWithH2()
-
-        var counts: SeedCounts? = null
-        val logs = captureLogs { logger -> counts = transaction(database) { SeedDataLoader.load(logger) } }
-        val seeded = requireNotNull(counts) { "The loader was supposed to report what it seeded" }
+        val counts = transaction(database) { SeedDataLoader.load() }
 
         // The dataset is a resource file, and a resource file can silently stop parsing. The
-        // loader says what it inserted, so the question is whether the milestone agrees with
-        // what actually landed — asking the work is what makes the two impossible to disagree.
-        val milestones = logs.messagesAt(Level.INFO)
-        assertThat(milestones).hasSize(1)
-        assertThat(milestones.single())
-            .describedAs("The seeding milestone, which names both counts")
-            .isEqualTo("Seeded ${seeded.remembrances} remembrances and ${seeded.tags} tags")
+        // loader says what it inserted, so the question is whether that matches what landed —
+        // asking the work is what makes the two impossible to disagree.
+        assertThat(counts.remembrances)
+            .describedAs("Remembrances the loader says it seeded")
+            .isEqualTo(transaction(database) { RemembranceTable.selectAll().count().toInt() })
+        assertThat(counts.tags)
+            .describedAs("Tags the loader says it seeded")
+            .isEqualTo(transaction(database) { TagTable.selectAll().count().toInt() })
+
+        // A second start finds the table already populated and does nothing at all, so it has
+        // nothing to report. A loader that answered with the size of the file rather than the
+        // size of its work would say otherwise.
+        val second = transaction(database) { SeedDataLoader.load() }
+        assertThat(second.remembrances).describedAs("Remembrances seeded by the second start").isZero()
+        assertThat(second.tags).describedAs("Tags seeded by the second start").isZero()
     }
 }
 

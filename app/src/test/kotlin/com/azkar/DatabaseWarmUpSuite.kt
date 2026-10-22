@@ -1,7 +1,5 @@
 package com.azkar
 
-import ch.qos.logback.classic.Level
-import com.azkar.testing.captureLogs
 import de.infix.testBalloon.framework.core.testSuite
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -110,24 +108,21 @@ val DatabaseWarmUpSuite by testSuite("The database warm-up") {
 
     test("a failing warm-up is reported with the failure itself attached") {
         val failure = IllegalStateException("db down")
+        var reported: Throwable? = null
+        DatabaseWarmUp(
+            // Unconfined so `start()` runs the coroutine body to completion on this thread,
+            // which keeps the whole thing out of `runTest`'s virtual clock.
+            dispatcher = TestDispatchers.unconfined,
+            warmUp = { throw failure },
+            release = {},
+            onFailure = { reported = it },
+        ).start()
 
-        val logs =
-            captureLogs { logger ->
-                DatabaseWarmUp(
-                    // Unconfined so `start()` runs the coroutine body to completion on this thread,
-                    // which keeps the whole thing out of `runTest`'s virtual clock.
-                    dispatcher = TestDispatchers.unconfined,
-                    warmUp = { throw failure },
-                    release = {},
-                    logger = logger,
-                ).start()
-            }
-
-        // `error`, not `warn`: the job swallows the failure so the window still opens, which is
-        // exactly why nothing else would ever surface it. The throwable has to ride along, because
-        // "the database warm-up failed" on its own is not a diagnosable line.
-        assertThat(logs.messagesAt(Level.ERROR)).containsExactly("Database warm-up failed")
-        assertThat(logs.throwableAt(Level.ERROR)).isSameAs(failure)
+        // The job swallows the failure so the window still opens, which is exactly why the caller
+        // needs a channel of its own: without `onFailure` the failure would exist only as a line
+        // in a log. The throwable itself has to ride along, because "the warm-up failed" on its
+        // own is not a diagnosable report.
+        assertThat(reported).isSameAs(failure)
     }
 
     test("closing before starting is a no-op rather than a crash") {

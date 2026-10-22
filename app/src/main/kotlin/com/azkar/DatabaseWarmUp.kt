@@ -30,9 +30,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  * swallowed rather than propagated, because an escaping exception would take the window down
  * with it.
  *
- * That reporting is a log line and nothing more. The failure happens in a background coroutine
- * that swallows it by design, so [start] returns before anyone could observe it and the caller
- * has nothing to await: the line in the log is the only trace of it there is.
+ * That reporting goes through [onFailure], which is the method's own channel for the failure.
+ * The failure happens in a background coroutine that swallows it by design, so [start] returns
+ * before anyone could observe it and the caller has nothing to await: without a channel of its
+ * own, the failure would only ever exist as a line in a log file. A caller that wants to know
+ * asks for it by supplying a callback; the default logs it, which is what the application
+ * wants, and a test that wants the failure can hand in a callback that records it.
  *
  * [warmUp] and [release] are injected to make the lifecycle independently testable without
  * accessing the process-wide [DatabaseManager]. Production uses the singleton's initialization
@@ -59,6 +62,9 @@ internal class DatabaseWarmUp(
     private val warmUp: suspend () -> Unit = { DatabaseManager.default.warmUp() },
     private val release: () -> Unit = { DatabaseManager.default.close() },
     private val logger: KLogger = KotlinLogging.logger {},
+    private val onFailure: (Throwable) -> Unit = { failure ->
+        logger.error(failure) { "Database warm-up failed" }
+    },
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
@@ -69,8 +75,8 @@ internal class DatabaseWarmUp(
     // Catch Throwable so no failure from the warm-up escapes into the window's scope and takes
     // the application down with it. `DatabaseManager.warmUp` throws
     // `DatabaseInitializationException`, but the warm-up is injected and a failure reaching this
-    // point is by definition not the app's fault to recover from — the job swallows it, writes it
-    // to the log, and lets the window open regardless.
+    // point is by definition not the app's fault to recover from — the job swallows it, hands it
+    // to `onFailure` so the caller has a channel of its own, and lets the window open regardless.
     @Suppress("TooGenericExceptionCaught")
     fun start() {
         check(job == null) {
@@ -89,7 +95,7 @@ internal class DatabaseWarmUp(
                     // a warm-up that finished.
                     throw cancellation
                 } catch (failure: Throwable) {
-                    logger.error(failure) { "Database warm-up failed" }
+                    onFailure(failure)
                 }
 
                 warmedUp.set(true)

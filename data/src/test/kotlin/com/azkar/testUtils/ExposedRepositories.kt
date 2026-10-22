@@ -1,5 +1,6 @@
 package com.azkar.testUtils
 
+import com.azkar.data.mapping.RemembranceMapper
 import com.azkar.data.repo.exposed.ExposedCollectionRepository
 import com.azkar.data.repo.exposed.ExposedRecitationRepository
 import com.azkar.data.repo.exposed.ExposedRemembranceRepository
@@ -49,6 +50,18 @@ class ExposedRepositories(
      * package happened to log while the window was open.
      */
     fun loggingTo(logger: KLogger): ExposedRepositories = repositories(database, logger)
+
+    /**
+     * The same repositories, reporting a discarded explanation to [onDropped] instead of to the
+     * log.
+     *
+     * A mapping that cannot attach an explanation loses it, and a loss the caller cannot see is
+     * a loss nobody can act on. The repository writes the line the application has always
+     * written; a test that needs to know hands over a callback that records the loss instead, and
+     * asserts on what was recorded rather than on a line of prose.
+     */
+    fun reportingDropsTo(onDropped: (Long, List<String>) -> Unit): ExposedRepositories =
+        repositories(database, onDropped = onDropped)
 }
 
 /**
@@ -60,7 +73,8 @@ class ExposedRepositories(
  *
  * The repositories write to a logger of their own, which is the right thing for production and the
  * wrong thing for a test that wants to read what they logged. [ExposedRepositories.loggingTo] is
- * how a test gets at that log.
+ * how a test gets at that log, and [ExposedRepositories.reportingDropsTo] is how a test gets at
+ * an explanation the mapping could not attach.
  */
 fun TestSuiteScope.exposedRepositories(content: TestLevelFixtureScope<ExposedRepositories>.() -> Unit) {
     testFixture {
@@ -111,14 +125,15 @@ fun TestSuiteScope.seededCollections(content: TestLevelFixtureScope<ExposedRepos
 private fun repositories(
     database: Database,
     logger: KLogger = KotlinLogging.logger {},
+    onDropped: (Long, List<String>) -> Unit = RemembranceMapper.droppedExplanationsReported(),
 ): ExposedRepositories {
     val transactions = ExposedTransactionRunner(database)
     val tags = ExposedTagRepository(transactions, logger)
     return ExposedRepositories(
         database = database,
         tags = tags,
-        remembrances = ExposedRemembranceRepository(tags, transactions, logger),
-        collections = ExposedCollectionRepository(transactions, tags, logger),
+        remembrances = ExposedRemembranceRepository(tags, transactions, logger, onDropped),
+        collections = ExposedCollectionRepository(transactions, tags, logger, onDropped),
         recitations = ExposedRecitationRepository(transactions, logger),
     )
 }

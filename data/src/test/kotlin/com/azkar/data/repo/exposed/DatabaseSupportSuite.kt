@@ -1,12 +1,9 @@
 package com.azkar.data.repo.exposed
 
-import ch.qos.logback.classic.Level
 import com.azkar.domain.exception.CollectionNotFoundException
 import com.azkar.domain.exception.PersistenceFailureException
 import com.azkar.testUtils.TestDatabase
-import com.azkar.testing.captureLogs
 import de.infix.testBalloon.framework.core.testSuite
-import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -30,11 +27,10 @@ val DatabaseSupportSuite by testSuite("DatabaseSupport") {
     val migratedDatabase = testFixture { TestDatabase.bootstrapWithH2() }
     var answer: String? = null
 
-    test("a successful action hands its value back and logs nothing at all") {
-        val logs = captureLogs { logger -> answer = guarded(logger, POINTLESS_OPERATION) { "answered" } }
+    test("a successful action hands its value back") {
+        answer = guarded(KotlinLogging.logger {}, POINTLESS_OPERATION) { "answered" }
 
         assertThat(answer).isEqualTo("answered")
-        assertThat(logs.events).isEmpty()
     }
 
     test("a driver failure becomes a PersistenceFailureException naming the operation") {
@@ -64,14 +60,6 @@ val DatabaseSupportSuite by testSuite("DatabaseSupport") {
             .isNotInstanceOf(PersistenceFailureException::class.java)
             .isInstanceOf(CollectionNotFoundException::class.java)
     }
-
-    test("the failure is logged with the operation, before it is translated") {
-        val database = migratedDatabase()
-
-        val logs = captureLogs { logger -> runCatching { failingRead(database, logger) } }
-
-        assertThat(logs.messagesAt(Level.WARN)).containsExactly(FAILED_READ)
-    }
 }
 
 /**
@@ -96,17 +84,14 @@ private const val POINTLESS_OPERATION = "Failed to answer a question nobody aske
  * rather than by anything this module decided to reject — which is what makes this a test of
  * [guarded] rather than of the schema.
  *
- * The logger [guarded] asks for is the caller's to choose: the failure this method provokes is
- * reported through the exception it throws, and the line about it is written under the logger the
- * caller handed in.
+ * The logger [guarded] asks for goes to a throwaway: the failure this method provokes is reported
+ * through the exception it throws, and where the line about it is written is not part of what is
+ * being tested here.
  */
-private fun failingRead(
-    database: Database,
-    logger: KLogger = KotlinLogging.logger {},
-) {
+private fun failingRead(database: Database) {
     transaction(database) {
         val returned =
-            guarded(logger, FAILED_READ) {
+            guarded(KotlinLogging.logger {}, FAILED_READ) {
                 exec("SELECT * FROM table_that_was_never_migrated")
             }
         error("The statement was expected to fail, and it came back with $returned")
