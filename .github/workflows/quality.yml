@@ -1,0 +1,91 @@
+# Code quality and tests for pull requests, run only when a maintainer allows them.
+#
+# The always-on workflow (ci.yml) already builds the app on three operating systems. This one
+# is the deep pass: formatting, static analysis, the test suite and the coverage report, with
+# every report uploaded as an artifact so the person who asked for the run can read them.
+#
+# The gate is the `run-quality` label. Labelling a pull request needs triage or write access,
+# so a label on a pull request *is* a maintainer's "go ahead" — a contributor cannot add one
+# to their own pull request. The job below is skipped for every pull request that does not
+# carry the label. The label is read from the pull request rather than from the event, so a
+# run also happens when the author pushes more commits after the label was applied.
+#
+# The trigger is `pull_request`, never `pull_request_target`: the code this workflow checks
+# out is untrusted, so it gets a read-only token and no secrets, and nothing it does writes
+# to the repository.
+
+name: PR Quality
+
+on:
+  pull_request:
+    # `master`, not `main`: this is the branch the repository actually has, on both the fork
+    # and the upstream. A workflow that waits for a branch that does not exist never runs.
+    branches: ['master']
+    # `labeled` is the maintainer's approval. `synchronize`, `reopened` and `ready_for_review`
+    # are there so the pipeline picks the pull request up again once it has been allowed:
+    # a run that only ever fired on `labeled` would go stale the moment the author pushed a
+    # fix. The label check below still decides whether the job actually runs.
+    types: [labeled, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Code quality and tests
+    # The maintainer gate. A pull request without the label gets a skipped run, which is the
+    # signal that the pipeline is waiting to be allowed rather than that something failed.
+    if: contains(github.event.pull_request.labels.*.name, 'run-quality')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          # Zulu, not Temurin: Temurin 24+ ships no `jmods` (JEP 493) and ProGuard reads the
+          # JDK's own classes from there. This is also the JDK the project is developed
+          # against (SDKMAN's default), so CI and the local build agree on the toolchain.
+          distribution: 'zulu'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # `check` is the whole gate in one task: Spotless (formatting), detekt (static
+      # analysis) and the test suite, which finalises into the JaCoCo coverage report. It is
+      # the same task the project runs locally, so a green run here means a green
+      # `./gradlew check` on the author's machine.
+      - name: Code quality and tests
+        run: ./gradlew check --console=plain
+        env:
+          CI: true
+
+      - name: Upload detekt reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: detekt-reports
+          path: '**/build/reports/detekt/'
+          retention-days: 14
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          retention-days: 14
+
+      - name: Upload JaCoCo coverage reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-reports
+          path: '**/build/reports/jacoco/'
+          retention-days: 14

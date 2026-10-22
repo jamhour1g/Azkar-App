@@ -29,6 +29,12 @@ Releases are cut by pushing a `v*` tag that matches the Gradle version — see
 ./gradlew :app:run          # JDK 25 (toolchain-pinned)
 ```
 
+## Continuous integration
+
+Every pull request is built on Linux, Windows and macOS. A second pipeline runs
+formatting, static analysis and the test suite once a maintainer allows it with the
+`run-quality` label. See [docs/ci.md](docs/ci.md).
+
 See [docs/logging.md](docs/logging.md) and
 [docs/notification-overlay.md](docs/notification-overlay.md) for internal
 documentation.

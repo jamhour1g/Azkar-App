@@ -3,9 +3,11 @@ name: CI
 
 on:
   push:
-    branches: ['main']
+    # `master`, not `main`: this is the branch the repository actually has, on both the fork
+    # and the upstream. A workflow that waits for a branch that does not exist never runs.
+    branches: ['master']
   pull_request:
-    branches: ['main']
+    branches: ['master']
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -30,7 +32,11 @@ jobs:
         uses: actions/setup-java@v5
         with:
           java-version: '25'
-          distribution: 'temurin'
+          # Temurin 24+ ships no `jmods` (JEP 493) and ProGuard needs them; Zulu still does.
+          # This is also the JDK the project is developed against (SDKMAN's default), so CI and
+          # the local build agree on the toolchain. The release workflow uses it for the same
+          # reason; see docs/releasing.md.
+          distribution: 'zulu'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
