@@ -24,10 +24,10 @@ import com.azkar.ui.library.model.CollectionsSnapshot
 import com.azkar.ui.notifications.ReminderQueueConfig
 import com.azkar.ui.notifications.ReminderQueueProgress
 import kotlinx.coroutines.CompletableDeferred
-import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.util.Locale
+import java.util.UUID
 
 /** The instant every fixture is stamped with, so an ordering assertion cannot drift with the clock. */
 internal val FixtureInstant: Instant = Instant.parse("2026-01-15T08:00:00Z")
@@ -779,15 +779,18 @@ internal class FakeCollectionsGateway(
 }
 
 /**
- * A cover cache over a throwaway directory, for a test that constructs a [CollectionsCatalogue].
+ * A cover cache over a unique, nonexistent path, for a test that constructs a [CollectionsCatalogue].
  *
  * The catalogue takes one as a required argument rather than defaulting it, because a default would
  * have to build a real storage and so would touch `~/.azkar` from a constructor. Every suite that
  * builds a catalogue therefore needs one of these, and pointing them all at the same kind of empty
- * temporary directory keeps that requirement from becoming a second thing to get right per test.
+ * unique path keeps that requirement from becoming a second thing to get right per test without
+ * creating a directory that these tests do not use.
  */
 internal fun fakeCovers(): CollectionCoverCache =
-    CollectionCoverCache(CoverStorage(Files.createTempDirectory("azkar-test-covers")))
+    CollectionCoverCache(
+        CoverStorage(Path.of(System.getProperty("java.io.tmpdir"), "azkar-test-covers-${UUID.randomUUID()}")),
+    )
 
 /**
  * The queue's source list, as a plain set, for a test that only has to know what is in it.
