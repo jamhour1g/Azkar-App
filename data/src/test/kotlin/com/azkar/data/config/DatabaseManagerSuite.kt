@@ -1,5 +1,6 @@
 package com.azkar.data.config
 
+import com.azkar.testUtils.TestDatabase
 import com.zaxxer.hikari.HikariDataSource
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
@@ -32,4 +33,5 @@ val DatabaseManagerSuite by testSuite("DatabaseManager") {
     }
 }
 
-private const val H2_URL = "jdbc:h2:mem:pool_config_test;DB_CLOSE_DELAY=-1"
+// A name of its own, so this pool can never be handed a database some other test is using.
+private val H2_URL = "jdbc:h2:mem:${TestDatabase.uniqueName("pool_config")};DB_CLOSE_DELAY=-1"

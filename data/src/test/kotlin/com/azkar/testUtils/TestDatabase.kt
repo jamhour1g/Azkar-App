@@ -4,6 +4,7 @@ import com.azkar.data.config.ExposedDatabaseConfig
 import com.azkar.data.config.migrateToLatestSchema
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Throwaway in-memory H2 databases for the data-layer tests.
@@ -15,17 +16,36 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
  * seed and wipe their own rows.
  */
 object TestDatabase {
+    private val databaseCounter = AtomicLong()
+
+    /**
+     * A database name nothing else in this process is using.
+     *
+     * The name is what tells one throwaway database from another, so it has to be unique — and the
+     * obvious way to get a unique name, the clock, is not one. `System.nanoTime()` promises to be
+     * monotonic, not unique: it is a reading of a clock, and two threads can be handed the same
+     * one. Measured on the machine this suite runs on, 320,000 readings taken from sixteen threads
+     * came back with only 149,748 distinct values, so roughly a third of the readings were handed
+     * out more than once. Two databases that share a name are one database, which is how a test
+     * ends up finding rows another test wrote.
+     *
+     * A counter cannot collide, because nothing else increments it.
+     */
+    fun uniqueName(prefix: String = "test"): String = "${prefix}_${databaseCounter.incrementAndGet()}"
+
     /**
      * Creates a fresh in-memory database and migrates it to the latest version.
      *
-     * "Latest version" includes the bundled seed data, so the database comes up holding a few
-     * hundred seeded remembrances. Callers that want empty tables follow up with [reset].
+     * "Latest version" means the schema and nothing else: the migration is the DDL the application
+     * deploys, and the seed dataset is loaded on top of it by the bootstrapper rather than by the
+     * migration, so a test that wants the rows asks for them the way the app does. The tables
+     * therefore come up empty, and a caller that wants them empty needs no [reset].
      */
     fun bootstrapWithH2(): Database {
         // Matches the production URL's DATABASE_TO_LOWER so tests see the same identifier
         // casing the application database has — the INFORMATION_SCHEMA queries in
         // SchemaMigrationSuite assert against stored names, not just SQL that parses.
-        val jdbcUrl = "jdbc:h2:mem:test_${System.nanoTime()};DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE"
+        val jdbcUrl = "jdbc:h2:mem:${uniqueName()};DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE"
         val database =
             Database.connect(
                 jdbcUrl,

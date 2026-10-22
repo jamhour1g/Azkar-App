@@ -9,7 +9,6 @@ import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.domain.model.impl.TagImpl
 import com.azkar.domain.model.renamed
 import com.azkar.testUtils.ExposedRepositories
-import com.azkar.testUtils.TestDatabase
 import com.azkar.testUtils.seededCollections
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
@@ -31,10 +30,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
  * honest — so the shelf comes up with two populated shipped collections and the rest empty.
  */
 val ExposedCollectionRepositorySuite by testSuite("ExposedCollectionRepository") {
-    // One schema for the whole suite; the fixture resets the rows between tests.
-    val migratedDatabase = testFixture { TestDatabase.bootstrapWithH2() }
-
-    seededCollections(migratedDatabase) {
+    seededCollections {
         testSuite("seeded membership") {
             test("a shipped collection's members are the rows the seed wrote for it") { repositories ->
                 // Remembrances 1 and 3 carry the `Morning` tag in the reference fixture.

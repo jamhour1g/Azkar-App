@@ -1,7 +1,6 @@
 package com.azkar.data.repo.exposed
 
 import com.azkar.domain.model.impl.TagImpl
-import com.azkar.testUtils.TestDatabase
 import com.azkar.testUtils.exposedRepositories
 import com.azkar.testUtils.seededRemembrances
 import de.infix.testBalloon.framework.core.testSuite
@@ -78,9 +77,7 @@ val ExposedTagRepositorySuite by testSuite("ExposedTagRepository") {
     // rather than tags written on their own, because the join tables are where the interesting
     // behaviour lives: a tombstoned tag has to vanish from the collections that still point at
     // it, and has to come back with those pointers intact when it is restored.
-    val migratedDatabase = testFixture { TestDatabase.bootstrapWithH2() }
-
-    seededRemembrances(migratedDatabase) {
+    seededRemembrances {
         testSuite("soft delete") {
             test("hides the tag from every read") { repositories ->
                 val id = repositories.tags.save(TagImpl(name = "Temp")).id

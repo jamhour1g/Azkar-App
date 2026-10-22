@@ -42,10 +42,8 @@ class ExposedRepositories(
  * A per-test fixture: a freshly migrated, empty database plus the repositories built on top of
  * it. The test bodies registered inside the block receive the harness as their parameter.
  *
- * [TestDatabase.bootstrapWithH2] creates the schema and loads the seed dataset, so
- * [TestDatabase.reset] is what leaves the tables empty. Both are the expensive part though, so a
- * suite that only cares about the rows it writes itself is better off building the schema once —
- * [seededRemembrances] is that shape.
+ * [TestDatabase.bootstrapWithH2] creates the schema and nothing else, so the tables are already
+ * empty; [TestDatabase.reset] is what leaves them that way once a test has written to them.
  */
 fun TestSuiteScope.exposedRepositories(content: TestLevelFixtureScope<ExposedRepositories>.() -> Unit) {
     testFixture {
@@ -56,18 +54,17 @@ fun TestSuiteScope.exposedRepositories(content: TestLevelFixtureScope<ExposedRep
 }
 
 /**
- * A per-test fixture layered on a database that is migrated once for the whole suite.
+ * A per-test fixture layered on a database of its own, holding the fixed reference rows.
  *
- * The suite owns [database] and passes it in; every test then gets the same schema with the rows
- * wiped and replaced by [seedReferenceRemembrances]. Migrating once and reusing the schema keeps
- * the suite fast without letting one test's rows reach the next.
+ * The database is created per test rather than once for the suite, and that is the point: the
+ * schema is what the suite is about, and the rows are what each test gets to make its own. A
+ * schema shared by the whole suite had to be wiped between tests to keep them apart, and wiping is
+ * a mutation rather than a boundary — it only isolates tests while they take turns. A database per
+ * test is isolation that does not care how the tests are scheduled.
  */
-fun TestSuiteScope.seededRemembrances(
-    database: TestFixture<Database>,
-    content: TestLevelFixtureScope<ExposedRepositories>.() -> Unit,
-) {
+fun TestSuiteScope.seededRemembrances(content: TestLevelFixtureScope<ExposedRepositories>.() -> Unit) {
     testFixture {
-        val migrated = database()
+        val migrated = TestDatabase.bootstrapWithH2()
         TestDatabase.reset(migrated)
         seedReferenceRemembrances(migrated)
         repositories(migrated)
@@ -75,7 +72,7 @@ fun TestSuiteScope.seededRemembrances(
 }
 
 /**
- * A per-test fixture over a schema migrated once, with the shipped collections in place.
+ * A per-test fixture over a database of its own, with the shipped collections in place.
  *
  * The official collections are seeded *after* the reference remembrances, which is the order
  * [com.azkar.data.config.migrateToLatestSchema] uses and the order that matters: an official collection
@@ -84,12 +81,9 @@ fun TestSuiteScope.seededRemembrances(
  * spells them `Morning` and `Evening`, which is what keeps the tag match honest — so the resulting
  * shelf has two populated collections, one favorites-backed collection and eleven empty ones.
  */
-fun TestSuiteScope.seededCollections(
-    database: TestFixture<Database>,
-    content: TestLevelFixtureScope<ExposedRepositories>.() -> Unit,
-) {
+fun TestSuiteScope.seededCollections(content: TestLevelFixtureScope<ExposedRepositories>.() -> Unit) {
     testFixture {
-        val migrated = database()
+        val migrated = TestDatabase.bootstrapWithH2()
         TestDatabase.reset(migrated)
         seedReferenceRemembrances(migrated)
         transaction(migrated) { CollectionSeed.load() }

@@ -1,7 +1,6 @@
 package com.azkar.data.repo.exposed
 
 import com.azkar.domain.exception.RemembranceNotFoundException
-import com.azkar.testUtils.TestDatabase
 import com.azkar.testUtils.seededRemembrances
 import de.infix.testBalloon.framework.core.testSuite
 import kotlinx.coroutines.test.runTest
@@ -18,11 +17,7 @@ import java.util.Locale
 val ExposedRemembranceRepositorySuite by testSuite(
     "ExposedRemembranceRepository – repository behavior against an in-memory H2 DB",
 ) {
-    // The schema is identical for every test here, so it is built once and only the rows are
-    // replaced between tests.
-    val migratedDatabase = testFixture { TestDatabase.bootstrapWithH2() }
-
-    seededRemembrances(migratedDatabase) {
+    seededRemembrances {
         test("findAll(): returns all rows ordered by ID ascending") { repositories ->
             val all = repositories.remembrances.findAll()
 

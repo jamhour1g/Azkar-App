@@ -4,7 +4,6 @@ import com.azkar.data.table.CollectionMemberTable
 import com.azkar.data.table.RecitationProgressTable
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.testUtils.ExposedRepositories
-import com.azkar.testUtils.TestDatabase
 import com.azkar.testUtils.seededRemembrances
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
@@ -14,9 +13,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 val ExposedRecitationRepositorySuite by testSuite("ExposedRecitationRepository") {
-    val migratedDatabase = testFixture { TestDatabase.bootstrapWithH2() }
-
-    seededRemembrances(migratedDatabase) {
+    seededRemembrances {
         testSuite("recording progress") {
             test("a member with no row yet gets one on its first recitation") { repositories ->
                 val collectionId = newCollection(repositories, "Morning Azkar")

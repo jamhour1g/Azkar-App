@@ -1,5 +1,6 @@
 package com.azkar.data.config
 
+import com.azkar.testUtils.TestDatabase
 import com.zaxxer.hikari.HikariDataSource
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
@@ -187,7 +188,7 @@ private fun jdbcUrl(name: String): String = "jdbc:h2:mem:$name;DB_CLOSE_DELAY=-1
 
 /** An in-memory database named for this call alone, migrated once, with a body free to migrate it again. */
 private fun withMigratedDatabase(block: (name: String) -> Unit) {
-    val name = "azkar_migration_${System.nanoTime()}"
+    val name = TestDatabase.uniqueName("azkar_migration")
     migrateAgain(name)
     block(name)
 }

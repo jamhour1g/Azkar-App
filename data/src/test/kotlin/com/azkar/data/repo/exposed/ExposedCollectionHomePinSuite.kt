@@ -6,7 +6,6 @@ import com.azkar.domain.exception.CollectionNotFoundException
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.testUtils.ExposedRepositories
-import com.azkar.testUtils.TestDatabase
 import com.azkar.testUtils.seededCollections
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
@@ -32,10 +31,7 @@ import java.time.OffsetDateTime
  * And one thing worth pinning down that lives in the seed: re-seeding must not quietly undo a pin.
  */
 val ExposedCollectionHomePinSuite by testSuite("ExposedCollectionRepository: the Home rail") {
-    // One schema for the whole suite; the fixture resets the rows between tests.
-    val migratedDatabase = testFixture { TestDatabase.bootstrapWithH2() }
-
-    seededCollections(migratedDatabase) {
+    seededCollections {
         testSuite("pinning a collection to Home") {
             test("a newly created collection is not on the Home screen") { repositories ->
                 val collectionId = newCollection(repositories, "Morning copy")

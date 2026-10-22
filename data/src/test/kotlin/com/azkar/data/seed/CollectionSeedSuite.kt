@@ -7,7 +7,6 @@ import com.azkar.data.transaction.ExposedTransactionRunner
 import com.azkar.domain.model.CollectionKind
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.testUtils.TestDatabase
-import de.infix.testBalloon.framework.core.TestFixture
 import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -28,12 +27,8 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
  * the user's now. What it must still guarantee is that running it again is harmless.
  */
 val CollectionSeedSuite by testSuite("Seeding the official collections") {
-    // Migrated once, with the real seed dataset, because the catalogue's tag names can only be
-    // checked against a database the real loader has populated.
-    val migratedDatabase = testFixture { TestDatabase.bootstrapWithH2() }
-
     test("every shipped collection is present, official, and fully described") {
-        withSeed(migratedDatabase) { seeded ->
+        withSeed { seeded ->
             val official = seeded.collections.findAll().filter { it.kind == CollectionKind.OFFICIAL }
 
             assertThat(official.map { it.name })
@@ -47,7 +42,7 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
     }
 
     test("a shipped collection starts unpinned, off the home rail, and with no cover") {
-        withSeed(migratedDatabase) { seeded ->
+        withSeed { seeded ->
             val morning = seeded.collectionNamed(OfficialCollectionCatalogue.entries.first())
 
             assertThat(morning.isPinned).isFalse()
@@ -60,7 +55,7 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
     }
 
     test("every shipped collection resolves at least one remembrance") {
-        withSeed(migratedDatabase) { seeded ->
+        withSeed { seeded ->
             val empty =
                 OfficialCollectionCatalogue.entries.filter { entry ->
                     seeded.collectionNamed(entry).members.isEmpty()
@@ -76,7 +71,7 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
     }
 
     test("every catalogue tag is a tag the seed dataset actually uses") {
-        withSeed(migratedDatabase) { seeded ->
+        withSeed { seeded ->
             val datasetTags = tagNamesIn(seeded.database)
             val missing =
                 OfficialCollectionCatalogue.entries
@@ -102,7 +97,7 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
     }
 
     test("a shipped collection carries its own tag as a label") {
-        withSeed(migratedDatabase) { seeded ->
+        withSeed { seeded ->
             val labels =
                 OfficialCollectionCatalogue.entries.associate { entry ->
                     entry.name to seeded.collectionNamed(entry).tags.map { it.name.lowercase() }
@@ -119,7 +114,7 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
     }
 
     test("seeding again is a no-op rather than a second set of rows") {
-        withSeed(migratedDatabase) { seeded ->
+        withSeed { seeded ->
             val before = seeded.collections.findAll().map { it.id to it.updatedAt }
 
             reseed(seeded.database)
@@ -129,7 +124,7 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
     }
 
     test("seeding again never overwrites what the user changed") {
-        withSeed(migratedDatabase) { seeded ->
+        withSeed { seeded ->
             val morning = seeded.collectionNamed(OfficialCollectionCatalogue.entries.first())
             // Tamper with everything at once, because that is what a user editing a shipped shelf
             // looks like from the seed's side: the name, the description, the icon, the pin and the
@@ -153,7 +148,7 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
     }
 
     test("seeding leaves a custom collection entirely alone") {
-        withSeed(migratedDatabase) { seeded ->
+        withSeed { seeded ->
             val mineId =
                 requireNotNull(
                     seeded.collections
@@ -193,17 +188,18 @@ private class SeededCollections(
 }
 
 /**
- * Runs [block] against the suite's migrated database, with the real seed dataset already in it.
+ * Runs [block] against a database of its own, with the real seed dataset already in it.
  *
  * The dataset goes first for the same reason the bootstrapper loads it first: the collections
  * resolve their membership through the tags the dataset creates, so a collection seeded into a
  * database with no tags in it would come up permanently empty.
+ *
+ * The database is per test rather than per suite because some of these tests write — one renames a
+ * shipped collection, another adds one — and a test that writes has to be writing to a database
+ * nothing else can see.
  */
-private suspend fun withSeed(
-    fixture: TestFixture<Database>,
-    block: suspend (SeededCollections) -> Unit,
-) {
-    val database = fixture()
+private suspend fun withSeed(block: suspend (SeededCollections) -> Unit) {
+    val database = TestDatabase.bootstrapWithH2()
     transaction(database) { SeedDataLoader.load() }
     transaction(database) { CollectionSeed.load() }
     val transactions = ExposedTransactionRunner(database)
