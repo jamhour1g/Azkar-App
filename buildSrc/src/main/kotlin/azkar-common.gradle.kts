@@ -136,7 +136,10 @@ detekt {
         rootProject.layout.projectDirectory.file("config/detekt/detekt-compose.yml"),
     )
     source.setFrom(layout.projectDirectory.dir("src"), sharedTestingDirectory)
-    parallel = true
+    // Detekt 2's parallel Analysis API can race and fail intermittently with
+    // ArrayIndexOutOfBoundsException. Keep analysis serial until the upstream fix ships.
+    // https://github.com/detekt/detekt/issues/9121
+    parallel = false
     ignoreFailures = false
     basePath.set(rootProject.projectDir)
 }
