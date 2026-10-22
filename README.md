@@ -10,8 +10,8 @@ Licensed MIT.
 ## Download
 
 Grab the latest build from the
-[Releases page](https://github.com/jamhour1g/Azkar-App/releases/latest) and open
-`download.html` for platform-specific instructions:
+[download page](https://jamhour1g.github.io/Azkar-App/download.html) — it picks the
+package for the platform you are on and explains how to install it:
 
 - **Windows** — MSIX installer; updates install automatically in the background.
 - **macOS** — Sparkle-based updater prompts when a new build is published.
@@ -32,9 +32,10 @@ Releases are cut by pushing a `v*` tag that matches the Gradle version — see
 
 ## Continuous integration
 
-Every pull request is built on Linux, Windows and macOS. A second pipeline runs
-formatting, static analysis and the test suite once a maintainer allows it with the
-`run-quality` label. See [docs/ci.md](docs/ci.md).
+The three platforms are built on demand: run the `CI` workflow from the Actions tab
+when you want them checked. A second pipeline runs formatting, static analysis and
+the test suite once a maintainer allows it with the `run-quality` label. See
+[docs/ci.md](docs/ci.md).
 
 See [docs/logging.md](docs/logging.md) and
 [docs/notification-overlay.md](docs/notification-overlay.md) for internal

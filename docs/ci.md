@@ -4,9 +4,15 @@ Two workflows build and check the app, plus a third that packages a release.
 
 | Workflow                                                        | Trigger                                                     | What it does                                              |
 |-----------------------------------------------------------------|-------------------------------------------------------------|-----------------------------------------------------------|
-| [CI](../.github/workflows/ci.yml)                                | every push and pull request to `main`                      | `./gradlew build` on Linux, Windows and macOS              |
+| [CI](../.github/workflows/ci.yml)                                | on demand, from the Actions tab                             | `./gradlew build` on Linux, Windows and macOS              |
 | [PR Quality](../.github/workflows/quality.yml)                   | a pull request carrying the `run-quality` label             | `./gradlew check` and `:app:proguardReleaseJars`           |
 | [Release](../.github/workflows/release.yml)                      | a `v*` tag                                                  | packages the installers and publishes the release          |
+
+The `CI` workflow does not start on its own. Building on Linux, Windows and macOS is
+the expensive half of the pipeline — a macOS minute costs about ten times a Linux one —
+so the platforms are checked when someone asks for them from the Actions tab, rather
+than on every push. `PR Quality` is the other half: it runs the cheap checks, and it
+waits for the `run-quality` label before it does.
 
 ## The JDK is Zulu, not Temurin
 
