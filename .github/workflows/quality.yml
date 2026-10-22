@@ -1,8 +1,9 @@
 # Code quality and tests for pull requests, run only when a maintainer allows them.
 #
 # The always-on workflow (ci.yml) already builds the app on three operating systems. This one
-# is the deep pass: formatting, static analysis, the test suite and the coverage report, with
-# every report uploaded as an artifact so the person who asked for the run can read them.
+# is the deep pass: formatting, static analysis, the test suite and the coverage report. The
+# reports are uploaded as artifacts when the run fails, so whoever has to look into it can read
+# them; a green run uploads nothing.
 #
 # The gate is the `run-quality` label. Labelling a pull request needs triage or write access,
 # so a label on a pull request *is* a maintainer's "go ahead" — a contributor cannot add one
@@ -77,8 +78,12 @@ jobs:
         env:
           CI: true
 
+      # The reports are uploaded only when something failed. A green run has nothing to read,
+      # and uploading every report on every run fills the repository's artifact storage with
+      # copies of a result nobody looks at. When a step fails, these are the files that say
+      # why, so they are the ones worth keeping.
       - name: Upload detekt reports
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v5
         with:
           name: detekt-reports
@@ -86,7 +91,7 @@ jobs:
           retention-days: 14
 
       - name: Upload test reports
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v5
         with:
           name: test-reports
@@ -94,7 +99,7 @@ jobs:
           retention-days: 14
 
       - name: Upload JaCoCo coverage reports
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v5
         with:
           name: coverage-reports

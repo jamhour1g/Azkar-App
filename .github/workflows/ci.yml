@@ -47,8 +47,11 @@ jobs:
         env:
           CI: true
 
+      # The reports are uploaded only when the build failed. A green run has nothing to read,
+      # and uploading every report on every run fills the repository's artifact storage with
+      # copies of a result nobody looks at.
       - name: Upload test reports
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v5
         with:
           name: test-reports-${{ matrix.os }}
@@ -57,15 +60,18 @@ jobs:
           retention-days: 14
 
       - name: Upload JaCoCo coverage reports
-        if: always() && matrix.os == 'ubuntu-latest'
+        if: failure() && matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v5
         with:
           name: coverage-reports
           path: '**/build/reports/jacoco/'
           retention-days: 14
 
+      # The jar is what the run produced, so it is uploaded when the run succeeded. The reports
+      # above are the opposite: they are uploaded when the run failed, because then they are the
+      # only thing that says what went wrong.
       - name: Upload build artifacts
-        if: matrix.os == 'ubuntu-latest'
+        if: success() && matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v5
         with:
           name: build-jars

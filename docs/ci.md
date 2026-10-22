@@ -83,6 +83,17 @@ deliberate: `pull_request_target` runs with a token that can write to the reposi
 and with the secrets, while the code it checks out is whatever the pull request says
 it is. This workflow only reads, so it takes a read-only token and no secrets.
 
+## Reports only when something fails
+
+Both workflows upload artifacts, but only the ones that are worth keeping:
+
+- A **failed** run uploads the detekt, test and coverage reports. They are the files that
+  say what went wrong, so they are what whoever looks into the failure reads.
+- A **successful** run uploads the built jar and nothing else.
+
+Uploading the reports on every run fills the repository's artifact storage with copies of a
+result nobody looks at.
+
 ## Running the same checks locally
 
 ```bash
