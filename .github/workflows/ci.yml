@@ -2,15 +2,13 @@
 name: CI
 
 on:
-  push:
-    branches: ['dev']
   pull_request:
     branches: ['dev', 'production']
   # Manual trigger for a full three-platform run.
   workflow_dispatch:
 
 concurrency:
-  # Cancel stale PR runs, but keep each dev push and manual run independent.
+  # Cancel stale PR runs while keeping manual runs independent.
   group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || format('ci-{0}-{1}', github.ref, github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 

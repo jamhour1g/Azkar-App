@@ -1,14 +1,11 @@
-# Stable releases come from version tags on production. Successful CI runs on dev
-# update a separate rolling preview app and update feed in the dev-preview release.
+# Stable releases come from version tags on production. Dev previews are built
+# only when manually dispatched from dev, keeping ordinary pushes inexpensive.
 name: Release
 
 on:
   push:
     tags: ['v*']
-  workflow_run:
-    workflows: ['CI']
-    types: [completed]
-    branches: ['dev']
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -68,7 +65,7 @@ jobs:
 
   release-dev:
     name: Publish dev preview
-    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     concurrency:
@@ -78,50 +75,31 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
-      - name: Skip stale dev CI runs
-        id: freshness
-        env:
-          PREVIEW_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          latest_dev_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"
-          if [[ "$latest_dev_sha" != "$PREVIEW_SHA" ]]; then
-            echo "Dev has advanced to $latest_dev_sha; skipping preview for $PREVIEW_SHA."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Set up JDK 25
-        if: steps.freshness.outputs.skip != 'true'
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           java-version: '25'
           distribution: 'zulu'
 
       - name: Setup Gradle
-        if: steps.freshness.outputs.skip != 'true'
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
-      # CI already checked this exact commit. Rebuild the shrunk runtime that
-      # Conveyor packages, but don't rerun the tests here.
-      - name: Build ProGuard jars
-        if: steps.freshness.outputs.skip != 'true'
-        run: ./gradlew :app:proguardReleaseJars --console=plain
+      # Manual previews are self-contained: validate before spending time on packaging.
+      - name: Run checks and build ProGuard jars
+        run: ./gradlew check :app:proguardReleaseJars --console=plain
         env:
           CI: true
 
       - name: Build the preview update site
-        if: steps.freshness.outputs.skip != 'true'
         uses: hydraulic-software/conveyor/actions/build@7370ce828ff1cbc38b95426ffb2fd613492016d5 # v22.3
         with:
           command: make site
           signing_key: ${{ secrets.SIGNING_KEY }}
           extra_flags: >-
             --passphrase=env:SIGNING_PASSPHRASE
-            -Kapp.version=0.1.${{ github.event.workflow_run.run_number }}
+            -Kapp.version=0.1.${{ github.run_number }}
             -Kapp.display-name="Azkar Dev"
             -Kapp.fsname=azkar-dev
             -Kapp.rdns-name=com.azkar.app.dev
@@ -135,11 +113,10 @@ jobs:
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
 
       - name: Publish GitHub prerelease
-        if: steps.freshness.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PREVIEW_SHA: ${{ github.event.workflow_run.head_sha }}
-          PREVIEW_RUN: ${{ github.event.workflow_run.run_number }}
+          PREVIEW_SHA: ${{ github.sha }}
+          PREVIEW_RUN: ${{ github.run_number }}
         run: |
           short_sha="${PREVIEW_SHA:0:7}"
           tag="dev-preview"

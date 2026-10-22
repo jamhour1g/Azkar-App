@@ -1,9 +1,9 @@
 # Releasing the desktop app
 
 The desktop build is packaged with [Hydraulic Conveyor](https://conveyor.hydraulic.dev).
-Stable releases come from version tags on `production`. Successful CI pushes to
-`dev` update a separate rolling preview release. Both channels are built for all
-three platforms from a Linux runner:
+Stable releases come from version tags on `production`. Manually dispatching the
+Release workflow from `dev` updates a separate rolling preview release. Both
+channels are built for all three platforms from a Linux runner:
 
 | OS      | Output                                | Auto-update mechanism        |
 |---------|---------------------------------------|------------------------------|
@@ -207,14 +207,15 @@ release exists, and the auto-updates keep reading the Release either way.
 
 ## Testing a dev preview
 
-Every successful CI push to `dev` publishes a GitHub prerelease named
-`dev-preview`, updated to the latest successful dev commit. The packages are
+Run the Release workflow manually with the `dev` branch selected to publish a
+GitHub prerelease named `dev-preview`. The workflow runs checks before packaging.
+The packages are
 labeled **Azkar Dev** and use a
 separate application identity (`com.azkar.app.dev` / `azkar-dev`), so testers
 can install them alongside production. The preview's update feed is hosted at
 `https://github.com/jamhour1g/Azkar-App/releases/download/dev-preview`; it does
-not read or replace the production `releases/latest` feed. The Release workflow
-publishes it only after that commit's CI run succeeds.
+not read or replace the production `releases/latest` feed. Previews do not run
+on ordinary pushes, so they consume Actions only when requested.
 
 The dev preview version uses the release workflow run number. Production keeps
 using the Gradle version and the `v*` tag parity check. Promote code by opening a

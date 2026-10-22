@@ -1,21 +1,20 @@
 # CI
 
-The branch flow is **feature PRs → `dev` → `production`**. CI runs on pushes to
-`dev` and on pull requests targeting either long-lived branch:
+The branch flow is **feature PRs → `dev` → `production`**. CI runs on pull
+requests targeting either long-lived branch; ordinary pushes do not start CI:
 
 | Change | Checks |
 | --- | --- |
-| Push to `dev` or PR targeting `dev` | Linux build, tests, release shrinking |
+| PR targeting `dev` | Linux build, tests, release shrinking |
 | PR targeting `production` | Linux, Windows, and macOS builds; `Production promotion gate` requires all three |
 | Manual CI run | Linux, Windows, and macOS builds |
-| Successful CI push to `dev` | Publishes a separate preview release and update site |
+| Manual Release run on `dev` | Checks, then publishes the separate preview release and update site |
 | `v*` tag on `production` | Publishes a stable release |
 
 The [CI workflow](../.github/workflows/ci.yml) cancels obsolete pull-request
-runs while allowing independent branch pushes to finish. The
-[Release workflow](../.github/workflows/release.yml) only publishes a dev
-preview after the corresponding push run has passed CI. Stable releases must
-use a version tag whose commit is already on `production`.
+runs. Dispatch the [Release workflow](../.github/workflows/release.yml) manually
+with `dev` selected when you want a preview; it runs checks before packaging.
+Stable releases must use a version tag whose commit is already on `production`.
 
 ## The JDK is Zulu, not Temurin
 
