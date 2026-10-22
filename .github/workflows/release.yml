@@ -1,5 +1,5 @@
 # Stable releases come from version tags on production. Successful CI runs on dev
-# publish a separate preview app and update feed under the GitHub Pages /dev path.
+# update a separate rolling preview app and update feed in the dev-preview release.
 name: Release
 
 on:
@@ -10,10 +10,6 @@ on:
     types: [completed]
     branches: ['dev']
 
-concurrency:
-  group: release-${{ github.repository }}
-  cancel-in-progress: false
-
 permissions:
   contents: write
 
@@ -23,6 +19,9 @@ jobs:
     if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    concurrency:
+      group: release-production
+      cancel-in-progress: false
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -72,6 +71,9 @@ jobs:
     if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    concurrency:
+      group: release-dev-preview
+      cancel-in-progress: false
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -79,23 +81,40 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
+      - name: Skip stale dev CI runs
+        id: freshness
+        env:
+          PREVIEW_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          latest_dev_sha="$(git ls-remote origin refs/heads/dev | cut -f1)"
+          if [[ "$latest_dev_sha" != "$PREVIEW_SHA" ]]; then
+            echo "Dev has advanced to $latest_dev_sha; skipping preview for $PREVIEW_SHA."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up JDK 25
+        if: steps.freshness.outputs.skip != 'true'
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           java-version: '25'
           distribution: 'zulu'
 
       - name: Setup Gradle
+        if: steps.freshness.outputs.skip != 'true'
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
       # CI already checked this exact commit. Rebuild the shrunk runtime that
       # Conveyor packages, but don't rerun the tests here.
       - name: Build ProGuard jars
+        if: steps.freshness.outputs.skip != 'true'
         run: ./gradlew :app:proguardReleaseJars --console=plain
         env:
           CI: true
 
       - name: Build the preview update site
+        if: steps.freshness.outputs.skip != 'true'
         uses: hydraulic-software/conveyor/actions/build@7370ce828ff1cbc38b95426ffb2fd613492016d5 # v22.3
         with:
           command: make site
@@ -106,7 +125,7 @@ jobs:
             -Kapp.display-name="Azkar Dev"
             -Kapp.fsname=azkar-dev
             -Kapp.rdns-name=com.azkar.app.dev
-            -Kapp.site.base-url=https://jamhour1g.github.io/Azkar-App/dev
+            -Kapp.site.base-url=https://github.com/jamhour1g/Azkar-App/releases/download/dev-preview
           agree_to_license: 1
           conveyor_version: '22.3'
         env:
@@ -114,44 +133,40 @@ jobs:
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
 
       - name: Publish GitHub prerelease
+        if: steps.freshness.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PREVIEW_SHA: ${{ github.event.workflow_run.head_sha }}
           PREVIEW_RUN: ${{ github.event.workflow_run.run_number }}
         run: |
           short_sha="${PREVIEW_SHA:0:7}"
-          tag="dev-${PREVIEW_RUN}-${short_sha}"
+          tag="dev-preview"
           title="Azkar Dev ${PREVIEW_RUN} (${short_sha})"
+          notes="Rolling preview from dev commit $PREVIEW_SHA. This prerelease has its own app identity and update feed."
 
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" output/* --clobber
+            gh release edit "$tag" --title "$title" --notes "$notes"
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/$tag" \
+              -f "sha=$PREVIEW_SHA" -F force=true >/dev/null
           else
             gh release create "$tag" output/* \
               --title "$title" \
-              --notes "Preview build from dev commit $PREVIEW_SHA. This prerelease has its own app identity and update feed." \
+              --notes "$notes" \
               --prerelease \
               --target "$PREVIEW_SHA"
           fi
 
-      # Keep the production download page at the Pages root and publish the
-      # isolated dev feed beneath /dev. The shared release concurrency group
-      # prevents a simultaneous production page publish from racing this push.
-      - name: Publish preview update site to GitHub Pages
-        env:
-          PREVIEW_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: |
-          site_dir="$GITHUB_WORKSPACE/output"
-          git fetch origin gh-pages:refs/remotes/origin/gh-pages
-          git switch --detach origin/gh-pages
-
-          rm -rf dev
-          mkdir -p dev
-          cp -a "$site_dir"/. dev/
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dev
-          if ! git diff --cached --quiet; then
-            git commit -m "Publish dev preview ${PREVIEW_SHA:0:7}"
-            git push origin HEAD:gh-pages
-          fi
+          mapfile -t current_assets < <(find output -maxdepth 1 -type f -printf '%f\n')
+          while IFS=$'\t' read -r asset_id asset_name; do
+            keep=false
+            for current_asset in "${current_assets[@]}"; do
+              if [[ "$current_asset" == "$asset_name" ]]; then
+                keep=true
+                break
+              fi
+            done
+            if [[ "$keep" == false ]]; then
+              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/$asset_id"
+            fi
+          done < <(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$tag" --jq '.assets[] | [.id, .name] | @tsv')

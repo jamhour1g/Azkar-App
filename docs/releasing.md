@@ -2,7 +2,7 @@
 
 The desktop build is packaged with [Hydraulic Conveyor](https://conveyor.hydraulic.dev).
 Stable releases come from version tags on `production`. Successful CI pushes to
-`dev` publish a separate preview release and update site. Both are built for all
+`dev` update a separate rolling preview release. Both channels are built for all
 three platforms from a Linux runner:
 
 | OS      | Output                                | Auto-update mechanism        |
@@ -13,9 +13,8 @@ three platforms from a Linux runner:
 
 For production, Conveyor generates the download-page HTML and uploads the packages
 into the versioned GitHub Release (`make copied-site`). For dev, the workflow
-generates a site without publishing to the production release feed, attaches its
-files to a GitHub prerelease, and publishes its update feed under the Pages `/dev`
-path.
+generates a site without publishing to the production release feed and attaches
+its files to the `dev-preview` GitHub prerelease.
 
 ## One packaging path
 
@@ -209,12 +208,13 @@ release exists, and the auto-updates keep reading the Release either way.
 ## Testing a dev preview
 
 Every successful CI push to `dev` publishes a GitHub prerelease named
-`dev-<run>-<short-sha>`. The packages are labeled **Azkar Dev** and use a
+`dev-preview`, updated to the latest successful dev commit. The packages are
+labeled **Azkar Dev** and use a
 separate application identity (`com.azkar.app.dev` / `azkar-dev`), so testers
 can install them alongside production. The preview's update feed is hosted at
-`https://jamhour1g.github.io/Azkar-App/dev`; it does not read or replace the
-production `releases/latest` feed. The Release workflow publishes it only after
-that commit's CI run succeeds.
+`https://github.com/jamhour1g/Azkar-App/releases/download/dev-preview`; it does
+not read or replace the production `releases/latest` feed. The Release workflow
+publishes it only after that commit's CI run succeeds.
 
 The dev preview version uses the release workflow run number. Production keeps
 using the Gradle version and the `v*` tag parity check. Promote code by opening a
