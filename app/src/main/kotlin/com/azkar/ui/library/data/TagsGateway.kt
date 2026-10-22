@@ -4,10 +4,9 @@ import com.azkar.domain.exception.TagNameTakenException
 import com.azkar.domain.model.TagSummary
 import com.azkar.domain.model.TagUsage
 import com.azkar.domain.service.TagService
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.Locale
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * The seam between the tags screen and everything that stores a tag.
@@ -129,6 +128,7 @@ sealed interface TagSaveResult {
  */
 class DomainTagsGateway(
     private val tags: TagService,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) : TagGateway {
     override suspend fun fetchSummaries(): List<TagSummary> = tags.findSummaries()
 

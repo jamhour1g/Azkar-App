@@ -1,6 +1,7 @@
 package com.azkar.data.config
 
 import ch.qos.logback.classic.Level
+import com.azkar.data.seed.SeedCounts
 import com.azkar.data.seed.SeedDataLoader
 import com.azkar.data.table.ExplanationTranslationTable
 import com.azkar.data.table.RemembranceTable
@@ -66,23 +67,21 @@ val SeedDataSuite by testSuite("Seed data") {
     // time a test starts, and this wants to watch the very call that does it.
     test("a first start says how much of the dataset it just loaded") {
         val database = TestDatabase.bootstrapWithH2()
-        val logs =
-            captureLogs(SEED_LOADER_LOGGER) {
-                transaction(database) { SeedDataLoader.load() }
-            }
 
-        // This is the one line the shipped app prints on a user's very first launch, so it is worth
-        // a test: the dataset is a resource file, and a resource file can silently stop parsing.
+        var counts: SeedCounts? = null
+        val logs = captureLogs { logger -> counts = transaction(database) { SeedDataLoader.load(logger) } }
+        val seeded = requireNotNull(counts) { "The loader was supposed to report what it seeded" }
+
+        // The dataset is a resource file, and a resource file can silently stop parsing. The
+        // loader says what it inserted, so the question is whether the milestone agrees with
+        // what actually landed — asking the work is what makes the two impossible to disagree.
         val milestones = logs.messagesAt(Level.INFO)
         assertThat(milestones).hasSize(1)
         assertThat(milestones.single())
             .describedAs("The seeding milestone, which names both counts")
-            .matches("""Seeded \d+ remembrances and \d+ tags""")
+            .isEqualTo("Seeded ${seeded.remembrances} remembrances and ${seeded.tags} tags")
     }
 }
-
-/** The logger [SeedDataLoader] writes to, named by hand so the test cannot drift from the class. */
-private const val SEED_LOADER_LOGGER = "com.azkar.data.seed.SeedDataLoader"
 
 /** The two locales the seed is expected to cover. */
 private val SEEDED_LOCALES = listOf("ar", "en")

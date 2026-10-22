@@ -7,8 +7,11 @@ import ch.qos.logback.classic.PatternLayout
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.read.ListAppender
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.slf4j.LoggerFactory
 import java.io.InputStream
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * What one logger emitted while [captureLogs] ran its block.
@@ -52,46 +55,76 @@ private fun fieldsOf(event: ILoggingEvent): List<Pair<String, String>> =
     event.keyValuePairs.orEmpty().map { pair -> pair.key to pair.value.toString() }
 
 /**
- * Runs [block] with every event from [loggerName] and its children collected into a list.
+ * Runs [block] with a logger of its own, and collects every event that logger emitted.
  *
- * The logger is forced to [Level.TRACE] for the duration and put back exactly as it was
- * afterwards, level included. That matters because `captureLogs` is the only way to assert on a
- * `debug` statement, and the configured level for `com.azkar` is a property of whichever
- * `logback-test.xml` the module happened to load — not something a test should have to
- * coordinate with.
+ * What this is for: the **shipped configuration** — that the console pattern renders a structured
+ * payload the way a user would see it. Production log lines are not asserted on: a method that
+ * loses data or swallows a failure reports it through its return value or through a callback it
+ * accepts, and the test asserts that instead. See `docs/logging.md`.
  *
- * The appender hangs off [loggerName] rather than off the root so nothing double-counts an event
- * that also reaches the console, and events from sibling loggers are deliberately not collected:
- * a test that wants those asks for their name.
+ * The logger is **private to this capture**: it is created here, named after nothing but a counter,
+ * and handed to [block]. Nothing global is touched, which is the whole point of the design.
  *
- * [block] is typed `suspend () -> Unit` on purpose, so a value-producing call can be passed inline
- * (Kotlin coerces the last expression) without the harness inventing a second overload that differs
- * only by a type parameter. It has to be `suspend` because most of what the codebase logs from
- * happens inside a suspending call — a repository read, a warm-up — so a non-suspending block
- * would rule out exactly the logs worth asserting on.
+ * The older shape of this helper — "attach an appender to the logger named `com.azkar.something`
+ * and collect whatever arrives" — could only ever see a *time window*, not a *cause*. A logback
+ * logger is a JVM-wide singleton, so any other code logging under that name while the window was
+ * open landed in the capture too: the seed loader's line appeared twice when two suites seeded at
+ * once, and a repository's failure warning appeared in a test that was asserting that a *successful*
+ * call logs nothing. A capture that belongs to one test can only be one the test owns.
+ *
+ * Three properties follow from that, and they are the reason this shape was chosen over the older
+ * one rather than merely being tidier:
+ *
+ * - **Causal.** Only the events emitted through *this* logger are collected, so `containsExactly`
+ *   and `isEmpty` stay exact. A window-based capture can only ever be approximate.
+ * - **Thread-independent.** The event is collected whichever thread emitted it. A warm-up that
+ *   runs on `Dispatchers.IO` — the production default — logs from that thread, and a capture that
+ *   filtered by thread would lose the very line it was written for.
+ * - **Free of shared state.** There is no `logger.level` to put back and no appender to detach from
+ *   a logger somebody else may be using, so two captures running at the same time cannot restore
+ *   each other's level or read each other's events.
+ *
+ * The logger is forced to [Level.TRACE] for the duration, because `captureLogs` is the only way to
+ * assert on a `debug` statement and the configured level for `com.azkar` is a property of whichever
+ * `logback-test.xml` the module happened to load — not something a test should have to coordinate
+ * with. The level is set on this capture's own logger, so nothing else is affected.
+ *
+ * [block] is typed `suspend (KLogger) -> Unit` on purpose. It has to be `suspend` because the code
+ * that logs tends to log from inside a suspending call — a repository read, a warm-up — so a
+ * non-suspending block would rule out exactly the calls worth capturing.
  */
-suspend fun captureLogs(
-    loggerName: String,
-    block: suspend () -> Unit,
-): CapturedLogs {
-    val logger = loggerNamed(loggerName)
+suspend fun captureLogs(block: suspend (KLogger) -> Unit): CapturedLogs {
+    val name = "com.azkar.testing.capture.${captureCounter.incrementAndGet()}"
+    val logger = KotlinLogging.logger(name)
+    val backend = loggerNamed(name)
     val appender = ListAppender<ILoggingEvent>()
-    val previousLevel = logger.level
 
     appender.setContext(logbackContext())
     appender.start()
-    logger.addAppender(appender)
-    logger.level = Level.TRACE
+    backend.addAppender(appender)
+    backend.level = Level.TRACE
 
     return try {
-        block()
+        block(logger)
         CapturedLogs(appender.list)
     } finally {
-        logger.level = previousLevel
-        logger.detachAppender(appender)
+        backend.detachAppender(appender)
         appender.stop()
+        // The logger is this capture's own and is never used again, so it only has to be left
+        // inert: no appender to collect into, and no level of its own to keep it at TRACE.
+        backend.level = null
     }
 }
+
+/**
+ * Numbers the capture loggers.
+ *
+ * A counter rather than a fixed name because two captures running at the same time must not share a
+ * logger: they would collect each other's events, which is the very defect this design removes.
+ * The names live under `com.azkar` so the `com.azkar` level configured by `logback-test.xml` still
+ * applies to them.
+ */
+private val captureCounter = AtomicLong()
 
 /**
  * Renders [event] through the pattern [productionPattern] declares — the layout the shipped app

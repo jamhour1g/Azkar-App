@@ -4,7 +4,6 @@ import ch.qos.logback.classic.Level
 import com.azkar.testing.captureLogs
 import com.azkar.testing.renderAsProduction
 import de.infix.testBalloon.framework.core.testSuite
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.assertj.core.api.Assertions.assertThat
 
 /**
@@ -18,12 +17,17 @@ import org.assertj.core.api.Assertions.assertThat
  *
  * Only `:app` can run this: it is the module that packages `logback.xml`, so it is the only one
  * whose test classpath carries the file `renderAsProduction` reads the pattern out of.
+ *
+ * The capture hands out a logger of its own, and a logger created by name has no caller
+ * information — so `%method` renders as `[?]` in the lines these tests assert on. Production loggers
+ * use `KotlinLogging.logger {}`, which passes the callsite, and that is the only reason `%method`
+ * is in the pattern at all.
  */
 val LoggingPatternSuite by testSuite("The shipped log pattern") {
     test("a structured payload reaches the rendered line, not just the event") {
         val logs =
-            captureLogs(PROBE) {
-                probeLogger.atWarn {
+            captureLogs { logger ->
+                logger.atWarn {
                     message = "Dropped locales missing counterpart"
                     payload =
                         mapOf(
@@ -48,8 +52,8 @@ val LoggingPatternSuite by testSuite("The shipped log pattern") {
 
     test("a message with no payload still renders in full, and adds no stray field") {
         val logs =
-            captureLogs(PROBE) {
-                probeLogger.warn { "Seed resource [/db/seed/muslim_data.tsv] holds no rows" }
+            captureLogs { logger ->
+                logger.warn { "Seed resource [/db/seed/muslim_data.tsv] holds no rows" }
             }
 
         val rendered = renderAsProduction(logs.at(Level.WARN).single())
@@ -62,14 +66,3 @@ val LoggingPatternSuite by testSuite("The shipped log pattern") {
             .doesNotContain("=")
     }
 }
-
-/**
- * Named explicitly so the capture and the emitting call cannot drift apart.
- *
- * A named logger has no caller information, so `%method` renders as `[?]` in the lines these tests
- * assert on. Production loggers use `KotlinLogging.logger {}`, which passes the callsite, and that
- * is the only reason `%method` is in the pattern at all.
- */
-private const val PROBE = "com.azkar.loggingpattern.probe"
-
-private val probeLogger = KotlinLogging.logger(PROBE)

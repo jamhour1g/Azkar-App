@@ -11,6 +11,7 @@ import com.azkar.ui.home.name
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.model.CollectionsSnapshot
 import com.azkar.ui.notifications.presentation.NotificationPublisher
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -22,8 +23,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Locale
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Routes a notification activation to the live navigation tree, in two halves.
@@ -99,6 +98,7 @@ class NotificationRuntime(
     private val collections: CollectionsGateway,
     private val locationDetector: LocationDetector,
     private val publisher: NotificationPublisher,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     private val startLock = Any()
     private var schedulerJob: Job? = null

@@ -1,13 +1,12 @@
 package com.azkar.data.storage
 
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.UUID
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * The app's own directory of collection cover images, and the only place a cover file is read from.
@@ -27,6 +26,7 @@ private val logger = KotlinLogging.logger {}
  */
 class CoverStorage(
     private val directory: Path = defaultDirectory(),
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     /**
      * Copies [source] into the covers directory and returns the name to store against a collection.

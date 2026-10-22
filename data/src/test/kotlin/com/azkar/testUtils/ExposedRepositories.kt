@@ -9,6 +9,8 @@ import com.azkar.data.transaction.ExposedTransactionRunner
 import de.infix.testBalloon.framework.core.Test
 import de.infix.testBalloon.framework.core.TestFixture
 import de.infix.testBalloon.framework.core.TestSuiteScope
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
@@ -36,7 +38,18 @@ class ExposedRepositories(
     val remembrances: ExposedRemembranceRepository,
     val collections: ExposedCollectionRepository,
     val recitations: ExposedRecitationRepository,
-)
+) {
+    /**
+     * The same repositories, writing to [logger] rather than to the default one.
+     *
+     * A test that asserts on a repository's own log has to *own* the logger the repository writes
+     * to, and that logger only comes into existence once the capture has started — which is after
+     * this fixture built the repositories. Rebuilding them over the same database is what lets the
+     * capture be exact: the lines collected are the ones this call caused, not every line the
+     * package happened to log while the window was open.
+     */
+    fun loggingTo(logger: KLogger): ExposedRepositories = repositories(database, logger)
+}
 
 /**
  * A per-test fixture: a freshly migrated, empty database plus the repositories built on top of
@@ -44,6 +57,10 @@ class ExposedRepositories(
  *
  * [TestDatabase.bootstrapWithH2] creates the schema and nothing else, so the tables are already
  * empty; [TestDatabase.reset] is what leaves them that way once a test has written to them.
+ *
+ * The repositories write to a logger of their own, which is the right thing for production and the
+ * wrong thing for a test that wants to read what they logged. [ExposedRepositories.loggingTo] is
+ * how a test gets at that log.
  */
 fun TestSuiteScope.exposedRepositories(content: TestLevelFixtureScope<ExposedRepositories>.() -> Unit) {
     testFixture {
@@ -91,15 +108,18 @@ fun TestSuiteScope.seededCollections(content: TestLevelFixtureScope<ExposedRepos
     } asParameterForEach content
 }
 
-private fun repositories(database: Database): ExposedRepositories {
+private fun repositories(
+    database: Database,
+    logger: KLogger = KotlinLogging.logger {},
+): ExposedRepositories {
     val transactions = ExposedTransactionRunner(database)
-    val tags = ExposedTagRepository(transactions)
+    val tags = ExposedTagRepository(transactions, logger)
     return ExposedRepositories(
         database = database,
         tags = tags,
-        remembrances = ExposedRemembranceRepository(tags, transactions),
-        collections = ExposedCollectionRepository(transactions, tags),
-        recitations = ExposedRecitationRepository(transactions),
+        remembrances = ExposedRemembranceRepository(tags, transactions, logger),
+        collections = ExposedCollectionRepository(transactions, tags, logger),
+        recitations = ExposedRecitationRepository(transactions, logger),
     )
 }
 

@@ -12,6 +12,7 @@ import com.azkar.ui.library.data.ImportPlanResult
 import com.azkar.ui.library.data.ImportReport
 import com.azkar.ui.library.data.TransferCollection
 import com.azkar.ui.library.data.TransferFormat
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -33,9 +34,8 @@ import kotlinx.coroutines.launch
 class CollectionImportState(
     private val collections: CollectionsCatalogue,
     private val scope: CoroutineScope,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
-    private val logger = KotlinLogging.logger {}
-
     /** Whether the import dialog is on screen at all. */
     var isOpen by mutableStateOf(false)
         private set

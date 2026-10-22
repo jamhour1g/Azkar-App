@@ -21,13 +21,12 @@ import com.azkar.domain.service.RemembranceService
 import com.azkar.ui.library.data.CollectionPresenter.Companion.ARABIC_LOCALE
 import com.azkar.ui.library.data.CollectionPresenter.Companion.ENGLISH_LOCALE
 import com.azkar.ui.library.model.CollectionsSnapshot
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
 import java.time.Instant
 import java.util.Base64
 import java.util.Locale
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Returns a copy of this remembrance with a different favorite flag, leaving every other field
@@ -495,6 +494,7 @@ data class CollectionsGatewayDependencies(
  */
 class DomainCollectionsGateway(
     private val dependencies: CollectionsGatewayDependencies,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) : CollectionsGateway {
     private val remembranceService = dependencies.remembranceService
     private val collectionService = dependencies.collectionService
@@ -862,7 +862,7 @@ class DomainCollectionsGateway(
                             name = step.transfer.name,
                             description = step.transfer.description,
                             iconKey = step.transfer.iconKey,
-                            coverImagePath = step.transfer.restoreCoverInto(covers),
+                            coverImagePath = step.transfer.restoreCoverInto(covers, logger),
                             tags = step.transfer.tagNames.toTags(step.transfer.nameLanguage()),
                             translations = step.transfer.pairs(),
                             nameLocale = step.transfer.nameLanguage(),
@@ -1000,7 +1000,10 @@ private fun Collection<String>.toTags(nameLocale: Locale): Set<Tag> =
  * itself is the thing the user asked for; the cover is decoration on it, and losing the decoration is
  * a better outcome than losing the collection.
  */
-private fun TransferCollection.restoreCoverInto(covers: CoverStorage): String? {
+private fun TransferCollection.restoreCoverInto(
+    covers: CoverStorage,
+    logger: KLogger,
+): String? {
     val encoded = coverImageBase64
     val bytes =
         encoded?.let {

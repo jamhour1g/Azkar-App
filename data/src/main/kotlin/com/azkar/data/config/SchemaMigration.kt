@@ -1,12 +1,11 @@
 package com.azkar.data.config
 
 import com.azkar.data.table.ALL_TABLES
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.migration.jdbc.MigrationUtils
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Brings this database in line with the Exposed table objects.
@@ -35,7 +34,7 @@ private val logger = KotlinLogging.logger {}
  * [ALL_TABLES], inside the one call that migrates the schema.
  */
 @Suppress("SpreadOperator")
-fun Database.migrateToLatestSchema() {
+fun Database.migrateToLatestSchema(logger: KLogger = KotlinLogging.logger {}) {
     transaction(this) {
         val tables = ALL_TABLES.toTypedArray()
         val statements = MigrationUtils.statementsRequiredForDatabaseMigration(*tables, withLogs = false)
@@ -46,7 +45,7 @@ fun Database.migrateToLatestSchema() {
         if (statements.isEmpty()) {
             logger.debug { "Schema is already up to date" }
         } else {
-            val applicable = statements.withoutUndeclaredIndexDrops()
+            val applicable = statements.withoutUndeclaredIndexDrops(logger)
             logger.info { "Applying ${applicable.size} schema statement(s)" }
             applicable.forEach { exec(it) }
         }
@@ -75,7 +74,7 @@ fun Database.migrateToLatestSchema() {
  * of being cleaned up on the next start. That is the safer direction to err in, and the skip is
  * logged so it is not silent.
  */
-private fun List<String>.withoutUndeclaredIndexDrops(): List<String> {
+private fun List<String>.withoutUndeclaredIndexDrops(logger: KLogger): List<String> {
     val declared = ALL_TABLES.flatMapTo(mutableSetOf()) { table -> table.indices.map { it.indexName } }
     return filterNot { statement ->
         val name = INDEX_DROP.find(statement)?.groupValues?.get(1) ?: return@filterNot false

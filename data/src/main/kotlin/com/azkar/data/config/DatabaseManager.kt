@@ -3,14 +3,13 @@ package com.azkar.data.config
 import com.azkar.data.config.migrateToLatestSchema
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.jdbc.Database
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Owns the process-wide Exposed [Database] and its connection pool.
@@ -24,11 +23,18 @@ private val logger = KotlinLogging.logger {}
  * before the [Database] is published, so the first query can never land on an unmigrated
  * database.
  *
- * The `object` singleton is closeable and re-openable rather than one-shot: [close] drops both
- * handles so the next [database] call reconnects, which is what lets the window teardown release
- * the pool without a restart being needed afterward.
+ * The manager is closeable and re-openable rather than one-shot: [close] drops both handles so
+ * the next [database] call reconnects, which is what lets the window teardown release the pool
+ * without a restart being needed afterward.
+ *
+ * It is a class rather than an `object` so that it can be given the logger it writes to: a
+ * logger reached through a name is shared by the whole process, and a test that wants to assert
+ * on the line the pool emits has to be able to own the logger behind it. [default] is the one
+ * the application uses.
  */
-object DatabaseManager : AutoCloseable {
+class DatabaseManager(
+    private val logger: KLogger = KotlinLogging.logger {},
+) : AutoCloseable {
     private val lock = ReentrantLock()
 
     private var pool: HikariDataSource? = null
@@ -109,23 +115,33 @@ object DatabaseManager : AutoCloseable {
         }
     }
 
-    /**
-     * Builds the pool configuration.
-     */
-    internal fun poolConfig(
-        jdbcUrl: String,
-        idleTimeout: Duration = 10_000L.milliseconds,
-        connectionTimeout: Duration = 20_000L.milliseconds,
-    ): HikariConfig =
-        HikariConfig().apply {
-            this.jdbcUrl = jdbcUrl
-            driverClassName = "org.h2.Driver"
-            poolName = "azkar-h2"
-            minimumIdle = 1
-            maximumPoolSize = 4
-            this.idleTimeout = idleTimeout.inWholeMilliseconds
-            this.connectionTimeout = connectionTimeout.inWholeMilliseconds
-            // Exposed drives commit/rollback itself around every transaction.
-            isAutoCommit = false
-        }
+    companion object {
+        /**
+         * The manager the application uses.
+         *
+         * One instance owns the process-wide pool, and the window's teardown closes the same one,
+         * so the default is shared rather than constructed afresh at every call site.
+         */
+        val default: DatabaseManager by lazy { DatabaseManager() }
+
+        /**
+         * Builds the pool configuration.
+         */
+        internal fun poolConfig(
+            jdbcUrl: String,
+            idleTimeout: Duration = 10_000L.milliseconds,
+            connectionTimeout: Duration = 20_000L.milliseconds,
+        ): HikariConfig =
+            HikariConfig().apply {
+                this.jdbcUrl = jdbcUrl
+                driverClassName = "org.h2.Driver"
+                poolName = "azkar-h2"
+                minimumIdle = 1
+                maximumPoolSize = 4
+                this.idleTimeout = idleTimeout.inWholeMilliseconds
+                this.connectionTimeout = connectionTimeout.inWholeMilliseconds
+                // Exposed drives commit/rollback itself around every transaction.
+                isAutoCommit = false
+            }
+    }
 }

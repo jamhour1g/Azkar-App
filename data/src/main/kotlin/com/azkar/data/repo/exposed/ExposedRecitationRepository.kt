@@ -8,6 +8,8 @@ import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.RecitationSummary
 import com.azkar.domain.repo.RecitationRepository
 import com.azkar.domain.service.TransactionRunner
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.CustomFunction
 import org.jetbrains.exposed.v1.core.IntegerColumnType
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -34,9 +36,10 @@ import java.time.OffsetDateTime
  */
 class ExposedRecitationRepository(
     private val transactions: TransactionRunner,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) : RecitationRepository {
     override suspend fun findByCollection(collectionId: Long): List<RecitationProgress> =
-        transactions.tx("Failed to find the recitation progress of collection id=$collectionId") {
+        transactions.tx(logger, "Failed to find the recitation progress of collection id=$collectionId") {
             RecitationProgressEntity
                 .find { RecitationProgressTable.collectionId eq collectionId }
                 .orderBy(RecitationProgressTable.remembranceId to SortOrder.ASC)
@@ -44,7 +47,7 @@ class ExposedRecitationRepository(
         }
 
     override suspend fun findByRemembrance(remembranceId: Long): List<RecitationProgress> =
-        transactions.tx("Failed to find the recitation progress of remembrance id=$remembranceId") {
+        transactions.tx(logger, "Failed to find the recitation progress of remembrance id=$remembranceId") {
             RecitationProgressEntity
                 .find { RecitationProgressTable.remembranceId eq remembranceId }
                 .map { it.toProgress() }
@@ -71,7 +74,10 @@ class ExposedRecitationRepository(
         if (collectionIds.isEmpty()) {
             return emptyMap()
         }
-        return transactions.tx("Failed to summarise the recitation progress of ${collectionIds.size} collections") {
+        return transactions.tx(
+            logger,
+            "Failed to summarise the recitation progress of ${collectionIds.size} collections",
+        ) {
             RecitationProgressEntity
                 .find { RecitationProgressTable.collectionId inList collectionIds }
                 .filter { it.repeatCount > 0 }
@@ -98,7 +104,7 @@ class ExposedRecitationRepository(
         collectionId: Long,
         deltas: Map<Long, Int>,
     ): Int =
-        transactions.tx("Failed to record recitation progress on collection id=$collectionId") {
+        transactions.tx(logger, "Failed to record recitation progress on collection id=$collectionId") {
             val timestamp = now()
             deltas.entries.count { (remembranceId, delta) ->
                 // Nothing to add is nothing to write: reaching here with a stored row would
@@ -177,7 +183,10 @@ class ExposedRecitationRepository(
         remembranceId: Long,
         count: Int,
     ) {
-        transactions.tx("Failed to set the count of remembrance id=$remembranceId in collection id=$collectionId") {
+        transactions.tx(
+            logger,
+            "Failed to set the count of remembrance id=$remembranceId in collection id=$collectionId",
+        ) {
             val timestamp = now()
             RecitationProgressTable.deleteWhere {
                 (RecitationProgressTable.collectionId eq collectionId) and
@@ -193,7 +202,7 @@ class ExposedRecitationRepository(
     }
 
     override suspend fun reset(collectionId: Long): Int =
-        transactions.tx("Failed to reset the recitation progress of collection id=$collectionId") {
+        transactions.tx(logger, "Failed to reset the recitation progress of collection id=$collectionId") {
             RecitationProgressTable
                 .deleteWhere { RecitationProgressTable.collectionId eq collectionId }
         }

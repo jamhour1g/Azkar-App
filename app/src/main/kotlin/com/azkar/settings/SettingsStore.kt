@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +22,15 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 
-private val logger = KotlinLogging.logger {}
+/**
+ * The logger this file's own code writes to.
+ *
+ * A property of the file rather than an inline default on each declaration, because two
+ * declarations here log — the class and its companion — and a logger reached by name is a
+ * singleton. Two inline defaults would be two loggers under two names, and a test that
+ * captured one of them would never see the other's lines. One default, one logger, one name.
+ */
+private val defaultLogger = KotlinLogging.logger {}
 
 /**
  * The app's persistent settings, backed by Jetpack DataStore.
@@ -36,6 +45,7 @@ private val logger = KotlinLogging.logger {}
 class SettingsStore(
     private val dataStore: DataStore<Preferences>,
     private val scope: CoroutineScope,
+    private val logger: KLogger = defaultLogger,
 ) {
     /**
      * Applies [block] on the store's own scope, so a caller that only ever writes does not have to
@@ -55,10 +65,10 @@ class SettingsStore(
      * ways of asking this store a question cannot disagree about what a failure means.
      */
     val changes: Flow<Preferences> =
-        dataStore.data.degradingToEmpty().distinctUntilChanged()
+        dataStore.data.degradingToEmpty(logger).distinctUntilChanged()
 
     /** The stored value of [key], suspending until the store has been read once. */
-    suspend fun <T> read(key: Preferences.Key<T>): T? = dataStore.data.degradingToEmpty().first()[key]
+    suspend fun <T> read(key: Preferences.Key<T>): T? = dataStore.data.degradingToEmpty(logger).first()[key]
 
     /**
      * Applies [block] to the stored values as a single transaction.
@@ -111,8 +121,9 @@ class SettingsStore(
         fun create(
             file: Path = settingsFile(),
             scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+            logger: KLogger = defaultLogger,
         ): SettingsStore {
-            createDirectory(file)
+            createDirectory(file, logger)
             return SettingsStore(
                 dataStore =
                     PreferenceDataStoreFactory.create(
@@ -126,6 +137,7 @@ class SettingsStore(
                         produceFile = { file.toFile() },
                     ),
                 scope = scope,
+                logger = logger,
             )
         }
 
@@ -150,7 +162,10 @@ class SettingsStore(
          * retry — the path is wrong. Logging then throwing keeps the useful stack frame, which a
          * field initialiser would swallow.
          */
-        private fun createDirectory(file: Path) {
+        private fun createDirectory(
+            file: Path,
+            logger: KLogger,
+        ) {
             val parent = file.parent ?: return
             runCatching { Files.createDirectories(parent) }
                 .onFailure { failure ->
@@ -180,7 +195,7 @@ class SettingsStore(
  * consumer had to wrap its own read — and which of them protected a given call depended on which
  * API that consumer happened to reach for.
  */
-private fun Flow<Preferences>.degradingToEmpty(): Flow<Preferences> =
+private fun Flow<Preferences>.degradingToEmpty(logger: KLogger): Flow<Preferences> =
     catch { failure ->
         if (failure is IOException) {
             logger.error(failure) { "Unable to read the stored settings" }

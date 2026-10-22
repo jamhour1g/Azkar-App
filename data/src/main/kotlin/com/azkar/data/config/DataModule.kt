@@ -40,7 +40,7 @@ import org.koin.dsl.module
  */
 val dataModule =
     module {
-        single<Database> { DatabaseManager.database() }
+        single<Database> { DatabaseManager.default.database() }
 
         // One runner is shared deliberately: the repositories and the services both go through it,
         // and a repository call nested inside a service transaction has to join that transaction

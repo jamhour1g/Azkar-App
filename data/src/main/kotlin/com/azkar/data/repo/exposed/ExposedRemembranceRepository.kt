@@ -18,6 +18,8 @@ import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.Tag
 import com.azkar.domain.repo.RemembranceRepository
 import com.azkar.domain.service.TransactionRunner
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -55,6 +57,9 @@ import java.util.Locale
  * `RemembranceEntity.find { }` would be the same query with a different spelling, and the entity
  * classes earn their place where a row is read and written field by field.
  *
+ * [logger] is the repository's own logger, handed to the transaction wrapper so a failed write
+ * is reported under this repository rather than under a name the whole process shares.
+ *
  * Every method runs inside [transactions]; none of them opens a transaction of its own, so a
  * service-level transaction and the repository method nested inside it commit or roll back as one
  * unit rather than competing for the same rows.
@@ -62,9 +67,10 @@ import java.util.Locale
 class ExposedRemembranceRepository(
     private val tagRepository: ExposedTagRepository,
     private val transactions: TransactionRunner,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) : RemembranceRepository {
     override suspend fun save(remembrance: Remembrance): Remembrance =
-        transactions.tx("Failed to save remembrance") {
+        transactions.tx(logger, "Failed to save remembrance") {
             val timestamp = now()
             val existingId = remembrance.id
             val id = existingId ?: insert(remembrance, timestamp)
@@ -84,7 +90,7 @@ class ExposedRemembranceRepository(
     }
 
     override suspend fun deleteById(id: Long) {
-        transactions.tx("Failed to delete remembrance id=$id") {
+        transactions.tx(logger, "Failed to delete remembrance id=$id") {
             // Translations, explanations and tag links all cascade from `remembrance`, so the
             // parent row is the whole of the delete. It used not to be: the `favorite` row was
             // only *referenced* by the remembrance and had to be cleared by hand, which is what
@@ -95,18 +101,18 @@ class ExposedRemembranceRepository(
     }
 
     override suspend fun findById(id: Long): Remembrance? =
-        transactions.tx("Failed to find remembrance id=$id") { loadOne(id) }
+        transactions.tx(logger, "Failed to find remembrance id=$id") { loadOne(id) }
 
     override suspend fun findAll(): List<Remembrance> =
-        transactions.tx("Failed to find all remembrances") {
+        transactions.tx(logger, "Failed to find all remembrances") {
             load(RemembranceTable.selectAll().orderBy(RemembranceTable.id to SortOrder.ASC))
         }
 
     override suspend fun findFirst(): Remembrance? =
-        transactions.tx("Failed to find the first remembrance") { loadFirst() }
+        transactions.tx(logger, "Failed to find the first remembrance") { loadFirst() }
 
     override suspend fun findByTagNameIgnoreCase(tagName: String): List<Remembrance> =
-        transactions.tx("Failed to find remembrances by tag '$tagName'") {
+        transactions.tx(logger, "Failed to find remembrances by tag '$tagName'") {
             load(
                 RemembranceTable
                     .innerJoin(RemembranceTagTable)
@@ -118,7 +124,7 @@ class ExposedRemembranceRepository(
         }
 
     override suspend fun findFavorites(): List<Remembrance> =
-        transactions.tx("Failed to find favorite remembrances") {
+        transactions.tx(logger, "Failed to find favorite remembrances") {
             load(
                 RemembranceTable
                     .selectAll()
@@ -134,7 +140,7 @@ class ExposedRemembranceRepository(
         if (query.isBlank()) {
             return emptyList()
         }
-        return transactions.tx("Failed to search remembrances") {
+        return transactions.tx(logger, "Failed to search remembrances") {
             val matchingIds =
                 RemembranceTranslationTable
                     .selectAll()
@@ -168,7 +174,7 @@ class ExposedRemembranceRepository(
         favorite: Boolean,
     ) {
         val state = if (favorite) "mark" else "unmark"
-        transactions.tx("Failed to $state remembrance id=$id as favorite") {
+        transactions.tx(logger, "Failed to $state remembrance id=$id as favorite") {
             // A cheap existence probe before the write: backed by `EntityClass.findById`, which is
             // the primary-key lookup rather than a scan, and the point is that this runs before a
             // write rather than as part of one. An update against a row that is not there reports
@@ -213,7 +219,7 @@ class ExposedRemembranceRepository(
         load(RemembranceEntity.wrapRows(rows).toList())
 
     /** The full aggregate for a page of already-loaded parents, loading all children in bulk. */
-    private fun load(parents: List<RemembranceEntity>): List<Remembrance> = parents.load()
+    private fun load(parents: List<RemembranceEntity>): List<Remembrance> = parents.load(logger)
 
     /** Inserts the parent row and returns its generated id. */
     private fun insert(

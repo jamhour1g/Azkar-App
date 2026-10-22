@@ -11,6 +11,7 @@ import com.azkar.data.table.TagTable
 import com.azkar.data.table.TagTranslationTable
 import com.azkar.domain.model.CollectionKind
 import com.azkar.domain.model.Tag
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.inList
@@ -19,8 +20,6 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.time.OffsetDateTime
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Writes the shipped collections and the memberships that go with them into an empty database.
@@ -44,7 +43,7 @@ private val logger = KotlinLogging.logger {}
  * against a database with no tags or no remembrances in it comes up empty and stays empty.
  */
 internal object CollectionSeed {
-    fun load() {
+    fun load(logger: KLogger = KotlinLogging.logger {}) {
         val catalogue = OfficialCollectionCatalogue.entries
 
         // Belt and braces rather than the real gate — [LibraryBootstrapper] decides whether to call
@@ -55,7 +54,7 @@ internal object CollectionSeed {
         }
 
         val tagIds = resolveTagIds(catalogue)
-        warnAboutTagsTheDatasetNoLongerCarries(catalogue, tagIds)
+        warnAboutTagsTheDatasetNoLongerCarries(logger, catalogue, tagIds)
 
         val timestamp = now()
         val collections = insertCollections(catalogue, timestamp)
@@ -92,6 +91,7 @@ internal object CollectionSeed {
      * collection is still worth having as an empty shelf the user can fill.
      */
     private fun warnAboutTagsTheDatasetNoLongerCarries(
+        logger: KLogger,
         entries: List<OfficialCollectionCatalogue.Entry>,
         tagIds: Map<String, Long>,
     ) {

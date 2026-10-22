@@ -1,5 +1,6 @@
 package com.azkar.ui.library
 
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.PlatformFile
@@ -8,8 +9,6 @@ import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import java.io.IOException
 import java.nio.file.Path
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Asks the platform for a picture and hands back a path to it.
@@ -42,7 +41,10 @@ internal object CoverImageChooser {
      * that the app never composes, so a `StringResource` cannot be read inside this function --
      * it takes a plain string and the caller resolves it against the current locale.
      */
-    suspend fun choose(title: String): PlatformFile? =
+    suspend fun choose(
+        title: String,
+        logger: KLogger = KotlinLogging.logger {},
+    ): PlatformFile? =
         runCatching {
             FileKit.openFilePicker(
                 type = FileKitType.Image,
@@ -75,6 +77,7 @@ internal object CoverImageChooser {
     suspend fun ingest(
         source: Path,
         store: suspend (Path) -> String,
+        logger: KLogger = KotlinLogging.logger {},
     ): String? =
         try {
             store(source)

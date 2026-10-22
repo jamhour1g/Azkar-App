@@ -110,18 +110,17 @@ val DatabaseWarmUpSuite by testSuite("The database warm-up") {
 
     test("a failing warm-up is reported with the failure itself attached") {
         val failure = IllegalStateException("db down")
-        val warmUp =
-            DatabaseWarmUp(
-                // Unconfined so `start()` runs the coroutine body to completion on this thread,
-                // which keeps the whole thing out of `runTest`'s virtual clock.
-                dispatcher = TestDispatchers.unconfined,
-                warmUp = { throw failure },
-                release = {},
-            )
 
         val logs =
-            captureLogs(WARM_UP_LOGGER) {
-                warmUp.start()
+            captureLogs { logger ->
+                DatabaseWarmUp(
+                    // Unconfined so `start()` runs the coroutine body to completion on this thread,
+                    // which keeps the whole thing out of `runTest`'s virtual clock.
+                    dispatcher = TestDispatchers.unconfined,
+                    warmUp = { throw failure },
+                    release = {},
+                    logger = logger,
+                ).start()
             }
 
         // `error`, not `warn`: the job swallows the failure so the window still opens, which is
@@ -155,6 +154,3 @@ val DatabaseWarmUpSuite by testSuite("The database warm-up") {
             .hasMessageContaining("already been started")
     }
 }
-
-/** The logger [DatabaseWarmUp] writes to, named by hand so the test cannot drift from the class. */
-private const val WARM_UP_LOGGER = "com.azkar.DatabaseWarmUp"

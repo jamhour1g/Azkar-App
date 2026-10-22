@@ -6,6 +6,8 @@ import com.azkar.domain.exception.PersistenceFailureException
 import com.azkar.testUtils.TestDatabase
 import com.azkar.testing.captureLogs
 import de.infix.testBalloon.framework.core.testSuite
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
@@ -29,10 +31,7 @@ val DatabaseSupportSuite by testSuite("DatabaseSupport") {
     var answer: String? = null
 
     test("a successful action hands its value back and logs nothing at all") {
-        val logs =
-            captureLogs(EXPOSED_PACKAGE_LOGGER) {
-                answer = guarded(POINTLESS_OPERATION) { "answered" }
-            }
+        val logs = captureLogs { logger -> answer = guarded(logger, POINTLESS_OPERATION) { "answered" } }
 
         assertThat(answer).isEqualTo("answered")
         assertThat(logs.events).isEmpty()
@@ -55,8 +54,10 @@ val DatabaseSupportSuite by testSuite("DatabaseSupport") {
     }
 
     test("a domain failure travels through untouched, and stays matchable by the caller") {
+        val logger = KotlinLogging.logger {}
+
         assertThatThrownBy {
-            guarded("Failed to look up a collection that is not there") {
+            guarded(logger, "Failed to look up a collection that is not there") {
                 throw CollectionNotFoundException(7L)
             }
         }.describedAs("Rewrapping a domain failure would hide the type its callers match on")
@@ -67,42 +68,26 @@ val DatabaseSupportSuite by testSuite("DatabaseSupport") {
     test("the failure is logged with the operation, before it is translated") {
         val database = migratedDatabase()
 
-        val logs =
-            captureLogs(EXPOSED_PACKAGE_LOGGER) {
-                runCatching { failingRead(database) }
-            }
+        val logs = captureLogs { logger -> runCatching { failingRead(database, logger) } }
 
         assertThat(logs.messagesAt(Level.WARN)).containsExactly(FAILED_READ)
     }
 }
 
 /**
- * The operation description the failing read passes to [guarded], spelled out once because two of
- * the tests above assert that the log line and the exception quote the same text — which is the
- * whole reason the text is a parameter rather than something [guarded] composes for itself.
+ * The operation description the failing read passes to [guarded], spelled out once because the
+ * test above asserts that the exception quotes this exact text — which is the whole reason the
+ * text is a parameter rather than something [guarded] composes for itself.
  */
 private const val FAILED_READ = "Failed to read a table that was never migrated"
 
 /**
  * The operation description the succeeding action passes to [guarded].
  *
- * Named alongside [FAILED_READ] for the same reason: the text is only ever checked for *absence*,
- * so what it says does not matter — only that this exact string would have been logged had the
- * action failed.
+ * Named alongside [FAILED_READ] for the same reason: the text is what names the operation, and
+ * naming it is the caller's job rather than something [guarded] composes for itself.
  */
 private const val POINTLESS_OPERATION = "Failed to answer a question nobody asked"
-
-/**
- * The package every logger written here lives under.
- *
- * `DatabaseSupport.kt` holds a file-level `private val logger = KotlinLogging.logger {}`, and
- * kotlin-logging names that after the file's class — so the events land on a child of this name
- * rather than on it. Capturing at the package collects the child either way, which keeps the test
- * from pinning an internal derivation that a Kotlin or kotlin-logging upgrade could change
- * underneath it. Nothing else logs inside these blocks, so asserting on the whole event list stays
- * exact rather than becoming approximate.
- */
-private const val EXPOSED_PACKAGE_LOGGER = "com.azkar.data.repo.exposed"
 
 /**
  * Runs [guarded] over a statement H2 must reject.
@@ -110,10 +95,20 @@ private const val EXPOSED_PACKAGE_LOGGER = "com.azkar.data.repo.exposed"
  * `table_that_was_never_migrated` is not in the schema, so the failure is raised by the driver
  * rather than by anything this module decided to reject — which is what makes this a test of
  * [guarded] rather than of the schema.
+ *
+ * The logger [guarded] asks for is the caller's to choose: the failure this method provokes is
+ * reported through the exception it throws, and the line about it is written under the logger the
+ * caller handed in.
  */
-private fun failingRead(database: Database) {
+private fun failingRead(
+    database: Database,
+    logger: KLogger = KotlinLogging.logger {},
+) {
     transaction(database) {
-        val returned = guarded(FAILED_READ) { exec("SELECT * FROM table_that_was_never_migrated") }
+        val returned =
+            guarded(logger, FAILED_READ) {
+                exec("SELECT * FROM table_that_was_never_migrated")
+            }
         error("The statement was expected to fail, and it came back with $returned")
     }
 }

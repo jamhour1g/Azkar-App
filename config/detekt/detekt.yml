@@ -18,8 +18,9 @@ style:
     active: false
 
   # `LoggerFactory.getLogger(Foo::class.java)` is the boilerplate kotlin-logging exists to remove,
-  # and a raw `org.slf4j.Logger` in a signature lets a logger be passed around instead of looked up
-  # where it is used. Banned at the import so neither the factory nor the type can be reached.
+  # and a raw `org.slf4j.Logger` in a signature is a logger nobody can hand to a test. Banned at the
+  # import so neither the factory nor the type can be reached: a logger that travels is the
+  # kotlin-logging `KLogger`, which carries the name and the callsite with it.
   ForbiddenImport:
     active: true
     # `config/testing` is the one place that legitimately holds a backend handle: `LogCapture`

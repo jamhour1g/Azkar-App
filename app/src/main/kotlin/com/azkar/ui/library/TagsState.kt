@@ -8,13 +8,12 @@ import com.azkar.domain.model.TagSummary
 import com.azkar.domain.model.TagUsage
 import com.azkar.ui.library.data.TagGateway
 import com.azkar.ui.library.data.TagSaveResult
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.util.Locale
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * How many rows the footer pages at.
@@ -107,6 +106,7 @@ class TagsState(
     private val gateway: TagGateway,
     private val onTagsChanged: () -> Unit,
     private val labelOf: (TagSummary) -> String = { it.name },
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     /** Whether the first read is still under way. Distinguishes "loading" from "the user has none". */
     var loading: Boolean by mutableStateOf(true)

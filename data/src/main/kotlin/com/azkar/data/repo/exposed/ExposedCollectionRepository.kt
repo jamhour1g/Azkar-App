@@ -20,6 +20,8 @@ import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
 import com.azkar.domain.repo.CollectionRepository
 import com.azkar.domain.service.TransactionRunner
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -55,6 +57,9 @@ import java.util.Locale
  * rather than swaps. None of that is visible in a method that only forwards, and all of it is now a
  * private method of the one type that needs it.
  *
+ * [logger] is the repository's own logger, handed to the transaction wrapper so a failed write
+ * is reported under this repository rather than under a name the whole process shares.
+ *
  * Every method runs inside [transactions]; none of them opens a transaction of its own, so a
  * service-level transaction and the repository method nested inside it commit or roll back as one
  * unit rather than competing for the same rows.
@@ -62,9 +67,10 @@ import java.util.Locale
 class ExposedCollectionRepository(
     private val transactions: TransactionRunner,
     private val tagRepository: ExposedTagRepository,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) : CollectionRepository {
     override suspend fun findAll(): List<RemembranceCollection> =
-        transactions.tx("Failed to find all collections") {
+        transactions.tx(logger, "Failed to find all collections") {
             loadAll()
         }
 
@@ -73,7 +79,7 @@ class ExposedCollectionRepository(
         if (id == null) {
             return null
         }
-        return transactions.tx("Failed to find collection id=$id") {
+        return transactions.tx(logger, "Failed to find collection id=$id") {
             loadOne(id)
         }
     }
@@ -95,7 +101,7 @@ class ExposedCollectionRepository(
      * `CollectionService.create` does.
      */
     override suspend fun save(collection: RemembranceCollection): RemembranceCollection =
-        transactions.tx("Failed to save collection") {
+        transactions.tx(logger, "Failed to save collection") {
             val timestamp = now()
             val existingId = collection.id
             val id = existingId ?: insert(collection, timestamp)
@@ -111,7 +117,7 @@ class ExposedCollectionRepository(
         if (id == null) {
             return
         }
-        transactions.tx("Failed to delete collection id=$id") {
+        transactions.tx(logger, "Failed to delete collection id=$id") {
             requireExists(id)
             CollectionTable.deleteWhere { CollectionTable.id eq id }
         }
@@ -128,7 +134,7 @@ class ExposedCollectionRepository(
         collectionId: Long,
         remembranceIds: List<Long>,
     ): Int =
-        transactions.tx("Failed to add ${remembranceIds.size} remembrances to collection id=$collectionId") {
+        transactions.tx(logger, "Failed to add ${remembranceIds.size} remembrances to collection id=$collectionId") {
             requireExists(collectionId)
             val timestamp = now()
             val pending = withoutExistingMembership(collectionId, remembranceIds).distinct()
@@ -146,7 +152,10 @@ class ExposedCollectionRepository(
         collectionId: Long,
         remembranceIds: List<Long>,
     ): Int =
-        transactions.tx("Failed to remove ${remembranceIds.size} remembrances from collection id=$collectionId") {
+        transactions.tx(
+            logger,
+            "Failed to remove ${remembranceIds.size} remembrances from collection id=$collectionId",
+        ) {
             requireExists(collectionId)
             val pending = removeMany(collectionId, remembranceIds)
             if (pending > 0) {
@@ -158,7 +167,7 @@ class ExposedCollectionRepository(
     override suspend fun setCoverImage(
         collectionId: Long,
         coverImagePath: String?,
-    ) = transactions.tx("Failed to set the cover image of collection id=$collectionId") {
+    ) = transactions.tx(logger, "Failed to set the cover image of collection id=$collectionId") {
         requireExists(collectionId)
         writeCoverImage(collectionId, coverImagePath, now())
     }
@@ -173,7 +182,7 @@ class ExposedCollectionRepository(
     override suspend fun setTags(
         collectionId: Long,
         tags: Collection<Tag>,
-    ) = transactions.tx("Failed to set the tags of collection id=$collectionId") {
+    ) = transactions.tx(logger, "Failed to set the tags of collection id=$collectionId") {
         requireExists(collectionId)
         replaceTags(collectionId, tags)
     }
@@ -189,7 +198,7 @@ class ExposedCollectionRepository(
         collectionId: Long,
         pinned: Boolean,
     ) {
-        transactions.tx("Failed to pin or unpin collection id=$collectionId") {
+        transactions.tx(logger, "Failed to pin or unpin collection id=$collectionId") {
             requireExists(collectionId)
             CollectionTable.update({ CollectionTable.id eq collectionId }) { row ->
                 row[CollectionTable.pinnedAt] = if (pinned) now() else null
@@ -202,14 +211,14 @@ class ExposedCollectionRepository(
         fromIndex: Int,
         toIndex: Int,
     ) {
-        transactions.tx("Failed to move a member of collection id=$collectionId from $fromIndex to $toIndex") {
+        transactions.tx(logger, "Failed to move a member of collection id=$collectionId from $fromIndex to $toIndex") {
             requireExists(collectionId)
             move(collectionId, fromIndex, toIndex)
         }
     }
 
     override suspend fun touchLastOpened(id: Long) {
-        transactions.tx("Failed to record the last opening of collection id=$id") {
+        transactions.tx(logger, "Failed to record the last opening of collection id=$id") {
             requireExists(id)
             CollectionEntity.findById(id)?.updateAndFlush { lastOpenedAt = now() }
         }
@@ -225,7 +234,7 @@ class ExposedCollectionRepository(
         id: Long,
         pinned: Boolean,
     ) {
-        transactions.tx("Failed to move collection id=$id on or off the Home screen") {
+        transactions.tx(logger, "Failed to move collection id=$id on or off the Home screen") {
             requireExists(id)
             CollectionEntity.findById(id)?.updateAndFlush { homePinnedAt = if (pinned) now() else null }
         }
@@ -235,7 +244,7 @@ class ExposedCollectionRepository(
         id: Long,
         favorite: Boolean,
     ) {
-        transactions.tx("Failed to star or unstar collection id=$id") {
+        transactions.tx(logger, "Failed to star or unstar collection id=$id") {
             requireExists(id)
             CollectionEntity.findById(id)?.updateAndFlush { isFavorite = favorite }
         }
@@ -254,7 +263,7 @@ class ExposedCollectionRepository(
      * that ended over a card that has since been deleted should not fail the whole reorder.
      */
     override suspend fun reorder(orderedIds: List<Long>) {
-        transactions.tx("Failed to reorder the collections") {
+        transactions.tx(logger, "Failed to reorder the collections") {
             val positions = orderedIds.distinct().mapIndexed { index, id -> id to index }
             positions.forEach { (id, position) ->
                 CollectionEntity.findById(id)?.updateAndFlush { this.position = position }
@@ -263,22 +272,22 @@ class ExposedCollectionRepository(
     }
 
     override suspend fun findHomePinned(): List<RemembranceCollection> =
-        transactions.tx("Failed to find the collections shown on the Home screen") {
+        transactions.tx(logger, "Failed to find the collections shown on the Home screen") {
             loadHomePinned()
         }
 
     override suspend fun findSummaries(): List<CollectionSummary> =
-        transactions.tx("Failed to summarise the collections") {
+        transactions.tx(logger, "Failed to summarise the collections") {
             summarizeAll()
         }
 
     override suspend fun findSummary(id: Long): CollectionSummary? =
-        transactions.tx("Failed to summarise collection id=$id") {
+        transactions.tx(logger, "Failed to summarise collection id=$id") {
             summarize(id)
         }
 
     override suspend fun findAllCoverImagePaths(): Set<String> =
-        transactions.tx("Failed to find the cover images in use") {
+        transactions.tx(logger, "Failed to find the cover images in use") {
             coverImagePaths()
         }
 
@@ -309,11 +318,11 @@ class ExposedCollectionRepository(
             .orderBy(CollectionTable.position to SortOrder.ASC_NULLS_LAST)
             .orderBy(CollectionTable.id to SortOrder.ASC)
             .toList()
-            .load()
+            .load(logger)
 
     /** The collection with [id], with its members and tags loaded, or `null` when no such collection exists. */
     private fun loadOne(id: Long): RemembranceCollection? =
-        CollectionEntity.findById(id)?.let { listOf(it).load() }?.firstOrNull()
+        CollectionEntity.findById(id)?.let { listOf(it).load(logger) }?.firstOrNull()
 
     /**
      * The collections the user put on the Home screen, most recently pinned first.
@@ -326,7 +335,7 @@ class ExposedCollectionRepository(
             .find { CollectionTable.homePinnedAt.isNotNull() }
             .orderBy(CollectionTable.homePinnedAt to SortOrder.DESC)
             .toList()
-            .load()
+            .load(logger)
 
     /** Every collection as a [CollectionSummary]: what to put on a card, and how big it is. */
     private fun summarizeAll(): List<CollectionSummary> = CollectionEntity.all().summaries()

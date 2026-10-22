@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.azkar.domain.model.RecitationProgress
 import com.azkar.ui.library.data.CollectionProgressGateway
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -27,9 +28,8 @@ import java.time.Instant
 class CollectionProgressState(
     private val scope: CoroutineScope,
     private val gateway: CollectionProgressGateway,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
-    private val logger = KotlinLogging.logger {}
-
     private var byCollection by mutableStateOf<Map<Long, List<RecitationProgress>>>(emptyMap())
         private set
 

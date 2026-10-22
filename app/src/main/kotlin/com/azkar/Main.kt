@@ -85,7 +85,7 @@ private const val OVERLAY_PROOF_OF_CONSENT_FLAG = "--overlay-poc"
 /**
  * Compose Multiplatform replacement for `com.azkar.Launcher` + `com.azkar.Home`.
  *
- * The JavaFX application warmed the database ([DatabaseManager.warmUp], which creates the schema
+ * The JavaFX application warmed the database ([DatabaseManager.default.warmUp], which creates the schema
  * and opens the connection pool) off the UI thread before showing the stage and closed it again in
  * `stop()`. The Compose entry point keeps that contract — [DatabaseWarmUp] runs the warm-up before
  * showing the window, while the notification runtime and data stores live until the explicit tray

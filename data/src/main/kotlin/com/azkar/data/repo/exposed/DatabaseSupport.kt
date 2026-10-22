@@ -2,13 +2,11 @@ package com.azkar.data.repo.exposed
 
 import com.azkar.domain.exception.PersistenceFailureException
 import com.azkar.domain.service.TransactionRunner
-import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.oshai.kotlinlogging.KLogger
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Value stamped into the `created_at` / `updated_at` columns.
@@ -38,8 +36,15 @@ internal fun now(): OffsetDateTime = Instant.now().atOffset(ZoneOffset.UTC)
  * watches the result of — would otherwise take the fault out of the log entirely. The line does
  * duplicate what a caller that *does* handle the failure writes with the same cause attached; that
  * duplication is the price of the guarantee, and the cheaper side of it.
+ *
+ * [logger] is a parameter rather than a file-level constant because a log line is something a test
+ * has to be able to *own* before it can assert on it: a logger reached through a JVM-wide name can
+ * only be watched through a time window, and every other line logged under that name while the
+ * window was open would arrive in the capture as well. The caller hands over the logger it wants
+ * the failure to land on, which is what makes the assertion exact.
  */
 internal fun <T> guarded(
+    logger: KLogger,
     operation: String,
     action: () -> T,
 ): T =
@@ -57,7 +62,7 @@ internal fun <T> guarded(
  * call rather than as the nested shape the repositories used to spell out:
  *
  * ```
- * transactions.run { guarded("Failed to ...") { statement() } }
+ * transactions.tx(logger, "Failed to ...") { statement() }
  * ```
  *
  * The nesting carries no meaning that the single call does not already carry — the order is fixed,
@@ -74,6 +79,7 @@ internal fun <T> guarded(
  * their counts.
  */
 internal suspend fun <T> TransactionRunner.tx(
+    logger: KLogger,
     operation: String,
     block: () -> T,
-): T = run { guarded(operation, block) }
+): T = run { guarded(logger, operation, block) }

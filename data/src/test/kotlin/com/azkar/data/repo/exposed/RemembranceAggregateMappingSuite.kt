@@ -115,14 +115,16 @@ val RemembranceAggregateMappingSuite by testSuite("Remembrance aggregate mapping
 
             // `save()` always writes a translation and an explanation together, so the two tables
             // can only drift apart behind its back — which is what a hand-edited or partially
-            // migrated database looks like, and the case the mapper's warning exists for.
+            // migrated database looks like, and the case the mapper's report exists for.
             transaction(repositories.database) {
                 exec("DELETE FROM explanation_translation WHERE remembrance_id = $id AND locale_code = 'ar'")
             }
 
             val logs =
-                captureLogs(MAPPER_LOGGER) {
-                    val reloaded = requireNotNull(repositories.remembrances.findById(id))
+                captureLogs { logger ->
+                    val own = repositories.loggingTo(logger)
+                    val reloaded = requireNotNull(own.remembrances.findById(id))
+
                     assertThat(reloaded.translations).containsOnlyKeys(ENGLISH, ARABIC)
                     assertThat(
                         reloaded.translations
@@ -150,23 +152,20 @@ val RemembranceAggregateMappingSuite by testSuite("Remembrance aggregate mapping
             }
 
             val logs =
-                captureLogs(MAPPER_LOGGER) {
-                    val reloaded = requireNotNull(repositories.remembrances.findById(id))
+                captureLogs { logger ->
+                    val own = repositories.loggingTo(logger)
+                    val reloaded = requireNotNull(own.remembrances.findById(id))
+
                     assertThat(reloaded.translations).containsOnlyKeys(ENGLISH)
                 }
 
             assertThat(logs.messagesAt(Level.WARN)).containsExactly("Dropped explanations without translation")
-            assertThat(logs.payload.keys)
-                .describedAs("The logger identifies the remembrance and orphaned locales")
-                .containsExactlyInAnyOrder("remembranceId", "droppedExplanations")
+            assertThat(logs.payload.keys).containsExactlyInAnyOrder("remembranceId", "droppedExplanations")
             assertThat(logs.payload["remembranceId"]).containsExactly(id.toString())
             assertThat(logs.payload["droppedExplanations"]).containsExactly("[fr]")
         }
     }
 }
-
-/** The logger [RemembranceMapper] writes to, named by hand so the test cannot drift from the class. */
-private const val MAPPER_LOGGER = "com.azkar.data.mapping.RemembranceMapper"
 
 // ------------------------------------------------------------------ fixtures
 

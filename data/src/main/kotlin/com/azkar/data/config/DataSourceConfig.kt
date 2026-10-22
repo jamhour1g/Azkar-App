@@ -1,5 +1,6 @@
 package com.azkar.data.config
 
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.nio.file.Files
@@ -12,13 +13,12 @@ import java.nio.file.Path
  * in exactly one place.
  */
 object DataSourceConfig {
-    private val logger = KotlinLogging.logger {}
     private val databaseDirectory: Path = Path.of(System.getProperty("user.home"), ".azkar", "db")
 
     /** Default JDBC URL pointing to a deterministic user-level file-based H2 database. */
-    val JDBC_URL: String = buildJdbcUrl()
+    val JDBC_URL: String = buildJdbcUrl(KotlinLogging.logger {})
 
-    private fun buildJdbcUrl(): String {
+    private fun buildJdbcUrl(logger: KLogger): String {
         try {
             Files.createDirectories(databaseDirectory)
         } catch (exception: IOException) {

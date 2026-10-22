@@ -12,20 +12,53 @@ KotlinLogging.logger {}   →   SLF4J API 2.0.20   →   Logback 1.5.32
 
 ## Declaring a logger
 
-One logger per file, at the top level, immediately after the imports:
+**Code that logs receives its logger.** The parameter defaults to `KotlinLogging.logger {}`, so the
+production wiring and the logger's name are exactly what they were:
 
 ```kotlin
-import io.github.oshai.kotlinlogging.KotlinLogging
-
-private val logger = KotlinLogging.logger {}
+class SettingsStore(
+    private val dataStore: DataStore<Preferences>,
+    private val scope: CoroutineScope,
+    private val logger: KLogger = KotlinLogging.logger {},
+)
 ```
+
+The shape follows the declaration that does the logging:
+
+| The code that logs is | The logger arrives as |
+| --- | --- |
+| a class | a constructor parameter |
+| an `object` | a defaulted parameter on the function that logs |
+| a top-level function | a defaulted parameter |
+
+Two places keep a file-level logger, because neither has anywhere to put a parameter: the
+application entry point (`app/src/main/kotlin/com/azkar/Main.kt`) and the `@Composable` functions in
+`app/src/main/kotlin/com/azkar/ui/home/HomeScreen.kt`. When two declarations in one file log — a
+class and its companion, say — give them one shared file-level default rather than two inline
+defaults, so that both write to the same logger under the same name.
+
+### Why the logger is handed in rather than looked up
+
+A logger reached through a name is a JVM-wide singleton. A test that wants to assert on a log
+statement can therefore only attach an appender to that name and collect whatever arrives while its
+window is open — which is every statement anybody else logged under the same name in the meantime,
+not the ones the code under test produced. The capture is a *time window* rather than a *cause*, and
+the assertions it can support have to be approximate: "somebody logged this at some point", not
+"this code logged this".
+
+Handing the logger to the code makes the capture exact. The test owns the logger, the code writes to
+it, and the events in between are precisely the ones the code under test emitted. It also lets the
+code decide where a statement lands, which matters for the failures that are logged from a
+coroutine on `Dispatchers.IO` rather than on the thread that started the work.
+
 
 The empty lambda lets kotlin-logging derive the name from the enclosing declaration, which is what
 makes `%logger` and `%method` resolve in the shipped pattern. Passing an explicit name works but
 renders `%method` as `[?]`, so do not do it outside of tests.
 
-Never hold a `Logger` in a field, pass one as a parameter, or build one with
-`LoggerFactory.getLogger(...)`. Both are banned by detekt (see [Enforcement](#enforcement)).
+The raw `org.slf4j.Logger` and `java.util.logging.Logger` types are still banned (see
+[Enforcement](#enforcement)): a logger in a signature is fine, but it should be the kotlin-logging
+one.
 
 ## Writing a log statement
 
@@ -120,20 +153,26 @@ target. It pins `com.azkar` to `DEBUG` and the root to `WARN` so test output sta
 making assertions depend on the shell that launched Gradle.
 
 `config/testing/com/azkar/testing/LogCapture.kt` is compiled into every module's test source set
-and provides the assertion surface:
+and provides the capture surface:
 
 ```kotlin
-val logs = captureLogs("com.azkar.data.seed.SeedDataLoader") {
-    TestDatabase.bootstrapWithH2()
-}
+val logs = captureLogs { logger -> SeedDataLoader.load(logger) }
 
-logs.messagesAt(Level.INFO) containsExactly "Seeded 254 remembrances and 12 tags"
-logs.payload["remembranceId"] containsExactly "7"
-logs.throwableAt(Level.ERROR) isSameAs failure
+logs.messagesAt(Level.WARN) containsExactly "Dropped explanations without translation"
 ```
 
-`captureLogs` is `suspend` because the code under test usually is. It attaches a Logback
-`ListAppender`, forces the level it is given, and restores the previous level in a `finally`.
+`captureLogs` is `suspend` because the code under test usually is. It creates a logger private to the
+capture — named after a counter, so two captures running at the same time cannot see each other's
+events — attaches a Logback `ListAppender` to it, and forces that logger's level to `TRACE` for the
+duration.
+
+Nothing global is touched, and that is what makes the capture trustworthy. There is no shared
+`logger.level` for two captures to restore over each other, so a capture can run while another one
+is open. The events are collected whichever thread emitted them, so a statement logged from a
+coroutine on `Dispatchers.IO` is captured like any other.
+
+Because the logger belongs to the capture, the code under test has to be given it — the house rule
+above is what makes that possible — and the assertions that follow can be exact.
 
 `renderAsProduction(event)` and `productionPattern()` read the pattern out of the shipped
 `logback.xml` and run an event through it, so a test can assert on the line a user would actually
@@ -145,22 +184,18 @@ directly, which is why `config/testing` is excluded from the rules below.
 
 ## Enforcement
 
-Two detekt tasks run in `verification`:
+One detekt task runs in `verification`, configured by `config/detekt/detekt.yml` and
+`config/detekt/detekt-compose.yml`:
 
-- `detekt` — the project's existing gate, configured by `config/detekt/detekt.yml` and
-  `config/detekt/detekt-compose.yml`. Its `style > ForbiddenImport` rule bans
-  `org.slf4j.LoggerFactory`, `org.slf4j.Logger`, `java.util.logging.Logger` and
-  `java.util.logging.LogManager`, so the facade cannot be bypassed. detekt's built-in
-  `PrintStackTrace` covers stack-trace printing.
-- `detektLogging` — configured by `config/detekt/detekt-logging.yml`, and the only task that sets a
-  `classpath`. Its `style > ForbiddenMethodCall` rule bans `println`/`print` in both their
-  `kotlin.io` and `java.io.PrintStream` forms.
-
-`detektLogging` needs its own task because of a pre-existing quirk: the project's `detekt` task runs
-with an empty `classpath`, and detekt's method-call rules silently match nothing without type
-resolution. Rather than switch on that whole dormant rule set for every module — which surfaces
-around seventeen pre-existing `LongParameterList`, `InjectDispatcher` and unused-symbol findings in
-unrelated UI code — the logging rules get a dedicated, additive task. The main gate is unchanged.
+- `style > ForbiddenImport` bans `org.slf4j.LoggerFactory`, `org.slf4j.Logger`,
+  `java.util.logging.Logger` and `java.util.logging.LogManager`. The facade cannot be bypassed,
+  and a raw logger type cannot appear in a signature — a logger in a signature is the kotlin-logging
+  `KLogger` or nothing at all. `config/testing` is excluded, because the capture harness is the one
+  place that legitimately holds a backend handle.
+- `style > ForbiddenMethodCall` bans `println`/`print` in both their `kotlin.io` and
+  `java.io.PrintStream` forms, and excludes `config/testing` for the same reason: the harness may
+  print a diagnostic while a test is failing.
+- detekt's built-in `PrintStackTrace` covers stack-trace printing.
 
 `println` is not a logging API, but it behaves like one: it bypasses `logback.xml`, ignores
 `AZKAR_LOG_LEVEL`, and never reaches the appenders. The single legitimate use is
@@ -170,8 +205,13 @@ justification.
 
 ## Adding logging to new code
 
-1. Add `private val logger = KotlinLogging.logger {}` after the imports.
+1. Give the code that logs a logger: a constructor parameter on a class, a defaulted parameter on
+   an `object`'s function or on a top-level function, defaulting to `KotlinLogging.logger {}`.
 2. Log at the point where the information still exists, before a `runCatching` discards it.
 3. Pick the level from the table above, and prefer `error` whenever a throwable is being swallowed.
 4. Use `atX { … }` with a `payload` once a message needs more than a couple of fields.
-5. If the new code sits behind a failure path, add an assertion to the suite that already covers it.
+5. Give the code a logger to write to, as the house rule above says, so that a test can assert on
+   what it wrote.
+6. Assert the line it wrote, with the capture described in
+   [Logging in tests](#logging-in-tests). The suite that already covers the code is where the
+   assertion belongs.

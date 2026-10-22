@@ -6,11 +6,27 @@ import com.azkar.data.table.RemembranceTagTable
 import com.azkar.data.table.RemembranceTranslationTable
 import com.azkar.data.table.TagTable
 import com.azkar.domain.model.HadithGrade
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
-private val logger = KotlinLogging.logger {}
+/**
+ * How much the dataset loader actually inserted.
+ *
+ * The counts are the loader's answer to "what did you do", and they are the answer a test should
+ * ask for. The log line that also carries them is a *report*, meant for a person reading a console,
+ * and a test that reads a report is reading the side effect of an action rather than the action
+ * itself: the line is only there if the level happens to allow it, only says what it says while
+ * nobody else is logging under the same name, and says it a beat later than the work it describes.
+ * The counts are the work itself, and they cannot be lost on the way to the caller.
+ *
+ * Both counts are zero when the loader decided there was nothing to do.
+ */
+internal data class SeedCounts(
+    val remembrances: Int,
+    val tags: Int,
+)
 
 /**
  * Loads the bundled azkar dataset into an empty database.
@@ -36,22 +52,37 @@ internal object SeedDataLoader {
     private const val COLUMN_COUNT = 6
 
     /**
-     * Inserts the dataset, unless the database already holds remembrances.
+     * Inserts the dataset, unless the database already holds remembrances, and reports what it
+     * inserted.
      *
      * The check is what makes this safe to run on every start: a database that already has
      * content is a database that has been seeded, or a database the user has filled in, and
      * neither should gain a second copy of the dataset.
+     *
+     * [logger] is a parameter because the three lines this logs are the only way a person finds out
+     * that the dataset was skipped, and a test that wants to know the same thing should not have to
+     * watch a global logger for a line that any other caller might have produced at the same time.
+     * The default keeps the production logger — and the name derived from this object — as it was.
      */
-    fun load() {
+    fun load(logger: KLogger = KotlinLogging.logger {}): SeedCounts {
         if (RemembranceTable.selectAll().limit(1).any()) {
             logger.debug { "Remembrance table is not empty; skipping seed data" }
-            return
+            return SeedCounts(remembrances = 0, tags = 0)
         }
+        return seed(logger)
+    }
 
+    /**
+     * Inserts the rows the dataset holds and reports how many of each it inserted.
+     *
+     * Split out of [load] so that the "is there anything to do at all" question and the work
+     * itself are two functions, each with a single way out.
+     */
+    private fun seed(logger: KLogger): SeedCounts {
         val rows = readRows()
         if (rows.isEmpty()) {
             logger.warn { "Seed resource [$RESOURCE] holds no rows" }
-            return
+            return SeedCounts(remembrances = 0, tags = 0)
         }
 
         val tagIds = insertTags(rows)
@@ -61,6 +92,8 @@ internal object SeedDataLoader {
         insertTagLinks(rows, remembranceIds, tagIds)
 
         logger.info { "Seeded ${rows.size} remembrances and ${tagIds.size} tags" }
+
+        return SeedCounts(remembrances = rows.size, tags = tagIds.size)
     }
 
     private fun readRows(): List<SeedRow> =

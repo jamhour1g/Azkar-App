@@ -44,5 +44,12 @@ dependencies {
     // UI.
     implementation(libs.io.insert.koin.koin.core)
 
+    // The repositories and the cover storage take a `KLogger`, so the type is part of
+    // this module's public API and belongs on a consumer's compile classpath.
+    // `azkar-common` adds kotlin-logging as an `implementation` dependency of every
+    // module; declaring it as `api` here is what lifts it out of this module's
+    // implementation details.
+    api(libs.io.github.oshai.kotlin.logging.jvm)
+
     testImplementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.test)
 }

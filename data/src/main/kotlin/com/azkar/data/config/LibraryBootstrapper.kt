@@ -9,13 +9,12 @@ import com.azkar.domain.repo.CollectionRepository
 import com.azkar.domain.repo.LibrarySeedState
 import com.azkar.domain.service.CollectionService
 import com.azkar.domain.service.TransactionRunner
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.util.Locale
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Everything that has to happen to an installation before the library can be read, once.
@@ -53,6 +52,7 @@ class LibraryBootstrapper(
     private val collectionService: CollectionService,
     private val collections: CollectionRepository,
     private val covers: CoverStorage,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     /**
      * Serialises the work, because "before the first read" is enforced by callers rather than by this

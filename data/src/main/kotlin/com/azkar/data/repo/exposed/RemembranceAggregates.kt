@@ -15,6 +15,7 @@ import com.azkar.data.table.entity.TagEntity
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.TagUsageRemembrance
+import io.github.oshai.kotlinlogging.KLogger
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -42,8 +43,14 @@ import java.util.Locale
  * marked where they appear.
  */
 internal object RemembranceAggregates {
-    /** The full aggregate for a page of already-loaded parents, loading all children in bulk. */
-    fun List<RemembranceEntity>.load(): List<Remembrance> {
+    /**
+     * The full aggregate for a page of already-loaded parents, loading all children in bulk.
+     *
+     * [logger] is the repository's own logger, handed down to the mapping: a logger reached
+     * through a name is a singleton the whole process shares, and a test that wants to see the
+     * line has to own the logger it was written to.
+     */
+    fun List<RemembranceEntity>.load(logger: KLogger): List<Remembrance> {
         if (isEmpty()) {
             return emptyList()
         }
@@ -60,6 +67,7 @@ internal object RemembranceAggregates {
         return map { entity ->
             val id = entity.id.value
             entity.toRemembrance(
+                logger = logger,
                 translations = translations[id].orEmpty(),
                 explanations = explanations[id].orEmpty(),
                 tags = tags[id].orEmpty(),

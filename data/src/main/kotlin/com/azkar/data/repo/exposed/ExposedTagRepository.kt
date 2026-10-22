@@ -24,6 +24,8 @@ import com.azkar.domain.model.TagUsage
 import com.azkar.domain.model.impl.TagImpl
 import com.azkar.domain.repo.TagRepository
 import com.azkar.domain.service.TransactionRunner
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.LowerCase
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -58,6 +60,7 @@ import java.util.Locale
  */
 class ExposedTagRepository(
     private val transactions: TransactionRunner,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) : TagRepository {
     /**
      * Stamps [id] as deleted and leaves everything else alone.
@@ -73,7 +76,7 @@ class ExposedTagRepository(
      */
     override suspend fun softDelete(id: Long?) {
         val target = id ?: return
-        transactions.tx("Failed to delete tag id=$target") {
+        transactions.tx(logger, "Failed to delete tag id=$target") {
             val row = findTagRow(target) ?: return@tx
             if (row.deletedAt != null) {
                 return@tx
@@ -95,7 +98,7 @@ class ExposedTagRepository(
      */
     override suspend fun restore(id: Long?) {
         val target = id ?: return
-        transactions.tx("Failed to restore tag id=$target") {
+        transactions.tx(logger, "Failed to restore tag id=$target") {
             val row = findTagRow(target) ?: return@tx
             if (row.deletedAt == null) {
                 return@tx
@@ -108,7 +111,7 @@ class ExposedTagRepository(
     }
 
     override suspend fun save(tag: Tag): Tag =
-        transactions.tx("Failed to save tag") {
+        transactions.tx(logger, "Failed to save tag") {
             val existingId = tag.id
             // `tag.name` is written by TagImpl too, but folding here means the value that
             // comes back from the row and the value that went into it cannot disagree even
@@ -182,11 +185,11 @@ class ExposedTagRepository(
 
     override suspend fun findById(id: Long?): Tag? {
         val target = id ?: return null
-        return transactions.tx("Failed to find tag id=$target") { findTag(target)?.withTranslations() }
+        return transactions.tx(logger, "Failed to find tag id=$target") { findTag(target)?.withTranslations() }
     }
 
     override suspend fun findByNameIgnoreCase(name: String): Tag? =
-        transactions.tx("Failed to find tag by name '$name'") { findTagByName(name)?.withTranslations() }
+        transactions.tx(logger, "Failed to find tag by name '$name'") { findTagByName(name)?.withTranslations() }
 
     /**
      * The live tag that answers to [text] in any language, or `null`.
@@ -200,7 +203,7 @@ class ExposedTagRepository(
      * `TagService` checks rather than one read that covers both.
      */
     override suspend fun findByTranslationIgnoreCase(text: String): Tag? =
-        transactions.tx("Failed to find tag by translation '$text'") {
+        transactions.tx(logger, "Failed to find tag by translation '$text'") {
             val needle = text.trim()
             if (needle.isEmpty()) {
                 return@tx null
@@ -217,12 +220,12 @@ class ExposedTagRepository(
         }
 
     override suspend fun findAll(): List<Tag> =
-        transactions.tx("Failed to find all tags") {
+        transactions.tx(logger, "Failed to find all tags") {
             liveRows().orderBy(TagTable.id to SortOrder.ASC).toList().withTranslations()
         }
 
     override suspend fun findByNameContainingIgnoreCase(fragment: String): List<Tag> =
-        transactions.tx("Failed to search tags by name '$fragment'") {
+        transactions.tx(logger, "Failed to search tags by name '$fragment'") {
             TagEntity
                 .find { (TagTable.name.foldedContains(fragment)) and isLive }
                 .orderBy(TagTable.id to SortOrder.ASC)
@@ -231,12 +234,12 @@ class ExposedTagRepository(
         }
 
     override suspend fun findSummaries(): List<TagSummary> =
-        transactions.tx("Failed to read tag summaries") {
+        transactions.tx(logger, "Failed to read tag summaries") {
             summarize(liveRows().orderBy(TagTable.id to SortOrder.ASC).toList())
         }
 
     override suspend fun findDeletedSummaries(): List<TagSummary> =
-        transactions.tx("Failed to read deleted tag summaries") {
+        transactions.tx(logger, "Failed to read deleted tag summaries") {
             // Ordered by the stamp rather than by id so that the tag the user just removed is the one at
             // the top of the list they are most likely to be looking at, and `DESC` over a column that is
             // non-null on every row of this query puts the most recent deletion there by construction.
@@ -264,7 +267,7 @@ class ExposedTagRepository(
      */
     override suspend fun findUsage(id: Long?): TagUsage? {
         val target = id ?: return null
-        return transactions.tx("Failed to read usage of tag id=$target") {
+        return transactions.tx(logger, "Failed to read usage of tag id=$target") {
             val row = findTag(target) ?: return@tx null
             val collectionIds =
                 CollectionTagEntity

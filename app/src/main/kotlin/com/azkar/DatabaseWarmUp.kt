@@ -1,6 +1,7 @@
 package com.azkar
 
 import com.azkar.data.config.DatabaseManager
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -11,8 +12,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Coordinates database initialization and cleanup with the application's lifecycle.
@@ -27,13 +26,26 @@ private val logger = KotlinLogging.logger {}
  * callback rather than run inline.
  *
  * Cleanup only runs for a warm-up that ran to its end — one [close] cancelled mid-flight never
- * finished, so it never owned anything to hand back. A failure along the way is logged and
+ * finished, so it never owned anything to hand back. A failure along the way is reported and
  * swallowed rather than propagated, because an escaping exception would take the window down
- * with it; the throwable rides along on the log line so the failure stays diagnosable.
+ * with it.
+ *
+ * That reporting is a log line and nothing more. The failure happens in a background coroutine
+ * that swallows it by design, so [start] returns before anyone could observe it and the caller
+ * has nothing to await: the line in the log is the only trace of it there is.
  *
  * [warmUp] and [release] are injected to make the lifecycle independently testable without
  * accessing the process-wide [DatabaseManager]. Production uses the singleton's initialization
  * and cleanup methods.
+ *
+ * [logger] is injected for the same reason and by the same argument. The failure line below is
+ * the one a person diagnosing a slow start looks for, and the only test that can say anything
+ * about it is one that owns the logger the failure was written to. A logger reached through a
+ * name is shared by the whole process: a test that attaches to it collects every line logged
+ * under that name while its window is open, including the ones another test caused, and the
+ * warm-up runs on [Dispatchers.IO] by default, so the line is not even written on the thread
+ * that started it. The default keeps the production logger, and the name derived from this
+ * class, exactly as they were.
  *
  * [start] and [close] are non-suspending so they can be called from application lifecycle
  * callbacks without waiting for database operations to finish. Resource cleanup may therefore
@@ -44,8 +56,9 @@ private val logger = KotlinLogging.logger {}
  */
 internal class DatabaseWarmUp(
     dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val warmUp: suspend () -> Unit = DatabaseManager::warmUp,
-    private val release: () -> Unit = DatabaseManager::close,
+    private val warmUp: suspend () -> Unit = { DatabaseManager.default.warmUp() },
+    private val release: () -> Unit = { DatabaseManager.default.close() },
+    private val logger: KLogger = KotlinLogging.logger {},
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
 
@@ -56,8 +69,8 @@ internal class DatabaseWarmUp(
     // Catch Throwable so no failure from the warm-up escapes into the window's scope and takes
     // the application down with it. `DatabaseManager.warmUp` throws
     // `DatabaseInitializationException`, but the warm-up is injected and a failure reaching this
-    // point is by definition not the app's fault to recover from — the job swallows it, logs it
-    // with the throwable attached, and lets the window open regardless.
+    // point is by definition not the app's fault to recover from — the job swallows it, writes it
+    // to the log, and lets the window open regardless.
     @Suppress("TooGenericExceptionCaught")
     fun start() {
         check(job == null) {
@@ -76,9 +89,7 @@ internal class DatabaseWarmUp(
                     // a warm-up that finished.
                     throw cancellation
                 } catch (failure: Throwable) {
-                    logger.error(failure) {
-                        "Database warm-up failed"
-                    }
+                    logger.error(failure) { "Database warm-up failed" }
                 }
 
                 warmedUp.set(true)

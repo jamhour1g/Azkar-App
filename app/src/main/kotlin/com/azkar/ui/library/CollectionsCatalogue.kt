@@ -30,6 +30,7 @@ import com.azkar.ui.library.data.withMemberFavorite
 import com.azkar.ui.library.data.withMemberTexts
 import com.azkar.ui.library.data.withTexts
 import com.azkar.ui.library.model.CollectionsSnapshot
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -38,8 +39,6 @@ import java.util.Locale
 import kotlin.concurrent.atomics.AtomicLong
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * What a shelf mutation is asking the screen to say.
@@ -188,6 +187,7 @@ class CollectionsCatalogue(
      * constructor argument — in a test, or a preview, or anywhere else that never meant to touch disk.
      */
     val covers: CollectionCoverCache,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     private val loadVersion = AtomicLong(0L)
 
@@ -698,10 +698,10 @@ class CollectionsCatalogue(
      */
     suspend fun pickCoverImage(title: String): String? =
         CoverImageChooser
-            .choose(title)
+            .choose(title, logger)
             ?.file
             ?.toPath()
-            ?.let { CoverImageChooser.ingest(it, ::storeCoverImage) }
+            ?.let { CoverImageChooser.ingest(it, ::storeCoverImage, logger) }
 
     fun duplicateCollection(
         id: Long,

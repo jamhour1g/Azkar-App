@@ -4,6 +4,7 @@ import com.azkar.data.table.entity.RemembranceEntity
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.impl.RemembranceImpl
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.Locale
 
@@ -12,22 +13,24 @@ import java.util.Locale
  *
  * A translation is meaningful without an explanation, so every translation is retained and gets an
  * empty explanation pair when its locale has no explanation row. Explanations without a translation
- * are still discarded and logged because they cannot be attached to a rendered translation.
+ * are still discarded — they cannot be attached to a rendered translation — and the discard is
+ * reported through the callback the caller supplies.
  *
- * ### Why the logger is declared inside this object
+ * ### Why the report is a callback
  *
- * `RemembranceAggregateMappingSuite` attaches a list appender to the logger named
- * `com.azkar.data.mapping.RemembranceMapper` and asserts on what it captures. A `private val logger`
- * at file scope would be a property of the *file facade* — `RemembranceMapperKt` — and that is a
- * sibling of this object in the logger hierarchy, not a child of it. The appender would sit on a
- * logger no event is ever emitted to, capture nothing, and the assertion would be testing an empty
- * list while reading as a passing test. Declaring it here makes the name the suite expects the name
- * the events actually carry.
+ * The discard is a loss of data, so it is reported. The report is a log line, which says what
+ * happened to whoever is looking at the log.
+ *
+ * ### Why the logger is a parameter
+ *
+ * The logger is handed in rather than looked up. A logger reached through a name is a singleton
+ * that the whole process shares, so a test that wants to see this line has to own the logger it
+ * was written to. The default keeps the production logger, and the name derived from this
+ * enclosing declaration, exactly as they were.
  */
 internal object RemembranceMapper {
-    private val logger = KotlinLogging.logger {}
-
     fun RemembranceEntity.toRemembrance(
+        logger: KLogger = KotlinLogging.logger {},
         translations: Map<Locale, LocalizedTextRow>,
         explanations: Map<Locale, LocalizedTextRow>,
         tags: Set<Tag>,

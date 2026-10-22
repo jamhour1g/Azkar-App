@@ -8,6 +8,7 @@ import com.azkar.ui.notifications.presentation.OverlayCardSize
 import com.azkar.ui.notifications.presentation.OverlayCardSizing
 import com.azkar.ui.notifications.presentation.OverlayDurationMode
 import com.azkar.ui.notifications.presentation.OverlayPlacement
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -55,9 +56,8 @@ class NotificationSettingsState(
     private val startupRegistration: StartupRegistration? = null,
     /** Place search and reverse geocoding behind the picker's search box. See [locationDetector]. */
     private val geocodingClient: GeocodingClient? = null,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
-    private val logger = KotlinLogging.logger {}
-
     /** The location editor's working copy of the four fields. */
     var locationDraft: PrayerLocationDraft by mutableStateOf(PrayerLocationDraft.of(preferences.prayerLocation.value))
         private set
