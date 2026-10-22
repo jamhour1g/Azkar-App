@@ -70,6 +70,50 @@ val SettingsStoreSuite by testSuite("The settings store") {
         }
     }
 
+    test("a write that fails once is retried and lands") {
+        withInMemorySettings { _, store, dataStore ->
+            // The failure Windows produces on the way to the disk: the settings file was held open
+            // by something else — a virus scanner reading it is the usual one — and the move over
+            // the target failed. The failure heals on its own, so the write has to be tried again
+            // rather than lost, because a setting that is quietly lost is one the user cannot get
+            // back.
+            dataStore.writeFailure = IOException("the file was still open")
+            dataStore.writeFailuresRemaining = 1
+
+            store.edit { this[TEST_KEY] = "written anyway" }
+
+            assertThat(dataStore.writeAttempts).isEqualTo(2)
+            assertThat(dataStore.stored[TEST_KEY]).isEqualTo("written anyway")
+        }
+    }
+
+    test("a write that keeps failing is given up on rather than retried forever") {
+        withInMemorySettings { _, store, dataStore ->
+            dataStore.writeFailure = IOException("the disk went away")
+
+            store.edit { this[TEST_KEY] = "never written" }
+
+            // Three attempts, then it stops. A retry that never gives up is a hang with extra
+            // steps, and the retry is only there because the failure is expected to be transient:
+            // a disk that stays broken is not going to be fixed by the fourth try either.
+            assertThat(dataStore.writeAttempts).isEqualTo(3)
+            assertThat(dataStore.stored[TEST_KEY]).isNull()
+        }
+    }
+
+    test("a write that fails for a reason other than IO is not retried") {
+        withInMemorySettings { _, store, dataStore ->
+            // A decoding defect does not heal, so retrying it would only delay the same error
+            // three times over. The error is the thing worth looking at.
+            dataStore.writeFailure = IllegalStateException("a decoding defect, not a broken disk")
+
+            store.edit { this[TEST_KEY] = "never written" }
+
+            assertThat(dataStore.writeAttempts).isEqualTo(1)
+            assertThat(dataStore.stored[TEST_KEY]).isNull()
+        }
+    }
+
     test("a corrupt file is replaced rather than bricking the store") {
         withSettingsFile { file, scope ->
             Files.writeString(file, "this is not a preferences file")

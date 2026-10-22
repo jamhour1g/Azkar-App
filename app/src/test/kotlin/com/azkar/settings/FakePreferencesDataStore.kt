@@ -56,6 +56,26 @@ class FakePreferencesDataStore(
     /** Thrown from [updateData] while set, which is what a write that could not be committed looks like. */
     var writeFailure: Throwable? = null
 
+    /**
+     * How many more writes fail with [writeFailure] before it stops failing.
+     *
+     * [Int.MAX_VALUE] — the default — means a write fails for as long as [writeFailure] is set: a
+     * disk that is broken, which is what most of the suites that use this need. A smaller number
+     * models a failure that heals on its own: the first attempt runs into a handle that is still
+     * open — a virus scanner reading the settings file is the usual one on Windows — and the next
+     * attempt lands.
+     */
+    var writeFailuresRemaining: Int = Int.MAX_VALUE
+
+    /**
+     * How many writes have been attempted, whatever their outcome.
+     *
+     * This is what makes the retry policy observable. A store that swallows a failure says
+     * nothing about how hard it tried, so without a count a test cannot tell a write that was
+     * retried and landed from one that was retried and gave up.
+     */
+    var writeAttempts: Int = 0
+
     /** The snapshot a write has committed so far, without going through [data] and its failure switch. */
     val stored: Preferences get() = snapshots.value
 
@@ -67,7 +87,13 @@ class FakePreferencesDataStore(
 
     override suspend fun updateData(transform: suspend (t: Preferences) -> Preferences): Preferences =
         commits.withLock {
-            writeFailure?.let { failure -> throw failure }
+            writeAttempts += 1
+            writeFailure?.let { failure ->
+                if (writeFailuresRemaining > 0) {
+                    writeFailuresRemaining -= 1
+                    throw failure
+                }
+            }
             transform(snapshots.value).also { committed -> snapshots.value = committed }
         }
 }
