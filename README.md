@@ -2,9 +2,10 @@
 
 A desktop Islamic *azkar* app (morning/evening remembrances, prayers, tasbih)
 built with [Kotlin Compose Multiplatform](https://www.jetbrains.com/lp/compose-multiplatform/)
-for Windows, macOS and Linux. Based on
-[AbdelrahmanBayoumi/Azkar-App](https://github.com/AbdelrahmanBayoumi/Azkar-App)
-(the Android client); this repository is the desktop port. Licensed MIT.
+for Windows, macOS and Linux. It is the Compose Multiplatform rewrite of the
+JavaFX original in
+[AbdelrahmanBayoumi/Azkar-App](https://github.com/AbdelrahmanBayoumi/Azkar-App).
+Licensed MIT.
 
 ## Download
 
