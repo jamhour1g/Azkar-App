@@ -42,6 +42,24 @@ Without it, a change that breaks the release classpath — a dependency ProGuard
 see, a keep rule that stops matching — would surface for the first time on the tag that
 publishes the release, which is the most expensive place to find it.
 
+## One line ending, everywhere
+
+A checkout of the repository has LF line endings on every platform, and the formatter
+writes LF as well. `.gitattributes` pins the line endings for git, and Spotless is told
+to write LF rather than to take the line endings from git's configuration — which
+differs between a Linux and a Windows machine.
+
+Without that, the Windows job checks out CRLF where the Linux job checks out LF, the two
+disagree about what a formatted file is supposed to look like, and the Windows build
+fails on files the Linux build accepts. The failure names one file and shows the whole
+file changed, which says nothing about the code.
+
+One trap hides in the same place. A file that git considers binary is not converted at
+all: `CollectionImport.kt` held a raw NUL byte — the separator in a lookup key — which
+made git treat it as binary, and it was therefore the one file in the repository that
+Windows checked out with LF while everything else was CRLF. The separator is now
+written as an escape, so the file is ordinary text like the rest.
+
 ## The maintainer gate on the quality pipeline
 
 `PR Quality` does not run on every pull request. It waits for a maintainer to allow

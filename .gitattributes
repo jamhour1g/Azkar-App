@@ -1,0 +1,15 @@
+# Every text file is checked out with LF endings, on every platform.
+#
+# Without this, git converts line endings according to each machine's `core.autocrlf`, so a
+# Windows checkout of the repository has CRLF where a Linux checkout has LF. Spotless takes its
+# line endings from git, so the two checkouts then disagree about what a formatted file is
+# supposed to look like, and the Windows build reports files as unformatted that the Linux build
+# accepts.
+#
+# `text=auto` leaves the binary files — images, jars, the Gradle wrapper — alone, and git still
+# detects them the way it always has.
+* text=auto eol=lf
+
+# `cmd.exe` needs CRLF: a batch file with LF endings misbehaves.
+*.bat text eol=crlf
+*.cmd text eol=crlf

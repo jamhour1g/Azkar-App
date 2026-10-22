@@ -1,3 +1,4 @@
+import com.diffplug.spotless.LineEnding
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 repositories {
@@ -104,6 +105,12 @@ java {
 }
 
 spotless {
+    // The repository stores LF and checks out LF — `.gitattributes` says so — so the formatter
+    // asks for LF as well. Left to its default, Spotless takes the line endings from git's
+    // configuration, which differs between a Linux and a Windows machine, and the two then
+    // disagree about the same file.
+    lineEndings = LineEnding.UNIX
+
     // `sharedTestingDirectory` is deliberately absent: Spotless rejects any target outside the
     // project directory, and the shared helper sits at the repository root. The root project's
     // own `build.gradle.kts` formats it instead, reading the same `.editorconfig`.

@@ -12,6 +12,8 @@
  * `config/detekt` and `config/logback` are not listed here because they are XML, which Spotless
  * does not format.
  */
+import com.diffplug.spotless.LineEnding
+
 // Applied unversioned: `buildSrc` already puts Spotless on the build classpath, pinning it to
 // `com-diffplug-spotless` in the version catalog. This mirrors how `:app` applies the plugin.
 plugins {
@@ -24,6 +26,12 @@ plugins {
 repositories { mavenCentral() }
 
 spotless {
+    // The repository stores LF and checks out LF — `.gitattributes` says so — so the formatter
+    // asks for LF as well. Left to its default, Spotless takes the line endings from git's
+    // configuration, which differs between a Linux and a Windows machine, and the two then
+    // disagree about the same file.
+    lineEndings = LineEnding.UNIX
+
     kotlin {
         target("config/testing/**/*.kt")
         targetExclude("**/build/**")
