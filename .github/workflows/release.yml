@@ -38,7 +38,7 @@ jobs:
           }
 
       - name: Set up JDK 25
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffbf961 # v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           java-version: '25'
           # ProGuard needs jmods; Zulu still ships them for JDK 25.
@@ -80,7 +80,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up JDK 25
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffbf961 # v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           java-version: '25'
           distribution: 'zulu'
