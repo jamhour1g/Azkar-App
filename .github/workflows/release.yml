@@ -1,48 +1,52 @@
-# Build native installers for Windows, macOS and Linux with Hydraulic Conveyor
-# and publish them as a GitHub Release.
-#
-# Conveyor builds all three targets from a single ubuntu runner and wires native
-# auto-updates on each OS (MSIX/.appinstaller on Windows, Sparkle 2 on macOS,
-# deb package + apt repository on Linux). No pre-releases: the update feed for
-# `make copied-site` reads the /releases/latest endpoint. The pushed tag must
-# match the Gradle project version in app/build.gradle.kts.
-#
-# Requires two repository secrets (see docs/releasing.md): SIGNING_KEY (the
-# encrypted root-key value from ~/.config/hydraulic/conveyor/defaults.conf) and
-# SIGNING_PASSPHRASE (the passphrase the key is encrypted under, injected via
-# --passphrase=env:). Also needs app.vcs-url in conveyor.conf.
-
+# Stable releases come from version tags on production. Successful CI runs on dev
+# publish a separate preview app and update feed under the GitHub Pages /dev path.
 name: Release
 
 on:
   push:
     tags: ['v*']
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: ['dev']
 
 concurrency:
   group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
 
 jobs:
-  build-and-release:
-    name: Package and publish releases
+  release-production:
+    name: Publish production release
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    permissions:
-      contents: write
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+
+      - name: Require the tag to be on production
+        run: |
+          git fetch origin production
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/production || {
+            echo "Refusing a stable release: $GITHUB_SHA is not on production."
+            exit 1
+          }
 
       - name: Set up JDK 25
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffbf961 # v5
         with:
           java-version: '25'
-          # Temurin 24+ ships no `jmods` (JEP 493) and ProGuard needs them; Zulu still does.
+          # ProGuard needs jmods; Zulu still ships them for JDK 25.
           distribution: 'zulu'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4 - pinned for act compatibility
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
-      # Validate the tagged revision before Conveyor packages and publishes it.
       - name: Run release checks and build ProGuard jars
         shell: bash
         env:
@@ -51,7 +55,7 @@ jobs:
           chmod +x ./gradlew
           ./gradlew check :app:checkTagParity :app:proguardReleaseJars --console=plain
 
-      - name: Build and publish releases with Conveyor
+      - name: Build and publish the production release
         uses: hydraulic-software/conveyor/actions/build@7370ce828ff1cbc38b95426ffb2fd613492016d5 # v22.3
         with:
           command: make copied-site
@@ -62,3 +66,91 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+
+  release-dev:
+    name: Publish dev preview
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'dev' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffbf961 # v5
+        with:
+          java-version: '25'
+          distribution: 'zulu'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+
+      # CI already checked this exact commit. Rebuild the shrunk runtime that
+      # Conveyor packages, but don't rerun the tests here.
+      - name: Build ProGuard jars
+        run: ./gradlew :app:proguardReleaseJars --console=plain
+        env:
+          CI: true
+
+      - name: Build the preview update site
+        uses: hydraulic-software/conveyor/actions/build@7370ce828ff1cbc38b95426ffb2fd613492016d5 # v22.3
+        with:
+          command: make site
+          signing_key: ${{ secrets.SIGNING_KEY }}
+          extra_flags: >-
+            --passphrase=env:SIGNING_PASSPHRASE
+            -Kapp.version=0.1.${{ github.event.workflow_run.run_number }}
+            -Kapp.display-name="Azkar Dev"
+            -Kapp.fsname=azkar-dev
+            -Kapp.rdns-name=com.azkar.app.dev
+            -Kapp.site.base-url=https://jamhour1g.github.io/Azkar-App/dev
+          agree_to_license: 1
+          conveyor_version: '22.3'
+        env:
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PREVIEW_SHA: ${{ github.event.workflow_run.head_sha }}
+          PREVIEW_RUN: ${{ github.event.workflow_run.run_number }}
+        run: |
+          short_sha="${PREVIEW_SHA:0:7}"
+          tag="dev-${PREVIEW_RUN}-${short_sha}"
+          title="Azkar Dev ${PREVIEW_RUN} (${short_sha})"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" output/* --clobber
+          else
+            gh release create "$tag" output/* \
+              --title "$title" \
+              --notes "Preview build from dev commit $PREVIEW_SHA. This prerelease has its own app identity and update feed." \
+              --prerelease \
+              --target "$PREVIEW_SHA"
+          fi
+
+      # Keep the production download page at the Pages root and publish the
+      # isolated dev feed beneath /dev. The shared release concurrency group
+      # prevents a simultaneous production page publish from racing this push.
+      - name: Publish preview update site to GitHub Pages
+        env:
+          PREVIEW_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          site_dir="$GITHUB_WORKSPACE/output"
+          git fetch origin gh-pages:refs/remotes/origin/gh-pages
+          git switch --detach origin/gh-pages
+
+          rm -rf dev
+          mkdir -p dev
+          cp -a "$site_dir"/. dev/
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dev
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish dev preview ${PREVIEW_SHA:0:7}"
+            git push origin HEAD:gh-pages
+          fi

@@ -1,8 +1,9 @@
 # Releasing the desktop app
 
 The desktop build is packaged with [Hydraulic Conveyor](https://conveyor.hydraulic.dev).
-One tag push produces all three platform packages from a single Linux runner and
-publishes them to the GitHub Release:
+Stable releases come from version tags on `production`. Successful CI pushes to
+`dev` publish a separate preview release and update site. Both are built for all
+three platforms from a Linux runner:
 
 | OS      | Output                                | Auto-update mechanism        |
 |---------|---------------------------------------|------------------------------|
@@ -10,9 +11,11 @@ publishes them to the GitHub Release:
 | macOS   | `.app.tar.gz` + Sparkle 2 appcast     | Sparkle (EdDSA signatures)   |
 | Linux   | `.deb` + apt repository               | apt (signed repo metadata)   |
 
-Conveyor also generates the download-page HTML and uploads everything into the
-Release assets (`make copied-site` in
-[.github/workflows/release.yml](../.github/workflows/release.yml)).
+For production, Conveyor generates the download-page HTML and uploads the packages
+into the versioned GitHub Release (`make copied-site`). For dev, the workflow
+generates a site without publishing to the production release feed, attaches its
+files to a GitHub prerelease, and publishes its update feed under the Pages `/dev`
+path.
 
 ## One packaging path
 
@@ -161,6 +164,8 @@ sudo dpkg -i output/jamhour1g-azkar_<version>_amd64.deb
 
 The tag version must equal the Gradle `version` at the top of
 [app/build.gradle.kts](../app/build.gradle.kts) — the workflow aborts on mismatch.
+The tag's commit must also already be on `production`; tags from `dev` cannot
+publish a stable release.
 
 ```bash
 # 1. bump "version = \"x.y.z\"" in app/build.gradle.kts and commit
@@ -201,11 +206,27 @@ storefront and the Release is the warehouse: the buttons on the page link
 straight to `releases/latest/download/…`, so the page is only useful once a
 release exists, and the auto-updates keep reading the Release either way.
 
+## Testing a dev preview
+
+Every successful CI push to `dev` publishes a GitHub prerelease named
+`dev-<run>-<short-sha>`. The packages are labeled **Azkar Dev** and use a
+separate application identity (`com.azkar.app.dev` / `azkar-dev`), so testers
+can install them alongside production. The preview's update feed is hosted at
+`https://jamhour1g.github.io/Azkar-App/dev`; it does not read or replace the
+production `releases/latest` feed. The Release workflow publishes it only after
+that commit's CI run succeeds.
+
+The dev preview version uses the release workflow run number. Production keeps
+using the Gradle version and the `v*` tag parity check. Promote code by opening a
+PR from `dev` into `production`; after it passes the three-platform promotion
+gate and merges, bump the Gradle version and tag that production commit.
+
 ## Caveats
 
-- **No pre-release tags.** The update feed reads
-  `releases/latest/download`, which ignores pre-releases and their assets.
-  Publishing a `-alpha`/`-beta` tag would leave existing installs orphaned.
+- **Do not publish dev packages with `make copied-site`.** Production updates
+  read `releases/latest/download`, which ignores GitHub prereleases. The dev
+  workflow instead builds a separate preview identity and publishes a separate
+  update site, so neither channel can move the other's update feed.
 - **macOS is unsigned.** Without an Apple Developer ID the app is self-signed
   and Gatekeeper will warn on first launch (right-click -> Open). Sparkle
   signatures still protect updates from tampering; the EdDSA root key is the

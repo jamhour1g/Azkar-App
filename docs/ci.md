@@ -1,18 +1,21 @@
 # CI
 
-Two workflows build and check the app, plus a third that packages a release.
+The branch flow is **feature PRs → `dev` → `production`**. CI runs on pushes to
+`dev` and on pull requests targeting either long-lived branch:
 
-| Workflow                                                        | Trigger                                                     | What it does                                              |
-|-----------------------------------------------------------------|-------------------------------------------------------------|-----------------------------------------------------------|
-| [CI](../.github/workflows/ci.yml)                                | on demand, from the Actions tab                             | `./gradlew build` on Linux, Windows and macOS              |
-| [PR Quality](../.github/workflows/quality.yml)                   | a pull request carrying the `run-quality` label             | `./gradlew check` and `:app:proguardReleaseJars`           |
-| [Release](../.github/workflows/release.yml)                      | a `v*` tag                                                  | packages the installers and publishes the release          |
+| Change | Checks |
+| --- | --- |
+| Push to `dev` or PR targeting `dev` | Linux build, tests, release shrinking |
+| PR targeting `production` | Linux, Windows, and macOS builds; `Production promotion gate` requires all three |
+| Manual CI run | Linux, Windows, and macOS builds |
+| Successful CI push to `dev` | Publishes a separate preview release and update site |
+| `v*` tag on `production` | Publishes a stable release |
 
-The `CI` workflow does not start on its own. Building on Linux, Windows and macOS is
-the expensive half of the pipeline — a macOS minute costs about ten times a Linux one —
-so the platforms are checked when someone asks for them from the Actions tab, rather
-than on every push. `PR Quality` is the other half: it runs the cheap checks, and it
-waits for the `run-quality` label before it does.
+The [CI workflow](../.github/workflows/ci.yml) cancels obsolete pull-request
+runs while allowing independent branch pushes to finish. The
+[Release workflow](../.github/workflows/release.yml) only publishes a dev
+preview after the corresponding push run has passed CI. Stable releases must
+use a version tag whose commit is already on `production`.
 
 ## The JDK is Zulu, not Temurin
 
@@ -34,19 +37,12 @@ sentence that names the JDK and the fix, and `:app:proguardReleaseJars` does not
 until it has passed. The check runs wherever the build runs — on a laptop, in CI and in
 the release pipeline.
 
-## The release classpath is checked on the pull request
+## The release classpath is checked before promotion
 
 `./gradlew build` shrinks nothing: ProGuard only runs for the release build type, and
-`build` does not produce it. The quality pipeline therefore runs the release task as
-well, after the quality gate:
-
-```bash
-./gradlew :app:proguardReleaseJars
-```
-
-Without it, a change that breaks the release classpath — a dependency ProGuard cannot
-see, a keep rule that stops matching — would surface for the first time on the tag that
-publishes the release, which is the most expensive place to find it.
+`build` does not produce it. Linux CI also runs `:app:proguardReleaseJars`, so a change
+that breaks the release classpath — for example, a dependency ProGuard cannot see or a
+keep rule that stops matching — is caught before the release workflow packages it.
 
 ## One line ending, everywhere
 
@@ -66,48 +62,19 @@ made git treat it as binary, and it was therefore the one file in the repository
 Windows checked out with LF while everything else was CRLF. The separator is now
 written as an escape, so the file is ordinary text like the rest.
 
-## The maintainer gate on the quality pipeline
-
-`PR Quality` does not run on every pull request. It waits for a maintainer to allow
-it, and the permission is the **`run-quality` label**:
-
-```bash
-gh pr edit <number> --add-label run-quality
-```
-
-Adding a label to a pull request needs triage or write access, so a label on a pull
-request is a maintainer's go-ahead — an author cannot add one to their own pull
-request. Without the label the job is skipped, which is the visible signal that the
-pipeline is waiting rather than failing.
-
-The label is read from the pull request rather than from the event, so the pipeline
-also picks the pull request up again when the author pushes more commits after it was
-allowed. Remove the label to stop it.
-
-The workflow is triggered by `pull_request` and not by `pull_request_target`. That is
-deliberate: `pull_request_target` runs with a token that can write to the repository
-and with the secrets, while the code it checks out is whatever the pull request says
-it is. This workflow only reads, so it takes a read-only token and no secrets.
-
 ## Reports only when something fails
 
-Both workflows upload artifacts, but only the ones that are worth keeping:
-
-- A **failed** run uploads the detekt, test and coverage reports. They are the files that
-  say what went wrong, so they are what whoever looks into the failure reads.
-- A **successful** run uploads the built jar and nothing else.
-
-Uploading the reports on every run fills the repository's artifact storage with copies of a
-result nobody looks at.
+Linux CI uploads detekt, test and coverage reports only for failed runs. Successful
+runs keep the built jars for seven days. Windows and macOS upload test reports when
+their build fails.
 
 ## Running the same checks locally
 
 ```bash
-./gradlew check                      # Spotless, detekt and the test suite, exactly as CI runs them
-./gradlew :app:proguardReleaseJars   # the release classpath, exactly as CI runs it
+./gradlew build                      # build, tests, detekt and Spotless
+./gradlew :app:proguardReleaseJars   # the release classpath, exactly as CI checks it
 ```
 
-`check` is the same task the quality pipeline runs, so a green run locally is a green
-run in CI. Note that `build` behaves differently on purpose: it *applies* the
-Spotless formatting when `CI` is unset, and only *verifies* it when `CI` is set, so a
-local `build` quietly fixes formatting while a CI `build` fails on it.
+`check` is included in `build`. Note that `build` behaves differently on purpose:
+it *applies* Spotless formatting when `CI` is unset, and only *verifies* it when
+`CI` is set, so a local build can quietly fix formatting while a CI build fails on it.

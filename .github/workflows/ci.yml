@@ -1,11 +1,11 @@
-# Validate changes on dev and require all supported platforms before a PR reaches main.
+# Validate changes on dev and require all supported platforms before a PR reaches production.
 name: CI
 
 on:
   push:
     branches: ['dev']
   pull_request:
-    branches: ['dev', 'main']
+    branches: ['dev', 'production']
   # Manual trigger for a full three-platform run.
   workflow_dispatch:
 
@@ -75,8 +75,8 @@ jobs:
 
   build-cross-platform:
     name: Build (${{ matrix.os }})
-    # Full platform validation gates promotions to main. Feature PRs into dev stay fast.
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.base_ref == 'main')
+    # Full platform validation gates promotions to production. Feature PRs into dev stay fast.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.base_ref == 'production')
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -109,9 +109,9 @@ jobs:
           path: '**/build/reports/tests/'
           retention-days: 14
 
-  main-promotion:
-    name: Main promotion gate
-    if: ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' }}
+  production-promotion:
+    name: Production promotion gate
+    if: ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'production' }}
     needs: [build-linux, build-cross-platform]
     runs-on: ubuntu-24.04
     steps:
