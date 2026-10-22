@@ -19,6 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
@@ -96,8 +97,24 @@ class NotificationActionRouter {
 class NotificationRuntime(
     private val preferences: NotificationPreferencesRepository,
     private val collections: CollectionsGateway,
-    private val locationDetector: LocationDetector,
+    private val locationDetector: PrayerLocationSource,
     private val publisher: NotificationPublisher,
+    /**
+     * The clock the schedule is read against.
+     *
+     * Injected rather than read from [System] so that "what does the scheduler do at this moment?"
+     * is a question a test can ask. Everything the scheduler decides is a decision about a time, and
+     * a scheduler that can only be asked about the real one can only be tested by waiting for it.
+     */
+    private val clock: () -> Instant = { Instant.now() },
+    /**
+     * How long the scheduler waits between polls.
+     *
+     * A parameter for the same reason as the clock: the poll cadence is part of what the scheduler
+     * does, and a test that has to wait thirty seconds to watch one poll is a test that does not get
+     * written. The production value is the half-minute it has always been.
+     */
+    private val tickIntervalMillis: Long = TICK_MILLIS,
     private val logger: KLogger = KotlinLogging.logger {},
 ) {
     private val startLock = Any()
@@ -113,11 +130,17 @@ class NotificationRuntime(
      * sleeping for thirty seconds *after* every database read; otherwise a slow read shifts every
      * later check farther from the slot boundary. Work that takes longer than the polling period
      * coalesces to the latest due slot, matching the schedule's existing missed-slot policy.
+     *
+     * The moment of the start is also the moment the schedule's baseline is taken, and that baseline
+     * is what keeps the app from opening with a card: a slot — or a prayer — that came due while the
+     * app was closed is missed rather than replayed, so a fresh install opens with nothing on screen
+     * at all. See [DeliveryPolicy] for the rule and why it exists.
      */
     fun start(scope: CoroutineScope) {
         synchronized(startLock) {
             if (schedulerJob?.isActive == true) return
             preferences.observe(scope)
+            val startedAt = clock()
             schedulerJob =
                 scope.launch {
                     runCatching { preferences.refresh() }
@@ -128,11 +151,12 @@ class NotificationRuntime(
                                 it,
                             ) { "Unable to detect prayer-time location; keeping the saved location" }
                         }
+                    val tickNanos = tickIntervalMillis * NANOS_PER_MILLI
                     var nextTickNanos = System.nanoTime()
                     while (isActive) {
-                        runCatching { tick() }
+                        runCatching { tick(startedAt) }
                             .onFailure { logger.error(it) { "Notification scheduler tick failed" } }
-                        nextTickNanos += TICK_NANOS
+                        nextTickNanos += tickNanos
                         val remainingNanos = nextTickNanos - System.nanoTime()
                         if (remainingNanos > 0L) {
                             delay(remainingNanos / NANOS_PER_MILLI)
@@ -154,28 +178,52 @@ class NotificationRuntime(
                 .also { preferences.savePrayerLocation(it) }
         }
 
-    private suspend fun tick() {
+    /**
+     * One poll of the schedule.
+     *
+     * [since] is when the scheduler started, and it is what separates "this is due now" from "this
+     * was already due when the app opened". The first is a reminder; the second is a notification
+     * arriving before the reader has asked for one, and the whole point of the baseline is that the
+     * second is not announced.
+     *
+     * The two schedules are read in their own zones: prayer times belong to the prayer location,
+     * and the queue's window belongs to the reader's own wall clock.
+     */
+    private suspend fun tick(since: Instant) {
         val location = preferences.prayerLocation.value
-        val now = LocalDateTime.now(ZoneId.of(location.zoneId))
-        deliverPrayerIfDue(now, location)
-        deliverQueueIfDue(LocalDateTime.now(), preferences.queue.value)
+        val instant = clock()
+        val prayerZone = ZoneId.of(location.zoneId)
+        deliverPrayerIfDue(
+            now = instant.atZone(prayerZone).toLocalDateTime(),
+            location = location,
+            since = since.atZone(prayerZone).toLocalDateTime(),
+        )
+        val queueZone = ZoneId.systemDefault()
+        deliverQueueIfDue(
+            now = instant.atZone(queueZone).toLocalDateTime(),
+            config = preferences.queue.value,
+            since = since.atZone(queueZone).toLocalDateTime(),
+        )
     }
 
     private suspend fun deliverPrayerIfDue(
         now: LocalDateTime,
         location: PrayerLocationSettings,
+        since: LocalDateTime,
     ) {
         val times = PrayerTimeCalculator.calculate(now.toLocalDate(), location)
         val progress = preferences.prayerProgress.value
         for ((key, time) in times) {
             val dateKey = now.toLocalDate().toString()
-            val prayerAt = now.toLocalDate().atTime(time)
-            val isWithinGraceWindow =
-                !now.isBefore(prayerAt) && !now.isAfter(prayerAt.plusMinutes(PRAYER_GRACE_MINUTES))
             if (
                 preferences.prayerFlags.value[key] == true &&
                 progress.lastDeliveredLocalDates[key.id] != dateKey &&
-                isWithinGraceWindow
+                DeliveryPolicy.isPrayerDue(
+                    now = now,
+                    prayerAt = time,
+                    since = since,
+                    graceMinutes = PRAYER_GRACE_MINUTES,
+                )
             ) {
                 val updated =
                     progress.copy(
@@ -221,33 +269,23 @@ class NotificationRuntime(
     /**
      * Delivers the passage this moment's slot is for, if there is one.
      *
-     * [QueueCadence] is read once here and decides whether the daily window applies, rather than being
-     * pushed down into [QueueSchedule] as another argument. A continuous queue has no window to be
-     * outside of, so handing its arithmetic a start and an end would have meant inventing a window to
-     * immediately ignore — and inventing one is how a schedule that never stops ends up stopping at
-     * half past ten, with the preview counting down to tomorrow because the preview asked the same
-     * question.
+     * [QueueCadence] is read once — inside [DeliveryPolicy] — and decides whether the daily window
+     * applies, rather than being pushed down into [QueueSchedule] as another argument. A continuous
+     * queue has no window to be outside of, so handing its arithmetic a start and an end would have
+     * meant inventing a window to immediately ignore — and inventing one is how a schedule that never
+     * stops ends up stopping at half past ten, with the preview counting down to tomorrow because
+     * the preview asked the same question.
+     *
+     * [since] is the moment the scheduler started. A slot that came due before it is not announced:
+     * the queue sleeps through the slots it is not running for, and a queue that woke up and
+     * announced the slot it slept through would put a card on screen at the moment the app opened.
      */
     private suspend fun deliverQueueIfDue(
         now: LocalDateTime,
         config: ReminderQueueConfig,
+        since: LocalDateTime,
     ) {
-        val interval = config.effectiveIntervalMinutes
-        val slot =
-            when {
-                !config.enabled -> null
-                !QueueSchedule.isDayActive(now, config.activeDays) -> null
-                config.cadence == QueueCadence.CONTINUOUS ->
-                    ContinuousSchedule.dueSlot(now = now, intervalMinutes = interval)
-
-                else ->
-                    QueueSchedule.dueSlot(
-                        now = now,
-                        startMinute = config.windowStartMinute,
-                        endMinute = config.windowEndMinute,
-                        intervalMinutes = interval,
-                    )
-            } ?: return
+        val slot = DeliveryPolicy.dueQueueSlot(now = now, config = config, since = since) ?: return
         deliverQueueAtSlot(slot, config)
     }
 
@@ -477,7 +515,6 @@ class NotificationRuntime(
     private companion object {
         const val TICK_MILLIS = 30_000L
         const val NANOS_PER_MILLI = 1_000_000L
-        const val TICK_NANOS = TICK_MILLIS * NANOS_PER_MILLI
         const val PRAYER_GRACE_MINUTES = 2L
         const val MAX_NOTICE_LENGTH = 180
 

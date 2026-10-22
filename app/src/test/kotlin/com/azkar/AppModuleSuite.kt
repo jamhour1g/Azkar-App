@@ -34,6 +34,7 @@ import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationActionRouter
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.NotificationRuntime
+import com.azkar.ui.notifications.PrayerLocationSource
 import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationPublisher
 import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
@@ -93,6 +94,7 @@ val AppModuleSuite by testSuite("AppModule") {
                     koin.get<LocaleStore>(),
                     koin.get<HttpClient>(),
                     koin.get<LocationDetector>(),
+                    koin.get<PrayerLocationSource>(),
                     koin.get<GeocodingClient>(),
                     koin.get<NotificationPreferencesRepository>(),
                     koin.get<NotificationActionRouter>(),
@@ -139,6 +141,15 @@ val AppModuleSuite by testSuite("AppModule") {
             // gateway is about the library's rows. One copy of each, or the two would drift apart.
             assertThat(koin.get<ReminderSources>()).isSameAs(koin.get<ReminderSources>())
             assertThat(koin.get<ReminderSources>()).isNotSameAs(koin.get<CollectionsGateway>())
+        }
+
+        test("the prayer location source is the location detector") { graph ->
+            val koin = graph.koin
+            // The scheduler asks for the seam rather than for the detector, because the detector
+            // talks to the network and a scheduler that has to be handed one is a scheduler that
+            // cannot be tested. The seam resolves to the one detector, so the app still detects the
+            // reader's location and a test can still stand in for it.
+            assertThat(koin.get<PrayerLocationSource>()).isSameAs(koin.get<LocationDetector>())
         }
 
         test("the adapters cannot be reached past the seam they are registered under") { graph ->

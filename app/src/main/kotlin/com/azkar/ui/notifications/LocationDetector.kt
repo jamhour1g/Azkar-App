@@ -12,8 +12,9 @@ import kotlinx.serialization.Serializable
 /** Best-effort IP geolocation. Manual coordinates remain available when the network lookup fails. */
 class LocationDetector(
     private val client: HttpClient,
-) : AutoCloseable {
-    suspend fun detect(): PrayerLocationSettings {
+) : PrayerLocationSource,
+    AutoCloseable {
+    override suspend fun detect(): PrayerLocationSettings {
         val response: HttpResponse =
             client.get("https://ipapi.co/json/") {
                 header("User-Agent", "Azkar-Desktop")

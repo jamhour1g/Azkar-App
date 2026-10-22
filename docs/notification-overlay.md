@@ -87,6 +87,42 @@ Settings live in **Reminders → Notification appearance**: duration, placement,
 sizing and the language the reminder is written in. They are separate from the queue's own settings
 on purpose — turning a reminder off is not the same decision as changing how a reminder looks.
 
+## What the scheduler announces
+
+The scheduler polls every thirty seconds and announces two things: a passage from the shared queue
+and a prayer time. The rule that decides *whether* either of them is announced is one sentence long:
+
+> **A reminder is announced only if it became due after the scheduler started.**
+
+What came due while the app was closed is **missed, not replayed** — the same answer the schedule
+already gives a slot it slept through. A fresh install opens with nothing on screen at all.
+
+This is the answer to a bug that was reported as "a notification pops up exactly when the app is
+opened for the first time after installing it". Both of the scheduler's paths were catch-up paths:
+the queue treats the most recent slot in its window as due, and a prayer stays due for two minutes
+after its time. The scheduler's first poll runs the moment the app opens, so anything that had come
+due while the app was closed was announced at the door — and on a fresh install, where nothing had
+ever been delivered, that card was the very first thing on screen. A notification that arrives
+before the reader has decided they want notifications is the one kind that reads as a fault rather
+than as a reminder.
+
+The rule lives in `DeliveryPolicy`, which decides and does not deliver:
+
+- `dueQueueSlot(now, config, since)` answers the queue. It refuses a slot that came due before
+  `since`, and it refuses the whole queue when it is switched off, when the day is not one the queue
+  speaks on, or when the window is closed.
+- `isPrayerDue(now, prayerAt, since, graceMinutes)` answers the prayer bells. It requires both the
+  grace window (from the prayer's own time until two minutes after it, which is what lets a
+  thirty-second poll still catch it) and the baseline.
+
+A slot that comes due at the very moment the scheduler started *is* announced: `since` is the
+start, and the scheduler was there for it.
+
+The scheduler's clock is injected, so "what does the scheduler do at this moment?" is a question a
+test can ask rather than a question a test has to wait for. `DeliveryPolicySuite` pins the rule
+itself and `NotificationRuntimeSuite` pins the scheduler's use of it, including the case this bug
+was reported from: the app opens a minute after a prayer time, and nothing is announced.
+
 ## What the card offers
 
 The card carries three gestures: the body opens the passage, the cross closes the card, and a star
@@ -193,6 +229,8 @@ Work down this table once per platform:
 9. Two monitors, app hidden on the second — the card appears on the second.
 10. Arabic (RTL) and dark mode — the card reads correctly; the corners of the window are transparent.
 11. Tray → Quit — the overlay window disappears with the app, and nothing fires afterwards.
+12. Fresh install, or a start within two minutes of a prayer time — the app opens with **nothing** on
+    screen. A slot or a prayer that came due while the app was closed is missed, not replayed.
 
 ## What is tested, and what cannot be
 
@@ -203,6 +241,10 @@ scheduler alone, disposal, and the dispatcher's forwarding (`OverlayPresenterSui
 through the semantics tree, which is the only place that can say "the body, the star and the cross,
 and nothing else" — that the star keeps the passage it belongs to, that it does not open the app,
 that it is offered only where it can be written, and that a failed write takes it back.
+
+The scheduler's own rule is covered by `DeliveryPolicySuite` and `NotificationRuntimeSuite`: what is
+announced, what is missed, and the case this documentation's previous section is about — an app
+that opens with nothing on screen.
 
 None of it can answer "is it on top". That is rows 2–5 and 9 of the table above, and they stay a
 manual check by design.

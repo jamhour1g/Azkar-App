@@ -19,6 +19,7 @@ import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationActionRouter
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.NotificationRuntime
+import com.azkar.ui.notifications.PrayerLocationSource
 import com.azkar.ui.notifications.QueueReminderSources
 import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationDispatcher
@@ -90,7 +91,7 @@ val appModule =
                 expectSuccess = false
             }
         }
-        single { LocationDetector(get()) }
+        single { LocationDetector(get()) } bind PrayerLocationSource::class
         // Place search for the location picker. It shares the one configured client above, so it
         // inherits its timeouts and its single close on Quit.
         single { GeocodingClient(get()) }
