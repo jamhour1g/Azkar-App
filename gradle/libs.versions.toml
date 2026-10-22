@@ -112,6 +112,13 @@ org-jetbrains-compose-material-icons-extended = { module = "org.jetbrains.compos
 org-jetbrains-compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "jetbrains-compose" }
 org-jetbrains-compose-ui-test = { module = "org.jetbrains.compose.ui:ui-test", version.ref = "jetbrains-compose" }
 org-jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "jetbrains-compose" }
+# The per-platform Compose Desktop runtime that Conveyor packages. The Compose plugin's own
+# `compose.desktop.linux_x64` and its siblings are deprecated ("Specify dependency directly"),
+# so the artifacts are named here instead, on the same version as the plugin.
+org-jetbrains-compose-desktop-linux-x64 = { module = "org.jetbrains.compose.desktop:desktop-jvm-linux-x64", version.ref = "jetbrains-compose" }
+org-jetbrains-compose-desktop-macos-x64 = { module = "org.jetbrains.compose.desktop:desktop-jvm-macos-x64", version.ref = "jetbrains-compose" }
+org-jetbrains-compose-desktop-macos-arm64 = { module = "org.jetbrains.compose.desktop:desktop-jvm-macos-arm64", version.ref = "jetbrains-compose" }
+org-jetbrains-compose-desktop-windows-x64 = { module = "org.jetbrains.compose.desktop:desktop-jvm-windows-x64", version.ref = "jetbrains-compose" }
 org-jetbrains-kotlinx-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "jetbrains-serialization" }
 io-ktor-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 io-ktor-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }

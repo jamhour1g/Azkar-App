@@ -161,11 +161,13 @@ dependencies {
 // include in `conveyor.conf`). Each one resolves the Compose Desktop artifact for that
 // platform, which is how a single Linux CI runner packages all three operating systems.
 // `compose.desktop.currentOs` above covers a local `./gradlew :app:run`; these cover shipping.
+// The artifacts are named in the version catalog rather than taken from the Compose plugin:
+// `compose.desktop.linux_x64` and its siblings are deprecated ("Specify dependency directly").
 dependencies {
-    linuxAmd64(compose.desktop.linux_x64)
-    macAmd64(compose.desktop.macos_x64)
-    macAarch64(compose.desktop.macos_arm64)
-    windowsAmd64(compose.desktop.windows_x64)
+    linuxAmd64(libs.org.jetbrains.compose.desktop.linux.x64)
+    macAmd64(libs.org.jetbrains.compose.desktop.macos.x64)
+    macAarch64(libs.org.jetbrains.compose.desktop.macos.arm64)
+    windowsAmd64(libs.org.jetbrains.compose.desktop.windows.x64)
 }
 
 // Compose Multiplatform re-publishes part of the Compose runtime under
