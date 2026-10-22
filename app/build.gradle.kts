@@ -1,4 +1,5 @@
 import org.gradle.api.artifacts.ExternalModuleDependency
+import java.io.File
 import java.util.jar.JarFile
 
 plugins {
@@ -424,6 +425,35 @@ compose.desktop {
             }
         }
     }
+}
+
+// ProGuard runs in a JVM forked from the JDK the build itself runs on, and it reads the JDK's
+// own classes from that JDK's `jmods` directory. Temurin 24+ ships none (JEP 493), and the
+// failure that causes is a wall of thousands of "can't find referenced class java.lang.*"
+// warnings: they name the symptom and never the cause, and the build ends with an error that
+// says nothing about the JDK. So the requirement is checked here, and stated plainly. Zulu 25
+// — the JDK the project is developed against, and the one every workflow installs — still
+// ships `jmods`; see docs/releasing.md.
+val verifyJdkShipsJmods =
+    tasks.register("verifyJdkShipsJmods") {
+        val javaHome = providers.systemProperty("java.home")
+        inputs.property("javaHome", javaHome)
+        doLast {
+            val home = File(javaHome.get())
+            val modules = home.resolve("jmods").listFiles()?.filter { it.isFile && it.name.endsWith(".jmod") }
+            check(!modules.isNullOrEmpty()) {
+                "The JDK at $home has no usable 'jmods' directory, so ProGuard cannot resolve " +
+                    "the JDK's own classes. Temurin 24+ dropped 'jmods' (JEP 493); build with " +
+                    "Zulu 25 instead. See docs/releasing.md."
+            }
+        }
+    }
+
+// The check runs before ProGuard does, so the build stops with the message above rather than
+// with thousands of warnings that read like a broken classpath. The Compose plugin registers
+// the task lazily, so it is matched by name rather than looked up by path.
+tasks.matching { it.name == "proguardReleaseJars" }.configureEach {
+    dependsOn(verifyJdkShipsJmods)
 }
 
 // Conveyor publishes whatever version this project declares, so a release tag that

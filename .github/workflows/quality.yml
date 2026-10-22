@@ -18,9 +18,10 @@ name: PR Quality
 
 on:
   pull_request:
-    # `master`, not `main`: this is the branch the repository actually has, on both the fork
-    # and the upstream. A workflow that waits for a branch that does not exist never runs.
-    branches: ['master']
+    # `main` is this repository's default branch. The workflow was written against `main`
+    # back when the default branch was still called `master`, so it never ran at all; the
+    # branch has since been renamed and the filter now names the branch that exists.
+    branches: ['main']
     # `labeled` is the maintainer's approval. `synchronize`, `reopened` and `ready_for_review`
     # are there so the pipeline picks the pull request up again once it has been allowed:
     # a run that only ever fired on `labeled` would go stale the moment the author pushed a
@@ -63,6 +64,16 @@ jobs:
       # `./gradlew check` on the author's machine.
       - name: Code quality and tests
         run: ./gradlew check --console=plain
+        env:
+          CI: true
+
+      # The release build shrinks the classpath with ProGuard, and ProGuard reads the JDK's
+      # own classes from the `jmods` directory. A JDK that ships none — Temurin 24+ dropped
+      # it in JEP 493 — fails there, in a wall of thousands of warnings that say nothing
+      # about the cause. Running the task here puts that failure on the pull request
+      # instead of on the tag that publishes the release.
+      - name: Check the release classpath against ProGuard
+        run: ./gradlew :app:proguardReleaseJars --console=plain
         env:
           CI: true
 

@@ -179,8 +179,11 @@ The [Release workflow](../.github/workflows/release.yml) then:
     halves the dependency footprint (~94 MB -> ~40 MB; unused Material icons
 alone drop 36.9 MB -> 87 KB). ProGuard reads the JDK's own classes from its
      `jmods` directory, and Temurin dropped that folder in 24 (JEP 493), so the
-     build (and CI) use **Zulu 25**, which still ships one. Conveyor never runs
-     Gradle itself; app code (`com.azkar.**`) is fully kept, so verification only
+     build (and CI) use **Zulu 25**, which still ships one. `:app:verifyJdkShipsJmods`
+     runs before it and fails with that explanation, rather than leaving ProGuard to
+     report the missing JDK as thousands of warnings about `java.lang.Object`.
+     Conveyor never runs Gradle itself; app code (`com.azkar.**`) is fully kept, so
+     verification only
     re-names third-party classes — run the app once after any ProGuard/rules
     or dependency change before tagging.
 3. Runs `conveyor make copied-site`, which builds every platform and pushes the

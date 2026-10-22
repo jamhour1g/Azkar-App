@@ -4,8 +4,8 @@ Two workflows build and check the app, plus a third that packages a release.
 
 | Workflow                                                        | Trigger                                                     | What it does                                              |
 |-----------------------------------------------------------------|-------------------------------------------------------------|-----------------------------------------------------------|
-| [CI](../.github/workflows/ci.yml)                                | every push and pull request to `master`                     | `./gradlew build` on Linux, Windows and macOS              |
-| [PR Quality](../.github/workflows/quality.yml)                   | a pull request carrying the `run-quality` label             | `./gradlew check`: formatting, static analysis, tests      |
+| [CI](../.github/workflows/ci.yml)                                | every push and pull request to `main`                      | `./gradlew build` on Linux, Windows and macOS              |
+| [PR Quality](../.github/workflows/quality.yml)                   | a pull request carrying the `run-quality` label             | `./gradlew check` and `:app:proguardReleaseJars`           |
 | [Release](../.github/workflows/release.yml)                      | a `v*` tag                                                  | packages the installers and publishes the release          |
 
 ## The JDK is Zulu, not Temurin
@@ -19,6 +19,28 @@ Zulu. `docs/releasing.md` covers the release side of the same requirement.
 
 `setup-java` resolves `java-version: '25'` on the `zulu` distribution to the newest
 Zulu 25 available, so the patch level moves forward on its own.
+
+ProGuard's own reaction to a missing `jmods` directory is unreadable: thousands of
+"can't find referenced class java.lang.*" warnings, followed by an error that says
+nothing about the JDK at all. So the requirement is checked by the build instead of
+being rediscovered by whoever hits it. The task `:app:verifyJdkShipsJmods` fails with a
+sentence that names the JDK and the fix, and `:app:proguardReleaseJars` does not start
+until it has passed. The check runs wherever the build runs — on a laptop, in CI and in
+the release pipeline.
+
+## The release classpath is checked on the pull request
+
+`./gradlew build` shrinks nothing: ProGuard only runs for the release build type, and
+`build` does not produce it. The quality pipeline therefore runs the release task as
+well, after the quality gate:
+
+```bash
+./gradlew :app:proguardReleaseJars
+```
+
+Without it, a change that breaks the release classpath — a dependency ProGuard cannot
+see, a keep rule that stops matching — would surface for the first time on the tag that
+publishes the release, which is the most expensive place to find it.
 
 ## The maintainer gate on the quality pipeline
 
@@ -46,7 +68,8 @@ it is. This workflow only reads, so it takes a read-only token and no secrets.
 ## Running the same checks locally
 
 ```bash
-./gradlew check        # Spotless, detekt and the test suite, exactly as CI runs them
+./gradlew check                      # Spotless, detekt and the test suite, exactly as CI runs them
+./gradlew :app:proguardReleaseJars   # the release classpath, exactly as CI runs it
 ```
 
 `check` is the same task the quality pipeline runs, so a green run locally is a green

@@ -3,11 +3,12 @@ name: CI
 
 on:
   push:
-    # `master`, not `main`: this is the branch the repository actually has, on both the fork
-    # and the upstream. A workflow that waits for a branch that does not exist never runs.
-    branches: ['master']
+    # `main` is this repository's default branch. The workflows were written against `main`
+    # back when the default branch was still called `master`, so they never ran at all; the
+    # branch has since been renamed and the filters now name the branch that exists.
+    branches: ['main']
   pull_request:
-    branches: ['master']
+    branches: ['main']
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
