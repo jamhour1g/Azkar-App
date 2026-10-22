@@ -1,83 +1,121 @@
-# Continuous Integration — build, test, and static analysis on every push and PR
+# Validate changes on dev and require all supported platforms before a PR reaches main.
 name: CI
 
 on:
   push:
-    # `main` is this repository's default branch. The workflows were written against `main`
-    # back when the default branch was still called `master`, so they never ran at all; the
-    # branch has since been renamed and the filters now name the branch that exists.
-    branches: ['main']
+    branches: ['dev']
   pull_request:
-    branches: ['main']
-  # A manual trigger, for checking the three platforms without opening a pull request, or without
-  # waiting for one. Nothing runs on its own: the minutes are spent only when someone asks for
-  # them, which is the point.
+    branches: ['dev', 'main']
+  # Manual trigger for a full three-platform run.
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Cancel stale PR runs, but keep each dev push and manual run independent.
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || format('ci-{0}-{1}', github.ref, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+  build-linux:
+    name: Build (ubuntu-24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           java-version: '25'
-          # Temurin 24+ ships no `jmods` (JEP 493) and ProGuard needs them; Zulu still does.
-          # This is also the JDK the project is developed against (SDKMAN's default), so CI and
-          # the local build agree on the toolchain. The release workflow uses it for the same
-          # reason; see docs/releasing.md.
+          # ProGuard needs jmods; Zulu still ships them for JDK 25.
           distribution: 'zulu'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Build, test, and check release shrinking
+        run: ./gradlew build :app:proguardReleaseJars --console=plain
         env:
           CI: true
 
-      # The reports are uploaded only when the build failed. A green run has nothing to read,
-      # and uploading every report on every run fills the repository's artifact storage with
-      # copies of a result nobody looks at.
+      - name: Upload detekt reports
+        if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: detekt-reports
+          path: '**/build/reports/detekt/'
+          retention-days: 14
+
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
-          name: test-reports-${{ matrix.os }}
-          path: |
-            **/build/reports/tests/
+          name: test-reports
+          path: '**/build/reports/tests/'
           retention-days: 14
 
       - name: Upload JaCoCo coverage reports
-        if: failure() && matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v5
+        if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: coverage-reports
           path: '**/build/reports/jacoco/'
           retention-days: 14
 
-      # The jar is what the run produced, so it is uploaded when the run succeeded. The reports
-      # above are the opposite: they are uploaded when the run failed, because then they are the
-      # only thing that says what went wrong.
       - name: Upload build artifacts
-        if: success() && matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v5
+        if: success()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: build-jars
           path: 'app/build/libs/*.jar'
           retention-days: 7
+
+  build-cross-platform:
+    name: Build (${{ matrix.os }})
+    # Full platform validation gates promotions to main. Feature PRs into dev stay fast.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.base_ref == 'main')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, macos-15]
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          java-version: '25'
+          distribution: 'zulu'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+
+      - name: Build and test with Gradle
+        run: ./gradlew build --console=plain
+        env:
+          CI: true
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: test-reports-${{ matrix.os }}
+          path: '**/build/reports/tests/'
+          retention-days: 14
+
+  main-promotion:
+    name: Main promotion gate
+    if: ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'main' }}
+    needs: [build-linux, build-cross-platform]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require Linux and cross-platform builds
+        if: ${{ needs.build-linux.result != 'success' || needs.build-cross-platform.result != 'success' }}
+        run: exit 1
+      - run: echo "Linux, Windows, and macOS builds passed."
