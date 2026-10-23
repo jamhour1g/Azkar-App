@@ -11,6 +11,7 @@
     <string name="trayMenuPause">إيقاف التذكيرات مؤقتًا</string>
     <string name="trayMenuResume">استئناف التذكيرات</string>
     <string name="trayMenuQuit">خروج</string>
+    <string name="trayNextPrayerCountdown">%1$s في %2$s</string>
     <!-- Main Content -->
     <string name="greetingTitle">السلام عليكم</string>
     <string name="greetingDate">14 ذو الحجة 1445 هـ</string>
