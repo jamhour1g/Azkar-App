@@ -86,7 +86,7 @@ class PrayerTrayCountdownState(
             logger.debug { "Prayer tray countdown is already started" }
             return
         }
-        logger.info { "Starting prayer tray countdown (zone=${location.zoneId}, method=${location.method})" }
+        logger.info { "Starting prayer tray countdown" }
         model.load()
         format = getString(Res.string.trayNextPrayerCountdown)
         loaded = true
