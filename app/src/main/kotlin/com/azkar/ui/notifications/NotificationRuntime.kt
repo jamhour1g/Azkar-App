@@ -145,6 +145,14 @@ class NotificationRuntime(
                 scope.launch {
                     runCatching { preferences.refresh() }
                         .onFailure { logger.error(it) { "Unable to load notification preferences" } }
+                    runCatching {
+                        preferences.initializeQueueDefaults {
+                            val snapshot = collections.fetchSnapshot()
+                            snapshot.collections
+                                .filter { it.name in DEFAULT_REMINDER_COLLECTIONS }
+                                .mapNotNull { it.id } + listOfNotNull(snapshot.favoritesCollectionId)
+                        }
+                    }.onFailure { logger.error(it) { "Unable to initialize default reminder collections" } }
                     refreshDetectedLocation()
                         .onFailure {
                             logger.warn(
@@ -513,6 +521,8 @@ class NotificationRuntime(
         passageText(locale).replace('\n', ' ').take(MAX_NOTICE_LENGTH)
 
     private companion object {
+        val DEFAULT_REMINDER_COLLECTIONS = setOf("Praising Allah", "Home & Family")
+
         const val TICK_MILLIS = 30_000L
         const val NANOS_PER_MILLI = 1_000_000L
         const val PRAYER_GRACE_MINUTES = 2L

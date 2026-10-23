@@ -82,6 +82,15 @@ class NotificationPreferencesRepository(
             settings.edit { this[QUEUE_KEY] = json.encodeToString(next) }
         }
 
+    /** Seeds the shipped reminder sources only when this installation has no saved queue yet. */
+    suspend fun initializeQueueDefaults(collectionIds: suspend () -> List<Long>) =
+        mutex.withLock {
+            if (settings.read(QUEUE_KEY) != null) return@withLock
+            val next = ReminderQueueConfig(collectionIds = collectionIds().distinct().filter { it > 0 })
+            _queue.value = next
+            settings.edit { this[QUEUE_KEY] = json.encodeToString(next) }
+        }
+
     /**
      * Adds a collection to the queue's sources, or takes it out.
      *

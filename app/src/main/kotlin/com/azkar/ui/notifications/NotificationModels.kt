@@ -56,9 +56,9 @@ enum class QueueCadence {
 /** User-owned inputs for the single shared remembrance queue. */
 @Serializable
 data class ReminderQueueConfig(
-    val enabled: Boolean = false,
-    val mode: QueueMode = QueueMode.MANUAL,
-    val cadence: QueueCadence = QueueCadence.INTERVAL,
+    val enabled: Boolean = true,
+    val mode: QueueMode = QueueMode.RANDOM,
+    val cadence: QueueCadence = QueueCadence.CONTINUOUS,
     /**
      * The collections the queue draws from.
      *
@@ -74,7 +74,7 @@ data class ReminderQueueConfig(
     /** Closes the daily window. Read only when [cadence] is [QueueCadence.INTERVAL]. */
     val windowEndMinute: Int = 22 * 60,
     /** The gap between passages, for both cadences. Kept so switching cadence costs the user nothing. */
-    val intervalMinutes: Int = 60,
+    val intervalMinutes: Int = 10,
     /** Larger values mean a greater chance of being skipped during a weighted cycle. */
     val defaultDropChance: Int = 0,
     /** Per-collection skip chance, keyed by the collection's id as a string. */
