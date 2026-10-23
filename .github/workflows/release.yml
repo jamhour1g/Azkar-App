@@ -103,7 +103,7 @@ jobs:
             -Kapp.display-name="Azkar Dev"
             -Kapp.fsname=azkar-dev
             -Kapp.rdns-name=com.azkar.app.dev
-            -Kapp.site.base-url=https://github.com/jamhour1g/Azkar-App/releases/download/dev-preview
+            -Kapp.site.base-url=https://jamhour1g.github.io/Azkar-App/dev-preview
           agree_to_license: 1
           conveyor_version: '22.3'
         env:
@@ -151,31 +151,34 @@ jobs:
             fi
           done < <(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$tag" --jq '.assets[] | [.id, .name] | @tsv')
 
-      - name: Point GitHub Pages to dev preview when no stable release exists
+      - name: Publish the dev update site to GitHub Pages
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          stable_releases="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" \
-            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')"
-          if [[ -n "$stable_releases" ]]; then
-            echo "A stable release exists; keeping the production download page."
-            exit 0
-          fi
-
           git fetch origin gh-pages
           pages_dir="$(mktemp -d "$RUNNER_TEMP/gh-pages.XXXXXX")"
           git worktree add --detach "$pages_dir" FETCH_HEAD
-          cp output/download.html "$pages_dir/download.html"
-          cp output/icon.png "$pages_dir/icon.png"
-          sed -i 's@/releases/download/dev-preview/debian/@/releases/download/dev-preview/@g' \
-            "$pages_dir/download.html"
+
+          # Debian clients request repository metadata through directory paths,
+          # which GitHub Release asset URLs cannot serve. Pages serves the complete
+          # Conveyor tree with its paths intact.
+          rm -rf "$pages_dir/dev-preview"
+          mkdir -p "$pages_dir/dev-preview"
+          cp -a output/. "$pages_dir/dev-preview/"
+
+          stable_releases="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')"
+          if [[ -z "$stable_releases" ]]; then
+            cp output/download.html "$pages_dir/download.html"
+            cp output/icon.png "$pages_dir/icon.png"
+          fi
 
           git -C "$pages_dir" config user.name "github-actions[bot]"
           git -C "$pages_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C "$pages_dir" add download.html icon.png
+          git -C "$pages_dir" add -A dev-preview download.html icon.png
           if git -C "$pages_dir" diff --cached --quiet; then
-            echo "The GitHub Pages dev preview is already current."
+            echo "The GitHub Pages dev update site is already current."
           else
-            git -C "$pages_dir" commit -m "docs: point Pages downloads to dev preview"
+            git -C "$pages_dir" commit -m "build: publish dev update site to Pages"
             git -C "$pages_dir" push origin HEAD:gh-pages
           fi

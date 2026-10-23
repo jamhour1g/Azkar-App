@@ -1,47 +1,95 @@
 # Azkar
 
-A desktop Islamic *azkar* app (morning/evening remembrances, prayers, tasbih)
-built with [Kotlin Compose Multiplatform](https://www.jetbrains.com/lp/compose-multiplatform/)
-for Windows, macOS and Linux. It is the Compose Multiplatform rewrite of the
-JavaFX original in
-[AbdelrahmanBayoumi/Azkar-App](https://github.com/AbdelrahmanBayoumi/Azkar-App).
-Licensed MIT.
+Azkar is a desktop companion for daily adhkar and prayer times, built with Kotlin and
+[Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/) for Windows, macOS,
+and Linux. This repository contains the desktop rewrite of the original
+[JavaFX app](https://github.com/AbdelrahmanBayoumi/Azkar-App).
+
+## What you can do
+
+- Read a bundled library of remembrances with Arabic text, translations, explanations, and sources.
+- Create collections and tags, add your own remembrances, mark favorites, and track recitation
+  progress. Collections can be imported and exported.
+- See prayer times for a chosen location and calculation method, with configurable prayer alerts.
+- Schedule on-screen remembrance reminders from selected library content.
+- Use the interface in English or Arabic, with right-to-left layout, light and dark themes, and
+  adjustable text settings.
+
+The bundled seed library is based on the Muslim Data Azkars dataset. Its source, license, and
+transformation details are recorded in the [seed data notice](data/src/main/resources/db/seed/SEED_DATA_NOTICE.md).
 
 ## Download
 
-Grab the latest build from the
-[download page](https://jamhour1g.github.io/Azkar-App/download.html) — it picks the
-package for the platform you are on and explains how to install it:
+Get the latest stable installer from the [download page](https://jamhour1g.github.io/Azkar-App/download.html).
+The page detects your operating system and provides installation instructions.
 
-- **Windows** — MSIX installer; updates install automatically in the background.
-- **macOS** — Sparkle-based updater prompts when a new build is published.
-- **Linux** — `.deb` package; updates arrive via `apt upgrade` (signed apt repo).
+| Platform | Package | Updates |
+| --- | --- | --- |
+| Windows | MSIX + `.appinstaller` | Background updates through Windows App Installer |
+| macOS | `.app.tar.gz` | Sparkle update prompts |
+| Linux | `.deb` package | Signed apt repository; update with `apt upgrade` |
 
-Releases are cut by pushing a `v*` tag that matches the Gradle version — see
-[docs/releasing.md](docs/releasing.md).
+The macOS build is self-signed, so Gatekeeper may require you to right-click the app and choose
+**Open** the first time. Release and preview details are in [docs/releasing.md](docs/releasing.md).
 
-> **macOS note:** the app is self-signed (no Apple Developer ID yet), so
-> Gatekeeper asks on first launch: right-click → *Open*. Update signatures are
-> still verified end-to-end.
+## Run from source
 
-## Running from source
+Install a **JDK 25**. The Gradle wrapper downloads the required Gradle version and dependencies on
+the first run.
 
 ```bash
-./gradlew :app:run          # JDK 25 (toolchain-pinned)
+git clone https://github.com/jamhour1g/Azkar-App.git
+cd Azkar-App
+./gradlew :app:run
 ```
 
-## Continuous integration
+On Windows, run `.\gradlew.bat :app:run` from the project directory.
 
-The three platforms are built on demand: run the `CI` workflow from the Actions tab
-when you want them checked. A second pipeline runs formatting, static analysis and
-the test suite once a maintainer allows it with the `run-quality` label. See
+## Build and verification
+
+```bash
+./gradlew test
+CI=true ./gradlew build
+```
+
+`test` runs the module test suites. `build` also runs static analysis and formatting checks when
+`CI` is set. In PowerShell, set `$env:CI = "true"` and run `.\gradlew.bat build`.
+Without `CI`, the build applies Spotless formatting locally. Release shrinking uses
+ProGuard and needs a JDK 25 distribution that includes `jmods` (Zulu 25 is used in CI); see
 [docs/ci.md](docs/ci.md).
 
-See [docs/logging.md](docs/logging.md) and
-[docs/notification-overlay.md](docs/notification-overlay.md) for internal
-documentation.
+To render a screen to `app/build/screenshot.png` without opening the app:
+
+```bash
+./gradlew :app:runScreenshot -Pazkar.screenshot.screen=collections
+```
+
+The screenshot task also accepts `home`, `settings`, `collection-detail`, and options such as
+`-Pazkar.screenshot.locale=ar` or `-Pazkar.screenshot.dark=true`.
+
+## Project structure
+
+| Module or directory | Responsibility |
+| --- | --- |
+| `app/` | Compose Desktop UI, app startup, settings, prayer times, and reminders |
+| `domain/` | Library models, repository interfaces, and domain services |
+| `data/` | H2 persistence, schema setup, repositories, and bundled seed data |
+| `buildSrc/` | Shared Gradle build conventions |
+| `docs/` | CI, release, logging, and notification overlay documentation |
+
+The main CI workflow runs for pull requests targeting `dev` or `production`; Windows and macOS
+builds run for production pull requests and manual CI runs. Stable releases are published from
+version tags on `production`, while preview releases are dispatched manually from `dev`. See
+[docs/ci.md](docs/ci.md) and [docs/releasing.md](docs/releasing.md).
+
+For implementation details, see [docs/logging.md](docs/logging.md) and
+[docs/notification-overlay.md](docs/notification-overlay.md).
+
+## License
+
+The application is licensed under the [MIT License](LICENSE). The bundled seed dataset retains the
+separate attribution and license described in its [provenance notice](data/src/main/resources/db/seed/SEED_DATA_NOTICE.md).
 
 ---
 
-Packaged with [Hydraulic Conveyor](https://conveyor.hydraulic.dev) — native
-installers and auto-updates from one config.
+Packages and auto-updates are built with [Hydraulic Conveyor](https://conveyor.hydraulic.dev/).

@@ -13,8 +13,8 @@ channels are built for all three platforms from a Linux runner:
 
 For production, Conveyor generates the download-page HTML and uploads the packages
 into the versioned GitHub Release (`make copied-site`). For dev, the workflow
-generates a site without publishing to the production release feed and attaches
-its files to the `dev-preview` GitHub prerelease.
+attaches build artifacts to the `dev-preview` GitHub prerelease and publishes the
+full update site to a separate directory on GitHub Pages.
 
 ## One packaging path
 
@@ -212,10 +212,17 @@ GitHub prerelease named `dev-preview`. The workflow runs checks before packaging
 The packages are
 labeled **Azkar Dev** and use a
 separate application identity (`com.azkar.app.dev` / `azkar-dev`), so testers
-can install them alongside production. The preview's update feed is hosted at
-`https://github.com/jamhour1g/Azkar-App/releases/download/dev-preview`; it does
-not read or replace the production `releases/latest` feed. Previews do not run
-on ordinary pushes, so they consume Actions only when requested.
+can install them alongside production. The preview's complete update site is
+hosted at `https://jamhour1g.github.io/Azkar-App/dev-preview/`; publishing it to
+GitHub Pages preserves the directory paths required by Debian clients. The
+prerelease still provides a convenient place to download the build artifacts.
+The preview does not read or replace the production `releases/latest` feed.
+Previews do not run on ordinary pushes, so they consume Actions only when
+requested.
+
+Existing dev installations have the old GitHub Release URL saved in their APT
+source. Install the first `.deb` built after this change once; that package
+updates the source to the Pages repository, after which `apt upgrade` works.
 
 The dev preview version uses the release workflow run number. Production keeps
 using the Gradle version and the `v*` tag parity check. Promote code by opening a
