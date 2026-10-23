@@ -5,19 +5,26 @@
         <description>Most recent changes with links to updates.</description>
         <language>en</language>
         <item>
-            <title>Version 0.1.11</title>
+            <title>Version 0.1.12</title>
             <link>https://jamhour1g.github.io/Azkar-App/dev-preview/</link>
-            <sparkle:version>0.1.11.0</sparkle:version>
-            <sparkle:shortVersionString>0.1.11</sparkle:shortVersionString>
+            <sparkle:version>0.1.12.1</sparkle:version>
+            <sparkle:shortVersionString>0.1.12</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
             <description>
-                <![CDATA[ New release: version 0.1.11 ]]>
+                <![CDATA[ New release: version 0.1.12 ]]>
             </description>
-            <pubDate>Fri, 23 Oct 2026 12:13:34 GMT</pubDate>
-            <enclosure url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.11-mac-aarch64.zip" 
-                       length="72853265" 
+            <pubDate>Fri, 23 Oct 2026 12:25:21 GMT</pubDate>
+            <enclosure url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.12-1-mac-aarch64.zip" 
+                       length="72853182" 
                        type="application/octet-stream" 
-                       sparkle:edSignature="+fwli1WwSHH2mmt4neyzMubWe39MlIeZdumFREBzjiM8XegjMA0ebQ7slbU3sd4BpJLD6EwvoV+BPDc3c53LBg=="/>
+                       sparkle:edSignature="7rD4kdF5U3pHIWIPqcRZ3x3bnwsUwGv3EXyMHRlnuY0MfXOQdehIF8P/HqFQpuTW4Gh+O8rjdWcUlIYQJEcTCw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.11-0.1.12.1-mac-aarch64.delta"
+                           sparkle:deltaFrom="0.1.11.0"
+                           length="82086"
+                           type="application/octet-stream"
+                           sparkle:edSignature="Ix2Cm+rRIPXt/GM/rjzoMQKKbRP0FVf/gZVIalnvohjamjdeFmJizeUT2TQZM+QxWRolWz88CtNLmeb5TDuBDA=="/>
+            </sparkle:deltas>
         </item>
     </channel>
 </rss>

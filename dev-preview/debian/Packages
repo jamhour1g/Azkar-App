@@ -8,7 +8,7 @@ Package: jamhour1g-azkar-dev
 Priority: optional
 Provides: jamhour1g-azkar-dev
 Section: misc
-Version: 0.1.11
-Filename: debian/jamhour1g-azkar-dev_0.1.11_amd64.deb
-Size: 65268328
-SHA256: 30f4498e98ba683e604fec9111fd36fc0ceffc81ca28773e9feaee32e8930537
+Version: 0.1.12-1
+Filename: debian/jamhour1g-azkar-dev_0.1.12-1_amd64.deb
+Size: 65272480
+SHA256: edd73bfa638e3b2dd293d8e3cdc3d35e1a8c6fe67dd7e4d45841d832ee82608e

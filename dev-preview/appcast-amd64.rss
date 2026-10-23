@@ -5,19 +5,26 @@
         <description>Most recent changes with links to updates.</description>
         <language>en</language>
         <item>
-            <title>Version 0.1.11</title>
+            <title>Version 0.1.12</title>
             <link>https://jamhour1g.github.io/Azkar-App/dev-preview/</link>
-            <sparkle:version>0.1.11.0</sparkle:version>
-            <sparkle:shortVersionString>0.1.11</sparkle:shortVersionString>
+            <sparkle:version>0.1.12.1</sparkle:version>
+            <sparkle:shortVersionString>0.1.12</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
             <description>
-                <![CDATA[ New release: version 0.1.11 ]]>
+                <![CDATA[ New release: version 0.1.12 ]]>
             </description>
-            <pubDate>Fri, 23 Oct 2026 12:13:35 GMT</pubDate>
-            <enclosure url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.11-mac-amd64.zip" 
-                       length="74502884" 
+            <pubDate>Fri, 23 Oct 2026 12:25:21 GMT</pubDate>
+            <enclosure url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.12-1-mac-amd64.zip" 
+                       length="74502770" 
                        type="application/octet-stream" 
-                       sparkle:edSignature="YhhieVgm/COmTZbnqvMT3fR3m0rbg9O01B0vOa48PA9c05zOZSdxe1/ZKxkTVExFLYoK+SbLqibHoR+ods0DDA=="/>
+                       sparkle:edSignature="zU3YasCbEZCcd4ZuzZmMu3R/ZykIDUXnr53BDXihxnCj5w13D5KheooCd82qipcgKgTEMndeKj7W/COVE0Q6BQ=="/>
+            <sparkle:deltas>
+                <enclosure url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.11-0.1.12.1-mac-amd64.delta"
+                           sparkle:deltaFrom="0.1.11.0"
+                           length="81202"
+                           type="application/octet-stream"
+                           sparkle:edSignature="Mw1m3UANEy7drrj9bfBjgC2cEo5Pb6XEeOy40r8u9MNnpHL5bzPZZp5mlojbs7WL2mpIEbSNqRfdidoRQKi0Cg=="/>
+            </sparkle:deltas>
         </item>
     </channel>
 </rss>

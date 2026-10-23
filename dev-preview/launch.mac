@@ -6,8 +6,8 @@
 
 set -e
 
-mac_amd64_zip_url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.11-mac-amd64.zip"
-mac_aarch64_zip_url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.11-mac-aarch64.zip"
+mac_amd64_zip_url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.12-1-mac-amd64.zip"
+mac_aarch64_zip_url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.12-1-mac-aarch64.zip"
 app_name="Azkar Dev"
 
 arch=$( arch )
