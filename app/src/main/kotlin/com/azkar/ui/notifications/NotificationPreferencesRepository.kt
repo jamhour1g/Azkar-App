@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.home.PrayerKey
 import com.azkar.ui.notifications.presentation.NotificationPresentationSettings
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +23,7 @@ import kotlinx.serialization.json.Json
 /** Owns the persisted settings shared by the manager UI and the process notification service. */
 class NotificationPreferencesRepository(
     private val settings: SettingsStore,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val mutex = Mutex()
@@ -53,33 +56,75 @@ class NotificationPreferencesRepository(
     fun observe(scope: CoroutineScope) {
         scope.launch {
             settings.changes.collect { stored ->
-                _queue.value = decode(stored[QUEUE_KEY], ReminderQueueConfig())
-                _queueProgress.value = decode(stored[QUEUE_PROGRESS_KEY], ReminderQueueProgress())
-                _prayerLocation.value = decode(stored[PRAYER_LOCATION_KEY], PrayerLocationSettings())
-                _prayerProgress.value = decode(stored[PRAYER_PROGRESS_KEY], PrayerNotificationProgress())
+                _queue.value = decode(stored[QUEUE_KEY], QUEUE_KEY.name, ReminderQueueConfig())
+                _queueProgress.value =
+                    decode(stored[QUEUE_PROGRESS_KEY], QUEUE_PROGRESS_KEY.name, ReminderQueueProgress())
+                _prayerLocation.value =
+                    decode(stored[PRAYER_LOCATION_KEY], PRAYER_LOCATION_KEY.name, PrayerLocationSettings())
+                _prayerProgress.value =
+                    decode(stored[PRAYER_PROGRESS_KEY], PRAYER_PROGRESS_KEY.name, PrayerNotificationProgress())
                 _prayerFlags.value = PrayerKey.entries.associateWith { key -> stored[prayerKey(key)] ?: true }
                 _startOnLogin.value = stored[START_ON_LOGIN_KEY] ?: false
-                _presentation.value = decode(stored[PRESENTATION_KEY], NotificationPresentationSettings())
+                _presentation.value =
+                    decode(stored[PRESENTATION_KEY], PRESENTATION_KEY.name, NotificationPresentationSettings())
             }
         }
     }
 
     suspend fun refresh() {
         val stored = settings.changes.first()
-        _queue.value = decode(stored[QUEUE_KEY], ReminderQueueConfig())
-        _queueProgress.value = decode(stored[QUEUE_PROGRESS_KEY], ReminderQueueProgress())
-        _prayerLocation.value = decode(stored[PRAYER_LOCATION_KEY], PrayerLocationSettings())
-        _prayerProgress.value = decode(stored[PRAYER_PROGRESS_KEY], PrayerNotificationProgress())
+        _queue.value = decode(stored[QUEUE_KEY], QUEUE_KEY.name, ReminderQueueConfig())
+        _queueProgress.value =
+            decode(stored[QUEUE_PROGRESS_KEY], QUEUE_PROGRESS_KEY.name, ReminderQueueProgress())
+        _prayerLocation.value =
+            decode(stored[PRAYER_LOCATION_KEY], PRAYER_LOCATION_KEY.name, PrayerLocationSettings())
+        _prayerProgress.value =
+            decode(stored[PRAYER_PROGRESS_KEY], PRAYER_PROGRESS_KEY.name, PrayerNotificationProgress())
         _prayerFlags.value = PrayerKey.entries.associateWith { key -> stored[prayerKey(key)] ?: true }
         _startOnLogin.value = stored[START_ON_LOGIN_KEY] ?: false
-        _presentation.value = decode(stored[PRESENTATION_KEY], NotificationPresentationSettings())
+        _presentation.value =
+            decode(stored[PRESENTATION_KEY], PRESENTATION_KEY.name, NotificationPresentationSettings())
+        logger.info { "Restored notification preferences (collections=${_queue.value.collectionIds.size})" }
     }
 
     suspend fun updateQueue(transform: (ReminderQueueConfig) -> ReminderQueueConfig) =
         mutex.withLock {
-            val next = transform(_queue.value).validated()
+            val previous = _queue.value
+            val next = transform(previous).validated()
             _queue.value = next
-            settings.edit { this[QUEUE_KEY] = json.encodeToString(next) }
+            if (previous != next) {
+                val tuningOnly =
+                    previous.copy(
+                        intervalMinutes = next.intervalMinutes,
+                        defaultDropChance = next.defaultDropChance,
+                        collectionDropChances = next.collectionDropChances,
+                    ) == next
+                if (tuningOnly) {
+                    logger.atDebug {
+                        message = "Saving reminder queue tuning"
+                        payload =
+                            mapOf(
+                                "intervalMinutes" to next.intervalMinutes,
+                                "defaultDropChance" to next.defaultDropChance,
+                                "collectionDropChanceCount" to next.collectionDropChances.size,
+                            )
+                    }
+                } else {
+                    logger.atInfo {
+                        message = "Saving reminder queue"
+                        payload =
+                            mapOf(
+                                "enabled" to next.enabled,
+                                "mode" to next.mode,
+                                "cadence" to next.cadence,
+                                "intervalMinutes" to next.intervalMinutes,
+                                "activeDayCount" to next.activeDays.size,
+                                "collectionCount" to next.collectionIds.size,
+                            )
+                    }
+                }
+            }
+            settings.edit(QUEUE_KEY.name) { this[QUEUE_KEY] = json.encodeToString(next) }
         }
 
     /**
@@ -95,7 +140,7 @@ class NotificationPreferencesRepository(
         collectionId: Long,
         enabled: Boolean,
     ) = mutex.withLock {
-        val stored = decode(settings.read(QUEUE_KEY), ReminderQueueConfig())
+        val stored = decode(settings.read(QUEUE_KEY), QUEUE_KEY.name, ReminderQueueConfig())
         val next =
             stored
                 .copy(
@@ -107,51 +152,89 @@ class NotificationPreferencesRepository(
                         },
                 ).validated()
         _queue.value = next
-        settings.edit { this[QUEUE_KEY] = json.encodeToString(next) }
+        logger.info { "Saving reminder collection source (collectionId=$collectionId, enabled=$enabled)" }
+        settings.edit(QUEUE_KEY.name) { this[QUEUE_KEY] = json.encodeToString(next) }
     }
 
     suspend fun saveQueueProgress(progress: ReminderQueueProgress) =
         mutex.withLock {
             _queueProgress.value = progress
-            settings.edit { this[QUEUE_PROGRESS_KEY] = json.encodeToString(progress) }
+            settings.edit(QUEUE_PROGRESS_KEY.name) { this[QUEUE_PROGRESS_KEY] = json.encodeToString(progress) }
         }
 
     suspend fun savePrayerLocation(location: PrayerLocationSettings) =
         mutex.withLock {
             _prayerLocation.value = location
-            settings.edit { this[PRAYER_LOCATION_KEY] = json.encodeToString(location) }
+            logger.info {
+                "Saving prayer location settings (method=${location.method}, autoDetect=${location.autoDetect})"
+            }
+            settings.edit(PRAYER_LOCATION_KEY.name) { this[PRAYER_LOCATION_KEY] = json.encodeToString(location) }
         }
 
     suspend fun savePrayerProgress(progress: PrayerNotificationProgress) =
         mutex.withLock {
             _prayerProgress.value = progress
-            settings.edit { this[PRAYER_PROGRESS_KEY] = json.encodeToString(progress) }
+            settings.edit(PRAYER_PROGRESS_KEY.name) { this[PRAYER_PROGRESS_KEY] = json.encodeToString(progress) }
         }
 
     suspend fun setPrayerEnabled(
         key: PrayerKey,
         enabled: Boolean,
     ) {
-        settings.edit { this[prayerKey(key)] = enabled }
+        logger.info { "Saving prayer notification setting (prayer=${key.id}, enabled=$enabled)" }
+        settings.edit("prayer.${key.id}.enabled") { this[prayerKey(key)] = enabled }
     }
 
     suspend fun updatePresentation(transform: (NotificationPresentationSettings) -> NotificationPresentationSettings) =
         mutex.withLock {
-            val next = transform(_presentation.value).validated()
+            val previous = _presentation.value
+            val next = transform(previous).validated()
             _presentation.value = next
-            settings.edit { this[PRESENTATION_KEY] = json.encodeToString(next) }
+            if (previous != next) {
+                val sizeAdjustmentOnly =
+                    previous.copy(cardWidthDp = next.cardWidthDp, cardHeightDp = next.cardHeightDp) == next &&
+                        (previous.cardWidthDp != next.cardWidthDp || previous.cardHeightDp != next.cardHeightDp)
+                if (sizeAdjustmentOnly) {
+                    logger.debug {
+                        "Saving notification card size (${next.cardWidthDp}x${next.cardHeightDp} dp)"
+                    }
+                } else {
+                    logger.atInfo {
+                        message = "Saving notification presentation"
+                        payload =
+                            mapOf(
+                                "durationMode" to next.durationMode,
+                                "durationSeconds" to next.durationSeconds,
+                                "maxVisible" to next.maxVisible,
+                                "placement" to next.placement,
+                                "cardSizing" to next.cardSizing,
+                                "cardWidthDp" to next.cardWidthDp,
+                                "cardHeightDp" to next.cardHeightDp,
+                            )
+                    }
+                }
+            }
+            settings.edit(PRESENTATION_KEY.name) { this[PRESENTATION_KEY] = json.encodeToString(next) }
         }
 
     suspend fun setStartOnLogin(enabled: Boolean) =
         mutex.withLock {
             _startOnLogin.value = enabled
-            settings.edit { this[START_ON_LOGIN_KEY] = enabled }
+            logger.info { "Saving start-on-login preference (enabled=$enabled)" }
+            settings.edit(START_ON_LOGIN_KEY.name) { this[START_ON_LOGIN_KEY] = enabled }
         }
 
     private inline fun <reified T> decode(
         value: String?,
+        key: String,
         fallback: T,
-    ): T = value?.let { runCatching { json.decodeFromString<T>(it) }.getOrNull() } ?: fallback
+    ): T =
+        value?.let {
+            runCatching { json.decodeFromString<T>(it) }
+                .onFailure { failure ->
+                    logger.warn(failure) { "Unable to decode stored notification setting [$key]; using defaults" }
+                }.getOrNull()
+        } ?: fallback
 
     private fun ReminderQueueConfig.validated(): ReminderQueueConfig =
         copy(

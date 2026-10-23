@@ -105,6 +105,7 @@ class ExposedRecitationRepository(
         deltas: Map<Long, Int>,
     ): Int =
         transactions.tx(logger, "Failed to record recitation progress on collection id=$collectionId") {
+            logger.debug { "Bumping recitation progress collectionId=$collectionId count=${deltas.size}" }
             val timestamp = now()
             deltas.entries.count { (remembranceId, delta) ->
                 // Nothing to add is nothing to write: reaching here with a stored row would
@@ -187,6 +188,9 @@ class ExposedRecitationRepository(
             logger,
             "Failed to set the count of remembrance id=$remembranceId in collection id=$collectionId",
         ) {
+            logger.debug {
+                "Setting recitation count collectionId=$collectionId remembranceId=$remembranceId count=$count"
+            }
             val timestamp = now()
             RecitationProgressTable.deleteWhere {
                 (RecitationProgressTable.collectionId eq collectionId) and
@@ -203,6 +207,7 @@ class ExposedRecitationRepository(
 
     override suspend fun reset(collectionId: Long): Int =
         transactions.tx(logger, "Failed to reset the recitation progress of collection id=$collectionId") {
+            logger.debug { "Resetting recitation progress collectionId=$collectionId" }
             RecitationProgressTable
                 .deleteWhere { RecitationProgressTable.collectionId eq collectionId }
         }

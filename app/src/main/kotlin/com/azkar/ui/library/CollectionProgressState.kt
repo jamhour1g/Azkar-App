@@ -83,7 +83,11 @@ class CollectionProgressState(
         write(collectionId, stored, remembranceId, after, hadRow = true)
         scope.launch {
             runCatching { gateway.recordRecitation(collectionId, mapOf(remembranceId to times)) }
-                .onFailure { failure ->
+                .onSuccess {
+                    logger.debug {
+                        "Recorded $times recitations for remembrance $remembranceId in collection $collectionId"
+                    }
+                }.onFailure { failure ->
                     logger.error(failure) { "Unable to record $times recitations in collection $collectionId" }
                     // A count that was zero before the write has no row to restore, so the row the
                     // optimistic write created is taken away again rather than left claiming that
@@ -113,8 +117,10 @@ class CollectionProgressState(
         byCollection = byCollection + (collectionId to emptyList())
         scope.launch {
             runCatching { gateway.resetProgress(collectionId) }
-                .onSuccess { onSuccess() }
-                .onFailure { failure ->
+                .onSuccess {
+                    logger.info { "Reset recitation progress for collection $collectionId" }
+                    onSuccess()
+                }.onFailure { failure ->
                     logger.error(failure) { "Unable to reset the recitation progress of collection $collectionId" }
                     if (previous != null) {
                         byCollection = byCollection + (collectionId to previous)

@@ -159,8 +159,8 @@ The level answers "how would anyone find out this happened", not "how bad does i
 
 | Level | Use it for | Examples in the codebase |
 | --- | --- | --- |
-| `debug` | Lifecycle chatter that only matters while developing. | Creating the Exposed database, closing the pool, starting a warm-up, the schema already being current. |
-| `info` | A one-shot milestone, once per process, that a user support log should show. | Application start and shutdown, the seed counts, "applying N schema statements", the reminder schedule. |
+| `debug` | Frequent reads and intermediate details useful while investigating a problem. | Scheduler decisions, query result counts, retries, the schema already being current. |
+| `info` | User actions and lifecycle milestones that a support log should show. | Navigation, collection changes and imports, notification configuration and delivery, database initialization, application start and shutdown. |
 | `warn` | Degradation that is either recovered or will be reported again by whoever rethrows. | A seed resource with no rows, a locale that could not be persisted, a persistence call that is about to become a `PersistenceFailureException`. |
 | `error` | A failure that something swallowed. Use this whenever a `runCatching`, an `onFailure`, or a coroutine boundary discards the throwable — nothing else will surface it. | The database warm-up job, every UI `runCatching` in `LibraryState`/`HomeScreen`/`HomeState`, `DatabaseManager.open()`, `DataSourceConfig`. |
 
@@ -185,7 +185,10 @@ AZKAR_LOG_LEVEL=DEBUG ./gradlew :app:run     # from source
 AZKAR_LOG_LEVEL=TRACE -Dlogback.configurationFile=/path/to/logback.xml ./azkar
 ```
 
-`INFO` is the shipped default. `DEBUG` adds the lifecycle chatter. `TRACE` additionally enables
+`INFO` is the shipped default. It records the operations leading up to a failure with IDs, counts,
+and configuration choices. Keep content, search terms, and location details out of these messages.
+`DEBUG` adds frequent reads and intermediate decisions; polling and per-item progress belong here.
+`TRACE` additionally enables
 per-statement filtering, which is far too noisy to leave on outside a debugging session.
 
 The console pattern is:
@@ -196,9 +199,10 @@ The console pattern is:
 
 `%kvp` is load-bearing, not decoration: it is what renders an `atX { payload = … }` map. Logback
 emits nothing at all for `%kvp` when an event has no key-value pairs, so a plain `logger.info { … }`
-is unaffected. The same file contains a commented-out `RollingFileAppender` writing to `logs/azkar.log`
-with 30 days of history; uncomment it together with its `<appender-ref>` when a bug report needs a
-file to attach.
+is unaffected. The app always writes a rotating log to `~/.azkar/logs/azkar.log`; rotated files are
+compressed, split at 10 MB, and retained for 14 days with a 100 MB archive cap. Attach that directory when
+reporting a problem. The location follows the same `user.home` convention as the database and
+settings files.
 
 To quieten a noisy third party, add a `<logger name="…" level="…"/>` above `<root>`, as
 `com.zaxxer.hikari` already does.

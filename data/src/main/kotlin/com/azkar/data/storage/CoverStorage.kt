@@ -41,10 +41,10 @@ class CoverStorage(
             Files.createDirectories(directory)
             Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING)
         } catch (failure: IOException) {
-            logger.error(failure) { "Unable to store the cover image [$source]" }
+            logger.error(failure) { "Unable to store the selected cover image" }
             throw IllegalStateException("Unable to store the cover image [$source]", failure)
         }
-        logger.debug { "Stored a cover image as [$name]" }
+        logger.info { "Stored a collection cover image as [$name]" }
         return name
     }
 
@@ -72,7 +72,7 @@ class CoverStorage(
             logger.error(failure) { "Unable to store an imported cover image" }
             throw IllegalStateException("Unable to store an imported cover image", failure)
         }
-        logger.debug { "Stored an imported cover image as [$name]" }
+        logger.debug { "Stored an imported collection cover image as [$name]" }
         return name
     }
 
@@ -101,15 +101,16 @@ class CoverStorage(
             return null
         }
         return runCatching { Files.readAllBytes(file) }
-            .onFailure { failure -> logger.warn(failure) { "Unable to read the cover image [$coverImagePath]" } }
+            .onFailure { failure -> logger.warn(failure) { "Unable to read the stored cover image [$coverImagePath]" } }
             .getOrNull()
     }
 
     /** Removes one stored cover. Missing is not a failure — there is nothing left to remove. */
     fun delete(coverImagePath: String) {
         runCatching { Files.deleteIfExists(resolve(coverImagePath)) }
+            .onSuccess { deleted -> if (deleted) logger.debug { "Deleted stored cover image [$coverImagePath]" } }
             .onFailure { failure ->
-                logger.warn(failure) { "Unable to delete the cover image [$coverImagePath]" }
+                logger.warn(failure) { "Unable to delete the stored cover image [$coverImagePath]" }
             }
     }
 
@@ -124,7 +125,7 @@ class CoverStorage(
                 }
             }
         }.getOrElse { failure ->
-            logger.warn(failure) { "Unable to list the cover images directory [$directory]" }
+            logger.warn(failure) { "Unable to list stored cover images" }
             emptySet()
         }
 

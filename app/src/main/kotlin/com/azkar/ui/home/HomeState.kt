@@ -14,6 +14,8 @@ import com.azkar.generated.resources.favoriteAzkarEnglish
 import com.azkar.generated.resources.favoriteAzkarSource
 import com.azkar.i18n.RemembranceI18n
 import com.azkar.settings.SettingsStore
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
@@ -178,6 +180,7 @@ class FavoritesState(
 class NotificationSettingsState(
     private val store: SettingsStore,
     private val scope: CoroutineScope,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     /**
      * The stored switch for each prayer; [PrayerTimesState] applies these to the rendered rows.
@@ -205,8 +208,9 @@ class NotificationSettingsState(
      * transaction — an observer must never see the master switch applied to only some of its rows.
      */
     fun onGlobalToggleChanged(enabled: Boolean) {
+        logger.info { "Setting all prayer notifications enabled=$enabled" }
         scope.launch {
-            store.edit {
+            store.edit("all prayer notification switches") {
                 PrayerKey.entries.forEach { key -> this[flagKeyFor(key)] = enabled }
             }
         }
@@ -217,7 +221,8 @@ class NotificationSettingsState(
         key: PrayerKey,
         enabled: Boolean,
     ) {
-        scope.launch { store.edit { this[flagKeyFor(key)] = enabled } }
+        logger.info { "Setting prayer notification ${key.id} enabled=$enabled" }
+        scope.launch { store.edit(flagKeyFor(key).name) { this[flagKeyFor(key)] = enabled } }
     }
 
     private fun flagKeyFor(key: PrayerKey): Preferences.Key<Boolean> = booleanPreferencesKey("prayer.${key.id}.enabled")

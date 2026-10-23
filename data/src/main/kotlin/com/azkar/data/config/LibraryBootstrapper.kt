@@ -92,6 +92,7 @@ class LibraryBootstrapper(
             // Recorded last, so a run that fails part way leaves the flag clear and the next launch
             // tries again rather than believing a dataset it never finished writing.
             seedState.markSeeded()
+            logger.info { "Shipped library initialization completed" }
         }
 
         ensureUncategorizedShelf()

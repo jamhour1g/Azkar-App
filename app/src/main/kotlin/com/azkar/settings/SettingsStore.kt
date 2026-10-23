@@ -56,8 +56,11 @@ class SettingsStore(
      * Fire-and-forget by design: the caller has already moved its own state on, and [changes] is
      * what tells it whether the write landed. A caller that needs to know the outcome awaits [edit].
      */
-    fun write(block: MutablePreferences.() -> Unit) {
-        scope.launch { edit(block) }
+    fun write(
+        operation: String = "setting change",
+        block: MutablePreferences.() -> Unit,
+    ) {
+        scope.launch { edit(operation, block) }
     }
 
     /**
@@ -79,7 +82,7 @@ class SettingsStore(
      * the master notification switch writing all five bells is the case that matters.
      *
      * A write can still fail, and the caller has already moved its own state on, so the failure is
-     * logged with the key, the only fact that says what was lost, and left to be corrected by the
+     * logged with the [operation] identifier and left to be corrected by the
      * next [changes] emission. DataStore commits atomically, so unlike the `java.util.prefs` flush
      * it replaces, a failure here cannot leave a partially applied setting behind.
      *
@@ -93,21 +96,26 @@ class SettingsStore(
      * Swallows the failure deliberately, unlike [degradingToEmpty]: a caller awaiting this has
      * usually already repainted, and there is nothing useful it could do with the exception.
      */
-    suspend fun edit(block: MutablePreferences.() -> Unit) {
+    suspend fun edit(
+        operation: String = "setting change",
+        block: MutablePreferences.() -> Unit,
+    ) {
         var attempt = 0
         while (true) {
             val failure =
                 runCatching { dataStore.edit(block) }
+                    .onSuccess { logger.debug { "Persisted [$operation]" } }
                     .exceptionOrNull() ?: return
             if (failure is CancellationException) {
                 throw failure
             }
             if (failure is IOException && attempt < WRITE_ATTEMPTS - 1) {
                 attempt += 1
+                logger.debug { "Retrying [$operation] after an IO failure (attempt=${attempt + 1}/$WRITE_ATTEMPTS)" }
                 delay(WRITE_RETRY_MILLIS)
                 continue
             }
-            logger.error(failure) { "Unable to persist a setting change" }
+            logger.error(failure) { "Unable to persist [$operation]" }
             return
         }
     }

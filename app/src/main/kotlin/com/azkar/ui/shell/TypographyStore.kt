@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.theme.AppTypography
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * Reads and writes the reader's typographic choice: which face, and how large.
@@ -23,6 +25,7 @@ import com.azkar.ui.theme.AppTypography
 @Stable
 class TypographyStore(
     private val settings: SettingsStore,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     /**
      * The stored choice, clamped on the way in.
@@ -34,12 +37,23 @@ class TypographyStore(
     suspend fun read(): AppTypography {
         val family = settings.read(familyKey).orEmpty()
         val scale = settings.read(scaleKey) ?: AppTypography.DEFAULT_SCALE_PERCENT
-        return AppTypography(family = family, scalePercent = scale).coerced()
+        return AppTypography(family = family, scalePercent = scale).coerced().also {
+            logger.info { "Restored typography preferences (scale=${it.scalePercent}%)" }
+        }
     }
 
     /** Stores [typography] for the next run. Fire and forget: a lost write costs one choice. */
     fun persist(typography: AppTypography) {
-        settings.write {
+        logger.debug {
+            "Saving typography preferences (family=${typography.family.ifBlank {
+                "default"
+            }}, scale=${typography.scalePercent}%)"
+        }
+        settings.write(
+            "typography preferences family=${typography.family.ifBlank {
+                "default"
+            }}, scale=${typography.scalePercent}%",
+        ) {
             this[familyKey] = typography.family
             this[scaleKey] = typography.scalePercent
         }

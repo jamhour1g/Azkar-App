@@ -3,6 +3,8 @@ package com.azkar.ui.shell
 import androidx.compose.runtime.Stable
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.azkar.settings.SettingsStore
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * Reads and writes the stored colour preference.
@@ -27,6 +29,7 @@ import com.azkar.settings.SettingsStore
 @Stable
 class ThemePreferenceStore(
     private val settings: SettingsStore,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     /**
      * The stored colour preference for this run, defaulting to [ThemePreference.SYSTEM].
@@ -41,11 +44,15 @@ class ThemePreferenceStore(
      * two ways of reading a setting disagreed about failures, and this one could not tell an
      * unreadable store from a missing value.
      */
-    suspend fun read(): ThemePreference = settings.read(key).themePreferenceOrSystemTheme()
+    suspend fun read(): ThemePreference =
+        settings.read(key).themePreferenceOrSystemTheme().also {
+            logger.info { "Restored theme preference: $it" }
+        }
 
     /** Stores [preference] for the next run. Fire and forget: a lost write costs one theme choice. */
     fun persist(preference: ThemePreference) {
-        settings.write { this[key] = preference.name }
+        logger.info { "Saving theme preference: $preference" }
+        settings.write("theme preference=${preference.name}") { this[key] = preference.name }
     }
 
     /**

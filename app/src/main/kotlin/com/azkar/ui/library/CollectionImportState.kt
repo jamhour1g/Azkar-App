@@ -114,6 +114,7 @@ class CollectionImportState(
         isUnreadable = false
         decoded = transfers
         plan = CollectionImport.plan(transfers, collections.allCollections, collections.allRemembrances)
+        logger.debug { "Prepared ${transfers.size} collections for ${format.name} import preview" }
     }
 
     /**
@@ -186,11 +187,17 @@ class CollectionImportState(
     fun exportText(
         collection: RemembranceCollection,
         coverImageBase64: String? = null,
-    ): String =
-        CollectionExport.exportAs(
-            collection,
-            format,
-            collections.presenter::localizedPrimaryText,
-            coverImageBase64,
-        )
+    ): String {
+        val text =
+            CollectionExport.exportAs(
+                collection,
+                format,
+                collections.presenter::localizedPrimaryText,
+                coverImageBase64,
+            )
+        logger.debug {
+            "Prepared ${format.name} export for collection ${collection.id} (${collection.members.size} members)"
+        }
+        return text
+    }
 }

@@ -39,7 +39,9 @@ import java.util.Locale
  * Both handlers are expected to be safe to call from a foreign thread and to marshal to whatever
  * thread owns the state they touch; both of the two implementations already do.
  */
-class NotificationActionRouter {
+class NotificationActionRouter(
+    private val logger: KLogger = KotlinLogging.logger {},
+) {
     @Volatile
     private var beforeNavigate: (NotificationAction) -> Unit = {}
 
@@ -75,6 +77,14 @@ class NotificationActionRouter {
     fun dispatch(target: NotificationAction) {
         beforeNavigate(target)
         navigate(target)
+        when (target) {
+            is NotificationAction.Remembrance ->
+                logger.info {
+                    "Dispatched remembrance action (remembranceId=${target.id})"
+                }
+            NotificationAction.PrayerTimes -> logger.info { "Dispatched prayer-times action" }
+            NotificationAction.OpenApp -> logger.info { "Dispatched open-app action" }
+        }
     }
 
     /**
@@ -90,6 +100,7 @@ class NotificationActionRouter {
         favorite: Boolean,
     ) {
         favoriteChanged(id, favorite)
+        logger.info { "Updated remembrance favorite from notification (remembranceId=$id, favorite=$favorite)" }
     }
 }
 
@@ -139,6 +150,7 @@ class NotificationRuntime(
     fun start(scope: CoroutineScope) {
         synchronized(startLock) {
             if (schedulerJob?.isActive == true) return
+            logger.info { "Starting notification scheduler" }
             preferences.observe(scope)
             val startedAt = clock()
             schedulerJob =
@@ -225,6 +237,7 @@ class NotificationRuntime(
                     graceMinutes = PRAYER_GRACE_MINUTES,
                 )
             ) {
+                logger.debug { "Prayer notification is due (prayer=${key.id})" }
                 val updated =
                     progress.copy(
                         lastDeliveredLocalDates = progress.lastDeliveredLocalDates + (key.id to dateKey),
@@ -244,6 +257,7 @@ class NotificationRuntime(
                         content = content,
                     ),
                 )
+                logger.info { "Submitted prayer notification to presenter (prayer=${key.id})" }
             }
         }
     }
@@ -286,6 +300,7 @@ class NotificationRuntime(
         since: LocalDateTime,
     ) {
         val slot = DeliveryPolicy.dueQueueSlot(now = now, config = config, since = since) ?: return
+        logger.debug { "Queue slot is due (slot=$slot, cadence=${config.cadence})" }
         deliverQueueAtSlot(slot, config)
     }
 
@@ -295,7 +310,10 @@ class NotificationRuntime(
         config: ReminderQueueConfig,
     ) {
         val progress = preferences.queueProgress.value
-        if (progress.lastDeliveredSlot == slot.toString()) return
+        if (progress.lastDeliveredSlot == slot.toString()) {
+            logger.debug { "Skipping previously delivered queue slot (slot=$slot)" }
+            return
+        }
 
         val snapshot = collections.fetchSnapshot()
         val sources = resolveQueueSources(snapshot, config) ?: return
@@ -305,6 +323,7 @@ class NotificationRuntime(
         if (cycle.cycleOrder.isEmpty()) {
             // Consume an all-skipped weighted cycle once for this interval.
             preferences.saveQueueProgress(cycle.copy(lastDeliveredSlot = slot.toString()))
+            logger.debug { "Consuming queue slot with no eligible reminders (slot=$slot)" }
             return
         }
 
@@ -347,6 +366,7 @@ class NotificationRuntime(
                     content = content,
                 ),
             )
+            logger.info { "Submitted remembrance notification to presenter (remembranceId=$id, slot=$slot)" }
             true
         } ?: false
     }
@@ -422,6 +442,9 @@ class NotificationRuntime(
         val selection = QueueSources.select(snapshot.collections, config, snapshot.reminderPicksCollectionId)
         val availableIds = selection.orderedIds.filter { id -> snapshot.remembrances.any { it.id == id } }
         return if (availableIds.isEmpty()) {
+            logger.debug {
+                "No available remembrances in reminder sources (selectedCollections=${config.collectionIds.size})"
+            }
             null
         } else {
             ResolvedQueueSources(selection.owningCollections, availableIds)
@@ -449,6 +472,9 @@ class NotificationRuntime(
                         ?: config.defaultDropChance
                 },
             )
+        logger.info {
+            "Built reminder cycle (available=${sources.availableIds.size}, selected=${order.size}, mode=${config.mode})"
+        }
         return ReminderQueueProgress(sourceFingerprint = fingerprint, cycleOrder = order)
             .also { preferences.saveQueueProgress(it) }
     }

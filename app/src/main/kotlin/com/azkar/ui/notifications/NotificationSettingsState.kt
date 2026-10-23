@@ -199,11 +199,13 @@ class NotificationSettingsState(
                         notice = LocationNotice.Unavailable(reason = null)
                         return@launch
                     }
+                logger.info { "Started prayer-time location detection" }
                 runCatching { detector.detect() }
                     .onSuccess { detected ->
                         val updated = detected.copy(method = preferences.prayerLocation.value.method)
                         preferences.savePrayerLocation(updated)
                         locationDraft = PrayerLocationDraft.of(preferences.prayerLocation.value)
+                        logger.info { "Completed prayer-time location detection" }
                         notice = LocationNotice.Detected(updated.city)
                     }.onFailure { failure ->
                         logger.error(failure) { "Unable to detect the prayer-time location" }
@@ -252,11 +254,13 @@ class NotificationSettingsState(
                     return
                 }
             isSearching = true
+            logger.debug { "Started place search" }
             runCatching { client.searchPlaces(query, searchLanguage()) }
                 .onSuccess { results ->
                     // A slower early answer must not overwrite a later query's list.
                     if (searchQuery.trim() != query) return@onSuccess
                     suggestions = results
+                    logger.debug { "Completed place search (results=${results.size})" }
                     notice = if (results.isEmpty()) LocationNotice.NoResults else null
                 }.onFailure { failure ->
                     logger.warn(failure) { "Unable to search for places" }
@@ -468,6 +472,7 @@ class NotificationSettingsState(
                     .setEnabled(enabled)
                     .onSuccess {
                         preferences.setStartOnLogin(enabled)
+                        logger.info { "Updated desktop start-on-login registration (enabled=$enabled)" }
                         notice = null
                     }.onFailure { failure ->
                         logger.error(failure) { "Unable to register Azkar to start on login" }

@@ -69,6 +69,8 @@ import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ShowToast
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -556,6 +558,7 @@ private fun DetailShareHost(
     dialogs: DetailDialogState,
     collections: CollectionsCatalogue,
     showToast: ShowToast,
+    logger: KLogger = KotlinLogging.logger {},
 ) {
     val toastTitle = stringResource(Res.string.collectionsToastTitle)
     val copied = stringResource(Res.string.collectionShareCopied)
@@ -577,6 +580,9 @@ private fun DetailShareHost(
                 onCopy = { document ->
                     scope.launch {
                         clipboard.setPlainText(document)
+                        logger.info {
+                            "Copied collection ${collection.id} to clipboard (${dialogs.shareFormat.name})"
+                        }
                         showToast(toastTitle, copied, NotificationPriority.LOW)
                     }
                 },

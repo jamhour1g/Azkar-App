@@ -363,12 +363,16 @@ class CollectionsCatalogue(
     private fun startRead(showSpinner: Boolean) {
         val version = loadVersion.incrementAndFetch()
         if (showSpinner) {
+            logger.info { "Loading the library shelf" }
             loading = true
             infoLine = loadingLabel
         }
         scope.launch {
             val result = runCatching { gateway.fetchSnapshot() }
-            if (version != loadVersion.load()) return@launch
+            if (version != loadVersion.load()) {
+                logger.debug { "Discarding superseded library load (version=$version)" }
+                return@launch
+            }
             applyResult(result)
         }
     }
@@ -406,6 +410,15 @@ class CollectionsCatalogue(
         reminderPicksCollectionId = snapshot.reminderPicksCollectionId
         membershipCounts = membershipCountsOf(snapshot.collections, uncategorizedCollectionId)
         loading = false
+        logger.atInfo {
+            message = "Loaded library shelf"
+            payload =
+                mapOf(
+                    "collections" to snapshot.collections.size,
+                    "remembrances" to snapshot.remembrances.size,
+                    "collectionsWithProgress" to snapshot.recitedCounts.size,
+                )
+        }
         // Cleared rather than set to a success sentence: see [infoLine]. A read that worked says
         // nothing that the shelf it just filled does not already say.
         infoLine = ""
@@ -416,6 +429,7 @@ class CollectionsCatalogue(
         val collection = allCollections.findById(id) ?: return null
         scope.launch {
             runCatching { gateway.touchCollectionOpened(id) }
+                .onSuccess { logger.debug { "Recorded opening of collection $id" } }
                 .onFailure { failure -> logger.warn(failure) { "Unable to record the last opening of collection $id" } }
         }
         return collection
@@ -437,8 +451,10 @@ class CollectionsCatalogue(
         setFavoriteOn(id, nextValue)
         scope.launch {
             runCatching { gateway.setFavorite(id, nextValue) }
-                .onSuccess { reloadQuietly() }
-                .onFailure { failure ->
+                .onSuccess {
+                    logger.info { "${if (nextValue) "Favorited" else "Unfavorited"} remembrance $id" }
+                    reloadQuietly()
+                }.onFailure { failure ->
                     // The star is rolled back below, so the screen recovers on its own. The cause of
                     // the rollback is still a failed write, and that is what has to survive.
                     logger.error(failure) { "Unable to persist the favorite flag for remembrance $id" }
@@ -500,6 +516,7 @@ class CollectionsCatalogue(
         scope.launch {
             runCatching { operation() }
                 .onSuccess {
+                    logger.info { "Library operation completed: $description" }
                     if (notice != null) {
                         onNotice = CollectionNotice.Message(notice)
                     }
@@ -530,7 +547,7 @@ class CollectionsCatalogue(
         nameLocale: Locale = Locale.ENGLISH,
     ) {
         mutate(
-            description = "create the collection \"$name\"",
+            description = "create collection",
             onSuccess = CollectionNoticeKey.CREATED,
         ) {
             val created =
@@ -543,6 +560,7 @@ class CollectionsCatalogue(
                     nameLocale = nameLocale,
                 )
             val id = requireNotNull(created.id) { "A saved collection came back without an identifier" }
+            logger.info { "Created collection $id with ${tagNames.size} tags" }
             allCollections = allCollections + created
             membershipCounts = membershipCountsOf(allCollections, uncategorizedCollectionId)
             onCreated(id)
@@ -640,30 +658,42 @@ class CollectionsCatalogue(
         translations: Map<Locale, Remembrance.Translations>,
         tagNames: Collection<String>,
         tagLocale: Locale = uiLocale,
-    ) = mutate(
-        description = "create remembrance in collection $collectionId",
-        onSuccess = CollectionNoticeKey.REMEMBRANCE_CREATED,
     ) {
-        val saved =
-            gateway.saveRemembrance(
-                RemembranceImpl(
-                    grade = grade,
-                    source = source,
-                    translations = translations,
-                    tags = tagNames.map { TagImpl(name = it, nameLocale = tagLocale) }.toSet(),
-                ),
-            )
-        val id = requireNotNull(saved.id) { "A saved remembrance came back without an identifier" }
-        val destination = allCollections.findById(collectionId)
-        val canFileInCurrentCollection =
-            tagNames.isNotEmpty() &&
-                destination?.kind == CollectionKind.CUSTOM &&
-                collectionId != favoritesCollectionId &&
-                collectionId != uncategorizedCollectionId
-        if (canFileInCurrentCollection) {
-            gateway.addMembers(collectionId, listOf(id))
+        mutate(
+            description = "create remembrance in collection $collectionId",
+            onSuccess = CollectionNoticeKey.REMEMBRANCE_CREATED,
+        ) {
+            val saved =
+                gateway.saveRemembrance(
+                    RemembranceImpl(
+                        grade = grade,
+                        source = source,
+                        translations = translations,
+                        tags = tagNames.map { TagImpl(name = it, nameLocale = tagLocale) }.toSet(),
+                    ),
+                )
+            val id = requireNotNull(saved.id) { "A saved remembrance came back without an identifier" }
+            val destination = allCollections.findById(collectionId)
+            val canFileInCurrentCollection =
+                tagNames.isNotEmpty() &&
+                    destination?.kind == CollectionKind.CUSTOM &&
+                    collectionId != favoritesCollectionId &&
+                    collectionId != uncategorizedCollectionId
+            if (canFileInCurrentCollection) {
+                gateway.addMembers(collectionId, listOf(id))
+            }
+            logger.atInfo {
+                message = "Created remembrance"
+                payload =
+                    mapOf(
+                        "remembranceId" to id,
+                        "tagCount" to tagNames.size,
+                        "requestedCollectionId" to collectionId,
+                        "filedInRequestedCollection" to canFileInCurrentCollection,
+                    )
+            }
+            reloadQuietly()
         }
-        reloadQuietly()
     }
 
     fun deleteRemembrance(id: Long) =
@@ -956,6 +986,20 @@ class CollectionsCatalogue(
             runCatching { gateway.importCollections(transfers) }
                 .onFailure { failure -> logger.error(failure) { "Unable to import ${transfers.size} collections" } }
         if (outcome.isSuccess) {
+            outcome.getOrNull()?.let { report ->
+                logger.atInfo {
+                    message = "Imported collections"
+                    payload =
+                        mapOf(
+                            "collectionCount" to transfers.size,
+                            "created" to report.created,
+                            "merged" to report.merged,
+                            "membersAdded" to report.membersAdded,
+                            "skippedOfficial" to report.skippedOfficial.size,
+                            "unmatchedMembers" to report.unmatchedMembers.size,
+                        )
+                }
+            }
             reloadQuietly()
         }
         return outcome

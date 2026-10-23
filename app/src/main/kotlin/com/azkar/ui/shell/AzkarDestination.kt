@@ -5,6 +5,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * A destination in the app's Navigation 3 back stack.
@@ -131,6 +133,7 @@ val AzkarDestination.rootTab: AzkarDestination
 @Stable
 class AzkarNavigator(
     private val backStack: NavBackStack<AzkarDestination>,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     /**
      * What `NavDisplay` renders.
@@ -161,6 +164,7 @@ class AzkarNavigator(
     fun showSettings() {
         if (backStack.last() != AzkarDestination.Settings) {
             backStack.add(AzkarDestination.Settings)
+            logger.info { "Opened settings" }
         }
     }
 
@@ -178,6 +182,7 @@ class AzkarNavigator(
     fun showCollection(id: Long) {
         if (backStack.last() != AzkarDestination.CollectionDetail(id)) {
             backStack.add(AzkarDestination.CollectionDetail(id))
+            logger.info { "Opened collection $id" }
         }
     }
 
@@ -192,6 +197,7 @@ class AzkarNavigator(
     fun showSession(id: Long) {
         if (backStack.last() != AzkarDestination.CollectionSession(id)) {
             backStack.add(AzkarDestination.CollectionSession(id))
+            logger.info { "Opened recitation session for collection $id" }
         }
     }
 
@@ -208,6 +214,7 @@ class AzkarNavigator(
     fun showRemembrance(id: Long) {
         if (backStack.last() != AzkarDestination.RemembranceReader(id)) {
             backStack.add(AzkarDestination.RemembranceReader(id))
+            logger.info { "Opened remembrance reader for remembrance $id" }
         }
     }
 
@@ -222,6 +229,7 @@ class AzkarNavigator(
     fun showTags() {
         if (backStack.last() != AzkarDestination.Tags) {
             backStack.add(AzkarDestination.Tags)
+            logger.info { "Opened tag manager" }
         }
     }
 
@@ -234,7 +242,8 @@ class AzkarNavigator(
      */
     fun back() {
         if (backStack.size > ROOT_DEPTH) {
-            backStack.removeAt(backStack.lastIndex)
+            val previous = backStack.removeAt(backStack.lastIndex)
+            logger.info { "Navigated back from $previous to $current" }
         }
     }
 
@@ -248,12 +257,14 @@ class AzkarNavigator(
      * somewhere to go.
      */
     private fun showTopLevel(destination: AzkarDestination) {
+        val previous = current
         while (backStack.size > ROOT_DEPTH) {
             backStack.removeAt(backStack.lastIndex)
         }
         if (backStack.last() != destination) {
             backStack.add(destination)
         }
+        if (current != previous) logger.info { "Navigated from $previous to $current" }
     }
 
     private companion object {

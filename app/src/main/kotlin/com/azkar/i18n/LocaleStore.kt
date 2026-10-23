@@ -3,6 +3,8 @@ package com.azkar.i18n
 import androidx.compose.runtime.Stable
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.azkar.settings.SettingsStore
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.annotations.VisibleForTesting
 import java.util.Locale
 
@@ -29,6 +31,7 @@ import java.util.Locale
 class LocaleStore(
     private val settings: SettingsStore,
     private val fallback: Locale = defaultFallback(),
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     /**
      * The stored language, or [fallback] when nothing usable has been stored.
@@ -40,7 +43,10 @@ class LocaleStore(
      * does not carry one: [SettingsStore] answers a failed read with an empty snapshot already, and
      * a wrapper here would make a missing value and an unreadable store look the same.
      */
-    suspend fun read(): Locale = settings.read(key).localeOrNull() ?: fallback
+    suspend fun read(): Locale =
+        (settings.read(key).localeOrNull() ?: fallback).also {
+            logger.info { "Restored interface language preference (${it.toLanguageTag()})" }
+        }
 
     /**
      * Resolves the language, falls back, and points Compose at the result.
@@ -53,7 +59,10 @@ class LocaleStore(
 
     /** Stores [locale] for the next run. Fire and forget: a lost write costs one language choice. */
     fun persist(locale: Locale) {
-        settings.write { this[key] = locale.toLanguageTag() }
+        logger.info { "Saving interface language preference (${locale.toLanguageTag()})" }
+        settings.write("interface language preference=${locale.toLanguageTag()}") {
+            this[key] = locale.toLanguageTag()
+        }
     }
 
     /**

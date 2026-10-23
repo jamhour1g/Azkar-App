@@ -20,18 +20,19 @@
         </encoder>
     </appender>
 
-    <!-- ── File Appender (uncomment to enable file logging) ─────────
+    <!-- ── Rotating file appender ──────────────────────────────────── -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/azkar.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/azkar-%d{yyyy-MM-dd}.log</fileNamePattern>
-            <maxHistory>30</maxHistory>
+        <file>${user.home}/.azkar/logs/azkar.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${user.home}/.azkar/logs/azkar-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>14</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
         </rollingPolicy>
         <encoder>
             <pattern>[%logger] [%method] [%thread] [%date{yyyy-MM-dd@HH:mm:ss}] [%level] - %msg %kvp%n</pattern>
         </encoder>
     </appender>
-    -->
 
     <!-- Quieten noisy libraries -->
     <logger name="com.zaxxer.hikari" level="WARN"/>
@@ -44,13 +45,12 @@
           AZKAR_LOG_LEVEL=DEBUG ./azkar              # packaged app
           AZKAR_LOG_LEVEL=DEBUG ./gradlew :app:run   # from source
 
-      It defaults to INFO because a packaged desktop app is an end-user product: startup,
-      schema application and seeding are worth seeing once, per-run narration is not. See
-      docs/logging.md.
+      INFO records user operations and lifecycle milestones for support; DEBUG adds frequent
+      reads and intermediate decisions. See docs/logging.md.
     -->
     <root level="${AZKAR_LOG_LEVEL:-INFO}">
         <appender-ref ref="CONSOLE"/>
-        <!-- <appender-ref ref="FILE"/> -->
+        <appender-ref ref="FILE"/>
     </root>
 
 </configuration>

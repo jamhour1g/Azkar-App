@@ -93,7 +93,9 @@ private const val OVERLAY_PROOF_OF_CONSENT_FLAG = "--overlay-poc"
  */
 suspend fun main(args: Array<String>) {
     pinDesktopWindowClass()
-    logger.info { "Starting Azkar" }
+    logger.info {
+        "Starting Azkar (os=${System.getProperty("os.name")}, java=${System.getProperty("java.version")})"
+    }
     startKoin { modules(dataModule, appModule) }
     val koin = KoinPlatform.getKoin()
     val startup = prepareDesktopStartup(koin)
@@ -142,6 +144,9 @@ private suspend fun prepareDesktopStartup(koin: org.koin.core.Koin): DesktopStar
     val theme = koin.get<ThemePreferenceStore>().read()
     val typography = koin.get<TypographyStore>().read()
     registerComposeGraphics()
+    logger.info {
+        "Desktop preferences restored; preparing the main window"
+    }
     return DesktopStartup(warmUp, theme, typography)
 }
 
@@ -248,6 +253,7 @@ private fun DesktopApplicationRoot(
     // there is not, so the close is taken at face value and the app leaves — the alternative is a
     // running process with no way to show or stop it, which is worse than not hiding at all.
     fun hideOrQuit() {
+        logger.info { "Main window close requested (hideToTray=$trayAvailable)" }
         if (trayAvailable) windowVisible = false else quitAction()
     }
     MainWindow(
@@ -274,6 +280,7 @@ private fun shutdown(
     dispatcher: NotificationPublisher,
     exitApplication: () -> Unit,
 ) {
+    logger.info { "Stopping Azkar services" }
     notificationScope.cancel()
     runCatching { dispatcher.dispose() }
         .onFailure { failure -> logger.warn(failure) { "Unable to dispose the notification publisher" } }
@@ -386,6 +393,9 @@ private fun MainWindow(
     appState: AzkarAppState,
     actionRouter: NotificationActionRouter,
 ) {
+    LaunchedEffect(visible) {
+        logger.info { "Main window visibility changed (visible=$visible)" }
+    }
     val screen = screenSizeInDp(LocalDensity.current)
     val windowState =
         rememberWindowState(

@@ -76,6 +76,7 @@ class ExposedTagRepository(
      */
     override suspend fun softDelete(id: Long?) {
         val target = id ?: return
+        logger.debug { "Soft deleting tag id=$target" }
         transactions.tx(logger, "Failed to delete tag id=$target") {
             val row = findTagRow(target) ?: return@tx
             if (row.deletedAt != null) {
@@ -98,6 +99,7 @@ class ExposedTagRepository(
      */
     override suspend fun restore(id: Long?) {
         val target = id ?: return
+        logger.debug { "Restoring tag id=$target" }
         transactions.tx(logger, "Failed to restore tag id=$target") {
             val row = findTagRow(target) ?: return@tx
             if (row.deletedAt == null) {
@@ -110,8 +112,9 @@ class ExposedTagRepository(
         }
     }
 
-    override suspend fun save(tag: Tag): Tag =
-        transactions.tx(logger, "Failed to save tag") {
+    override suspend fun save(tag: Tag): Tag {
+        logger.debug { "Saving tag id=${tag.id} translations=${tag.translations.size}" }
+        return transactions.tx(logger, "Failed to save tag") {
             val existingId = tag.id
             // `tag.name` is written by TagImpl too, but folding here means the value that
             // comes back from the row and the value that went into it cannot disagree even
@@ -168,6 +171,7 @@ class ExposedTagRepository(
                 translations = tag.translations,
             )
         }
+    }
 
     /**
      * Reconciles a label's wording to exactly [translations], keyed by BCP-47 language tag.

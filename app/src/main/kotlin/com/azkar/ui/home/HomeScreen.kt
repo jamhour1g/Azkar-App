@@ -218,6 +218,7 @@ private fun HomeScreenEffects(
     // injected gateway. `LaunchedEffect` is already a coroutine scope and the domain ports are
     // `suspend`, so neither read needs an explicit dispatcher here.
     LaunchedEffect(uiLocale) {
+        logger.info { "Loading home dashboard (language=${uiLocale.toLanguageTag()})" }
         // The favourites placeholder texts are static per locale but come from the resource store
         // now, so they are resolved here; the carousel's own handlers stay synchronous by reading
         // them back out of `FavoritesState` as plain fields.
@@ -230,14 +231,16 @@ private fun HomeScreenEffects(
         val loaded =
             runCatching {
                 gateway.findFavorites()
-            }.onFailure { failure -> logger.error(failure) { "Unable to load the favorites" } }
+            }.onSuccess { logger.info { "Loaded ${it.size} favorite remembrances for the home dashboard" } }
+                .onFailure { failure -> logger.error(failure) { "Unable to load the favorites" } }
                 .getOrElse { emptyList() }
         inputs.favorites.loadFavorites(loaded)
 
         val single =
             runCatching {
                 gateway.findDailyHadith()
-            }.onFailure { failure -> logger.error(failure) { "Unable to load the daily hadith" } }
+            }.onSuccess { logger.info { "Loaded daily hadith for the home dashboard (remembranceId=${it?.id})" } }
+                .onFailure { failure -> logger.error(failure) { "Unable to load the daily hadith" } }
                 .getOrNull()
         if (single != null) {
             onHadithLoaded(resolveHadith(single, uiLocale, hadithArabicFallback, hadithEnglishFallback))
@@ -250,7 +253,8 @@ private fun HomeScreenEffects(
         val railCards =
             runCatching {
                 gateway.findHomeCollections()
-            }.onFailure { failure -> logger.error(failure) { "Unable to load the collection rail" } }
+            }.onSuccess { logger.info { "Loaded ${it.size} collections for the home dashboard rail" } }
+                .onFailure { failure -> logger.error(failure) { "Unable to load the collection rail" } }
                 .getOrElse { emptyList() }
         inputs.rail.replace(railCards)
     }

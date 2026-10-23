@@ -251,6 +251,7 @@ class TagsState(
             tags = live
             deleted = gone
             loading = false
+            logger.info { "Loaded ${live.size} active and ${gone.size} deleted tags" }
             if (announce != null) {
                 onNotice = CollectionNotice.Message(announce)
             }
@@ -353,10 +354,11 @@ class TagsState(
         translations: Map<Locale, String> = emptyMap(),
         nameLocale: Locale = Locale.ENGLISH,
     ): TagSaveResult? {
-        val result = attempt("create the tag '$name'") { gateway.create(name, translations, nameLocale) } ?: return null
+        val result = attempt("create a tag") { gateway.create(name, translations, nameLocale) } ?: return null
         if (result == TagSaveResult.Saved) {
             refresh(announce = null)
             onTagsChanged()
+            logger.info { "Created a tag with ${translations.size} translations" }
         }
         return result
     }
@@ -369,11 +371,12 @@ class TagsState(
         nameLocale: Locale? = null,
     ): TagSaveResult? {
         val result =
-            attempt("rename tag id=$id to '$newName'") { gateway.rename(id, newName, translations, nameLocale) }
+            attempt("rename tag id=$id") { gateway.rename(id, newName, translations, nameLocale) }
                 ?: return null
         if (result == TagSaveResult.Saved) {
             refresh(announce = CollectionNoticeKey.TAG_RENAMED)
             onTagsChanged()
+            logger.info { "Renamed tag $id with ${translations?.size ?: 0} supplied translations" }
         }
         return result
     }
@@ -390,6 +393,7 @@ class TagsState(
             attempt("delete tag id=$id") { gateway.softDelete(id) } ?: return@launch
             refresh(announce = CollectionNoticeKey.TAG_DELETED)
             onTagsChanged()
+            logger.info { "Deleted tag $id" }
         }
     }
 
@@ -399,6 +403,7 @@ class TagsState(
             attempt("restore tag id=$id") { gateway.restore(id) } ?: return@launch
             refresh(announce = CollectionNoticeKey.TAG_RESTORED)
             onTagsChanged()
+            logger.info { "Restored tag $id" }
         }
     }
 

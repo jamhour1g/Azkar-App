@@ -76,8 +76,18 @@ class ExposedRemembranceRepository(
     private val onDroppedExplanation: (Long, List<String>) -> Unit =
         RemembranceMapper.droppedExplanationsReported(),
 ) : RemembranceRepository {
-    override suspend fun save(remembrance: Remembrance): Remembrance =
-        transactions.tx(logger, "Failed to save remembrance") {
+    override suspend fun save(remembrance: Remembrance): Remembrance {
+        logger.atDebug {
+            message = "Saving remembrance"
+            payload =
+                mapOf(
+                    "remembranceId" to remembrance.id,
+                    "translationCount" to remembrance.translations.size,
+                    "tagCount" to remembrance.tags.size,
+                    "favorite" to remembrance.isFavorite,
+                )
+        }
+        return transactions.tx(logger, "Failed to save remembrance") {
             val timestamp = now()
             val existingId = remembrance.id
             val id = existingId ?: insert(remembrance, timestamp)
@@ -89,6 +99,7 @@ class ExposedRemembranceRepository(
             applyTags(id, remembrance.tags, timestamp)
             loadOne(id) ?: error("Remembrance $id vanished during save")
         }
+    }
 
     /** A remembrance that was never persisted carries no id, and there is nothing to delete. */
     override suspend fun delete(remembrance: Remembrance) {
@@ -97,6 +108,7 @@ class ExposedRemembranceRepository(
     }
 
     override suspend fun deleteById(id: Long) {
+        logger.debug { "Deleting remembrance id=$id" }
         transactions.tx(logger, "Failed to delete remembrance id=$id") {
             // Translations, explanations and tag links all cascade from `remembrance`, so the
             // parent row is the whole of the delete. It used not to be: the `favorite` row was
@@ -181,6 +193,7 @@ class ExposedRemembranceRepository(
         favorite: Boolean,
     ) {
         val state = if (favorite) "mark" else "unmark"
+        logger.debug { "Setting remembrance favorite id=$id favorite=$favorite" }
         transactions.tx(logger, "Failed to $state remembrance id=$id as favorite") {
             // A cheap existence probe before the write: backed by `EntityClass.findById`, which is
             // the primary-key lookup rather than a scan, and the point is that this runs before a

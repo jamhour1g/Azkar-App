@@ -10,6 +10,8 @@ import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.data.nextMember
 import com.azkar.ui.library.data.upcomingMembers
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * The state behind a recitation session: one member at a time, and where the session is.
@@ -28,6 +30,7 @@ class CollectionSessionState(
     private val collections: CollectionsCatalogue,
     val collectionId: Long,
     reminders: CollectionReminderState,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) {
     private val detail = CollectionDetailState(collections, collectionId, reminders)
 
@@ -122,6 +125,7 @@ class CollectionSessionState(
      */
     fun complete() {
         val id = current?.id ?: return
+        logger.debug { "Completing session passage (collectionId=$collectionId, remembranceId=$id)" }
         detail.recordRecitation(id)
         pinnedId = null
     }
@@ -136,6 +140,7 @@ class CollectionSessionState(
      */
     fun reciteAgain() {
         val id = current?.id ?: return
+        logger.debug { "Repeating session passage (collectionId=$collectionId, remembranceId=$id)" }
         detail.recordRecitation(id)
         pinnedId = id
     }
@@ -154,6 +159,7 @@ class CollectionSessionState(
             return
         }
         pinnedId = nextUncountedAfter(source, active)?.id ?: active.id
+        logger.debug { "Skipped session passage (collectionId=$collectionId, from=${active.id}, to=$pinnedId)" }
     }
 
     /**
@@ -254,7 +260,10 @@ class CollectionSessionState(
     fun readId(): Long? = current?.id
 
     /** Forgets the collection's progress and starts the session over. */
-    fun restart() = detail.resetProgress()
+    fun restart() {
+        logger.info { "Restarting recitation session for collection $collectionId" }
+        detail.resetProgress()
+    }
 }
 
 private const val UPCOMING_COUNT = 3

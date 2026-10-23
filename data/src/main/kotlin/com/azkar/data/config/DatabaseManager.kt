@@ -99,6 +99,7 @@ class DatabaseManager(
                     }
 
             pool = dataSource
+            logger.info { "Application database connected and schema migration completed" }
             connectedDatabase
         } catch (failure: Throwable) {
             try {

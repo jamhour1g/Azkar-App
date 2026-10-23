@@ -1,6 +1,9 @@
 package com.azkar.ui.notifications.presentation
 
+import com.azkar.ui.notifications.NotificationAction
 import com.azkar.ui.notifications.NotificationNotice
+import io.github.oshai.kotlinlogging.KLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -52,6 +55,7 @@ class OverlayNotificationPresenter(
     private val settings: StateFlow<NotificationPresentationSettings>,
     /** Injected so a test can own the clock instead of sleeping. */
     private val now: () -> Long = System::currentTimeMillis,
+    private val logger: KLogger = KotlinLogging.logger {},
 ) : NotificationPresenter {
     private val _notices = MutableStateFlow<List<PresentedNotice>>(emptyList())
     override val notices: StateFlow<List<PresentedNotice>> = _notices.asStateFlow()
@@ -87,6 +91,19 @@ class OverlayNotificationPresenter(
 
     override fun present(notice: NotificationNotice): Long? =
         synchronized(lock) { acceptLocked(notice, settings.value.validated()) }
+            .also { id ->
+                if (id != null) {
+                    val action =
+                        when (val target = notice.action) {
+                            is NotificationAction.Remembrance -> "remembrance:${target.id}"
+                            NotificationAction.PrayerTimes -> "prayer-times"
+                            NotificationAction.OpenApp -> "open-app"
+                        }
+                    logger.info { "Presented notification (id=$id, action=$action)" }
+                } else {
+                    logger.debug { "Suppressed notification presentation" }
+                }
+            }
 
     private fun acceptLocked(
         notice: NotificationNotice,
@@ -129,6 +146,7 @@ class OverlayNotificationPresenter(
             if (remaining.size == _notices.value.size) return
             retire(id)
             _notices.value = remaining
+            logger.info { "Dismissed notification (id=$id, remaining=${remaining.size})" }
         }
     }
 
@@ -233,6 +251,7 @@ class OverlayNotificationPresenter(
         synchronized(lock) {
             retire(id)
             _notices.value = _notices.value.filterNot { it.id == id }
+            logger.debug { "Expired notification (id=$id, remaining=${_notices.value.size})" }
         }
     }
 

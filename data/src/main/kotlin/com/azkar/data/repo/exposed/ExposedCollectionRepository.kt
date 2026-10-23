@@ -109,6 +109,7 @@ class ExposedCollectionRepository(
      */
     override suspend fun save(collection: RemembranceCollection): RemembranceCollection =
         transactions.tx(logger, "Failed to save collection") {
+            logger.debug { "Saving collection id=${collection.id} translations=${collection.translations.size}" }
             val timestamp = now()
             val existingId = collection.id
             val id = existingId ?: insert(collection, timestamp)
@@ -125,6 +126,7 @@ class ExposedCollectionRepository(
             return
         }
         transactions.tx(logger, "Failed to delete collection id=$id") {
+            logger.debug { "Deleting collection id=$id" }
             requireExists(id)
             CollectionTable.deleteWhere { CollectionTable.id eq id }
         }
@@ -142,6 +144,7 @@ class ExposedCollectionRepository(
         remembranceIds: List<Long>,
     ): Int =
         transactions.tx(logger, "Failed to add ${remembranceIds.size} remembrances to collection id=$collectionId") {
+            logger.debug { "Adding collection members collectionId=$collectionId count=${remembranceIds.size}" }
             requireExists(collectionId)
             val timestamp = now()
             val pending = withoutExistingMembership(collectionId, remembranceIds).distinct()
@@ -163,6 +166,7 @@ class ExposedCollectionRepository(
             logger,
             "Failed to remove ${remembranceIds.size} remembrances from collection id=$collectionId",
         ) {
+            logger.debug { "Removing collection members collectionId=$collectionId count=${remembranceIds.size}" }
             requireExists(collectionId)
             val pending = removeMany(collectionId, remembranceIds)
             if (pending > 0) {
@@ -175,6 +179,7 @@ class ExposedCollectionRepository(
         collectionId: Long,
         coverImagePath: String?,
     ) = transactions.tx(logger, "Failed to set the cover image of collection id=$collectionId") {
+        logger.debug { "Setting collection cover image collectionId=$collectionId present=${coverImagePath != null}" }
         requireExists(collectionId)
         writeCoverImage(collectionId, coverImagePath, now())
     }
@@ -190,6 +195,7 @@ class ExposedCollectionRepository(
         collectionId: Long,
         tags: Collection<Tag>,
     ) = transactions.tx(logger, "Failed to set the tags of collection id=$collectionId") {
+        logger.debug { "Setting collection tags collectionId=$collectionId count=${tags.size}" }
         requireExists(collectionId)
         replaceTags(collectionId, tags)
     }
@@ -205,6 +211,7 @@ class ExposedCollectionRepository(
         collectionId: Long,
         pinned: Boolean,
     ) {
+        logger.debug { "Setting collection pinned collectionId=$collectionId pinned=$pinned" }
         transactions.tx(logger, "Failed to pin or unpin collection id=$collectionId") {
             requireExists(collectionId)
             CollectionTable.update({ CollectionTable.id eq collectionId }) { row ->
@@ -218,6 +225,7 @@ class ExposedCollectionRepository(
         fromIndex: Int,
         toIndex: Int,
     ) {
+        logger.debug { "Moving collection member collectionId=$collectionId fromIndex=$fromIndex toIndex=$toIndex" }
         transactions.tx(logger, "Failed to move a member of collection id=$collectionId from $fromIndex to $toIndex") {
             requireExists(collectionId)
             move(collectionId, fromIndex, toIndex)
@@ -225,6 +233,7 @@ class ExposedCollectionRepository(
     }
 
     override suspend fun touchLastOpened(id: Long) {
+        logger.debug { "Recording collection last opened collectionId=$id" }
         transactions.tx(logger, "Failed to record the last opening of collection id=$id") {
             requireExists(id)
             CollectionEntity.findById(id)?.updateAndFlush { lastOpenedAt = now() }
@@ -241,6 +250,7 @@ class ExposedCollectionRepository(
         id: Long,
         pinned: Boolean,
     ) {
+        logger.debug { "Setting collection home pinned collectionId=$id pinned=$pinned" }
         transactions.tx(logger, "Failed to move collection id=$id on or off the Home screen") {
             requireExists(id)
             CollectionEntity.findById(id)?.updateAndFlush { homePinnedAt = if (pinned) now() else null }
@@ -251,6 +261,7 @@ class ExposedCollectionRepository(
         id: Long,
         favorite: Boolean,
     ) {
+        logger.debug { "Setting collection favorite collectionId=$id favorite=$favorite" }
         transactions.tx(logger, "Failed to star or unstar collection id=$id") {
             requireExists(id)
             CollectionEntity.findById(id)?.updateAndFlush { isFavorite = favorite }
@@ -270,6 +281,7 @@ class ExposedCollectionRepository(
      * that ended over a card that has since been deleted should not fail the whole reorder.
      */
     override suspend fun reorder(orderedIds: List<Long>) {
+        logger.debug { "Reordering collections count=${orderedIds.size}" }
         transactions.tx(logger, "Failed to reorder the collections") {
             val positions = orderedIds.distinct().mapIndexed { index, id -> id to index }
             positions.forEach { (id, position) ->
