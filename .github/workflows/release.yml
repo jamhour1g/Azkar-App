@@ -111,6 +111,7 @@ jobs:
           extra_flags: >-
             --passphrase=env:SIGNING_PASSPHRASE
             -Kapp.version=0.1.${{ github.run_number }}
+            -Kapp.revision=${{ github.run_attempt }}
             -Kapp.display-name="Azkar Dev"
             -Kapp.fsname=azkar-dev
             -Kapp.rdns-name=com.azkar.app.dev
