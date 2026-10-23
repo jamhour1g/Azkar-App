@@ -63,6 +63,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
 
+      - name: Generate and apply release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          notes_file="$RUNNER_TEMP/release-notes.md"
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f "tag_name=${GITHUB_REF_NAME}" \
+            -f "target_commitish=${GITHUB_SHA}" \
+            --jq .body > "$notes_file"
+          gh release edit "$GITHUB_REF_NAME" --notes-file "$notes_file"
+
   release-dev:
     name: Publish dev preview
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev' }}
