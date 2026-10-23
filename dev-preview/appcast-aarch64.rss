@@ -1,0 +1,23 @@
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+    <channel>
+        <title>Azkar Dev Changelog</title>
+        <link>https://jamhour1g.github.io/Azkar-App/dev-preview/appcast-aarch64.rss</link>
+        <description>Most recent changes with links to updates.</description>
+        <language>en</language>
+        <item>
+            <title>Version 0.1.11</title>
+            <link>https://jamhour1g.github.io/Azkar-App/dev-preview/</link>
+            <sparkle:version>0.1.11.0</sparkle:version>
+            <sparkle:shortVersionString>0.1.11</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+            <description>
+                <![CDATA[ New release: version 0.1.11 ]]>
+            </description>
+            <pubDate>Fri, 23 Oct 2026 12:13:34 GMT</pubDate>
+            <enclosure url="https://jamhour1g.github.io/Azkar-App/dev-preview/azkar-dev-0.1.11-mac-aarch64.zip" 
+                       length="72853265" 
+                       type="application/octet-stream" 
+                       sparkle:edSignature="+fwli1WwSHH2mmt4neyzMubWe39MlIeZdumFREBzjiM8XegjMA0ebQ7slbU3sd4BpJLD6EwvoV+BPDc3c53LBg=="/>
+        </item>
+    </channel>
+</rss>

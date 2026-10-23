@@ -1,0 +1,28 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+Architectures: amd64
+Components: main
+Date: Fri, 23 Oct 2026 12:14:34 GMT
+Description: Public archive for Azkar Dev
+Origin: Azkar Dev
+Suite: debian
+MD5Sum:
+ b28db55b5e5aff5ff5574ef12531eda9               653 Packages
+ 4102e07477f3487d73aed2a123757bf2               508 Packages.xz
+SHA1:
+ 493f2cbe36a6cabcadf0fd3572c69276d688273c               653 Packages
+ 752149fc3068b7741af0ef4f89e59df6b008dcca               508 Packages.xz
+SHA256:
+ 326e25a7fa662ed4f6522828181e607c639f37187e63c52575deaba6c0def584               653 Packages
+ 9f74d4f4b29d476ea7b065a1ad738531eb4490edc8f8f45b52d35fe0bf3b0752               508 Packages.xz
+SHA512:
+ 49db054de55b4a8351d8044369c5b4f2cd1d548b4e9724c3cc903874ca911e48336373bc69d8fbeb94a8d3f6d84cd3872a58e9fa506a40b8cb6f54da8a19d1fb               653 Packages
+ d7ccf441c3850861c51e233a10abc7cb7f88091f710c2e3c8a7d75417eac1c2054cdd722df29ef7b4939f3af8d9aa98c10486343a5dba09e6804ddaf50ffcc29               508 Packages.xz
+-----BEGIN PGP SIGNATURE-----
+Version: BCPG v1.77.00
+
+iF4EARMIAAYFAmrbT6oACgkQs1xxgC8fnyBGKwEA2xvJQ+8mpcdcgOIv6s2+7vAW
+my8TVSiWBCGLRd48ABEBAOOL9bb1Fy/I4qwP9mgOmtg2J+3xukk/T+rrc6J4KTXm
+=rnce
+-----END PGP SIGNATURE-----
