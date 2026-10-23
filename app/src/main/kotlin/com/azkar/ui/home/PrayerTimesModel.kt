@@ -50,6 +50,21 @@ data class CountdownState(
 )
 
 /**
+ * The prayer coming up next for a moment in time.
+ *
+ * Shared by the home table's `Next prayer` row and the tray countdown, so both always answer from
+ * the same computation: one clock, one calculation, and a `remaining` measured inward from the
+ * same `now`.
+ */
+@Immutable
+data class NextPrayer(
+    val key: PrayerKey,
+    val name: String,
+    val at: LocalDateTime,
+    val remaining: Duration,
+)
+
+/**
  * Stands in for the table until the localized prayer text has been resolved.
  *
  * The home screen shows a one-frame empty table on launch, which is what it already did while the
@@ -112,6 +127,20 @@ class PrayerTimesModel(
             }
     }
 
+    /**
+     * The next upcoming prayer for [now], or null before [load] has resolved the localized names.
+     *
+     * A second caller of the times — the tray countdown — needs the answer as data rather than as
+     * a formatted table. It goes through here so both surfaces can never disagree about which
+     * prayer is next or how long there is left of it: the moment chosen is the same moment, and
+     * `remaining` is measured against the same `now` the caller passed.
+     */
+    fun nextPrayer(now: LocalDateTime): NextPrayer? {
+        if (prayers.isEmpty()) return null
+        val calculatedTimes = PrayerTimeCalculator.calculate(now.toLocalDate(), location)
+        return computeNextPrayer(now, calculatedTimes)
+    }
+
     /** Resolves the next upcoming prayer and formats the whole table for [now]. */
     fun snapshot(now: LocalDateTime): PrayerTimesSnapshot {
         if (prayers.isEmpty()) return EMPTY_SNAPSHOT
@@ -119,7 +148,7 @@ class PrayerTimesModel(
         val next = computeNextPrayer(now, calculatedTimes)
         val rows =
             prayers.map { prayer ->
-                val isNext = prayer.key == next.prayer.key
+                val isNext = prayer.key == next.key
                 val time = calculatedTimes.getValue(prayer.key)
                 PrayerRowState(
                     key = prayer.key,
@@ -150,7 +179,13 @@ class PrayerTimesModel(
                 .filter { (at, _) -> !at.isBefore(now) }
                 .minByOrNull { (at, _) -> at }
                 ?: moments.first()
-        return NextPrayer(nearest.second, Duration.between(now, nearest.first))
+        val (at, prayer) = nearest
+        return NextPrayer(
+            key = prayer.key,
+            name = prayer.name,
+            at = at,
+            remaining = Duration.between(now, at),
+        )
     }
 
     private fun formatDuration(duration: Duration): String {
@@ -167,11 +202,6 @@ class PrayerTimesModel(
     private data class ParsedPrayer(
         val key: PrayerKey,
         val name: String,
-    )
-
-    private data class NextPrayer(
-        val prayer: ParsedPrayer,
-        val remaining: Duration,
     )
 }
 

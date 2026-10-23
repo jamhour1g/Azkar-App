@@ -3,8 +3,16 @@ package com.azkar.ui.shell
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.nextPrayerLabel
 import com.azkar.generated.resources.title
 import com.azkar.generated.resources.trayMenuOpen
 import com.azkar.generated.resources.trayMenuPause
@@ -12,9 +20,21 @@ import com.azkar.generated.resources.trayMenuQuit
 import com.azkar.generated.resources.trayMenuResume
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.notifications.DesktopPlatform
-import dev.nucleusframework.composenativetray.tray.api.Tray
+import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
+import dev.nucleusframework.composenativetray.tray.api.NativeTray
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import java.awt.GraphicsEnvironment
+
+private val logger = KotlinLogging.logger {}
+
+private data class TrayMenuActions(
+    val openApp: () -> Unit,
+    val toggleReminders: () -> Unit,
+    val quit: () -> Unit,
+)
 
 /**
  * The tray icon and its native context menu.
@@ -31,6 +51,13 @@ import java.awt.GraphicsEnvironment
  * the last notification pointed at; right-click opens the menu. Without a primary action the menu
  * would open on every click, which is not what a click on the icon should do.
  *
+ * Nucleus 2.1.7 rebuilds a supplied Linux menu on every tray update. The countdown still checks
+ * the wall clock each second, but native tray updates happen only when the displayed minute or
+ * menu state changes.
+ *
+ * The menu carries the same line as a disabled row at the top: reading is its only job, so nothing
+ * is clickable that has nothing to do.
+ *
  * This is a composable, so it exists exactly as long as the application composition does. That is
  * what makes close-to-tray safe: the icon is still registered while the window is hidden, and the
  * library removes it when the composition goes away, without a teardown step having to get it right.
@@ -42,38 +69,119 @@ fun ReminderTray(
     remindersPaused: Boolean,
     onToggleReminders: () -> Unit,
     onQuit: () -> Unit,
+    countdown: PrayerTrayCountdownState? = null,
 ) {
-    Tray(
-        // The `iconContent` overload rather than the `ImageVector` one, because that one flattens
-        // the mark to a single tint to match the menu bar it is drawn in. This one is a gradient
-        // khatim with a white mosque inside it, and it has to keep its own colours to stay legible
-        // as an icon this small.
-        iconContent = {
-            Image(
-                imageVector = AzkarIcons.Brand,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-            )
-        },
-        tooltip = stringResource(Res.string.title),
+    val tooltip = countdown?.tooltipText?.takeIf { it.isNotEmpty() } ?: stringResource(Res.string.title)
+    val menuPrayerName =
+        countdown?.nextPrayerName?.takeIf { it.isNotEmpty() }
+            ?: stringResource(Res.string.nextPrayerLabel)
+    val menuPrayerLine = countdown?.tooltipText?.takeIf { it.isNotEmpty() } ?: menuPrayerName
+    PrayerTrayCountdownTicker(countdown)
+    PrayerTrayNativeHost(
         primaryAction = primaryAction,
-    ) {
-        Item(label = stringResource(Res.string.trayMenuOpen), onClick = onOpenApp)
-        // The honest answer to "I am about to play a game that takes the whole screen": the overlay
-        // cannot be pinned over an exclusive fullscreen app, so the only thing that can stop the
-        // reminders arriving is the user saying so. Two taps from anywhere, which is why it lives in
-        // the tray rather than three screens deep in settings.
-        Item(
-            label =
-                stringResource(
-                    if (remindersPaused) Res.string.trayMenuResume else Res.string.trayMenuPause,
-                ),
-            onClick = onToggleReminders,
-        )
-        Divider()
-        Item(label = stringResource(Res.string.trayMenuQuit), onClick = onQuit)
+        tooltip = tooltip,
+        menuPrayerLine = menuPrayerLine,
+        remindersPaused = remindersPaused,
+        menuActions = TrayMenuActions(onOpenApp, onToggleReminders, onQuit),
+    )
+}
+
+@Composable
+private fun PrayerTrayCountdownTicker(countdown: PrayerTrayCountdownState?) {
+    LaunchedEffect(countdown) {
+        val state = countdown ?: return@LaunchedEffect
+        val startFailure = runCatching { state.start() }.exceptionOrNull()
+        if (startFailure is CancellationException) throw startFailure
+        if (startFailure != null) {
+            logger.error(startFailure) { "Unable to start prayer tray countdown ticker" }
+            return@LaunchedEffect
+        }
+        logger.info { "Prayer tray countdown ticker is running" }
+        var previousTickFailed = false
+        while (true) {
+            delay(COUNTDOWN_TICK_MS)
+            val tickFailure = runCatching { state.tick() }.exceptionOrNull()
+            if (tickFailure is CancellationException) throw tickFailure
+            if (tickFailure != null && !previousTickFailed) {
+                logger.error(tickFailure) { "Prayer tray countdown update failed; retrying" }
+            } else if (tickFailure == null && previousTickFailed) {
+                logger.info { "Prayer tray countdown recovered" }
+            }
+            previousTickFailed = tickFailure != null
+        }
+    }
+    DisposableEffect(countdown) {
+        onDispose {
+            if (countdown != null) logger.debug { "Prayer tray countdown ticker stopped" }
+        }
     }
 }
+
+@Composable
+private fun PrayerTrayNativeHost(
+    primaryAction: () -> Unit,
+    tooltip: String,
+    menuPrayerLine: String,
+    remindersPaused: Boolean,
+    menuActions: TrayMenuActions,
+) {
+    val openLabel = stringResource(Res.string.trayMenuOpen)
+    val pauseLabel =
+        stringResource(if (remindersPaused) Res.string.trayMenuResume else Res.string.trayMenuPause)
+    val quitLabel = stringResource(Res.string.trayMenuQuit)
+    val tray = remember { NativeTray() }
+    val currentPrimaryAction by rememberUpdatedState(primaryAction)
+    val currentMenuActions by rememberUpdatedState(menuActions)
+    var hasSubmittedTray by remember(tray) { mutableStateOf(false) }
+    val menuKey = "$menuPrayerLine|$openLabel|$pauseLabel|$quitLabel"
+    val currentMenu by rememberUpdatedState<TrayMenuBuilder.() -> Unit>({
+        Item(label = menuPrayerLine, isEnabled = false, onClick = {})
+        Divider()
+        Item(label = openLabel, onClick = { currentMenuActions.openApp() })
+        Item(label = pauseLabel, onClick = { currentMenuActions.toggleReminders() })
+        Divider()
+        Item(label = quitLabel, onClick = { currentMenuActions.quit() })
+    })
+    val iconContent: @Composable () -> Unit = {
+        // Keep the colored vector instead of the monochrome ImageVector tray overload.
+        Image(
+            imageVector = AzkarIcons.Brand,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+    LaunchedEffect(tray, tooltip, menuKey) {
+        if (hasSubmittedTray) {
+            logger.debug { "Updating prayer tray text: tooltip='$tooltip', menu='$menuPrayerLine'" }
+        } else {
+            logger.info { "Registering prayer tray icon" }
+        }
+        val updateFailure =
+            runCatching {
+                tray.updateComposable(
+                    iconContent = iconContent,
+                    tooltip = tooltip,
+                    primaryAction = { currentPrimaryAction() },
+                    menuContent = currentMenu,
+                )
+            }.exceptionOrNull()
+        if (updateFailure != null) {
+            logger.error(updateFailure) { "Unable to submit prayer tray update" }
+        } else {
+            hasSubmittedTray = true
+        }
+    }
+    DisposableEffect(tray) {
+        onDispose {
+            logger.debug { "Disposing prayer tray icon" }
+            runCatching { tray.dispose() }
+                .onFailure { failure -> logger.warn(failure) { "Unable to dispose prayer tray icon" } }
+        }
+    }
+}
+
+/** One tooltip tick per second, read off the wall clock the moment it lands. */
+private const val COUNTDOWN_TICK_MS = 1_000L
 
 /**
  * Whether hiding the window would still leave the user a way back into the app.

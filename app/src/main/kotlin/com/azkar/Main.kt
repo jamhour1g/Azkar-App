@@ -44,6 +44,7 @@ import com.azkar.ui.shell.ThemePreferenceStore
 import com.azkar.ui.shell.TypographyStore
 import com.azkar.ui.shell.rememberAzkarAppState
 import com.azkar.ui.shell.rememberAzkarDarkTheme
+import com.azkar.ui.shell.rememberPrayerTrayCountdown
 import com.azkar.ui.shell.trayAvailable
 import com.azkar.ui.theme.AppTypography
 import com.azkar.ui.theme.DEFAULT_WINDOW_HEIGHT
@@ -241,6 +242,9 @@ private fun DesktopApplicationRoot(
                 composeScope.launch { preferences.updateQueue { it.copy(enabled = !it.enabled) } }
             },
             onQuit = { quitAction() },
+            // Derived at the root so the tooltip keeps ticking while the window is hidden; a
+            // locale or location change rebuilds it and the old ticker dies with its effect.
+            countdown = rememberPrayerTrayCountdown(appState.locale),
         )
     }
 

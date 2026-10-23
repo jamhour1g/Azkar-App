@@ -11,6 +11,7 @@
     <string name="trayMenuPause">Pause reminders</string>
     <string name="trayMenuResume">Resume reminders</string>
     <string name="trayMenuQuit">Quit</string>
+    <string name="trayNextPrayerCountdown">%1$s in %2$s</string>
     <!-- Main Content -->
     <string name="greetingTitle">Assalamu Alaikum</string>
     <string name="greetingDate">14 Dhu al-Hijjah 1445 AH | 20 June 2024</string>
