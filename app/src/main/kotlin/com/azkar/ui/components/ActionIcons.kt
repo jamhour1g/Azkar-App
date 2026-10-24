@@ -15,7 +15,6 @@ import androidx.compose.material.icons.outlined.PlaylistRemove
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Replay
 import androidx.compose.material.icons.outlined.RestartAlt
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -89,9 +88,6 @@ internal object ActionIcons {
 
     /** Making a second collection out of the first. Deliberately the same glyph as [copy]. */
     val duplicate: ImageVector get() = Icons.Outlined.ContentCopy
-
-    /** Send this collection onward. */
-    val share: ImageVector get() = Icons.Outlined.Share
 
     /** Change the picture this collection is shown with. */
     val cover: ImageVector get() = Icons.Outlined.Image

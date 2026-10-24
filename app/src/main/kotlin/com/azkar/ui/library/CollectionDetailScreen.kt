@@ -15,7 +15,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -33,7 +32,6 @@ import com.azkar.generated.resources.collectionDetailEmptyTitle
 import com.azkar.generated.resources.collectionDetailMissingHint
 import com.azkar.generated.resources.collectionDetailMissingTitle
 import com.azkar.generated.resources.collectionDetailSearchHint
-import com.azkar.generated.resources.collectionShareCopied
 import com.azkar.generated.resources.collectionsActionAddMembers
 import com.azkar.generated.resources.collectionsActionAddToReminders
 import com.azkar.generated.resources.collectionsActionDelete
@@ -43,7 +41,6 @@ import com.azkar.generated.resources.collectionsActionFavorite
 import com.azkar.generated.resources.collectionsActionHideFromHome
 import com.azkar.generated.resources.collectionsActionPin
 import com.azkar.generated.resources.collectionsActionRemoveFromReminders
-import com.azkar.generated.resources.collectionsActionShare
 import com.azkar.generated.resources.collectionsActionShowOnHome
 import com.azkar.generated.resources.collectionsActionUnfavorite
 import com.azkar.generated.resources.collectionsActionUnpin
@@ -58,7 +55,6 @@ import com.azkar.ui.components.SettingRow
 import com.azkar.ui.components.StepperControl
 import com.azkar.ui.library.CollectionDetailState
 import com.azkar.ui.library.data.CollectionPresenter.Companion.ARABIC_LOCALE
-import com.azkar.ui.library.data.TransferFormat
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.library.model.TagOption
@@ -279,7 +275,6 @@ internal fun CollectionDetailContent(
         dialogs = dialogs,
         detail = detail,
         collections = collections,
-        showToast = showToast,
         onBack = onBack,
     )
 }
@@ -391,7 +386,6 @@ internal class DetailDialogState {
     var pendingReset by mutableStateOf(false)
     var pendingRemoval by mutableStateOf(false)
     var pendingRemembranceDelete by mutableStateOf<Long?>(null)
-    var shareTarget by mutableStateOf<RemembranceCollection?>(null)
 
     /**
      * The passage whose text is being corrected, or `null` when the editor is closed.
@@ -400,14 +394,6 @@ internal class DetailDialogState {
      * shows what the catalogue now holds instead of what it held when the editor was first opened.
      */
     var editingRemembrance by mutableStateOf<Remembrance?>(null)
-
-    /**
-     * Which encoding the share dialog is showing.
-     *
-     * Held here rather than inside the dialog so the choice survives closing and reopening it, which
-     * is the common case: you copy, paste, come back to correct a passage, and copy again.
-     */
-    var shareFormat by mutableStateOf(TransferFormat.JSON)
 }
 
 /** Every dialog this page can raise, each one still deciding for itself whether it is open. */
@@ -416,7 +402,6 @@ private fun DetailDialogs(
     dialogs: DetailDialogState,
     detail: CollectionDetailState,
     collections: CollectionsCatalogue,
-    showToast: ShowToast,
     onBack: () -> Unit,
 ) {
     if (detail.addPicker.isOpen) {
@@ -443,15 +428,6 @@ private fun DetailDialogs(
             draft = draft,
             collections = collections,
             onDismiss = { dialogs.editor = null },
-        )
-    }
-
-    dialogs.shareTarget?.let { target ->
-        DetailShareHost(
-            collection = target,
-            dialogs = dialogs,
-            collections = collections,
-            showToast = showToast,
         )
     }
 
@@ -544,48 +520,6 @@ private fun DetailConfirmations(
 }
 
 /**
- * The share dialog, plus the toast that confirms the copy.
- *
- * Toast wiring lives here rather than at the call site so the dialog stays a pure view of a document
- * and a clipboard write. A user who cannot tell whether the copy worked will copy twice, and the
- * second copy is the one that ends up on someone's clipboard instead.
- */
-@Composable
-private fun DetailShareHost(
-    collection: RemembranceCollection,
-    dialogs: DetailDialogState,
-    collections: CollectionsCatalogue,
-    showToast: ShowToast,
-) {
-    val toastTitle = stringResource(Res.string.collectionsToastTitle)
-    val copied = stringResource(Res.string.collectionShareCopied)
-    val clipboard = LocalClipboard.current
-    val scope = rememberCoroutineScope()
-    // Resolved here rather than inside the dialog, because the dialog builds its document
-    // synchronously from a `remember` and a picture has to be read off disk first.
-    val coverImageBase64 by produceState<String?>(initialValue = null, collection) {
-        value = collections.covers.base64Of(collection.coverImagePath)
-    }
-    ShareCollectionDialog(
-        collection = collection,
-        format = dialogs.shareFormat,
-        textOf = collections.presenter::localizedPrimaryText,
-        coverImageBase64 = coverImageBase64,
-        callbacks =
-            ShareCallbacks(
-                onFormatChanged = { dialogs.shareFormat = it },
-                onCopy = { document ->
-                    scope.launch {
-                        clipboard.setPlainText(document)
-                        showToast(toastTitle, copied, NotificationPriority.LOW)
-                    }
-                },
-                onDismiss = { dialogs.shareTarget = null },
-            ),
-    )
-}
-
-/**
  * What the title bar does, wired to the state and the open dialogs.
  *
  * Composable rather than a plain builder so it can read [AzkarTheme] for itself: the locale used to
@@ -628,7 +562,6 @@ private fun headerActions(
             }
         },
         onDelete = { dialogs.pendingDelete = true },
-        onShare = { dialogs.shareTarget = it },
         inReminders = detail.inReminders,
         onToggleReminders = { detail.setInReminders(!detail.inReminders) },
     )
@@ -821,7 +754,6 @@ private data class DetailActions(
     val onToggleHome: () -> Unit,
     val onToggleFavorite: () -> Unit,
     val onDelete: () -> Unit,
-    val onShare: (RemembranceCollection) -> Unit,
     /**
      * Whether the queue draws from this collection, and the way to change that.
      *
@@ -992,12 +924,7 @@ private fun detailMenuItems(
     }
 }
 
-/**
- * What the collection *is*: another copy of it, a way to hand it to someone else, and its artwork.
- *
- * The one group that acts on the collection rather than on this device's view of it, which is why a
- * shipped collection is offered all three.
- */
+/** What the collection *is*: another copy of it and its artwork. */
 @Composable
 private fun identityMenuItems(
     collection: RemembranceCollection,
@@ -1015,13 +942,6 @@ private fun identityMenuItems(
                 ),
             )
         }
-        add(
-            AzkarMenuItem(
-                label = stringResource(Res.string.collectionsActionShare),
-                onClick = { actions.onShare(collection) },
-                icon = ActionIcons.share,
-            ),
-        )
     }
 
 /**

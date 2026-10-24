@@ -53,7 +53,7 @@ import org.jetbrains.compose.resources.stringResource
  *
  * Which hue a collection gets is [iconKey]'s hash, which is stable across runs and machines —
  * `String.hashCode` is specified by the JVM rather than left to the implementation. It is keyed on the
- * *icon* rather than the name or the id, so a collection the user renames or re-imports keeps its
+ * *icon* rather than the name or the id, so a collection the user renames keeps its
  * colour, and two collections that share an icon share a colour, which is honest: they do say the same
  * kind of thing.
  *

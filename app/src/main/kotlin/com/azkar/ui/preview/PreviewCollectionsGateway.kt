@@ -6,8 +6,6 @@ import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.HomeCollection
-import com.azkar.ui.library.data.ImportReport
-import com.azkar.ui.library.data.TransferCollection
 import com.azkar.ui.library.model.CollectionsSnapshot
 import java.nio.file.Path
 import java.time.Instant
@@ -134,8 +132,6 @@ internal class PreviewCollectionsGateway(
     ): Int = 0
 
     override suspend fun resetProgress(collectionId: Long): Int = 0
-
-    override suspend fun importCollections(transfers: List<TransferCollection>): ImportReport = ImportReport.EMPTY
 
     override suspend fun setCollectionOnHome(
         id: Long,

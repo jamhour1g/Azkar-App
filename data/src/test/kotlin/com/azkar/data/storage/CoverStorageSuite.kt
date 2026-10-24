@@ -49,72 +49,14 @@ val CoverStorageSuite by testSuite("CoverStorage") {
         }
     }
 
-    testSuite("storing bytes that arrived over the wire") {
-        test("the extension is normalised rather than taken on trust") {
-            withCovers { storage ->
-                val name = storage.store(SUNSET_BYTES, "JPG")
-
-                assertThat(name).endsWith(".jpg")
-                assertThat(storage.read(name)).isEqualTo(SUNSET_BYTES)
-            }
-        }
-
-        test("a leading dot is dropped rather than doubled") {
-            withCovers { storage ->
-                assertThat(storage.store(SUNSET_BYTES, ".webp")).endsWith(".webp")
-            }
-        }
-
-        test("an extension carrying a separator is refused, because it would write outside the directory") {
-            withCovers { storage ->
-                val name = storage.store(SUNSET_BYTES, "../escaped")
-
-                assertThat(name).endsWith(".png")
-                assertThat(name).doesNotContain("/")
-                assertThat(storage.resolve(name).parent).isEqualTo(storage.resolve(""))
-            }
-        }
-
-        test("an extension too long to be one is refused for the same reason") {
-            withCovers { storage ->
-                assertThat(storage.store(SUNSET_BYTES, "notanextension")).endsWith(".png")
-            }
-        }
-    }
-
-    testSuite("reading a cover back") {
-        test("a stored cover reads as the bytes that went in") {
-            withCovers { storage ->
-                val name = storage.store(SUNSET_BYTES, ".png")
-
-                assertThat(storage.read(name)).isEqualTo(SUNSET_BYTES)
-            }
-        }
-
-        test("a cover whose file the user deleted reads as nothing rather than throwing") {
-            withCovers { storage ->
-                val name = storage.store(SUNSET_BYTES, ".png")
-                Files.delete(storage.resolve(name))
-
-                assertThat(storage.read(name)).isNull()
-            }
-        }
-
-        test("a name that was never stored reads as nothing") {
-            withCovers { storage ->
-                assertThat(storage.read("never-stored.png")).isNull()
-            }
-        }
-    }
-
     testSuite("removing a cover") {
         test("deleting takes the file away") {
             withCovers { storage ->
-                val name = storage.store(SUNSET_BYTES, ".png")
+                val name = storage.store(imageFile("sunset.png", SUNSET_BYTES))
 
                 storage.delete(name)
 
-                assertThat(storage.read(name)).isNull()
+                assertThat(storage.resolve(name)).doesNotExist()
             }
         }
 
@@ -128,9 +70,10 @@ val CoverStorageSuite by testSuite("CoverStorage") {
     testSuite("sweeping what nothing points at any more") {
         test("a cover no collection refers to goes, and the count says how many") {
             withCovers { storage ->
-                val kept = storage.store(SUNSET_BYTES, ".png")
-                storage.store(SUNSET_BYTES, ".jpg")
-                storage.store(SUNSET_BYTES, ".webp")
+                val source = imageFile("sunset.png", SUNSET_BYTES)
+                val kept = storage.store(source)
+                storage.store(source)
+                storage.store(source)
 
                 val swept = storage.sweepOrphans(setOf(kept))
 
@@ -141,10 +84,10 @@ val CoverStorageSuite by testSuite("CoverStorage") {
 
         test("sweeping with nothing to remove deletes nothing") {
             withCovers { storage ->
-                val name = storage.store(SUNSET_BYTES, ".png")
+                val name = storage.store(imageFile("sunset.png", SUNSET_BYTES))
 
                 assertThat(storage.sweepOrphans(setOf(name))).isEqualTo(0)
-                assertThat(storage.read(name)).isEqualTo(SUNSET_BYTES)
+                assertThat(storage.resolve(name)).exists()
             }
         }
 

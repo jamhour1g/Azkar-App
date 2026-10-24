@@ -639,7 +639,6 @@ fun previewLibraryHeroControls(
         query = query,
         onQueryChanged = {},
         narrowing = narrowing,
-        onImport = {},
         onNew = {},
         onManageTags = {},
     )

@@ -439,22 +439,7 @@ internal fun LocationNoticeText(
     notice: LocationNotice?,
     modifier: Modifier = Modifier,
 ) {
-    val text =
-        when (notice) {
-            null -> null
-            LocationNotice.InvalidCoordinates -> stringResource(Res.string.settingsPrayerInvalidCoordinates)
-            LocationNotice.InvalidTimeZone -> stringResource(Res.string.settingsPrayerInvalidZone)
-            LocationNotice.Saved -> stringResource(Res.string.settingsPrayerSaved)
-            is LocationNotice.Detected -> stringResource(Res.string.settingsPrayerDetected, notice.city)
-            is LocationNotice.Unavailable ->
-                stringResource(Res.string.settingsPrayerDetectFailed) +
-                    notice.reason?.let { ": $it" }.orEmpty()
-            is LocationNotice.SearchFailed ->
-                stringResource(Res.string.settingsPrayerSearchFailed) +
-                    notice.reason?.let { ": $it" }.orEmpty()
-            LocationNotice.NoResults -> stringResource(Res.string.settingsPrayerNoResults)
-            is LocationNotice.PlaceSelected -> stringResource(Res.string.settingsPrayerPlaceSelected, notice.city)
-        }
+    val text = locationNoticeMessage(notice)
     if (text != null) {
         Text(
             text = text,
@@ -469,6 +454,24 @@ internal fun LocationNoticeText(
         )
     }
 }
+
+@Composable
+private fun locationNoticeMessage(notice: LocationNotice?): String? =
+    when (notice) {
+        null -> null
+        LocationNotice.InvalidCoordinates -> stringResource(Res.string.settingsPrayerInvalidCoordinates)
+        LocationNotice.InvalidTimeZone -> stringResource(Res.string.settingsPrayerInvalidZone)
+        LocationNotice.Saved -> stringResource(Res.string.settingsPrayerSaved)
+        is LocationNotice.Detected -> stringResource(Res.string.settingsPrayerDetected, notice.city)
+        is LocationNotice.Unavailable ->
+            stringResource(Res.string.settingsPrayerDetectFailed) +
+                notice.reason?.let { ": $it" }.orEmpty()
+        is LocationNotice.SearchFailed ->
+            stringResource(Res.string.settingsPrayerSearchFailed) +
+                notice.reason?.let { ": $it" }.orEmpty()
+        LocationNotice.NoResults -> stringResource(Res.string.settingsPrayerNoResults)
+        is LocationNotice.PlaceSelected -> stringResource(Res.string.settingsPrayerPlaceSelected, notice.city)
+    }
 
 @Preview
 @Composable

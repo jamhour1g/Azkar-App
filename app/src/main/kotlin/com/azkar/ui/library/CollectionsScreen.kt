@@ -137,12 +137,6 @@ internal fun CollectionsScreenContent(
     var editor by remember { mutableStateOf<CollectionEditorDraft?>(null) }
     var pendingDelete by remember { mutableStateOf<RemembranceCollection?>(null) }
 
-    // The import needs a scope of its own for the write it kicks off, and one remembered here is
-    // cancelled the moment the hub leaves the composition — which is the right answer for an import
-    // the user abandoned halfway, since the gateway re-plans against the shelf anyway.
-    val importScope = rememberCoroutineScope()
-    val importer = remember(state, importScope) { CollectionImportState(state.catalogue, importScope) }
-
     val toastTitle = stringResource(Res.string.collectionsToastTitle)
     val copiedLabel = stringResource(Res.string.libraryActionCopyCopied)
     val clipboard = LocalClipboard.current
@@ -154,7 +148,6 @@ internal fun CollectionsScreenContent(
         callbacks =
             ShelfCallbacks(
                 onCreate = { editor = CollectionEditorDraft.create(activeLocale) },
-                onImport = { importer.open() },
                 onOpen = { id ->
                     state.findCollection(id)
                     onOpenCollection(id)
@@ -179,10 +172,6 @@ internal fun CollectionsScreenContent(
     )
 
     editor?.let { draft -> CollectionEditorHost(draft, state, onDismiss = { editor = null }) }
-
-    if (importer.isOpen) {
-        ImportCollectionDialog(state = importer, onDismiss = importer::close)
-    }
 
     pendingDelete?.let { collection ->
         CollectionDeleteHost(
@@ -244,7 +233,6 @@ private fun ShelfEffects(
  */
 internal data class ShelfCallbacks(
     val onCreate: () -> Unit,
-    val onImport: () -> Unit,
     val onOpen: (Long) -> Unit,
     val onEdit: (RemembranceCollection) -> Unit,
     val onDuplicate: (RemembranceCollection, String) -> Unit,
@@ -323,7 +311,6 @@ private fun ShelfBodyPreview() {
             callbacks =
                 ShelfCallbacks(
                     onCreate = {},
-                    onImport = {},
                     onOpen = {},
                     onEdit = {},
                     onDuplicate = { _, _ -> },

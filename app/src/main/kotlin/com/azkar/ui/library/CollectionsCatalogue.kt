@@ -20,9 +20,7 @@ import com.azkar.generated.resources.libraryLoadFailed
 import com.azkar.generated.resources.libraryLoading
 import com.azkar.ui.library.data.CollectionPresenter
 import com.azkar.ui.library.data.CollectionsGateway
-import com.azkar.ui.library.data.ImportReport
 import com.azkar.ui.library.data.MembershipCounts
-import com.azkar.ui.library.data.TransferCollection
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.data.membershipCountsOf
 import com.azkar.ui.library.data.withFavorite
@@ -933,31 +931,5 @@ class CollectionsCatalogue(
      */
     fun favoriteChanged() {
         reloadQuietly()
-    }
-
-    /**
-     * Applies a decoded transfer payload and re-reads the shelf behind it.
-     *
-     * This is the shelf's own door to the import gateway for the same reason [CollectionImportState]
-     * is not handed one: the gateway is private, and a state class reaching through another state
-     * class's private field to get at it would be a worse coupling than one delegating method. The
-     * gateway re-plans against the live shelf, so a merge that became a create while the dialog was
-     * open lands where it belongs rather than where it was previewed.
-     *
-     * Suspends because the gateway does, and is expected to be called from a coroutine the import
-     * flow owns.
-     *
-     * Returned as a [Result] rather than a bare report because "nothing was imported" and "the
-     * import failed" are different answers, and a dialog that cannot tell them apart will tell the
-     * user the wrong one.
-     */
-    suspend fun importCollections(transfers: List<TransferCollection>): Result<ImportReport> {
-        val outcome =
-            runCatching { gateway.importCollections(transfers) }
-                .onFailure { failure -> logger.error(failure) { "Unable to import ${transfers.size} collections" } }
-        if (outcome.isSuccess) {
-            reloadQuietly()
-        }
-        return outcome
     }
 }

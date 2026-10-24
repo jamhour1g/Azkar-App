@@ -159,7 +159,6 @@ private fun ShelfColumn(
                             filtersOpen = filtersOpen,
                             onFiltersToggle = { filtersOpen = !filtersOpen },
                         ),
-                    onImport = callbacks.onImport,
                     onNew = callbacks.onCreate,
                     onManageTags = callbacks.onManageTags,
                 ),
@@ -186,11 +185,9 @@ private fun ShelfColumn(
 /**
  * The page's name and what the page is for, and nothing else.
  *
- * It used to carry the two buttons that add and import a collection, on the reasoning that a row of
- * labelled buttons inside a banner looks like decoration. That reasoning was about the labels and not
- * about the buttons, so both moved down into the banner's own control row as glyphs and the header is
- * left with the two lines it was always really for. Nothing was lost by it: there is no longer a
- * second toolbar competing with the one the user is looking at.
+ * It used to carry the button that adds a collection, on the reasoning that a labelled button inside
+ * a banner looks like decoration. It moved down into the banner's control row as a glyph, leaving the
+ * header with the two lines it was always really for and no second toolbar competing with the page.
  */
 @Composable
 private fun ShelfHeading(modifier: Modifier = Modifier) {

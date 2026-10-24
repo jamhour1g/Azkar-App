@@ -3,7 +3,6 @@ package com.azkar.ui.library
 import androidx.compose.runtime.Stable
 import com.azkar.data.storage.CoverStorage
 import io.github.vinceglb.filekit.PlatformFile
-import java.util.Base64
 
 /**
  * The one place a collection cover picture is turned back into something that can be drawn.
@@ -26,8 +25,8 @@ import java.util.Base64
  * that is a path lookup.
  *
  * So the holder survives only because the answer is worth having in one place. [file] turns a stored
- * name into a file the loader can read, [bytes] and [base64Of] turn one into the bytes an exported
- * share document needs, and nothing else in the app knows that covers live in a directory at all.
+ * name into a file the loader can read, and nothing else in the app knows that covers live in a
+ * directory at all.
  *
  * [file] returns a path and not a *checked* one. Coil is the thing that decides whether a picture
  * decodes, and it answers that with its own state rather than with a boolean here; a cover whose file
@@ -48,19 +47,4 @@ class CollectionCoverCache(
      */
     fun file(coverImagePath: String): PlatformFile? =
         covers.resolve(coverImagePath).takeIf { it.toFile().isFile }?.let { PlatformFile(it.toFile()) }
-
-    /**
-     * The bytes of a stored cover, or `null` when the file is gone or unreadable.
-     *
-     * Separate from [file] because the two answer different questions: the UI needs a file the loader
-     * can stream and cache, and the exporter needs the original bytes so the other end receives this
-     * image rather than a re-encode of it. A name with no file behind it is `null` here for the same
-     * reason it draws as a wash there, and both are the normal state after the user deletes a picture
-     * out from under a collection.
-     */
-    fun bytes(coverImagePath: String): ByteArray? = covers.read(coverImagePath)
-
-    /** The cover behind [coverImagePath], base64-encoded for a share document. */
-    fun base64Of(coverImagePath: String?): String? =
-        coverImagePath?.let { path -> bytes(path)?.let { Base64.getEncoder().encodeToString(it) } }
 }

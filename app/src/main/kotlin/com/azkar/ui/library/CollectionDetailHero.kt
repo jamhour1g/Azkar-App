@@ -744,7 +744,6 @@ private fun HeroIconActionPreview() {
         ) {
             HeroIconAction(icon = ActionIcons.pin(on = false), contentDescription = "Pin", onClick = {})
             HeroIconAction(icon = ActionIcons.pin(on = true), contentDescription = "Unpin", onClick = {}, filled = true)
-            HeroIconAction(icon = ActionIcons.share, contentDescription = "Share", onClick = {})
         }
     }
 }

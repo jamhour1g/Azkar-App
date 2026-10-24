@@ -40,8 +40,8 @@ import java.util.Locale
  * this project, and this one is remembered per screen by the shelf, which is exactly the lifetime
  * its contents deserve.
  *
- * @param catalogue the shared library data. Public because the import flow is handed the catalogue
- * rather than this view — it plans against the whole library, not against what the shelf is showing.
+ * @param catalogue the shared library data. Public because the collection detail and session views
+ * also read from this same catalogue rather than loading their own copies.
  */
 @Stable
 class CollectionsState(

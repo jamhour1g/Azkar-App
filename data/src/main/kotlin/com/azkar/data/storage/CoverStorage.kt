@@ -9,7 +9,7 @@ import java.nio.file.StandardCopyOption
 import java.util.UUID
 
 /**
- * The app's own directory of collection cover images, and the only place a cover file is read from.
+ * The app's own directory of collection cover images, and the only place a cover path is resolved.
  *
  * A cover is stored as a copy rather than a path to wherever the user happened to pick it from.
  * That is what makes a deleted image an event this app can see: a user who removes the file they
@@ -51,60 +51,6 @@ class CoverStorage(
     /** The file behind a stored cover name, whether or not it is still there. */
     fun resolve(coverImagePath: String): Path = directory.resolve(coverImagePath)
 
-    /**
-     * Writes [bytes] as a new cover and returns the name to store against a collection.
-     *
-     * The second way in, for images that arrive as bytes rather than as a file — which today means a
-     * shared collection being imported. [extension] is supplied by the caller because only the caller
-     * can tell what the bytes are, and it is not this class's business to guess: it stores what it is
-     * given, and the decoder reads the contents either way.
-     */
-    fun store(
-        bytes: ByteArray,
-        extension: String,
-    ): String {
-        val name = UUID.randomUUID().toString() + extension.normalizedExtension()
-        val target = directory.resolve(name)
-        try {
-            Files.createDirectories(directory)
-            Files.write(target, bytes)
-        } catch (failure: IOException) {
-            logger.error(failure) { "Unable to store an imported cover image" }
-            throw IllegalStateException("Unable to store an imported cover image", failure)
-        }
-        logger.debug { "Stored an imported cover image as [$name]" }
-        return name
-    }
-
-    /**
-     * A leading dot, and nothing stranger than letters or digits after it.
-     *
-     * An extension here comes from outside — it is derived from a decoded image's magic number — and
-     * it is joined onto a file name without further checking, so a value carrying a separator or a
-     * parent reference would write outside the covers directory.
-     */
-    private fun String.normalizedExtension(): String {
-        val cleaned = trim().removePrefix(".").lowercase()
-        if (cleaned.isEmpty() || cleaned.length > MAX_EXTENSION_LENGTH) return DEFAULT_EXTENSION
-        return if (cleaned.all { it.isLetterOrDigit() }) ".$cleaned" else DEFAULT_EXTENSION
-    }
-
-    /**
-     * The bytes of a stored cover, or `null` when the file is gone.
-     *
-     * `null` rather than a throw, because a missing cover is the ordinary fallback case the model
-     * was designed around: the card draws its generated wash instead.
-     */
-    fun read(coverImagePath: String): ByteArray? {
-        val file = resolve(coverImagePath)
-        if (!Files.isRegularFile(file)) {
-            return null
-        }
-        return runCatching { Files.readAllBytes(file) }
-            .onFailure { failure -> logger.warn(failure) { "Unable to read the cover image [$coverImagePath]" } }
-            .getOrNull()
-    }
-
     /** Removes one stored cover. Missing is not a failure — there is nothing left to remove. */
     fun delete(coverImagePath: String) {
         runCatching { Files.deleteIfExists(resolve(coverImagePath)) }
@@ -131,11 +77,11 @@ class CoverStorage(
     /**
      * Deletes every cover file that no collection refers to, and reports how many went.
      *
-     * Replacing a cover, deleting a collection and importing one over another all leave a file
-     * behind that nothing points at any more. Nothing would ever remove them, so this does — on
-     * every launch, which is cheap because it is one listing and one query.
+     * Replacing a cover and deleting a collection leave a file behind that nothing points at any
+     * more. Nothing would ever remove them, so this does — on every launch, which is cheap because
+     * it is one listing and one query.
      *
-     * A read failure leaves the files alone. Sweeping on a guess about what is referenced would
+     * A listing failure leaves the files alone. Sweeping on a guess about what is referenced would
      * delete pictures the user still has a collection pointing at, and an unreferenced file costs
      * disk, while a wrongly deleted one costs the picture.
      */
@@ -156,7 +102,7 @@ class CoverStorage(
     companion object {
         private const val DEFAULT_EXTENSION = ".png"
 
-        // Long enough for `webp`, `jpeg`, `heic`; short enough that a name with no dot in it is not
+        // Long enough for `jpeg`; short enough that a name with no dot in it is not
         // mistaken for an extension.
         private const val MAX_EXTENSION_LENGTH = 5
 

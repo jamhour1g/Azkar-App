@@ -166,50 +166,65 @@ fun SettingsNavRail(
             verticalArrangement = Arrangement.spacedBy(RAIL_GROUP_GAP),
         ) {
             SettingsGroup.entries.forEach { group ->
-                Column(verticalArrangement = Arrangement.spacedBy(RAIL_ROW_SPACING)) {
-                    RailGroupHeader(
-                        icon = settingsGroupIcon(group),
-                        label = settingsGroupLabel(group),
-                        selected = selectedGroup == group,
-                        onClick = { onSelectGroup(group) },
-                    )
-                    // The spine. Drawn behind the children rather than as a row of its own, so it runs the whole
-                    // height of them and grows with them instead of having to be kept in step by hand — and so
-                    // each family's children hang off that family's own header, which is the only thing making
-                    // the tree say which of them a row belongs to.
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .drawBehind {
-                                    val spine =
-                                        if (layoutDirection == LayoutDirection.Ltr) {
-                                            RAIL_TREE_X.toPx()
-                                        } else {
-                                            size.width - RAIL_TREE_X.toPx()
-                                        }
-                                    drawLine(
-                                        color = colors.border,
-                                        start = Offset(spine, 0f),
-                                        end = Offset(spine, size.height),
-                                        strokeWidth = RAIL_TREE_STROKE.toPx(),
-                                    )
-                                },
-                        verticalArrangement = Arrangement.spacedBy(RAIL_ROW_SPACING),
-                    ) {
-                        group.sections.forEach { section ->
-                            RailRow(
-                                label = settingsSectionLabel(section),
-                                selected = active == section,
-                                onClick = { onSelect(section) },
-                            )
-                        }
-                    }
-                }
+                SettingsRailGroup(
+                    group = group,
+                    active = active,
+                    selectedGroup = selectedGroup,
+                    onSelect = onSelect,
+                    onSelectGroup = onSelectGroup,
+                )
             }
         }
         Spacer(Modifier.height(AzkarSpacing.lg))
         RailFooter()
+    }
+}
+
+@Composable
+private fun SettingsRailGroup(
+    group: SettingsGroup,
+    active: SettingsSection,
+    selectedGroup: SettingsGroup,
+    onSelect: (SettingsSection) -> Unit,
+    onSelectGroup: (SettingsGroup) -> Unit,
+) {
+    val colors = AzkarTheme.colors
+    Column(verticalArrangement = Arrangement.spacedBy(RAIL_ROW_SPACING)) {
+        RailGroupHeader(
+            icon = settingsGroupIcon(group),
+            label = settingsGroupLabel(group),
+            selected = selectedGroup == group,
+            onClick = { onSelectGroup(group) },
+        )
+        // Draw the spine behind each group's children so it grows with them and mirrors in RTL.
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .drawBehind {
+                        val spine =
+                            if (layoutDirection == LayoutDirection.Ltr) {
+                                RAIL_TREE_X.toPx()
+                            } else {
+                                size.width - RAIL_TREE_X.toPx()
+                            }
+                        drawLine(
+                            color = colors.border,
+                            start = Offset(spine, 0f),
+                            end = Offset(spine, size.height),
+                            strokeWidth = RAIL_TREE_STROKE.toPx(),
+                        )
+                    },
+            verticalArrangement = Arrangement.spacedBy(RAIL_ROW_SPACING),
+        ) {
+            group.sections.forEach { section ->
+                RailRow(
+                    label = settingsSectionLabel(section),
+                    selected = active == section,
+                    onClick = { onSelect(section) },
+                )
+            }
+        }
     }
 }
 

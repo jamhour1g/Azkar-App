@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
@@ -44,7 +43,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import com.azkar.generated.resources.Res
-import com.azkar.generated.resources.collectionsActionImport
 import com.azkar.generated.resources.collectionsActionNew
 import com.azkar.generated.resources.collectionsSearchCollections
 import com.azkar.generated.resources.hero_day
@@ -82,8 +80,8 @@ import java.time.ZoneId
  * because two dropdowns spent half the banner on two of the shelf's nine answers.
  *
  * The filters open in a popover rather than in the page, so nothing moves when they do. The banner's
- * control row also holds the two buttons that add and import a collection, which used to sit in a
- * header of their own above it — see [HeroControlRow] for why that arrangement was worth giving up.
+ * control row also holds the button that adds a collection, which used to sit in its own header
+ * above the banner — see [HeroControlRow] for why that arrangement was worth giving up.
  */
 
 @Composable
@@ -171,16 +169,16 @@ private fun HeroHeading() {
 }
 
 /**
- * The search field, the two controls that change what the shelf holds, and the one that opens both
+ * The search field, the control that creates a collection, and the one that opens both
  * filters.
  *
- * All four in one row. The filters used to sit here as two dropdowns of their own, which spent 300dp
+ * All four controls in one row. The filters used to sit here as two dropdowns of their own, which spent 300dp
  * of the banner to show two of the nine answers the shelf is capable of giving; they are behind one
- * button now. The two buttons that add and import a collection used to live in a header above the
- * banner, and moved down into this row: as glyphs beside the field they are simply the last three
- * things the field does, and the header is left with nothing but the page's name. A row of labelled
- * buttons inside a banner looked like decoration, which was the whole reason they were kept out of
- * it — but that reasoning is about labels, and there are none here.
+ * button now. The button that adds a collection used to live in a header above the banner, and moved
+ * down into this row: as a glyph beside the field it is simply one of the things the shelf lets the
+ * user do, and the header is left with nothing but the page's name. A row of labelled buttons inside
+ * a banner looked like decoration, which was the whole reason they were kept out of it — but that
+ * reasoning is about labels, and there are none here.
  *
  * The filter umbrella stays last. Its popover is aligned to the button's right edge, so anything in
  * front of it would pull the popover off the window edge and leave it hanging over the row it was
@@ -198,11 +196,6 @@ private fun HeroControlRow(controls: LibraryHeroControls) {
             placeholder = stringResource(Res.string.collectionsSearchCollections),
             leadingIcon = Icons.Filled.Search,
             modifier = Modifier.weight(1f),
-        )
-        HeroAction(
-            icon = Icons.Filled.FileDownload,
-            description = stringResource(Res.string.collectionsActionImport),
-            onClick = controls.onImport,
         )
         HeroAction(
             icon = Icons.Filled.Add,
@@ -412,7 +405,7 @@ private val DEFAULT_SORT = CollectionSort.MOST_ITEMS
 /**
  * Every button in the banner's control row, in one set of numbers.
  *
- * One set for all of them because they stand shoulder to shoulder in a single row: the import button
+ * One set for all of them because they stand shoulder to shoulder in a single row: the create button
  * at 44dp beside the filter button at 40dp would read as an accident rather than as a decision, and
  * 44dp is also taller than the search field they all line up with. Sized to the field's own height,
  * because a row of controls at three different heights is the one thing a control row cannot do.
@@ -450,7 +443,6 @@ data class LibraryHeroControls(
     val query: String,
     val onQueryChanged: (String) -> Unit,
     val narrowing: ShelfNarrowing,
-    val onImport: () -> Unit,
     val onNew: () -> Unit,
     /**
      * Opens the Manage tags screen.

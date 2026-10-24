@@ -349,34 +349,6 @@
     <string name="collectionSessionMissingTitle">المجموعة غير متاحة</string>
     <string name="collectionSessionMissingHint">لم تعد على مكتبتك، فليس هناك ما يُذكر.</string>
     <string name="collectionsActionClose">إغلاق</string>
-    <string name="collectionsActionShare">مشاركة</string>
-    <string name="collectionsActionImport">استيراد</string>
-    <string name="collectionShareTitle">مشاركة هذه المجموعة</string>
-    <string name="collectionShareHint">انسخ هذه القائمة والصقها في نسخة أخرى من أذكار لنقل الأذكار. وأنت تختار الصيغة؛ وكلتاهما تحمل الأذكار نفسها.</string>
-    <string name="collectionShareCopy">انسخ إلى الحافظة</string>
-    <string name="collectionShareCopied">نُسخت المجموعة إلى الحافظة</string>
-    <string name="collectionImportAddTitle">استيراد مجموعات</string>
-    <string name="collectionImportHint">الصق قائمة شاركها معك أحد، أو اكتبها بنفسك. يُطابَق الأذكار بنصِّها ومصدرها، فما لم تعرفه هذه النسخة يُبلَّغ عنه ولا يُختلق.</string>
-    <string name="collectionImportFormatJson">ملف أذكار</string>
-    <string name="collectionImportFormatText">قائمة بسيطة</string>
-    <string name="collectionImportPayloadLabel">القائمة</string>
-    <string name="collectionImportPayloadPlaceholder">الصق هنا</string>
-    <string name="collectionImportPreview">تابع ما سيفعله</string>
-    <string name="collectionImportAdd">استورد</string>
-    <string name="collectionImportPlanned">هذه ما سيفعله</string>
-    <string name="collectionImportUnreadableTitle">هذه ليست قائمة مجموعات من أذكار</string>
-    <string name="collectionImportUnreadableHint">تأكَّد أن الصيغة أعلاه تطابق الطريقة التي نُسخت بها القائمة، وأن شيئًا لم يُحذف من وسطها.</string>
-    <string name="collectionImportEmptyTitle">لا شيء للاستيراد</string>
-    <string name="collectionImportEmptyHint">تُقرأ القائمة، لكنها لا تصف أي أذكار ولا مجموعات.</string>
-    <string name="collectionImportCreateCount">مجموعات جديدة</string>
-    <string name="collectionImportMergeCount">أُضيفت إلى مجموعاتك</string>
-    <string name="collectionImportUnmatchedCount">أذكار لم تُعرف</string>
-    <string name="collectionImportSkippedLabel">تُركت لأننا نوفّرها سلفًا</string>
-    <string name="collectionImportUnmatchedLabel">لم تعرفها هذه النسخة</string>
-    <string name="collectionImportReportTitle">تمَّ الاستيراد</string>
-    <string name="collectionImportResultCreated">مج أُنشئت</string>
-    <string name="collectionImportResultMerged">مج أُضيفت إليها</string>
-    <string name="collectionImportResultMembers">أذكار أُضيفت</string>
 
     <!-- The library's own layout: the banner and the chips above the shelf. -->
     <string name="libraryHeroLabel">مكتبة الأذكار</string>

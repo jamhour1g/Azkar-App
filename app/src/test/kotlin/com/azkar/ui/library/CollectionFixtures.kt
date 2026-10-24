@@ -11,13 +11,9 @@ import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.domain.model.impl.RemembranceImpl
 import com.azkar.domain.model.impl.TagImpl
 import com.azkar.ui.library.data.CollectionFiltering
-import com.azkar.ui.library.data.CollectionImport
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.HomeCollection
-import com.azkar.ui.library.data.ImportPlan
-import com.azkar.ui.library.data.ImportReport
 import com.azkar.ui.library.data.ReminderSources
-import com.azkar.ui.library.data.TransferCollection
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.data.withFavorite
 import com.azkar.ui.library.model.CollectionsSnapshot
@@ -580,46 +576,6 @@ internal class FakeCollectionsGateway(
         val dropped = progress[collectionId].orEmpty().size
         progress = progress - collectionId
         return dropped
-    }
-
-    /**
-     * Runs the real planner over the fake's shelf and catalogue, then applies it.
-     *
-     * Deliberately not a stub that returns a canned report: the point of the state tests is that the
-     * numbers a dialog shows come from the same decisions the production gateway makes, and a stub
-     * would let the two disagree without anything failing.
-     */
-    override suspend fun importCollections(transfers: List<TransferCollection>): ImportReport {
-        checkNotFailing()
-        val plan = CollectionImport.plan(transfers, collections, remembrances)
-        var membersAdded = 0
-        plan.plans.forEach { step ->
-            when (step) {
-                is ImportPlan.Create -> {
-                    // The cover is dropped rather than invented. The real gateway decodes the
-                    // transfer's base64 into the covers directory and stores the name it wrote; a fake
-                    // has no directory, and naming a file that was never written would let a test
-                    // believe the imported collection had a picture.
-                    val created =
-                        createCollection(
-                            name = step.transfer.name,
-                            description = step.transfer.description,
-                            tagNames = step.transfer.tagNames,
-                            coverImagePath = null,
-                        )
-                    membersAdded += addMembers(requireNotNull(created.id), step.memberIds)
-                }
-                is ImportPlan.Merge -> membersAdded += addMembers(step.collectionId, step.memberIds)
-                is ImportPlan.SkipOfficial -> Unit
-            }
-        }
-        return ImportReport(
-            created = plan.created,
-            merged = plan.merged,
-            membersAdded = membersAdded,
-            skippedOfficial = plan.skippedOfficial,
-            unmatchedMembers = plan.unmatched,
-        )
     }
 
     /**

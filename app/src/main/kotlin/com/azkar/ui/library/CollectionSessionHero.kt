@@ -301,7 +301,6 @@ private fun CollectionSessionHeroPreview() {
                         menuItems =
                             listOf(
                                 AzkarMenuItem(label = "Restart", onClick = {}, icon = ActionIcons.restart),
-                                AzkarMenuItem(label = "Share", onClick = {}, icon = ActionIcons.share),
                             ),
                     ),
             )

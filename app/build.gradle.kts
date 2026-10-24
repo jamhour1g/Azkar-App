@@ -10,9 +10,7 @@ plugins {
     // match Kotlin exactly.
     id("org.jetbrains.kotlin.jvm")
     id("org.jetbrains.kotlin.plugin.compose")
-    // Applied for `CollectionTransfer`'s JSON: the import/export feature is the app's
-    // first machine-readable document, and a hand-written parser is where escaping bugs
-    // and unescaped Arabic live.
+    // Required for serializable prayer and reminder settings and network response models.
     id("org.jetbrains.kotlin.plugin.serialization")
     alias(libs.plugins.org.jetbrains.compose)
     alias(libs.plugins.org.jetbrains.compose.hot.reload)

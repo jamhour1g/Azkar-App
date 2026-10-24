@@ -335,34 +335,6 @@
     <string name="collectionSessionMissingTitle">Collection unavailable</string>
     <string name="collectionSessionMissingHint">It is no longer on your shelf, so there is nothing to recite.</string>
     <string name="collectionsActionClose">Close</string>
-    <string name="collectionsActionShare">Share</string>
-    <string name="collectionsActionImport">Import</string>
-    <string name="collectionShareTitle">Share this collection</string>
-    <string name="collectionShareHint">Copy this list and paste it into another install of Azkar to bring the remembrances across. You choose the encoding; both carry the same remembrances.</string>
-    <string name="collectionShareCopy">Copy to clipboard</string>
-    <string name="collectionShareCopied">Collection copied to the clipboard</string>
-    <string name="collectionImportAddTitle">Import collections</string>
-    <string name="collectionImportHint">Paste a list someone shared with you, or type one yourself. Remembrances are matched by their text and citation, so anything this build does not recognise is reported rather than invented.</string>
-    <string name="collectionImportFormatJson">Azkar file</string>
-    <string name="collectionImportFormatText">Plain list</string>
-    <string name="collectionImportPayloadLabel">The list</string>
-    <string name="collectionImportPayloadPlaceholder">Paste here</string>
-    <string name="collectionImportPreview">Check what it will do</string>
-    <string name="collectionImportAdd">Import</string>
-    <string name="collectionImportPlanned">Here is what it will do</string>
-    <string name="collectionImportUnreadableTitle">That is not an Azkar collections list</string>
-    <string name="collectionImportUnreadableHint">Check the encoding above matches how the list was copied, and that nothing was left out of the middle of it.</string>
-    <string name="collectionImportEmptyTitle">Nothing to import</string>
-    <string name="collectionImportEmptyHint">The list reads, but it does not describe any remembrances or collections.</string>
-    <string name="collectionImportCreateCount">New collections</string>
-    <string name="collectionImportMergeCount">Added to your collections</string>
-    <string name="collectionImportUnmatchedCount">Remembrances not recognised</string>
-    <string name="collectionImportSkippedLabel">Left alone because we already ship them</string>
-    <string name="collectionImportUnmatchedLabel">Not recognised by this build</string>
-    <string name="collectionImportReportTitle">Import finished</string>
-    <string name="collectionImportResultCreated">Collections created</string>
-    <string name="collectionImportResultMerged">Collections added to</string>
-    <string name="collectionImportResultMembers">Remembrances added</string>
 
     <!-- The library's own layout: the banner and the chips above the shelf. -->
     <string name="libraryHeroLabel">Azkar Library</string>

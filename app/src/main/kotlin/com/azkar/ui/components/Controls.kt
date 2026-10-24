@@ -1033,12 +1033,6 @@ private fun TooltipIconButtonPreview() {
                 tooltip = "Change cover",
                 onClick = {},
             )
-            TooltipIconButton(
-                icon = ActionIcons.share,
-                tooltip = "Share collection",
-                onClick = {},
-                enabled = false,
-            )
             TooltipIconActionButton(
                 icon = AzkarIcons.Settings,
                 tooltip = "Settings",

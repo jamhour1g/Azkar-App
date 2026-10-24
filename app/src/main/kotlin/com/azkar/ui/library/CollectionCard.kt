@@ -153,7 +153,6 @@ private fun CollectionCardPreview() {
                         items =
                             listOf(
                                 AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),
-                                AzkarMenuItem(label = "Share", onClick = {}, icon = ActionIcons.share),
                             ),
                         onOpen = {},
                         covers = null,

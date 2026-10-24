@@ -90,7 +90,9 @@ val CollectionCoverArtSuite by testSuite("Collection cover art") {
             // A PNG header with no image behind it, which is what a truncated download or a
             // half-finished copy looks like. The tile has to survive it, because the cover is
             // decoration sitting over a collection rather than the collection itself.
-            val stored = storage.store(byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 1, 2, 3), "png")
+            val truncatedPng = Files.createTempFile("azkar-cover-art-source", ".png")
+            Files.write(truncatedPng, byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 1, 2, 3))
+            val stored = storage.store(truncatedPng)
 
             renderArt(covers = covers, coverImagePath = stored) {
                 expectNoPhoto()

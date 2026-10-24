@@ -25,7 +25,6 @@ import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
 import java.time.Instant
-import java.util.Base64
 import java.util.Locale
 
 /**
@@ -159,44 +158,6 @@ interface CollectionProgressGateway {
 
     /** Forgets the collection's progress, returning how many members were reset. */
     suspend fun resetProgress(collectionId: Long): Int
-}
-
-/**
- * Brings collections in from another machine.
- *
- * A third concern alongside the shelf and the progress, and separate for the same reason: importing
- * is a single call the user makes rarely, while the other two are read on every screen. The payload
- * it takes is the codec's own [TransferCollection] rather than raw text, so decoding stays in
- * [CollectionTransfer] where it is tested and parsing failures never reach a write.
- */
-interface CollectionTransferGateway {
-    /**
-     * Merges [transfers] into the shelf and reports what happened.
-     *
-     * Never overwrites: a custom collection of the same name is added to, and a collection we ship
-     * is left alone entirely.
-     */
-    suspend fun importCollections(transfers: List<TransferCollection>): ImportReport
-}
-
-/** What an import actually did, in the terms the dialog needs to report it. */
-data class ImportReport(
-    val created: Int = 0,
-    val merged: Int = 0,
-    val membersAdded: Int = 0,
-    val skippedOfficial: List<String> = emptyList(),
-    val unmatchedMembers: List<TransferMember> = emptyList(),
-) {
-    val isEmpty: Boolean
-        get() =
-            created == 0 &&
-                merged == 0 &&
-                skippedOfficial.isEmpty() &&
-                unmatchedMembers.isEmpty()
-
-    companion object {
-        val EMPTY = ImportReport()
-    }
 }
 
 /**
@@ -415,12 +376,11 @@ interface ReminderPicksGateway {
  * That is what lets the state layer tell "added three" from "added nothing because they were already
  * members" and say so, instead of reloading the shelf to find out.
  *
- * Extends the five concern interfaces above it — [CollectionWriteGateway],
- * [CollectionProgressGateway], [CollectionTransferGateway], [CollectionHomeGateway] and
- * [CollectionMembershipGateway]: creating and editing a collection, how many times a passage has
- * been said, what can be brought in from another machine, which collection the Home screen leads
- * with and how its contents are edited are all part of what the library needs from the database, and
- * having the state classes take one dependency rather than six is worth more than a longer list of
+ * Extends the four concern interfaces above it — [CollectionWriteGateway],
+ * [CollectionProgressGateway], [CollectionHomeGateway] and [CollectionMembershipGateway]: creating
+ * and editing a collection, how many times a passage has been said, which collection the Home screen
+ * leads with and how its contents are edited are all part of what the library needs from the database,
+ * and having the state classes take one dependency rather than five is worth more than a longer list of
  * method names on one interface.
  *
  * What is left here is the catalogue itself: read the shelf, mark a passage, write a passage's texts,
@@ -429,7 +389,6 @@ interface ReminderPicksGateway {
 interface CollectionsGateway :
     CollectionWriteGateway,
     CollectionProgressGateway,
-    CollectionTransferGateway,
     CollectionHomeGateway,
     CollectionMembershipGateway,
     ReminderPicksGateway {
@@ -842,55 +801,6 @@ class DomainCollectionsGateway(
     override suspend fun resetProgress(collectionId: Long): Int = recitationService.reset(collectionId)
 
     /**
-     * Plans the whole import before writing any of it.
-     *
-     * The plan is computed against one read of the shelf and the catalogue, and the writes that
-     * follow are the same `CollectionService` calls the shelf screen already uses — so an import
-     * cannot end up in a state the ordinary create-and-append path could not reach, and there is no
-     * second set of rules to keep in step with the first.
-     */
-    override suspend fun importCollections(transfers: List<TransferCollection>): ImportReport {
-        val existing = collectionService.findAll()
-        val catalogue = remembranceService.findAll()
-        val plan = CollectionImport.plan(transfers, existing, catalogue)
-        var membersAdded = 0
-        plan.plans.forEach { step ->
-            when (step) {
-                is ImportPlan.Create -> {
-                    val collection =
-                        collectionService.create(
-                            name = step.transfer.name,
-                            description = step.transfer.description,
-                            iconKey = step.transfer.iconKey,
-                            coverImagePath = step.transfer.restoreCoverInto(covers, logger),
-                            tags = step.transfer.tagNames.toTags(step.transfer.nameLanguage()),
-                            translations = step.transfer.pairs(),
-                            nameLocale = step.transfer.nameLanguage(),
-                        )
-                    membersAdded += collection.id?.let { collectionService.addMembers(it, step.memberIds) } ?: 0
-                }
-                is ImportPlan.Merge -> {
-                    // Fill-only, for the reason `applyTranslations` gives: the local shelf is the user's
-                    // and a shared document matched on name alone has no standing to retranslate it.
-                    collectionService.applyTranslations(step.collectionId, step.translations)
-                    membersAdded += collectionService.addMembers(step.collectionId, step.memberIds)
-                }
-                is ImportPlan.SkipOfficial -> Unit
-            }
-        }
-        // The collection counts come from the plan rather than from the loop, because a create
-        // that added no members is still a create: the user needs to know the collection now
-        // exists, and an import that matched everything it already had still has to say so.
-        return ImportReport(
-            created = plan.created,
-            merged = plan.merged,
-            membersAdded = membersAdded,
-            skippedOfficial = plan.skippedOfficial,
-            unmatchedMembers = plan.unmatched,
-        )
-    }
-
-    /**
      * Moves a collection on or off the Home rail and returns it as stored.
      *
      * Returns the collection rather than nothing so the shelf tile behind the menu item can be
@@ -987,58 +897,3 @@ private fun Collection<String>.toTags(nameLocale: Locale): Set<Tag> =
     map { TagImpl(name = it, nameLocale = nameLocale) }
         .filter { it.name.isNotBlank() }
         .toSet()
-
-/**
- * Writes an imported cover into the app's own storage and returns the name to store against it.
- *
- * Only the JSON format carries a picture, because only it can hold bytes: a base64 blob inside the
- * pipe-delimited text block would be unreadable and enormous. An import from text therefore brings a
- * collection with no cover and the receiving side draws its generated wash, which is the fallback
- * working exactly as intended.
- *
- * A payload that will not decode is skipped rather than allowed to fail the import. The collection
- * itself is the thing the user asked for; the cover is decoration on it, and losing the decoration is
- * a better outcome than losing the collection.
- */
-private fun TransferCollection.restoreCoverInto(
-    covers: CoverStorage,
-    logger: KLogger,
-): String? {
-    val encoded = coverImageBase64
-    val bytes =
-        encoded?.let {
-            runCatching { Base64.getDecoder().decode(it) }
-                .onFailure { failure ->
-                    logger.warn(failure) { "Ignoring an unreadable cover image on imported collection '$name'" }
-                }.getOrNull()
-        }
-    val extension = bytes?.let(::imageExtensionOf)
-    return bytes?.let { imageBytes ->
-        extension?.let { ext ->
-            runCatching { covers.store(imageBytes, ext) }
-                .onFailure { failure ->
-                    logger.warn(failure) { "Unable to keep the cover image on imported collection '$name'" }
-                }.getOrNull()
-        }
-    }
-}
-
-/**
- * The file extension for an encoded image, read from the magic number rather than from a declared
- * format.
- *
- * The transfer says only that these are image bytes; a name or a media type beside it would be
- * something the sender could get wrong and the receiver would have no way to check. These four
- * signatures are the formats the app can actually decode, so an unrecognised one is refused and the
- * cover falls back rather than being written out under a `.png` that is not a PNG.
- */
-private fun imageExtensionOf(bytes: ByteArray): String? {
-    val hex = bytes.take(8).joinToString(separator = "") { byte -> "%02X".format(Locale.ROOT, byte) }
-    return when {
-        hex.startsWith("89504E47") -> ".png"
-        hex.startsWith("FFD8FF") -> ".jpg"
-        hex.startsWith("47494638") -> ".gif"
-        hex.startsWith("52494646") && bytes.size >= 12 -> ".webp"
-        else -> null
-    }
-}
