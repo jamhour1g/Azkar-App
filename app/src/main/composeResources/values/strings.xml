@@ -588,6 +588,8 @@
     <string name="settingsPrayerCalculationHint">The convention that turns that place into prayer times.</string>
     <string name="settingsPrayerCityLabel">City or place</string>
     <string name="settingsPrayerSearchLabel">Search for a city</string>
+    <string name="settingsPrayerCurrentLocation">Current location</string>
+    <string name="settingsPrayerSearchPlaceholder">e.g. Ramallah or London</string>
     <string name="settingsPrayerSearching">Searching…</string>
     <string name="settingsPrayerSearchFailed">Could not search for places.</string>
     <string name="settingsPrayerNoResults">No matching places.</string>
@@ -598,6 +600,11 @@
     <string name="settingsPrayerZoneLabel">Time zone</string>
     <string name="settingsPrayerZoneHint">Region and city, for example Europe/London.</string>
     <string name="settingsPrayerMethodLabel">Method</string>
+    <string name="settingsPrayerMethodMuslimWorldLeague">Muslim World League</string>
+    <string name="settingsPrayerMethodEgyptian">Egyptian General Authority</string>
+    <string name="settingsPrayerMethodKarachi">University of Islamic Sciences, Karachi</string>
+    <string name="settingsPrayerMethodUmmAlQura">Umm al-Qura (Makkah)</string>
+    <string name="settingsPrayerMethodNorthAmerica">ISNA / North America</string>
     <string name="settingsPrayerSave">Save location</string>
     <string name="settingsPrayerDetect">Auto-detect</string>
     <string name="settingsPrayerSaved">Location saved</string>

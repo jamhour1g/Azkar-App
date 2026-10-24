@@ -1,13 +1,25 @@
 package com.azkar.ui.shell
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +35,7 @@ import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.settingsPrayerCalculationHint
 import com.azkar.generated.resources.settingsPrayerCalculationTitle
 import com.azkar.generated.resources.settingsPrayerCityLabel
+import com.azkar.generated.resources.settingsPrayerCurrentLocation
 import com.azkar.generated.resources.settingsPrayerDetect
 import com.azkar.generated.resources.settingsPrayerDetectFailed
 import com.azkar.generated.resources.settingsPrayerDetected
@@ -33,7 +46,11 @@ import com.azkar.generated.resources.settingsPrayerLocationHint
 import com.azkar.generated.resources.settingsPrayerLocationTitle
 import com.azkar.generated.resources.settingsPrayerLongitudeLabel
 import com.azkar.generated.resources.settingsPrayerManualToggle
-import com.azkar.generated.resources.settingsPrayerMethodLabel
+import com.azkar.generated.resources.settingsPrayerMethodEgyptian
+import com.azkar.generated.resources.settingsPrayerMethodKarachi
+import com.azkar.generated.resources.settingsPrayerMethodMuslimWorldLeague
+import com.azkar.generated.resources.settingsPrayerMethodNorthAmerica
+import com.azkar.generated.resources.settingsPrayerMethodUmmAlQura
 import com.azkar.generated.resources.settingsPrayerNoResults
 import com.azkar.generated.resources.settingsPrayerPerPrayerHint
 import com.azkar.generated.resources.settingsPrayerPlaceSelected
@@ -41,9 +58,12 @@ import com.azkar.generated.resources.settingsPrayerSave
 import com.azkar.generated.resources.settingsPrayerSaved
 import com.azkar.generated.resources.settingsPrayerSearchFailed
 import com.azkar.generated.resources.settingsPrayerSearchLabel
+import com.azkar.generated.resources.settingsPrayerSearchPlaceholder
 import com.azkar.generated.resources.settingsPrayerSearching
 import com.azkar.generated.resources.settingsPrayerZoneHint
 import com.azkar.generated.resources.settingsPrayerZoneLabel
+import com.azkar.ui.components.ActionIcons
+import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarOutlinedField
 import com.azkar.ui.components.HintText
 import com.azkar.ui.components.PrimaryButton
@@ -70,12 +90,6 @@ import org.jetbrains.compose.resources.stringResource
 // it: a time zone is twenty characters and a coordinate is a signed decimal, and either one in a 210dp
 // box beside a sentence is a box too small to type into.
 
-/*
- * The dropdown's width, wider than the shared default because the method names are sentences ("Muslim
- * World League", "Umm al-Qura") and the shared 210dp truncated all of them.
- */
-private val LOCATION_FIELD_WIDTH = 230.dp
-
 /**
  * Where the prayer times come from.
  *
@@ -91,6 +105,7 @@ private val LOCATION_FIELD_WIDTH = 230.dp
  */
 @Composable
 internal fun SettingsPrayerLocationSection(
+    location: PrayerLocationSettings,
     settings: NotificationSettingsState,
     modifier: Modifier = Modifier,
 ) {
@@ -102,11 +117,14 @@ internal fun SettingsPrayerLocationSection(
         modifier = modifier,
     ) {
         SettingsGroupCard {
+            CurrentPrayerLocation(location)
+            SettingsRowDivider()
             SettingsFieldRow(label = stringResource(Res.string.settingsPrayerSearchLabel)) {
                 AzkarOutlinedField(
                     value = settings.prayer.searchQuery,
                     onValueChange = settings.prayer::updateSearchQuery,
-                    placeholder = "",
+                    placeholder = stringResource(Res.string.settingsPrayerSearchPlaceholder),
+                    leadingIcon = Icons.Default.Search,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -120,36 +138,70 @@ internal fun SettingsPrayerLocationSection(
                     onSelect = settings.prayer::selectPlace,
                 )
             }
-            SettingsRowDivider()
-            ManualLocationDisclosure(
-                expanded = manualExpanded,
-                onToggle = { manualExpanded = !manualExpanded },
-            )
+            FlowRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.sm),
+                verticalArrangement = Arrangement.spacedBy(AzkarSpacing.sm),
+            ) {
+                AutoDetectButton(settings = settings)
+                ManualLocationDisclosure(
+                    expanded = manualExpanded,
+                    onToggle = { manualExpanded = !manualExpanded },
+                )
+            }
             if (manualExpanded) {
                 SettingsRowDivider()
                 ManualLocationFields(settings = settings)
             }
-            SettingsRowDivider()
-            AutoDetectButton(settings = settings)
             LocationNoticeText(settings.prayer.notice)
-            SettingsRowDivider()
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                HintText(stringResource(Res.string.settingsPrayerPerPrayerHint))
+        }
+        Box(modifier = Modifier.padding(top = AzkarSpacing.md, start = 4.dp)) {
+            HintText(stringResource(Res.string.settingsPrayerPerPrayerHint))
+        }
+    }
+}
+
+@Composable
+private fun CurrentPrayerLocation(location: PrayerLocationSettings) {
+    val colors = AzkarTheme.colors
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier.size(44.dp).background(colors.highlight, RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                AzkarIcons.Compass,
+                contentDescription = null,
+                tint = colors.primaryStrong,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                stringResource(Res.string.settingsPrayerCurrentLocation),
+                color = colors.textSecondary,
+                fontSize = 12.sp,
+            )
+            Text(
+                location.city.ifBlank {
+                    location.zoneId
+                },
+                color = colors.textPrimary,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (location.city.isNotBlank()) {
+                Text(location.zoneId, color = colors.textSecondary, fontSize = 12.sp)
             }
         }
     }
 }
 
-/**
- * Which convention turns the stored coordinates into times.
- *
- * A block of its own, and only just — one row, one dropdown. That is still the honest shape, because the
- * method is not an attribute of a place: Umm al-Qura and the Muslim World League disagree about the
- * times *for the same place*, which is exactly what this block says and exactly what the location
- * block's rows cannot. Leaving it as the last row of the address form said the opposite — that it
- * described somewhere — and a reader who moved to Madrid and came back to Cairo to find their Fajr
- * shifted by a minute had no way of knowing that a dropdown two rows down was why.
- */
+/** Which convention turns the stored coordinates into times. */
 @Composable
 internal fun SettingsPrayerCalculationSection(
     location: PrayerLocationSettings,
@@ -160,20 +212,30 @@ internal fun SettingsPrayerCalculationSection(
         title = stringResource(Res.string.settingsPrayerCalculationTitle),
         subtitle = stringResource(Res.string.settingsPrayerCalculationHint),
         modifier = modifier,
-    ) {
-        SettingsGroupCard {
-            SettingsFieldRow(label = stringResource(Res.string.settingsPrayerMethodLabel)) {
-                AzkarDropdown(
-                    selected = location.method,
-                    options = PrayerCalculationMethod.entries,
-                    label = { it.displayName },
-                    onSelect = settings.prayer::setMethod,
-                    fieldWidth = LOCATION_FIELD_WIDTH,
-                )
-            }
-        }
-    }
+        headingAction = {
+            AzkarDropdown(
+                selected = location.method,
+                options = PrayerCalculationMethod.entries,
+                label = { method ->
+                    stringResource(
+                        when (method) {
+                            PrayerCalculationMethod.MUSLIM_WORLD_LEAGUE ->
+                                Res.string.settingsPrayerMethodMuslimWorldLeague
+                            PrayerCalculationMethod.EGYPTIAN -> Res.string.settingsPrayerMethodEgyptian
+                            PrayerCalculationMethod.KARACHI -> Res.string.settingsPrayerMethodKarachi
+                            PrayerCalculationMethod.UMM_AL_QURA -> Res.string.settingsPrayerMethodUmmAlQura
+                            PrayerCalculationMethod.NORTH_AMERICA -> Res.string.settingsPrayerMethodNorthAmerica
+                        },
+                    )
+                },
+                onSelect = settings.prayer::setMethod,
+                fieldWidth = CALCULATION_METHOD_FIELD_WIDTH,
+            )
+        },
+    )
 }
+
+private val CALCULATION_METHOD_FIELD_WIDTH = 280.dp
 
 /**
  * The manual location form behind the disclosure: a city, a coordinate pair, a time zone, and save.
@@ -221,6 +283,7 @@ private fun ManualLocationFields(settings: NotificationSettingsState) {
             value = settings.locationDraft.zoneId,
             onValueChange = { value -> settings.prayer.editDraft { draft -> draft.copy(zoneId = value) } },
             placeholder = "",
+            modifier = Modifier.fillMaxWidth(),
         )
     }
     SettingsRowDivider()
@@ -284,27 +347,26 @@ private fun ManualLocationDisclosure(
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggle)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.sm),
-    ) {
+    TextButton(onClick = onToggle, modifier = modifier) {
+        Icon(
+            ActionIcons.edit,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = AzkarTheme.colors.primaryStrong,
+        )
+        Spacer(Modifier.width(AzkarSpacing.sm))
         Text(
             text = stringResource(Res.string.settingsPrayerManualToggle),
-            color = AzkarTheme.colors.textSecondary,
+            color = AzkarTheme.colors.primaryStrong,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f),
         )
-        Text(
-            text = if (expanded) "−" else "+",
-            color = AzkarTheme.colors.textSecondary,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
+        Spacer(Modifier.width(AzkarSpacing.sm))
+        Icon(
+            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = null,
+            tint = AzkarTheme.colors.primaryStrong,
+            modifier = Modifier.size(16.dp),
         )
     }
 }
@@ -329,6 +391,7 @@ private fun PrayerCoordinateField(
             value = value,
             onValueChange = onValueChange,
             placeholder = "",
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
@@ -345,33 +408,22 @@ private fun SaveLocationButton(
         PrimaryButton(
             text = stringResource(Res.string.settingsPrayerSave),
             onClick = { settings.prayer.saveLocation() },
-            modifier = Modifier.weight(1f),
         )
     }
 }
 
-/**
- * Detect, on its own row.
- *
- * Secondary and alone, because it *replaces* whatever is stored — the search box, the map and the
- * typed fields all point somewhere deliberate, and a button that overwrites all three should not read
- * as the primary action. It stays outside the manual disclosure because it is not a typed answer and
- * needs no field to be open.
- */
+/** Available beside manual entry so either way to change location is visible before expanding fields. */
 @Composable
 private fun AutoDetectButton(
     settings: NotificationSettingsState,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-    ) {
-        SecondaryButton(
-            text = stringResource(Res.string.settingsPrayerDetect),
-            onClick = { settings.prayer.detectLocation() },
-            modifier = Modifier.weight(1f),
-        )
-    }
+    SecondaryButton(
+        text = stringResource(Res.string.settingsPrayerDetect),
+        onClick = { settings.prayer.detectLocation() },
+        leadingIcon = AzkarIcons.Compass,
+        modifier = modifier,
+    )
 }
 
 /**
@@ -406,7 +458,12 @@ internal fun LocationNoticeText(
     if (text != null) {
         Text(
             text = text,
-            color = AzkarTheme.colors.dialogValidation,
+            color =
+                when (notice) {
+                    LocationNotice.Saved, is LocationNotice.Detected, is LocationNotice.PlaceSelected ->
+                        AzkarTheme.colors.primaryStrong
+                    else -> AzkarTheme.colors.dialogValidation
+                },
             fontSize = 12.sp,
             modifier = modifier.padding(start = 16.dp, bottom = 12.dp),
         )
@@ -421,7 +478,10 @@ private fun SettingsPrayerSectionsPreview() {
             modifier = Modifier.width(820.dp).padding(AzkarSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
         ) {
-            SettingsPrayerLocationSection(settings = rememberPreviewNotificationSettingsState())
+            SettingsPrayerLocationSection(
+                location = PrayerLocationSettings(),
+                settings = rememberPreviewNotificationSettingsState(),
+            )
             SettingsPrayerCalculationSection(
                 location = PrayerLocationSettings(),
                 settings = rememberPreviewNotificationSettingsState(),

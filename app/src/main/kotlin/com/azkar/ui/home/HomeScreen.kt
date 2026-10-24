@@ -337,6 +337,7 @@ private fun HomeDashboard(
     inputs: HomeInputs,
     hadith: HadithState,
 ) {
+    val hasRailContent = inputs.rail.cards.isNotEmpty() || inputs.favorites.state.total > 0
     if (AzkarWindowSize.isCompactWidth) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -345,6 +346,10 @@ private fun HomeDashboard(
             HomeMainColumn(inputs, hadith, modifier = Modifier.fillMaxWidth())
             HomeRailColumn(inputs, modifier = Modifier.fillMaxWidth())
         }
+        return
+    }
+    if (!hasRailContent) {
+        HomeMainColumn(inputs, hadith, modifier = Modifier.fillMaxWidth())
         return
     }
     Row(

@@ -41,6 +41,7 @@ import com.azkar.ui.notifications.presentation.PresentedNotice
 import com.azkar.ui.preview.previewRailCards
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.shell.AzkarApp
+import com.azkar.ui.shell.SettingsGroup
 import com.azkar.ui.shell.SettingsScreen
 import com.azkar.ui.shell.ThemePreference
 import com.azkar.ui.shell.rememberAzkarAppState
@@ -185,6 +186,7 @@ private const val IDLE_FRAMES_REQUIRED = 3
 private const val SCREEN_APP = "app"
 private const val SCREEN_HOME = "home"
 private const val SCREEN_SETTINGS = "settings"
+private const val SCREEN_SETTINGS_PRAYER = "settings-prayer"
 private const val SCREEN_COLLECTIONS = "collections"
 private const val SCREEN_LIBRARY = "library"
 private const val SCREEN_COLLECTION_DETAIL = "collection-detail"
@@ -283,6 +285,8 @@ private fun ScreenshotScreen(
         // screen holds no fields of its own — that is the point of it, and a screenshot
         // built the other way would not prove it.
         SCREEN_SETTINGS -> SettingsScreen(rememberAzkarAppState(themePreference), onClose = {})
+        SCREEN_SETTINGS_PRAYER ->
+            SettingsScreen(rememberAzkarAppState(themePreference), onClose = {}, initialGroup = SettingsGroup.PRAYER)
 
         SCREEN_COLLECTION_DETAIL -> CollectionDetailShot(catalogue, reminders)
 
@@ -297,7 +301,7 @@ private fun ScreenshotScreen(
             ) {
                 HomeCollectionRail(
                     cards = HomeCollections.pick(previewRailCards(), RAIL_SHOT_LIMIT),
-                    dueIds = setOf(SCREENSHOT_COLLECTION_ID + 1L),
+                    reminderIds = setOf(SCREENSHOT_COLLECTION_ID + 1L),
                     onOpen = {},
                 )
             }

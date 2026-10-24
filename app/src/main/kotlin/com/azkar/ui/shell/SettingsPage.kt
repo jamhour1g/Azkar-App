@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -138,8 +137,8 @@ enum class SettingsSection(
     TEXT(SettingsGroup.GENERAL),
     REMINDER_SCHEDULE(SettingsGroup.REMINDERS),
     REMINDER_CARD(SettingsGroup.REMINDERS),
-    PRAYER_LOCATION(SettingsGroup.PRAYER),
     PRAYER_CALCULATION(SettingsGroup.PRAYER),
+    PRAYER_LOCATION(SettingsGroup.PRAYER),
 }
 
 /** This block's name — the rail's row and the page's heading are the same word for the same thing. */
@@ -245,7 +244,7 @@ fun SettingsGroupCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     AzkarCard(
-        modifier = modifier.fillMaxWidth().shadow(6.dp, RoundedCornerShape(16.dp)),
+        modifier = modifier.fillMaxWidth(),
         size = CardSize.MD,
         shape = RoundedCornerShape(16.dp),
         contentPadding = contentPadding,
@@ -258,7 +257,7 @@ fun SettingsGroupCard(
 @Composable
 fun SettingsRowDivider(modifier: Modifier = Modifier) {
     HorizontalDivider(
-        modifier = modifier.padding(start = 16.dp),
+        modifier = modifier.padding(horizontal = 16.dp),
         thickness = 1.dp,
         color = AzkarTheme.colors.border,
     )

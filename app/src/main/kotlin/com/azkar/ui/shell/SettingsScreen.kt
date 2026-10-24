@@ -94,13 +94,15 @@ fun SettingsScreen(
     state: AzkarAppState,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    initialGroup: SettingsGroup = SettingsGroup.GENERAL,
 ) {
     val notificationState = rememberNotificationSettingsState()
     val notificationValues = rememberNotificationSettingsValues()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    var selectedGroup by remember { mutableStateOf(SettingsGroup.GENERAL) }
-    val activeSection = activeSettingsSection(listState, selectedGroup)
+    var selectedSection by remember { mutableStateOf(initialGroup.sections.first()) }
+    val selectedGroup = selectedSection.group
+    val activeSection = activeSettingsSection(listState, selectedSection)
     val colors = AzkarTheme.colors
     val windowInfo = LocalWindowInfo.current
     LaunchedEffect(notificationState, windowInfo) {
@@ -117,8 +119,9 @@ fun SettingsScreen(
             active = activeSection,
             selectedGroup = selectedGroup,
             onSelect = { section ->
-                if (section.group != selectedGroup) {
-                    selectedGroup = section.group
+                val groupChanged = section.group != selectedGroup
+                selectedSection = section
+                if (groupChanged) {
                     scope.launch {
                         listState.scrollToItem(0)
                         listState.animateScrollToItem(sectionScrollIndexInSection(section))
@@ -129,7 +132,7 @@ fun SettingsScreen(
             },
             onSelectGroup = { group ->
                 if (group != selectedGroup) {
-                    selectedGroup = group
+                    selectedSection = group.sections.first()
                     scope.launch { listState.scrollToItem(0) }
                 }
             },
@@ -181,7 +184,11 @@ private fun LazyListScope.settingsSections(
                             queue = notificationValues.queue,
                             settings = notificationState,
                         )
-                    SettingsSection.PRAYER_LOCATION -> SettingsPrayerLocationSection(settings = notificationState)
+                    SettingsSection.PRAYER_LOCATION ->
+                        SettingsPrayerLocationSection(
+                            location = notificationValues.prayerLocation,
+                            settings = notificationState,
+                        )
                     SettingsSection.PRAYER_CALCULATION ->
                         SettingsPrayerCalculationSection(
                             location = notificationValues.prayerLocation,
@@ -233,16 +240,19 @@ private fun SettingsColumn(
 @Composable
 private fun activeSettingsSection(
     listState: LazyListState,
-    selectedGroup: SettingsGroup,
+    selectedSection: SettingsSection,
 ): SettingsSection {
+    // When the whole group fits, scrolling cannot express which section the user selected.
+    if (!listState.canScrollForward && !listState.canScrollBackward) return selectedSection
     val visible = listState.layoutInfo.visibleItemsInfo
     val index =
         when {
             visible.isEmpty() -> 0
+            !listState.canScrollBackward -> visible.firstOrNull { it.index >= OFFSET_FOR_HEADER }?.index ?: 0
             listState.canScrollForward -> visible.first().index
             else -> visible.last().index
         }
-    val sections = selectedGroup.sections
+    val sections = selectedSection.group.sections
     return sections.getOrElse(index - OFFSET_FOR_HEADER) { sections.first() }
 }
 

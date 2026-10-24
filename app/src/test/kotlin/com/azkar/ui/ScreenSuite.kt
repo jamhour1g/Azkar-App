@@ -15,6 +15,8 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -46,6 +48,7 @@ import com.azkar.ui.preview.previewAzkarAppState
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewCatalogue
 import com.azkar.ui.shell.AzkarAppState
+import com.azkar.ui.shell.SettingsGroup
 import com.azkar.ui.shell.SettingsScreen
 import com.azkar.ui.shell.ThemePreference
 import com.azkar.ui.theme.AzkarTheme
@@ -436,6 +439,30 @@ val ScreenSuite by testSuite("Screen smoke") {
                 ).describedAs(
                     "the choice must reach the store, not just the label",
                 ).containsExactly(ThemePreference.DARK)
+            }
+        }
+    }
+
+    test("prayer navigation keeps the chosen section selected when the group fits on screen") {
+        withScreenContainer {
+            screenTest {
+                setContent {
+                    ScreenFixture {
+                        SettingsScreen(
+                            state = previewAzkarAppState(),
+                            onClose = {},
+                            initialGroup = SettingsGroup.PRAYER,
+                        )
+                    }
+                }
+                waitForIdle()
+                onNodeWithText("Calculation").assertIsSelected()
+                onNodeWithText("Location").assertIsNotSelected().performClick()
+                waitForIdle()
+                onNodeWithText("Location").assertIsSelected()
+                onNodeWithText("Calculation").assertIsNotSelected().performClick()
+                waitForIdle()
+                onNodeWithText("Calculation").assertIsSelected()
             }
         }
     }

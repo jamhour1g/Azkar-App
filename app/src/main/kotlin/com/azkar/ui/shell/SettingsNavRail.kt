@@ -23,13 +23,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -102,9 +104,8 @@ private val RAIL_LABEL_GAP = 10.dp
 
 private val RAIL_TREE_STROKE = 1.dp
 
-/** Where a child's label begins: past the spine, the branch, the accent bar, and the gap after it. */
-private val RAIL_CHILD_INSET =
-    RAIL_TREE_X + RAIL_BRANCH_LENGTH + RAIL_ACCENT_WIDTH + RAIL_LABEL_GAP
+/** Where the child's accent begins: past the spine and its branch. */
+private val RAIL_CHILD_INSET = RAIL_TREE_X + RAIL_BRANCH_LENGTH
 
 /**
  * The settings page's navigation column.
@@ -181,7 +182,12 @@ fun SettingsNavRail(
                             Modifier
                                 .fillMaxWidth()
                                 .drawBehind {
-                                    val spine = RAIL_TREE_X.toPx()
+                                    val spine =
+                                        if (layoutDirection == LayoutDirection.Ltr) {
+                                            RAIL_TREE_X.toPx()
+                                        } else {
+                                            size.width - RAIL_TREE_X.toPx()
+                                        }
                                     drawLine(
                                         color = colors.border,
                                         start = Offset(spine, 0f),
@@ -247,16 +253,7 @@ private fun settingsGroupIcon(group: SettingsGroup): ImageVector =
         SettingsGroup.PRAYER -> AzkarIcons.Mosque
     }
 
-/**
- * The group's own row: the icon and the name of everything under it.
- *
- * Not clickable, and deliberately not drawn like a button. It was a row that jumped to the first block
- * underneath it, which made it a second way to reach Appearance — and worse, selecting Appearance lit up
- * two rows at once, because the group and its first child were the same target wearing different labels.
- * The reference has the same shape with the same trap in it, and it does not fall into it only because
- * the four things under its row there are peers rather than children. Here they are children, so the row
- * names them and nothing else — and because it is a parent, it now has the tree hanging off it.
- */
+/** Opens the group; a text tint distinguishes it from the filled selection of an individual section. */
 @Composable
 private fun RailGroupHeader(
     icon: ImageVector,
@@ -273,8 +270,6 @@ private fun RailGroupHeader(
                 .height(
                     RAIL_ROW_HEIGHT,
                 ).clip(RoundedCornerShape(RAIL_ROW_CORNER))
-                .background(if (selected) colors.highlight else Color.Transparent)
-                .shadow(if (selected) 4.dp else 0.dp, RoundedCornerShape(RAIL_ROW_CORNER))
                 .pressableClick(scale = 1f, onClick = onClick)
                 .padding(start = RAIL_GROUP_INSET, end = AzkarSpacing.md),
         horizontalArrangement = Arrangement.spacedBy(RAIL_ICON_GAP),
@@ -284,13 +279,13 @@ private fun RailGroupHeader(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = AzkarTheme.colors.textSecondary,
+                tint = if (selected) colors.primaryStrong else colors.textSecondary,
                 modifier = Modifier.size(17.dp),
             )
         }
         Text(
             text = label,
-            color = AzkarTheme.colors.textPrimary,
+            color = if (selected) colors.primaryStrong else colors.textSecondary,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
@@ -305,9 +300,8 @@ private fun RailGroupHeader(
  * block the reader is inside.
  *
  * Set in from the group header above it, and with no icon of its own, because these four are children of
- * that row rather than four more top-level destinations. The indent is applied to the text rather than
- * to the row box so the accent bar stays in one column with the header's icon — the relationship reads
- * as a shape the eye follows, not as a second margin.
+ * that row rather than more top-level destinations. The accent and label share one inset after the branch,
+ * so the bar touches its branch and the label keeps its gap from the bar.
  *
  * The branch is drawn by the row and not built out of boxes, because a box would take part in the row's
  * click and in its highlight pill, and a hairline that highlights when you hover it is not a hairline
@@ -332,12 +326,20 @@ private fun RailRow(
                 .height(RAIL_ROW_HEIGHT)
                 .clip(RoundedCornerShape(RAIL_ROW_CORNER))
                 .background(if (selected) colors.highlight else Color.Transparent)
+                .semantics { this.selected = selected }
                 .pressableClick(scale = 1f, onClick = onClick)
                 .drawBehind {
+                    val direction = if (layoutDirection == LayoutDirection.Ltr) 1f else -1f
+                    val spine =
+                        if (layoutDirection == LayoutDirection.Ltr) {
+                            RAIL_TREE_X.toPx()
+                        } else {
+                            size.width - RAIL_TREE_X.toPx()
+                        }
                     drawLine(
                         color = colors.border,
-                        start = Offset(RAIL_TREE_X.toPx(), center.y),
-                        end = Offset((RAIL_TREE_X + RAIL_BRANCH_LENGTH).toPx(), center.y),
+                        start = Offset(spine, center.y),
+                        end = Offset(spine + RAIL_BRANCH_LENGTH.toPx() * direction, center.y),
                         strokeWidth = RAIL_TREE_STROKE.toPx(),
                     )
                 }.padding(start = RAIL_CHILD_INSET, end = AzkarSpacing.md),
@@ -353,6 +355,7 @@ private fun RailRow(
                         RoundedCornerShape(2.dp),
                     ),
         )
+        Spacer(Modifier.width(RAIL_LABEL_GAP))
         Text(
             text = label,
             color = if (selected) colors.primaryStrong else colors.textPrimary,

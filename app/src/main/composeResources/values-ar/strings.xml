@@ -601,6 +601,8 @@
     <string name="settingsPrayerCalculationHint">الطريقة التي يحوّل بها ذلك المكان إلى أوقات صلاة.</string>
     <string name="settingsPrayerCityLabel">المدينة أو المكان</string>
     <string name="settingsPrayerSearchLabel">ابحث عن مدينة</string>
+    <string name="settingsPrayerCurrentLocation">الموقع الحالي</string>
+    <string name="settingsPrayerSearchPlaceholder">مثل رام الله أو لندن</string>
     <string name="settingsPrayerSearching">جارٍ البحث…</string>
     <string name="settingsPrayerSearchFailed">تعذّر البحث عن الأماكن.</string>
     <string name="settingsPrayerNoResults">لا توجد أماكن مطابقة.</string>
@@ -611,6 +613,11 @@
     <string name="settingsPrayerZoneLabel">المنطقة الزمنية</string>
     <string name="settingsPrayerZoneHint">المنطقة والمدينة، مثل Europe/London.</string>
     <string name="settingsPrayerMethodLabel">الطريقة</string>
+    <string name="settingsPrayerMethodMuslimWorldLeague">رابطة العالم الإسلامي</string>
+    <string name="settingsPrayerMethodEgyptian">الهيئة المصرية العامة للمساحة</string>
+    <string name="settingsPrayerMethodKarachi">جامعة العلوم الإسلامية، كراتشي</string>
+    <string name="settingsPrayerMethodUmmAlQura">أم القرى (مكة المكرمة)</string>
+    <string name="settingsPrayerMethodNorthAmerica">جمعية الطلبة المسلمين في أمريكا الشمالية</string>
     <string name="settingsPrayerSave">حفظ الموقع</string>
     <string name="settingsPrayerDetect">تحديد تلقائي</string>
     <string name="settingsPrayerSaved">تم حفظ الموقع</string>
