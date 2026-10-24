@@ -256,6 +256,10 @@
     <string name="settingsGroupPrayer">الصلاة</string>
     <string name="settingsStartupTitle">بدء التشغيل</string>
     <string name="settingsStartupHint">هل يفتح أذكار نفسه عند تسجيل دخولك.</string>
+    <string name="settingsStartupDisabledByUser">تم تعطيل بدء التشغيل في إعدادات النظام. فعّله من هناك للسماح لأذكار بالعمل عند تسجيل الدخول.</string>
+    <string name="settingsStartupManagedByPolicy">يتحكم مسؤول النظام في إعداد بدء التشغيل.</string>
+    <string name="settingsStartupUnsupported">بدء التشغيل غير متاح في هذه البيئة. استخدم التطبيق المثبّت مع جلسة تسجيل دخول مدعومة.</string>
+    <string name="settingsStartupOpenSystemSettings">فتح إعدادات النظام</string>
     <string name="settingsThemeHeader">السمة</string>
     <string name="settingsThemeBody">اتبع إعدادات سطح المكتب، أو اختر الفاتح أو الداكن لكل مرة تفتح فيها التطبيق.</string>
     <string name="settingsThemeSystem">النظام</string>

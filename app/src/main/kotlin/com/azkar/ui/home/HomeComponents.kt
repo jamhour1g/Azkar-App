@@ -58,9 +58,6 @@ import org.jetbrains.compose.resources.stringResource
  */
 private const val FAVORITE_WATERMARK_ALPHA = 0.13f
 
-/** The count pill is a wash of the accent rather than a second solid colour, so it needs a low alpha. */
-private const val FAVORITE_BADGE_ALPHA = 0.18f
-
 /**
  * The prev/next targets.
  *
@@ -180,7 +177,7 @@ fun FavoritesCard(
             modifier = Modifier.align(Alignment.CenterEnd).size(190.dp),
         )
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            FavoritesHeader(state)
+            FavoritesHeader()
             FavoritesBody(state)
             HorizontalDivider(color = colors.border)
             FavoritesFooter(state, onPrevious, onNext, onBrowse)
@@ -210,7 +207,7 @@ private fun FavoritesCardPreview() {
  * The label row: star and name.
  */
 @Composable
-private fun FavoritesHeader(state: FavoriteState) {
+private fun FavoritesHeader() {
     val colors = AzkarTheme.colors
     Row(
         modifier = Modifier.fillMaxWidth(),

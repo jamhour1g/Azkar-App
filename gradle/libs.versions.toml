@@ -31,6 +31,8 @@ ktor = "3.3.3"
 # Desktop's `application { }`. The sibling `-app` artifact adds `TrayApp` (a tray-anchored popup
 # window) and pulls in the Nucleus windowing backend for it, which this app has no use for.
 compose-native-tray = "2.1.7"
+# AutoLaunch is independent of the tray and packaging plugins.
+nucleus-autolaunch = "2.5.18"
 # detekt is the Kotlin/Compose static-analysis gate; it replaces SpotBugs.
 detekt = "2.0.0-alpha.5"
 # Compose Multiplatform versions its Material 3 / extended-icons artifacts independently
@@ -126,6 +128,7 @@ io-ktor-ktor-client-content-negotiation = { module = "io.ktor:ktor-client-conten
 io-ktor-ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 io-ktor-ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 dev-nucleusframework-compose-native-tray = { module = "dev.nucleusframework:composenativetray", version.ref = "compose-native-tray" }
+dev-nucleusframework-autolaunch = { module = "dev.nucleusframework:nucleus.autolaunch", version.ref = "nucleus-autolaunch" }
 org-jetbrains-kotlinx-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "jetbrains-coroutines" }
 # Jetpack DataStore, the `common`/`jvm` artifact. `-core` is the variant without the Android
 # dependencies, which is the one a desktop-only build can use; `datastore-preferences` itself

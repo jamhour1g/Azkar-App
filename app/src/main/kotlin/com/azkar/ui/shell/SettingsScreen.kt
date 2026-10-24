@@ -20,14 +20,17 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,6 +50,7 @@ import com.azkar.ui.preview.previewAzkarAppState
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -98,6 +102,12 @@ fun SettingsScreen(
     var selectedGroup by remember { mutableStateOf(SettingsGroup.GENERAL) }
     val activeSection = activeSettingsSection(listState, selectedGroup)
     val colors = AzkarTheme.colors
+    val windowInfo = LocalWindowInfo.current
+    LaunchedEffect(notificationState, windowInfo) {
+        snapshotFlow { windowInfo.isWindowFocused }.collect { focused ->
+            if (focused) notificationState.notifications.refreshStartOnLogin()
+        }
+    }
 
     Row(
         modifier = modifier.fillMaxSize().background(colors.background),
@@ -155,7 +165,7 @@ private fun LazyListScope.settingsSections(
                     SettingsSection.LANGUAGE -> SettingsLanguageSection(state = state)
                     SettingsSection.STARTUP ->
                         SettingsStartupSection(
-                            startOnLogin = notificationValues.startOnLogin,
+                            startOnLogin = notificationState.notifications.startOnLogin,
                             settings = notificationState,
                         )
                     SettingsSection.THEME -> SettingsThemeSection(state = state)
@@ -308,7 +318,7 @@ private fun rememberNotificationSettingsState(): NotificationSettingsState {
 /**
  * Everything persisted on the moved blocks, snapshotted into one value.
  *
- * Four `collectAsState` calls would have left four locals to thread by hand into the blocks, and a single
+ * Three `collectAsState` calls would have left three locals to thread by hand into the blocks, and a single
  * immutable holder means a block only recomposes when the settings it actually reads change — the prayer
  * block does not recompose when the start-on-login flag is toggled far above it.
  *
@@ -321,7 +331,6 @@ private fun rememberNotificationSettingsState(): NotificationSettingsState {
 private data class NotificationSettingsValues(
     val queue: ReminderQueueConfig,
     val prayerLocation: PrayerLocationSettings,
-    val startOnLogin: Boolean,
     val presentation: NotificationPresentationSettings,
 )
 
@@ -330,9 +339,8 @@ private fun rememberNotificationSettingsValues(): NotificationSettingsValues {
     val preferences = koinInject<NotificationPreferencesRepository>()
     val queue by preferences.queue.collectAsState()
     val prayerLocation by preferences.prayerLocation.collectAsState()
-    val startOnLogin by preferences.startOnLogin.collectAsState()
     val presentation by preferences.presentation.collectAsState()
-    return NotificationSettingsValues(queue, prayerLocation, startOnLogin, presentation)
+    return NotificationSettingsValues(queue, prayerLocation, presentation)
 }
 
 @Preview

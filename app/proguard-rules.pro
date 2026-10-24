@@ -50,6 +50,10 @@
 # (tray / Linux bus glue), so keep its infrastructure whole.
 -keep class com.sun.jna.** { *; }
 
+# AutoLaunch selects the macOS backend by class name; JNI calls back into its bridges.
+-keep class dev.nucleusframework.autolaunch.** { *; }
+-keep class dev.nucleusframework.servicemanagement.** { *; }
+
 # kotlinx.serialization's generated serializers and the reflective lookup of
 # serializers from Companion properties.
 -keepclassmembers class * {

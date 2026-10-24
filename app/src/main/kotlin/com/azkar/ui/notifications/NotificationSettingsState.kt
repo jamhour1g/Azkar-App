@@ -8,6 +8,8 @@ import com.azkar.ui.notifications.presentation.OverlayCardSize
 import com.azkar.ui.notifications.presentation.OverlayCardSizing
 import com.azkar.ui.notifications.presentation.OverlayDurationMode
 import com.azkar.ui.notifications.presentation.OverlayPlacement
+import dev.nucleusframework.autolaunch.AutoLaunchResult
+import dev.nucleusframework.autolaunch.AutoLaunchState
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
@@ -350,6 +352,51 @@ class NotificationSettingsState(
         var notice: StartupNotice? by mutableStateOf(null)
             private set
 
+        private var startupState: AutoLaunchState? by mutableStateOf(null)
+
+        var isUpdatingStartup: Boolean by mutableStateOf(false)
+            private set
+
+        val startOnLogin: Boolean get() = startupState?.isStartupEnabled == true
+
+        val canChangeStartup: Boolean
+            get() = !isUpdatingStartup && startupState in setOf(AutoLaunchState.ENABLED, AutoLaunchState.DISABLED)
+
+        /** Re-read after returning from system settings; the OS owns this setting. */
+        suspend fun refreshStartOnLogin() {
+            if (isUpdatingStartup) return
+            isUpdatingStartup = true
+            try {
+                val registration = startupRegistration
+                if (registration == null) {
+                    showStartupState(AutoLaunchState.UNSUPPORTED)
+                } else {
+                    registration
+                        .state()
+                        .onSuccess(::showStartupState)
+                        .onFailure {
+                            startupState = null
+                            notice = StartupNotice.Unavailable(it.message)
+                        }
+                }
+            } finally {
+                isUpdatingStartup = false
+            }
+        }
+
+        private fun showStartupState(state: AutoLaunchState) {
+            startupState = state
+            notice =
+                when (state) {
+                    AutoLaunchState.DISABLED_BY_USER -> StartupNotice.DisabledByUser
+                    AutoLaunchState.DISABLED_BY_POLICY,
+                    AutoLaunchState.ENABLED_BY_POLICY,
+                    -> StartupNotice.ManagedByPolicy
+                    AutoLaunchState.UNSUPPORTED -> StartupNotice.Unsupported
+                    else -> null
+                }
+        }
+
         fun setOverlayDuration(seconds: Int) {
             scope.launch {
                 preferences.updatePresentation {
@@ -458,21 +505,42 @@ class NotificationSettingsState(
          * failed and nothing happens at the next login.
          */
         fun setStartOnLogin(enabled: Boolean) {
+            if (isUpdatingStartup) return
+            isUpdatingStartup = true
             scope.launch {
-                val registration =
-                    startupRegistration ?: run {
-                        notice = StartupNotice.Unavailable(reason = null)
-                        return@launch
-                    }
-                registration
-                    .setEnabled(enabled)
-                    .onSuccess {
-                        preferences.setStartOnLogin(enabled)
-                        notice = null
-                    }.onFailure { failure ->
-                        logger.error(failure) { "Unable to register Azkar to start on login" }
-                        notice = StartupNotice.Unavailable(failure.message)
-                    }
+                try {
+                    val registration =
+                        startupRegistration ?: run {
+                            showStartupState(AutoLaunchState.UNSUPPORTED)
+                            return@launch
+                        }
+                    registration
+                        .setEnabled(enabled)
+                        .onSuccess { state ->
+                            showStartupState(state)
+                            preferences.setStartOnLogin(state.isStartupEnabled)
+                        }.onFailure { failure ->
+                            registration.state().onSuccess { startupState = it }
+                            logger.error(failure) { "Unable to register Azkar to start on login" }
+                            notice =
+                                when ((failure as? StartupRegistrationException)?.result) {
+                                    AutoLaunchResult.BLOCKED_BY_USER -> StartupNotice.DisabledByUser
+                                    AutoLaunchResult.BLOCKED_BY_POLICY -> StartupNotice.ManagedByPolicy
+                                    AutoLaunchResult.UNSUPPORTED -> StartupNotice.Unsupported
+                                    else -> StartupNotice.Unavailable(failure.message)
+                                }
+                        }
+                } finally {
+                    isUpdatingStartup = false
+                }
+            }
+        }
+
+        fun openStartupSystemSettings() {
+            scope.launch {
+                if (startupRegistration?.openSystemSettings() != true) {
+                    notice = StartupNotice.Unavailable(reason = null)
+                }
             }
         }
 

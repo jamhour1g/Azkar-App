@@ -1,134 +1,121 @@
 package com.azkar.ui.notifications
 
+import dev.nucleusframework.autolaunch.AutoLaunch
+import dev.nucleusframework.autolaunch.AutoLaunchResult
+import dev.nucleusframework.autolaunch.AutoLaunchState
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Locale
 
-/** Registers the packaged desktop launcher with the current user's login session. */
-class StartupRegistration {
-    fun setEnabled(enabled: Boolean): Result<Unit> =
-        runCatching {
-            val path = registrationPath()
-            if (enabled) {
-                val launcher = findLauncher() ?: error("Start-on-login is available from the installed desktop app.")
-                Files.createDirectories(path.parent)
-                Files.writeString(path, registrationContents(launcher))
-            } else {
-                Files.deleteIfExists(path)
+/** Adapts Nucleus's native login registration to the settings UI. */
+class StartupRegistration internal constructor(
+    private val readState: () -> AutoLaunchState = AutoLaunch::state,
+    private val changeEnabled: (
+        Boolean,
+    ) -> AutoLaunchResult = { if (it) AutoLaunch.enable() else AutoLaunch.disable() },
+    private val legacyPaths: List<Path> =
+        if (System.getProperty("nucleus.app.id") == "com.azkar.app") legacyRegistrationPaths() else emptyList(),
+    private val packaged: Boolean = System.getProperty("nucleus.executable.type") != null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+) {
+    private val mutex = Mutex()
+
+    suspend fun state(): Result<AutoLaunchState> =
+        withContext(ioDispatcher) {
+            mutex.withLock {
+                runCatching { if (packaged) readState() else AutoLaunchState.UNSUPPORTED }
             }
         }
 
-    private fun registrationPath(): Path =
-        when (DesktopPlatform.current) {
-            DesktopPlatform.WINDOWS -> {
-                val appData =
-                    System.getenv("APPDATA")?.takeIf(String::isNotBlank)
-                        ?: error("Windows startup folder is unavailable")
-                Path.of(
-                    appData,
-                    "Microsoft/Windows/Start Menu/Programs/Startup/Azkar.cmd",
-                )
-            }
-
-            DesktopPlatform.MACOS ->
-                Path.of(
-                    System.getProperty("user.home"),
-                    "Library/LaunchAgents/com.azkar.app.plist",
-                )
-
-            DesktopPlatform.LINUX -> Path.of(System.getProperty("user.home"), ".config/autostart/azkar.desktop")
-        }
-
-    private fun registrationContents(launcher: Path): String =
-        when (DesktopPlatform.current) {
-            DesktopPlatform.WINDOWS -> "@echo off\r\nstart \"\" \"$launcher\" --start-hidden\r\n"
-            DesktopPlatform.MACOS -> macOsPlist(launcher)
-            DesktopPlatform.LINUX -> linuxDesktopEntry(launcher)
-        }
-
-    /** JPackage launches a bundled JVM, so walk up from its executable to the native launcher. */
-    private fun findLauncher(): Path? {
-        val processPath = processPath() ?: return null
-        val directLauncher = processPath.takeUnless(::isJvmLauncher)
-        return listOfNotNull(directLauncher)
-            .asSequence()
-            .plus(launcherCandidates(processPath.parent))
-            .plus(jpackageLauncherCandidates())
-            .firstOrNull { Files.isRegularFile(it) && Files.isExecutable(it) }
-    }
-
-    private fun processPath(): Path? =
-        ProcessHandle
-            .current()
-            .info()
-            .command()
-            .orElse(null)
-            ?.let { Path.of(it).toAbsolutePath().normalize() }
-
-    private fun isJvmLauncher(path: Path): Boolean =
-        path.fileName?.toString()?.lowercase(Locale.ROOT) in
-            setOf("java", "javaw", "java.exe", "javaw.exe")
-
-    private fun jpackageLauncherCandidates(): Sequence<Path> =
-        System
-            .getProperty("jpackage.app-path")
-            ?.let { Path.of(it).toAbsolutePath().normalize() }
-            ?.let(::launcherCandidates)
-            .orEmpty()
-
-    private fun launcherCandidates(start: Path?): Sequence<Path> =
-        start
-            ?.let { first ->
-                generateSequence(first) { it.parent }
-                    .mapNotNull(::launcherAt)
-            }.orEmpty()
-
-    private fun launcherAt(ancestor: Path): Path? =
-        when (DesktopPlatform.current) {
-            DesktopPlatform.WINDOWS -> ancestor.resolve("Azkar.exe")
-            DesktopPlatform.MACOS ->
-                if (ancestor.fileName?.toString()?.endsWith(".app") == true) {
-                    ancestor.resolve("Contents/MacOS/Azkar")
-                } else {
-                    null
+    suspend fun setEnabled(enabled: Boolean): Result<AutoLaunchState> =
+        withContext(ioDispatcher) {
+            mutex.withLock {
+                runCatching {
+                    check(packaged) { "Start-on-login is available from the installed desktop app." }
+                    val result = changeEnabled(enabled)
+                    if (result != AutoLaunchResult.OK && result != AutoLaunchResult.UNCHANGED) {
+                        throw StartupRegistrationException(result)
+                    }
+                    val state = readState()
+                    check(state != AutoLaunchState.UNSUPPORTED && state.isStartupEnabled == enabled) {
+                        "The login manager did not apply the startup setting."
+                    }
+                    removeLegacyRegistrations()
+                    state
                 }
-
-            DesktopPlatform.LINUX -> ancestor.resolve("bin/azkar")
+            }
         }
 
-    private fun linuxDesktopEntry(launcher: Path): String {
-        val escaped =
-            launcher
-                .toString()
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("`", "\\`")
-                .replace("$", "\\$")
-        return """[Desktop Entry]
-Type=Application
-Name=Azkar
-Exec="$escaped" --start-hidden
-Terminal=false
-X-GNOME-Autostart-enabled=true
-"""
+    /** Keep an existing opt-in, removing old launch files only after the native backend succeeds. */
+    suspend fun migrateLegacyRegistration(wasEnabled: Boolean): Result<Unit> =
+        withContext(ioDispatcher) {
+            mutex.withLock {
+                runCatching {
+                    if (!packaged) return@runCatching
+                    val legacy = legacyPaths.filter(::isLegacyRegistration)
+                    if (legacy.isEmpty()) return@runCatching
+                    when (readState()) {
+                        AutoLaunchState.DISABLED -> {
+                            if (wasEnabled && legacy.any(::isLegacyEnabled)) {
+                                val result = changeEnabled(true)
+                                check(result == AutoLaunchResult.OK || result == AutoLaunchResult.UNCHANGED) {
+                                    "Could not migrate login registration: $result"
+                                }
+                                check(
+                                    readState().isStartupEnabled,
+                                ) { "The migrated login registration is not enabled." }
+                            }
+                        }
+                        AutoLaunchState.UNSUPPORTED ->
+                            error(
+                                "The native login manager is unavailable; keeping the old registration.",
+                            )
+                        // A system-level user or policy decision takes precedence over the old preference.
+                        else -> Unit
+                    }
+                    removeLegacyRegistrations()
+                }
+            }
+        }
+
+    suspend fun openSystemSettings(): Boolean =
+        withContext(ioDispatcher) { runCatching { AutoLaunch.openSystemSettings() }.getOrDefault(false) }
+
+    private fun removeLegacyRegistrations() {
+        legacyPaths.filter(::isLegacyRegistration).forEach(Files::deleteIfExists)
     }
 
-    private fun macOsPlist(launcher: Path): String =
-        """<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-<key>Label</key><string>com.azkar.app</string>
-<key>ProgramArguments</key><array>
-<string>${xml(launcher.toString())}</string>
-<string>--start-hidden</string></array>
-<key>RunAtLoad</key><true/>
-</dict></plist>
-"""
+    private fun isLegacyRegistration(path: Path): Boolean =
+        Files.isRegularFile(path) && Files.readString(path).contains("--start-hidden")
 
-    private fun xml(value: String): String =
-        value
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
+    private fun isLegacyEnabled(path: Path): Boolean =
+        Files.readString(path).lineSequence().none {
+            it.trim() in setOf("Hidden=true", "X-GNOME-Autostart-enabled=false")
+        }
 }
+
+internal val AutoLaunchState.isStartupEnabled: Boolean
+    get() = this == AutoLaunchState.ENABLED || this == AutoLaunchState.ENABLED_BY_POLICY
+
+internal class StartupRegistrationException(
+    val result: AutoLaunchResult,
+) : IllegalStateException("Could not update login registration: $result")
+
+/** Only used to retire registrations written by earlier Azkar versions. */
+private fun legacyRegistrationPaths(): List<Path> =
+    when (DesktopPlatform.current) {
+        DesktopPlatform.WINDOWS ->
+            listOfNotNull(System.getenv("APPDATA"), System.getenv("USER_APPDATA"))
+                .filter(String::isNotBlank)
+                .distinct()
+                .map { Path.of(it, "Microsoft/Windows/Start Menu/Programs/Startup/Azkar.cmd") }
+        DesktopPlatform.MACOS ->
+            listOf(
+                Path.of(System.getProperty("user.home"), "Library/LaunchAgents/com.azkar.app.plist"),
+            )
+        DesktopPlatform.LINUX -> listOf(Path.of(System.getProperty("user.home"), ".config/autostart/azkar.desktop"))
+    }

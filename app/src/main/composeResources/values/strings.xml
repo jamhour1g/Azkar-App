@@ -258,6 +258,10 @@
     <string name="settingsGroupPrayer">Prayer</string>
     <string name="settingsStartupTitle">Startup</string>
     <string name="settingsStartupHint">Whether Azkar opens itself when you sign in.</string>
+    <string name="settingsStartupDisabledByUser">Startup was disabled in system settings. Enable it there to allow Azkar to start at login.</string>
+    <string name="settingsStartupManagedByPolicy">Startup is managed by your system administrator.</string>
+    <string name="settingsStartupUnsupported">Startup is unavailable in this environment. Use the installed app with a supported login session.</string>
+    <string name="settingsStartupOpenSystemSettings">Open system settings</string>
     <string name="settingsThemeHeader">Theme</string>
     <string name="settingsThemeBody">Follow the desktop, or pin light or dark for every launch.</string>
     <string name="settingsThemeSystem">System</string>

@@ -46,6 +46,28 @@ What the Compose extension still contributes to Conveyor:
 | `jvmArgs`       | `app.jvm.options`                           |
 | `buildTypes`    | the ProGuard-shrunk jars that get packaged  |
 
+## Start at login
+
+The runtime uses [Nucleus AutoLaunch](https://nucleusframework.dev/en/docs/lifecycle/auto-launch/)
+with Conveyor packaging. `conveyor.conf` supplies the `nucleus.app.*` identity properties,
+the executable-type hint for each OS, and a disabled-by-default MSIX startup task whose
+ID matches `nucleus.app.startup.task.id`. Keep those values aligned when changing packaging.
+The preview channel derives its own identity and does not migrate production registrations.
+
+Windows uses the native MSIX StartupTask API; the macOS package requires macOS 13 or
+newer because Nucleus's `SMAppService` native bridge declares that minimum in its Mach-O
+header. `app.mac.info-plist.LSMinimumSystemVersion` must match it for both CPU architectures.
+Host Linux uses a systemd user service. The settings toggle reads the
+OS state, including user and policy restrictions, and refreshes when the window regains focus.
+The saved preference is retained only as a record of the last choice and for migration.
+Old `.cmd`, LaunchAgent, and `.desktop` registrations are retired after a successful migration;
+failed migrations retain the old files. Gradle and IDE launches cannot register for startup.
+
+Before releasing, test the installed app on each OS: enable startup, sign out and back in,
+confirm it stays in the tray when available, then disable startup and repeat. On Windows,
+also disable it through Task Manager and verify Azkar reflects that state and links to
+system settings. Unit tests and cross-platform packaging checks do not verify a real login.
+
 ## The Linux desktop entry
 
 A Linux desktop manager matches a running window to its `.desktop` entry
@@ -89,7 +111,7 @@ the unassociated-window appearance even when everything is correct. Install the
 package to see the real thing:
 
 ```bash
-sudo dpkg -i output/jamhour1g-azkar_<version>_amd64.deb
+sudo dpkg -i output/packages/linux/jamhour1g-azkar_<version>_amd64.deb
 ```
 
 ## One-time setup
@@ -255,6 +277,66 @@ gate and merges, bump the Gradle version and tag that production commit.
   `site.github.oauth-token` are otherwise unresolved substitutions.
 
 ## Local dry run
+
+To package the stable production identity for all platforms without publishing it, run:
+
+```bash
+./gradlew :app:packageStableRelease
+```
+
+This uses the production app identity and version from `app/build.gradle.kts`. It keeps the
+complete Conveyor site in `output/site/` and creates `output/packages/` with installer files
+grouped under `linux/`, `windows/`, and `macos/`. The grouped files are hard links to the site
+files when supported, so they do not duplicate large packages. Re-running the task replaces the
+generated `output/` directory. The GitHub release workflow still uploads the Conveyor site in its
+expected flat form; this task only organizes the local output. As with the preview task, provide
+`CONVEYOR_PASSPHRASE` in the environment when the local signing key is encrypted.
+
+To package a local preview for Linux, Windows, and macOS without publishing it, run:
+
+```bash
+./gradlew :app:packageDevPreview
+```
+
+The task uses the version from `app/build.gradle.kts`. To package a higher version, pass an
+optional `-PdevVersion=x.y.z` override. It first builds the ProGuard jars, then writes the flat
+Conveyor site to `output-dev/site/`. The task also creates `output-dev/packages/` with Linux,
+Windows, and macOS installer archives grouped by platform; these are hard links to the site files
+when supported, so they do not duplicate large packages. Keep the site directory intact because
+its adjacent metadata and update files support installation and updates. The `Azkar Dev` package
+identity allows preview installs to coexist with production. Since Gradle runs Conveyor without
+an interactive console, enter the local root key passphrase through the environment before
+invoking the task if the key is encrypted. Re-running the task replaces its previous generated
+site and package index:
+
+```bash
+read -rsp 'Conveyor root-key passphrase: ' CONVEYOR_PASSPHRASE
+printf '\n'
+export CONVEYOR_PASSPHRASE
+./gradlew :app:packageDevPreview
+unset CONVEYOR_PASSPHRASE
+```
+
+For a key without a passphrase, run `conveyor keys passphrase` and set its new passphrase to
+empty; the task then runs without the environment variable. Check whether that key is also used
+by the GitHub release workflow before changing it, since CI's signing credentials may need to be
+updated too. Conveyor can also create a new root key without a passphrase with
+`conveyor keys generate --no-passphrase`, but that creates a different signing identity.
+
+To install the Linux package, use the matching filename, for example:
+
+```bash
+sudo apt install ./output-dev/packages/linux/jamhour1g-azkar-dev_*_amd64.deb
+```
+
+On Windows, open the `.msix` in `output-dev/packages/windows/`; on macOS, extract a `.zip` from
+`output-dev/packages/macos/` and launch `Azkar Dev.app`. For updates or web-based installation,
+use the files in `output-dev/site/`. This task only creates local files; publishing still happens
+through the release workflow.
+
+GitHub Release assets stay at the release root because Conveyor's update metadata references
+their exact filenames. The release notes include a platform-organized index with direct installer
+links, while the full update and support files remain available in the asset list.
 
 ```bash
 GITHUB_TOKEN=dummy ./gradlew :app:printConveyorConfig   # show merged config

@@ -33,6 +33,7 @@ import com.azkar.ui.notifications.NotificationActionRouter
 import com.azkar.ui.notifications.NotificationNotice
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.NotificationRuntime
+import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationOverlayWindow
 import com.azkar.ui.notifications.presentation.NotificationPublisher
 import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
@@ -50,6 +51,7 @@ import com.azkar.ui.theme.AppTypography
 import com.azkar.ui.theme.DEFAULT_WINDOW_HEIGHT
 import com.azkar.ui.theme.DEFAULT_WINDOW_WIDTH
 import com.azkar.ui.theme.windowSizeFor
+import dev.nucleusframework.autolaunch.AutoLaunch
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
@@ -139,6 +141,12 @@ private data class DesktopStartup(
 
 private suspend fun prepareDesktopStartup(koin: org.koin.core.Koin): DesktopStartup {
     koin.get<LocaleStore>().readAndActivate()
+    val preferences = koin.get<NotificationPreferencesRepository>()
+    preferences.refresh()
+    koin
+        .get<StartupRegistration>()
+        .migrateLegacyRegistration(preferences.startOnLogin.value)
+        .onFailure { logger.warn(it) { "Unable to migrate the legacy login registration" } }
     val warmUp = DatabaseWarmUp().apply { start() }
     val theme = koin.get<ThemePreferenceStore>().read()
     val typography = koin.get<TypographyStore>().read()
@@ -163,14 +171,24 @@ private fun runDesktopApplication(
 }
 
 @Composable
+private fun rememberStartedAtLogin(args: Array<String>): Boolean =
+    remember(args) {
+        "--start-hidden" in args ||
+            runCatching { AutoLaunch.wasStartedAtLogin(args) }
+                .onFailure { logger.warn(it) { "Unable to detect a login launch" } }
+                .getOrDefault(false)
+    }
+
+@Composable
 private fun DesktopApplicationRoot(
     args: Array<String>,
     koin: org.koin.core.Koin,
     startup: DesktopStartup,
     exitApplication: () -> Unit,
 ) {
-    var windowVisible by remember { mutableStateOf(true) }
-    lateinit var quitAction: () -> Unit
+    val trayAvailable = trayAvailable()
+    val startedAtLogin = rememberStartedAtLogin(args)
+    var windowVisible by remember { mutableStateOf(!(startedAtLogin && trayAvailable)) }
     val composeScope = rememberCoroutineScope()
     val actionRouter = remember { koin.get<NotificationActionRouter>() }
     // A notification activation, a tray click and an overlay card all arrive on somebody else's
@@ -198,14 +216,13 @@ private fun DesktopApplicationRoot(
     val dispatcher = koin.get<NotificationPublisher>()
     val overlay = koin.get<OverlayNotificationPresenter>()
     val notificationScope = koin.get<CoroutineScope>(named("notificationScope"))
-    val trayAvailable = trayAvailable()
     val proofOfConcept = OVERLAY_PROOF_OF_CONSENT_FLAG in args
     LaunchedEffect(runtime, proofOfConcept) {
         // Not in the harness: a card the scheduler picked on its own would be indistinguishable from
         // one the harness fired, and the point of the run is to know exactly what is on screen.
         if (!proofOfConcept) runtime.start(notificationScope)
     }
-    quitAction = {
+    val quitAction: () -> Unit = {
         shutdown(
             koin = koin,
             databaseWarmUp = startup.databaseWarmUp,
@@ -214,10 +231,10 @@ private fun DesktopApplicationRoot(
             exitApplication = exitApplication,
         )
     }
-    LaunchedEffect(trayAvailable, proofOfConcept) {
+    LaunchedEffect(trayAvailable, proofOfConcept, startedAtLogin) {
         // The harness starts hidden whatever the tray says: "a reminder with no window at all" is
         // the state being verified, and a tray icon would be the only other surface on screen.
-        windowVisible = if (proofOfConcept) false else !("--start-hidden" in args && trayAvailable)
+        windowVisible = if (proofOfConcept) false else !(startedAtLogin && trayAvailable)
     }
 
     // The overlay is its own window, created once and hidden when there is nothing to say. It is

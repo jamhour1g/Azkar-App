@@ -1,5 +1,6 @@
 import org.gradle.api.artifacts.ExternalModuleDependency
 import java.io.File
+import java.nio.file.Files
 import java.util.jar.JarFile
 
 plugins {
@@ -115,6 +116,7 @@ dependencies {
     // `dev.nucleusframework.composenativetray.**`) -- JNA resolves its native functions by
     // reflection at call time, so a shrinking build would break the tray silently at runtime.
     implementation(libs.dev.nucleusframework.compose.native.tray)
+    implementation(libs.dev.nucleusframework.autolaunch)
 
     // App settings (locale, notification switches). DataStore replaces `java.util.prefs`: it is
     // transactional, it survives a crash mid-write, and it exposes `Flow` reads, so the UI can
@@ -480,6 +482,155 @@ tasks.register("checkTagParity") {
     }
 }
 
+// Build the same cross-platform preview site as the manual GitHub workflow, locally and without
+// publishing it. The project version is the default; -PdevVersion can override it when a newer
+// package version is needed. The separate identity lets preview installs coexist with production.
+val devPreviewDefaultVersion = project.version.toString()
+
+fun organizePlatformPackages(
+    siteDirectory: File,
+    packagesDirectory: File,
+) {
+    val platformDirectories =
+        mapOf(
+            "linux" to packagesDirectory.resolve("linux"),
+            "windows" to packagesDirectory.resolve("windows"),
+            "macos" to packagesDirectory.resolve("macos"),
+        )
+    platformDirectories.values.forEach { it.mkdirs() }
+
+    siteDirectory
+        .walkTopDown()
+        .filter { it.isFile }
+        .forEach { packageFile ->
+            val platform =
+                when {
+                    packageFile.name.endsWith(".deb") || packageFile.name.endsWith(".tar.gz") -> "linux"
+                    packageFile.name.endsWith(".msix") || packageFile.name.endsWith("-windows-amd64.zip") -> "windows"
+                    packageFile.name.endsWith("-mac-aarch64.zip") ||
+                        packageFile.name.endsWith("-mac-amd64.zip") ->
+                        "macos"
+                    else -> null
+                } ?: return@forEach
+
+            val indexedFile =
+                platformDirectories
+                    .getValue(platform)
+                    .resolve(packageFile.name)
+                    .toPath()
+            try {
+                Files.createLink(indexedFile, packageFile.toPath())
+            } catch (_: Exception) {
+                Files.copy(packageFile.toPath(), indexedFile)
+            }
+        }
+}
+
+tasks.register<Exec>("packageDevPreview") {
+    group = "distribution"
+    description = "Builds a local cross-platform dev preview site (optional: -PdevVersion=x.y.z)."
+    dependsOn("proguardReleaseJars")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    standardInput = System.`in`
+    environment("GITHUB_TOKEN", "dummy")
+    val conveyorPassphrase = providers.environmentVariable("CONVEYOR_PASSPHRASE")
+
+    doFirst {
+        val previewVersion = providers.gradleProperty("devVersion").orElse(devPreviewDefaultVersion).get()
+        require(Regex("\\d+\\.\\d+\\.\\d+").matches(previewVersion)) {
+            "devVersion must use the release format x.y.z, for example 0.1.2"
+        }
+        val stagingDirectory = rootProject.file("output-dev/site-build")
+        delete(stagingDirectory)
+
+        val conveyorCommand = mutableListOf("conveyor")
+        if (conveyorPassphrase.isPresent) {
+            environment("CONVEYOR_PASSPHRASE", conveyorPassphrase.get())
+            conveyorCommand += "--passphrase=env:CONVEYOR_PASSPHRASE"
+        }
+        conveyorCommand +=
+            listOf(
+                "-Kapp.version=$previewVersion",
+                "-Kapp.display-name=Azkar Dev",
+                "-Kapp.fsname=azkar-dev",
+                "-Kapp.rdns-name=com.azkar.app.dev",
+                "-Kapp.site.base-url=https://jamhour1g.github.io/Azkar-App/dev-preview",
+                "make",
+                "--output-dir=${stagingDirectory.absolutePath}",
+                "site",
+            )
+        commandLine(conveyorCommand)
+    }
+
+    doLast {
+        val stagingDirectory = rootProject.file("output-dev/site-build")
+        val siteDirectory = rootProject.file("output-dev/site")
+        val packagesDirectory = rootProject.file("output-dev/packages")
+        delete(siteDirectory)
+        Files.move(stagingDirectory.toPath(), siteDirectory.toPath())
+        delete(packagesDirectory)
+
+        organizePlatformPackages(siteDirectory, packagesDirectory)
+
+        logger.lifecycle("Conveyor site: ${siteDirectory.relativeTo(rootProject.projectDir)}")
+        logger.lifecycle("Platform package index: ${packagesDirectory.relativeTo(rootProject.projectDir)}")
+    }
+}
+
+// Build the production identity locally, then arrange a copy of its packages by OS.
+// GitHub Releases still receives the unmodified Conveyor site from `make copied-site`.
+tasks.register<Exec>("packageStableRelease") {
+    group = "distribution"
+    description = "Builds the local stable site and groups installer packages by platform."
+    dependsOn("proguardReleaseJars")
+    workingDir = rootProject.layout.projectDirectory.asFile
+    standardInput = System.`in`
+    environment("GITHUB_TOKEN", "dummy")
+    val conveyorPassphrase = providers.environmentVariable("CONVEYOR_PASSPHRASE")
+
+    doFirst {
+        val stagingDirectory =
+            rootProject.layout.buildDirectory
+                .dir("conveyor-stable-site")
+                .get()
+                .asFile
+        delete(stagingDirectory)
+
+        val conveyorCommand = mutableListOf("conveyor")
+        if (conveyorPassphrase.isPresent) {
+            environment("CONVEYOR_PASSPHRASE", conveyorPassphrase.get())
+            conveyorCommand += "--passphrase=env:CONVEYOR_PASSPHRASE"
+        }
+        conveyorCommand +=
+            listOf(
+                "make",
+                "--output-dir=${stagingDirectory.absolutePath}",
+                "site",
+            )
+        commandLine(conveyorCommand)
+    }
+
+    doLast {
+        val stagingDirectory =
+            rootProject.layout.buildDirectory
+                .dir("conveyor-stable-site")
+                .get()
+                .asFile
+        val outputDirectory = rootProject.file("output")
+        val siteDirectory = outputDirectory.resolve("site")
+        val packagesDirectory = outputDirectory.resolve("packages")
+
+        delete(outputDirectory)
+        siteDirectory.parentFile.mkdirs()
+        Files.move(stagingDirectory.toPath(), siteDirectory.toPath())
+
+        organizePlatformPackages(siteDirectory, packagesDirectory)
+
+        logger.lifecycle("Conveyor site: ${siteDirectory.relativeTo(rootProject.projectDir)}")
+        logger.lifecycle("Platform package index: ${packagesDirectory.relativeTo(rootProject.projectDir)}")
+    }
+}
+
 // Local rehearsal of .github/workflows/release.yml with act (https://github.com/nektos/act). It
 // builds and signs every platform, so give it half an hour, and it needs Docker plus the `conveyor`
 // CLI on PATH. The signing key is a throwaway under ~/.conveyor-acttest.
@@ -542,9 +693,6 @@ tasks.register<Exec>("verifyReleaseWorkflow") {
                 .trim()
                 .trim('"')
         secrets.get().writeText("SIGNING_KEY=$signingKey\nSIGNING_PASSPHRASE=${passphrase.get()}\n")
-        // act reads the tag from the event payload; a branch ref would fail `checkTagParity`.
-        event.get().writeText("""{"ref":"refs/tags/v$releaseVersion"}""")
-
         val stagedDirectory = staging.get().asFile
         stagedDirectory.deleteRecursively()
         stagedDirectory.mkdirs()
@@ -558,6 +706,8 @@ tasks.register<Exec>("verifyReleaseWorkflow") {
                     "--exclude=.gradle",
                     "--exclude=build",
                     "--exclude=.idea",
+                    "--exclude=output/",
+                    "--exclude=output-dev/",
                     "--exclude=conveyor.output",
                     "--exclude=.conveyor",
                     "${repository.path}/",
@@ -573,19 +723,72 @@ tasks.register<Exec>("verifyReleaseWorkflow") {
         val patched =
             original
                 .replace(
-                    "      - uses: actions/checkout@v5\n",
-                    "      - uses: actions/checkout@v5\n" +
-                        "        with:\n" +
-                        "          persist-credentials: false\n",
+                    "          fetch-depth: 0\n",
+                    "          fetch-depth: 0\n          persist-credentials: false\n",
                 ).replace(
-                    "GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}",
-                    "GITHUB_TOKEN: rehearsal-token-without-write-access",
+                    "\${{ secrets.GITHUB_TOKEN }}",
+                    "rehearsal-token-without-write-access",
+                ).replace(
+                    "      - name: Run release checks and build ProGuard jars\n",
+                    "      - name: Install native graphics library for act tests\n" +
+                        "        run: apt-get update -qq && apt-get install -y libgl1\n\n" +
+                        "      - name: Run release checks and build ProGuard jars\n",
                 )
-        check(patched != original) {
+        check(
+            patched != original &&
+                "persist-credentials: false" in patched &&
+                "secrets.GITHUB_TOKEN" !in patched &&
+                "Install native graphics library for act tests" in patched,
+        ) {
             "The release workflow no longer looks the way this task expects; the credential " +
                 "stripping would silently stop working."
         }
         stagedWorkflow.writeText(patched)
+
+        // Keep the local rehearsal's Git metadata small and independent of the user's remotes.
+        // The synthetic production ref lets the workflow's ancestry guard run normally.
+        fun git(vararg arguments: String) {
+            providers
+                .exec {
+                    commandLine("git", "-C", stagedDirectory.absolutePath, *arguments)
+                }.result
+                .get()
+                .assertNormalExitValue()
+        }
+
+        git("init", "-b", "production")
+        git("config", "user.name", "act rehearsal")
+        git("config", "user.email", "act-rehearsal@example.invalid")
+        git("add", "-A")
+        git("commit", "-m", "act workflow rehearsal")
+
+        val rehearsalCommit =
+            providers
+                .exec {
+                    commandLine("git", "-C", stagedDirectory.absolutePath, "rev-parse", "HEAD")
+                }.standardOutput
+                .asText
+                .get()
+                .trim()
+        val rehearsalRemote = stagedDirectory.resolve(".git/act-origin.git")
+        delete(rehearsalRemote)
+        providers
+            .exec {
+                commandLine("git", "init", "--bare", rehearsalRemote.absolutePath)
+            }.result
+            .get()
+            .assertNormalExitValue()
+        git("remote", "add", "origin", rehearsalRemote.absolutePath)
+        git("push", "origin", "HEAD:refs/heads/production")
+        git("tag", "v$releaseVersion")
+        git("push", "origin", "refs/tags/v$releaseVersion")
+
+        // act reads the tag and commit from the event payload; a branch ref fails checkTagParity.
+        event
+            .get()
+            .writeText(
+                """{"ref":"refs/tags/v$releaseVersion","after":"$rehearsalCommit"}""",
+            )
     }
 
     workingDir = staging.get().asFile
@@ -604,7 +807,7 @@ tasks.register<Exec>("verifyReleaseWorkflow") {
         "--secret-file",
         secrets.get().absolutePath,
         "--platform",
-        "ubuntu-latest=catthehacker/ubuntu:act-latest",
+        "ubuntu-24.04=catthehacker/ubuntu:act-latest",
         "--artifact-server-path",
         artifacts.get().asFile.absolutePath,
     )

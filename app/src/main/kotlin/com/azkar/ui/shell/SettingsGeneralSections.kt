@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -16,8 +16,12 @@ import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.settingsLanguageBody
 import com.azkar.generated.resources.settingsLanguageHeader
 import com.azkar.generated.resources.settingsNotificationStartupFailed
+import com.azkar.generated.resources.settingsStartupDisabledByUser
 import com.azkar.generated.resources.settingsStartupHint
+import com.azkar.generated.resources.settingsStartupManagedByPolicy
+import com.azkar.generated.resources.settingsStartupOpenSystemSettings
 import com.azkar.generated.resources.settingsStartupTitle
+import com.azkar.generated.resources.settingsStartupUnsupported
 import com.azkar.i18n.displayNameIn
 import com.azkar.i18n.isSameLanguageAs
 import com.azkar.i18n.supportedLocales
@@ -112,29 +116,40 @@ internal fun SettingsStartupSection(
     settings: NotificationSettingsState,
     modifier: Modifier = Modifier,
 ) {
+    val notice = settings.notifications.notice
     SettingsSectionBlock(
         title = stringResource(Res.string.settingsStartupTitle),
         subtitle = stringResource(Res.string.settingsStartupHint),
         modifier = modifier,
         headingAction = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                AzkarToggleSwitch(
-                    checked = startOnLogin,
-                    onCheckedChange = settings.notifications::setStartOnLogin,
-                )
-                StartupNoticeText(settings.notifications.notice)
-            }
+            AzkarToggleSwitch(
+                checked = startOnLogin,
+                onCheckedChange = settings.notifications::setStartOnLogin,
+                enabled = settings.notifications.canChangeStartup,
+            )
         },
+        content =
+            if (notice == null) {
+                null
+            } else {
+                {
+                    Column {
+                        StartupNoticeText(notice)
+                        if (notice == StartupNotice.DisabledByUser) {
+                            TextButton(onClick = settings.notifications::openStartupSystemSettings) {
+                                Text(stringResource(Res.string.settingsStartupOpenSystemSettings))
+                            }
+                        }
+                    }
+                }
+            },
     )
 }
 
 /**
  * The startup failure, in the validation colour the rest of the app uses for "this did not work".
  *
- * A separate composable rather than a `when` branch inside the row above so the notice cannot grow a
- * second case later: this function accepts a [StartupNotice], and a location notice is not one. The two
- * used to share one nullable `locationError` string on the old reminders screen, which is how a failed
- * auto-detect once rendered under the wrong prayer.
+ * Accepts only [StartupNotice], keeping login-manager guidance separate from location failures.
  *
  * It sits under the switch rather than above it because the failure belongs to the action that just
  * happened, and a message about an action reads as its continuation, not as the row's description.
@@ -144,10 +159,18 @@ internal fun StartupNoticeText(
     notice: StartupNotice?,
     modifier: Modifier = Modifier,
 ) {
-    val failure = notice as? StartupNotice.Unavailable ?: return
-    val reason = failure.reason?.let { ": $it" }.orEmpty()
+    val message =
+        when (notice) {
+            StartupNotice.DisabledByUser -> stringResource(Res.string.settingsStartupDisabledByUser)
+            StartupNotice.ManagedByPolicy -> stringResource(Res.string.settingsStartupManagedByPolicy)
+            StartupNotice.Unsupported -> stringResource(Res.string.settingsStartupUnsupported)
+            is StartupNotice.Unavailable ->
+                stringResource(Res.string.settingsNotificationStartupFailed) +
+                    notice.reason?.let { ": $it" }.orEmpty()
+            null -> return
+        }
     Text(
-        text = stringResource(Res.string.settingsNotificationStartupFailed) + reason,
+        text = message,
         color = AzkarTheme.colors.dialogValidation,
         fontSize = 11.sp,
         fontWeight = FontWeight.Medium,

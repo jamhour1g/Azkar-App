@@ -37,6 +37,8 @@ class NotificationPreferencesRepository(
     val prayerLocation: StateFlow<PrayerLocationSettings> = _prayerLocation.asStateFlow()
     val prayerProgress: StateFlow<PrayerNotificationProgress> = _prayerProgress.asStateFlow()
     val prayerFlags: StateFlow<Map<PrayerKey, Boolean>> = _prayerFlags.asStateFlow()
+
+    /** Last successful choice, retained for migrating old launch files; the UI reads the OS state. */
     val startOnLogin: StateFlow<Boolean> = _startOnLogin.asStateFlow()
 
     /**

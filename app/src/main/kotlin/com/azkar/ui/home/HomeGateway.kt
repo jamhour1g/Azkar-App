@@ -48,7 +48,10 @@ class DomainHomeGateway(
     override suspend fun findDailyRemembrance(): Remembrance? {
         val remembrances = remembranceService.findAll().sortedBy { it.id }
         if (remembrances.isEmpty()) return null
-        val day = java.time.LocalDate.now().toEpochDay()
+        val day =
+            java.time.LocalDate
+                .now()
+                .toEpochDay()
         return remembrances[Math.floorMod(day, remembrances.size.toLong()).toInt()]
     }
 

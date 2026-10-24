@@ -186,7 +186,6 @@ fun HomeScreen(
         hadith = hadith,
         modifier = modifier,
     )
-
 }
 
 /** The three `LaunchedEffect`s that used to live in `HomeComponent.initialize()`. */

@@ -57,6 +57,12 @@ sealed interface LocationNotice {
 
 /** Why the desktop login manager refused. Its own type so it cannot be shown as a location problem. */
 sealed interface StartupNotice {
+    data object DisabledByUser : StartupNotice
+
+    data object ManagedByPolicy : StartupNotice
+
+    data object Unsupported : StartupNotice
+
     /** The platform call failed, or the host has no login manager to call. */
     data class Unavailable(
         val reason: String?,
