@@ -584,6 +584,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                     ScreenFixture {
                         HomeScreen(
                             onOpenLibrary = { libraryOpens++ },
+                            onOpenRemembrance = {},
                             onOpenCollection = { opened += it },
                             reminders = REMINDERS,
                         )

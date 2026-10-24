@@ -207,11 +207,7 @@ private fun FavoritesCardPreview() {
 }
 
 /**
- * The label row: star, name, and how many favourites the arrows are cycling through.
- *
- * [FavoriteState.total] doubles as the badge's visibility switch. With one favourite there is
- * nothing to count, and with none the footer says so; printing "1 / 1" over a card the user cannot
- * page through would be noise.
+ * The label row: star and name.
  */
 @Composable
 private fun FavoritesHeader(state: FavoriteState) {
@@ -233,19 +229,6 @@ private fun FavoritesHeader(state: FavoriteState) {
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
         )
-        if (state.total > 1) {
-            Text(
-                text = state.total.toString(),
-                color = colors.accentInk,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier =
-                    Modifier
-                        .clip(CircleShape)
-                        .background(colors.accent.copy(alpha = FAVORITE_BADGE_ALPHA))
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-            )
-        }
     }
 }
 
@@ -319,17 +302,14 @@ private fun FavoritesFooter(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text =
-                if (state.total > 0) {
-                    stringResource(Res.string.favoritePosition, state.position, state.total)
-                } else {
-                    stringResource(Res.string.noFavoritesYet)
-                },
-            color = colors.textSecondary,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-        )
+        if (state.total > 1) {
+            Text(
+                text = stringResource(Res.string.favoritePosition, state.position, state.total),
+                color = colors.textSecondary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             TooltipIconButton(

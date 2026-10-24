@@ -242,6 +242,7 @@ private fun ColumnScope.AzkarContent(
                 entry(AzkarDestination.Home) {
                     HomeScreen(
                         onOpenLibrary = navigator::showLibrary,
+                        onOpenRemembrance = navigator::showRemembrance,
                         onOpenCollection = navigator::showCollection,
                         reminders = reminders,
                     )

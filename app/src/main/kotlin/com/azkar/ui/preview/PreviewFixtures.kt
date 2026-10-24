@@ -235,7 +235,7 @@ class PreviewHomeGateway(
 ) : HomeGateway {
     override suspend fun findFavorites(): List<Remembrance> = favorites
 
-    override suspend fun findDailyHadith(): Remembrance? = dailyHadith
+    override suspend fun findDailyRemembrance(): Remembrance? = dailyHadith
 
     override suspend fun findHomeCollections(): List<HomeCollection> = homeCollections
 }
@@ -764,6 +764,7 @@ internal fun previewHadithState(
     source: String? = "Sahih al-Bukhari 39",
 ): HadithState =
     HadithState(
+        remembranceId = null,
         arabic = arabic,
         english = english,
         source = source,

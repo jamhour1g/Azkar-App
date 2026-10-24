@@ -16,8 +16,8 @@ interface HomeGateway {
     /** Every remembrance marked as a favorite. */
     suspend fun findFavorites(): List<Remembrance>
 
-    /** A single remembrance to show as the daily hadith, or `null` when the library is empty. */
-    suspend fun findDailyHadith(): Remembrance?
+    /** A stable daily selection, or `null` when the library is empty. */
+    suspend fun findDailyRemembrance(): Remembrance?
 
     /**
      * Every collection the rail could offer: the ones the user pinned, then the rest.
@@ -45,7 +45,12 @@ class DomainHomeGateway(
      * one that came first. It is the hadith on the first screen the user sees, so it was the read
      * that made the app feel slow to open, and the cost grew every time a remembrance was added.
      */
-    override suspend fun findDailyHadith(): Remembrance? = remembranceService.findFirst()
+    override suspend fun findDailyRemembrance(): Remembrance? {
+        val remembrances = remembranceService.findAll().sortedBy { it.id }
+        if (remembrances.isEmpty()) return null
+        val day = java.time.LocalDate.now().toEpochDay()
+        return remembrances[Math.floorMod(day, remembrances.size.toLong()).toInt()]
+    }
 
     /**
      * Delegates rather than reimplementing.

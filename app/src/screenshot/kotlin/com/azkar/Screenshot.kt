@@ -274,6 +274,7 @@ private fun ScreenshotScreen(
         SCREEN_HOME ->
             HomeScreen(
                 onOpenLibrary = {},
+                onOpenRemembrance = {},
                 onOpenCollection = {},
                 reminders = reminders,
             )

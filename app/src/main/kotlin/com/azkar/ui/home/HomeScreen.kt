@@ -74,6 +74,7 @@ private val RAIL_WIDTH = 380.dp
  * content has to be able to supply it.
  */
 internal data class HadithState(
+    val remembranceId: Long?,
     val arabic: String,
     val english: String,
     /**
@@ -113,7 +114,7 @@ internal class HomeInputs(
  */
 internal class HomeNavigation(
     val onOpenLibrary: () -> Unit,
-    val onReadMore: () -> Unit,
+    val onOpenRemembrance: (Long) -> Unit,
     val onOpenCollection: (Long) -> Unit,
 )
 
@@ -128,6 +129,7 @@ internal class HomeNavigation(
 @Composable
 fun HomeScreen(
     onOpenLibrary: () -> Unit,
+    onOpenRemembrance: (Long) -> Unit,
     onOpenCollection: (Long) -> Unit,
     reminders: CollectionReminderState,
     modifier: Modifier = Modifier,
@@ -151,7 +153,6 @@ fun HomeScreen(
     // texts are static per locale, so reading them once per composition is the whole cost.
     val initialHadith = placeholderHadith()
     var hadith by remember { mutableStateOf(initialHadith) }
-    var detailsVisible by remember { mutableStateOf(false) }
 
     // Rebuilt on every recomposition, which is free: the three holders are remembered instances and
     // nothing below keys a `LaunchedEffect` off `inputs` itself.
@@ -165,7 +166,7 @@ fun HomeScreen(
             navigation =
                 HomeNavigation(
                     onOpenLibrary = onOpenLibrary,
-                    onReadMore = { detailsVisible = true },
+                    onOpenRemembrance = onOpenRemembrance,
                     onOpenCollection = onOpenCollection,
                 ),
         )
@@ -186,14 +187,6 @@ fun HomeScreen(
         modifier = modifier,
     )
 
-    if (detailsVisible) {
-        DailyHadithDetailsDialog(
-            arabic = hadith.arabic,
-            english = hadith.english,
-            source = hadith.source,
-            onDismiss = { detailsVisible = false },
-        )
-    }
 }
 
 /** The three `LaunchedEffect`s that used to live in `HomeComponent.initialize()`. */
@@ -236,7 +229,7 @@ private fun HomeScreenEffects(
 
         val single =
             runCatching {
-                gateway.findDailyHadith()
+                gateway.findDailyRemembrance()
             }.onFailure { failure -> logger.error(failure) { "Unable to load the daily hadith" } }
                 .getOrNull()
         if (single != null) {
@@ -321,7 +314,7 @@ private fun HomeContentPreview() {
                     notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
                     rail = remember { HomeRailState().apply { replace(previewRailCards()) } },
                     reminders = previewReminders(),
-                    navigation = HomeNavigation(onOpenLibrary = {}, onReadMore = {}, onOpenCollection = {}),
+                    navigation = HomeNavigation(onOpenLibrary = {}, onOpenRemembrance = {}, onOpenCollection = {}),
                 ),
             dateText = "Friday, 20 February",
             hadith = previewHadithState(),
@@ -386,7 +379,9 @@ private fun HomeRailColumn(
             reminderIds = inputs.reminders.enabledCollectionIds,
             onOpen = inputs.navigation.onOpenCollection,
         )
-        HomeFavoritesCard(inputs, modifier = Modifier.fillMaxWidth())
+        if (inputs.favorites.state.total > 0) {
+            HomeFavoritesCard(inputs, modifier = Modifier.fillMaxWidth())
+        }
     }
 }
 
@@ -405,7 +400,7 @@ private fun HomeMainColumn(
             arabic = hadith.arabic,
             english = hadith.english,
             source = hadith.source,
-            onClick = inputs.navigation.onReadMore,
+            onClick = { hadith.remembranceId?.let(inputs.navigation.onOpenRemembrance) },
         )
         val snapshot = inputs.prayerTimes.snapshot
         PrayerTimesCard(
@@ -436,6 +431,7 @@ private fun HomeFavoritesCard(
 @Composable
 private fun placeholderHadith() =
     HadithState(
+        remembranceId = null,
         arabic = stringResource(Res.string.hadithExample),
         english = stringResource(Res.string.explanationExample),
         source = stringResource(Res.string.sourceExample),
@@ -456,6 +452,7 @@ private fun resolveHadith(
             englishFallback,
         )
     return HadithState(
+        remembranceId = remembrance.id,
         arabic = texts.translation,
         english = texts.explanation,
         source = remembrance.source,
