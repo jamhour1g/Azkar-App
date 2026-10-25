@@ -40,6 +40,7 @@ import com.azkar.ui.notifications.presentation.NotificationPublisher
 import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
 import com.azkar.ui.shell.ThemePreferenceStore
 import com.azkar.ui.shell.TypographyStore
+import com.azkar.updates.UpdateManager
 import de.infix.testBalloon.framework.core.testSuite
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineDispatcher
@@ -110,6 +111,7 @@ val AppModuleSuite by testSuite("AppModule") {
                         org.koin.core.qualifier
                             .named("notificationScope"),
                     ),
+                    koin.get<UpdateManager>(),
                 ),
             ).doesNotContainNull()
         }
@@ -186,6 +188,7 @@ val AppModuleSuite by testSuite("AppModule") {
                     OverlayNotificationPresenter::class,
                     CoroutineDispatcher::class,
                     CoroutineScope::class,
+                    UpdateManager::class,
                 )
         }
 
@@ -247,6 +250,13 @@ private class StubbedGraph private constructor(
                 .get<CoroutineScope>(
                     org.koin.core.qualifier
                         .named("notificationScope"),
+                ).cancel()
+        }
+        runCatching {
+            koin
+                .get<CoroutineScope>(
+                    org.koin.core.qualifier
+                        .named("updateScope"),
                 ).cancel()
         }
         runCatching { koin.get<HttpClient>().close() }

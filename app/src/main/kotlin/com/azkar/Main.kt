@@ -51,6 +51,7 @@ import com.azkar.ui.theme.AppTypography
 import com.azkar.ui.theme.DEFAULT_WINDOW_HEIGHT
 import com.azkar.ui.theme.DEFAULT_WINDOW_WIDTH
 import com.azkar.ui.theme.windowSizeFor
+import com.azkar.updates.UpdateManager
 import dev.nucleusframework.autolaunch.AutoLaunch
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.HttpClient
@@ -95,6 +96,10 @@ private const val OVERLAY_PROOF_OF_CONSENT_FLAG = "--overlay-poc"
  * Quit action shuts the process down.
  */
 suspend fun main(args: Array<String>) {
+    if (args.contentEquals(arrayOf("--packaging-smoke-test"))) {
+        verifyPackagedRuntime()
+        return
+    }
     pinDesktopWindowClass()
     logger.info { "Starting Azkar" }
     startKoin { modules(dataModule, appModule) }
@@ -217,11 +222,7 @@ private fun DesktopApplicationRoot(
     val overlay = koin.get<OverlayNotificationPresenter>()
     val notificationScope = koin.get<CoroutineScope>(named("notificationScope"))
     val proofOfConcept = OVERLAY_PROOF_OF_CONSENT_FLAG in args
-    LaunchedEffect(runtime, proofOfConcept) {
-        // Not in the harness: a card the scheduler picked on its own would be indistinguishable from
-        // one the harness fired, and the point of the run is to know exactly what is on screen.
-        if (!proofOfConcept) runtime.start(notificationScope)
-    }
+    NotificationRuntimeLifecycle(runtime, notificationScope, proofOfConcept)
     val quitAction: () -> Unit = {
         shutdown(
             koin = koin,
@@ -231,6 +232,7 @@ private fun DesktopApplicationRoot(
             exitApplication = exitApplication,
         )
     }
+    UpdateLifecycle(koin.get<UpdateManager>())
     LaunchedEffect(trayAvailable, proofOfConcept, startedAtLogin) {
         // The harness starts hidden whatever the tray says: "a reminder with no window at all" is
         // the state being verified, and a tray icon would be the only other surface on screen.
@@ -279,6 +281,23 @@ private fun DesktopApplicationRoot(
     )
 }
 
+@Composable
+private fun NotificationRuntimeLifecycle(
+    runtime: NotificationRuntime,
+    scope: CoroutineScope,
+    proofOfConcept: Boolean,
+) {
+    LaunchedEffect(runtime, proofOfConcept) {
+        // Keep the harness deterministic: it fires its own cards and never starts the scheduler.
+        if (!proofOfConcept) runtime.start(scope)
+    }
+}
+
+@Composable
+private fun UpdateLifecycle(manager: UpdateManager) {
+    LaunchedEffect(manager) { manager.checkAutomatically() }
+}
+
 /**
  * The one place the process is allowed to end, in the order that leaves nothing half-released.
  *
@@ -296,6 +315,7 @@ private fun shutdown(
     exitApplication: () -> Unit,
 ) {
     notificationScope.cancel()
+    koin.get<CoroutineScope>(named("updateScope")).cancel()
     runCatching { dispatcher.dispose() }
         .onFailure { failure -> logger.warn(failure) { "Unable to dispose the notification publisher" } }
     databaseWarmUp.close()

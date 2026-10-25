@@ -1,10 +1,6 @@
 plugins {
     `java-library`
     id("azkar-common")
-    // Applied unversioned for the same reason `:data` does it: buildSrc already owns the Kotlin
-    // plugin on the classpath (detekt needs it to resolve source sets) and the version has to
-    // match the catalog exactly.
-    id("org.jetbrains.kotlin.jvm")
 }
 
 java {

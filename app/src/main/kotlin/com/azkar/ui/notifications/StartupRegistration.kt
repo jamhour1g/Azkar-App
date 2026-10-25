@@ -118,4 +118,5 @@ private fun legacyRegistrationPaths(): List<Path> =
                 Path.of(System.getProperty("user.home"), "Library/LaunchAgents/com.azkar.app.plist"),
             )
         DesktopPlatform.LINUX -> listOf(Path.of(System.getProperty("user.home"), ".config/autostart/azkar.desktop"))
+        DesktopPlatform.UNKNOWN -> emptyList()
     }

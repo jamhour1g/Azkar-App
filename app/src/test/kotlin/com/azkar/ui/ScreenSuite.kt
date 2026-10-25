@@ -54,6 +54,7 @@ import com.azkar.ui.shell.ThemePreference
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.LocalWindowSizeClass
 import com.azkar.ui.theme.windowSizeClassFor
+import com.azkar.updates.UpdateManager
 import de.infix.testBalloon.framework.core.testSuite
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -257,6 +258,7 @@ private fun withScreenContainer(block: () -> Unit) {
                     single { LocationDetector(get()) }
                     single { GeocodingClient(get()) }
                     single { StartupRegistration() }
+                    single { UpdateManager(get(), get(), storeScope) }
                 },
             )
         }

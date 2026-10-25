@@ -3,7 +3,7 @@
 Azkar logs through [kotlin-logging](https://github.com/oshai/kotlin-logging) on top of
 [SLF4J](https://www.slf4j.org/), with [Logback](https://logback.qos.ch/) as the backend. The
 versions are pinned in `gradle/libs.versions.toml` and the dependencies are added to every module by
-`buildSrc/src/main/kotlin/azkar-common.gradle.kts`, so no module needs to declare logging
+`build-logic/src/main/kotlin/azkar-common.gradle.kts`, so no module needs to declare logging
 itself.
 
 ```

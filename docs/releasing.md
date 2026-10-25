@@ -1,388 +1,114 @@
 # Releasing the desktop app
 
-The desktop build is packaged with [Hydraulic Conveyor](https://conveyor.hydraulic.dev).
-Stable releases come from version tags on `production`. Manually dispatching the
-Release workflow from `dev` updates a separate rolling preview release. Both
-channels are built for all three platforms from a Linux runner:
+Nucleus 2.5.18 packages the existing Compose Desktop JVM application. The Compose UI, AWT windows, tray and ProGuard rules remain in the app; only installation and update packaging moved from Conveyor.
 
-| OS      | Output                                | Auto-update mechanism        |
-|---------|---------------------------------------|------------------------------|
-| Windows | MSIX + `.appinstaller`                | Background MSIX updates      |
-| macOS   | `.app.tar.gz` + Sparkle 2 appcast     | Sparkle (EdDSA signatures)   |
-| Linux   | `.deb` + apt repository               | apt (signed repo metadata)   |
+| Platform | Installer and update path | Initial architecture |
+|---|---|---|
+| Windows | NSIS `.exe`; Nucleus checks, downloads and installs after approval | x64 |
+| macOS | DMG for installation; ZIP is the Nucleus replacement payload | Intel and Apple Silicon |
+| Linux | `.deb` and `.rpm` through signed apt/dnf repositories; AppImage through Nucleus | x64 |
 
-For production, Conveyor generates the download-page HTML and uploads the packages
-into the versioned GitHub Release (`make copied-site`). For dev, the workflow
-attaches build artifacts to the `dev-preview` GitHub prerelease and publishes the
-full update site to a separate directory on GitHub Pages.
+Linux repositories have Stable and Dev suites and retain only the newest package in each suite. Historical installers remain on GitHub Releases. apt/dnf owns package transactions; Azkar shows package-manager commands for updates and channel changes. AppImage, Windows and macOS use Nucleus in-app updates. The app checks on startup and from Settings, shows release notes, and waits for approval before downloading and installing. A channel change is an explicit request and can offer an older version; Azkar warns that the installer does not roll back database changes.
 
-## One packaging path
+## Local packaging
 
-Conveyor is the only thing that packages this app.
+Use JDK 25 (Zulu in CI; ProGuard needs `jmods`). Nucleus packages on the matching host OS:
 
-The Compose Multiplatform plugin's own `nativeDistributions` block used to sit
-next to it in [app/build.gradle.kts](../app/build.gradle.kts) as a second,
-jpackage-based packager, and it has been removed. The reason is Linux-only and
-it is not cosmetic.
-
-jpackage builds its desktop entry from
-`classes/jdk/jpackage/internal/resources/template.desktop` inside the JDK, and
-that template has **no `StartupWMClass` key at all**. A desktop entry without
-one cannot be matched to the running window — the desktop manager matches on
-the window's `WM_CLASS` — so a jpackage-built `.deb` puts the app in the dock
-as an unassociated window: a generic Java icon, and the window's raw
-`WM_CLASS` as the label. Conveyor's desktop entry does carry
-`StartupWMClass`, and the Conveyor Gradle plugin derives it from the Compose
-plugin's `mainClass`, so the two agree by construction.
-
-Do not re-add a jpackage packaging path. If a second packager is ever needed,
-it has to generate the desktop entry itself.
-
-What the Compose extension still contributes to Conveyor:
-
-| Compose setting | Becomes                                     |
-|-----------------|---------------------------------------------|
-| `mainClass`     | `app.jvm.gui.main-class`, `StartupWMClass`  |
-| `jvmArgs`       | `app.jvm.options`                           |
-| `buildTypes`    | the ProGuard-shrunk jars that get packaged  |
-
-## Start at login
-
-The runtime uses [Nucleus AutoLaunch](https://nucleusframework.dev/en/docs/lifecycle/auto-launch/)
-with Conveyor packaging. `conveyor.conf` supplies the `nucleus.app.*` identity properties,
-the executable-type hint for each OS, and a disabled-by-default MSIX startup task whose
-ID matches `nucleus.app.startup.task.id`. Keep those values aligned when changing packaging.
-The preview channel derives its own identity and does not migrate production registrations.
-
-Windows uses the native MSIX StartupTask API; the macOS package requires macOS 13 or
-newer because Nucleus's `SMAppService` native bridge declares that minimum in its Mach-O
-header. `app.mac.info-plist.LSMinimumSystemVersion` must match it for both CPU architectures.
-Host Linux uses a systemd user service. The settings toggle reads the
-OS state, including user and policy restrictions, and refreshes when the window regains focus.
-The saved preference is retained only as a record of the last choice and for migration.
-Old `.cmd`, LaunchAgent, and `.desktop` registrations are retired after a successful migration;
-failed migrations retain the old files. Gradle and IDE launches cannot register for startup.
-
-Before releasing, test the installed app on each OS: enable startup, sign out and back in,
-confirm it stays in the tray when available, then disable startup and repeat. On Windows,
-also disable it through Task Manager and verify Azkar reflects that state and links to
-system settings. Unit tests and cross-platform packaging checks do not verify a real login.
-
-## The Linux desktop entry
-
-A Linux desktop manager matches a running window to its `.desktop` entry
-through two strings that have to be equal:
-
-- the `StartupWMClass` in the desktop entry, and
-- the window's `WM_CLASS`.
-
-They are computed independently, which is what makes the agreement fragile:
-
-- Conveyor writes `StartupWMClass` by taking the packaged entry point's class
-  name and replacing its dots with hyphens (`com.azkar.MainKt` becomes
-  `com-azkar-MainKt`),
-- AWT reports `WM_CLASS` from the class name of the **bottom stack frame** of
-  whichever thread first constructed the AWT toolkit, with the same
-  dots-to-hyphens substitution.
-
-`Main.kt` therefore calls `Toolkit.getDefaultToolkit()` as the first statement
-of `main`, on the main thread, so the class AWT sees is `com.azkar.MainKt` and
-the window reports `com-azkar-MainKt` — the same value Conveyor writes. Both
-sides derive from one class name, so they cannot drift.
-
-Two things follow, and both are easy to break by accident:
-
-- **The toolkit must be initialised on the main thread, before any suspension
-  point.** The startup sequence suspends (database warm-up, settings stores), and
-  a coroutine worker touching AWT first would report
-  `kotlinx-coroutines-scheduling-CoroutineScheduler$Worker` instead — which is
-  exactly what the dock used to display.
-- **ProGuard must not obfuscate.** `obfuscate` is off in the release build
-  type, and that is load-bearing: renaming `com.azkar.MainKt` would change the
-  window's `WM_CLASS` while the packaged `StartupWMClass` stayed as it is.
-
-`DesktopWindowClassSuite` in
-[app/src/test/kotlin/com/azkar](../app/src/test/kotlin/com/azkar) asserts this
-agreement, so a refactor that breaks it fails the build rather than the dock.
-
-A window with no matching desktop entry has no icon either. Running
-`./gradlew :app:run` from source installs no `.desktop` file, so the dock shows
-the unassociated-window appearance even when everything is correct. Install the
-package to see the real thing:
+On Ubuntu/Debian, install the RPM build tool before building the full Linux format set:
 
 ```bash
-sudo dpkg -i output/packages/linux/jamhour1g-azkar_<version>_amd64.deb
+sudo apt install rpm
 ```
 
-## One-time setup
-
-1. Install the Conveyor CLI (see the [website](https://conveyor.hydraulic.dev)).
-2. Generate the root signing key once (it derives every platform key: MSIX,
-   Sparkle, apt repo metadata…). On Linux you will be prompted for a
-   passphrase; choose a strong one — it encrypts the phrase on disk and in the
-   CI secret:
-
-   ```bash
-   # Prompts: "Enter a passphrase" (pressing enter would create a passwordless key).
-   conveyor keys generate
-   ```
-
-   The (encrypted) phrase is written to the per-user Conveyor defaults file
-   (`~/.config/hydraulic/conveyor/defaults.conf`) as a single HOCON line. Push
-   its value (**no quotes**) and the passphrase into two repo secrets:
-
-   ```bash
-   gh secret set SIGNING_KEY --repo jamhour1g/Azkar-App \
-     < <(grep '^app.signing-key' ~/.config/hydraulic/conveyor/defaults.conf \
-         | sed 's/^app.signing-key *= *//' | tr -d '"' | tr -d '\n')
-
-   gh secret set SIGNING_PASSPHRASE --repo jamhour1g/Azkar-App
-   ```
-
-   The release workflow supplies the passphrase programmatically
-   (`--passphrase=env:SIGNING_PASSPHRASE`), so nothing else is needed for CI.
-   Locally, `conveyor` will prompt for it on each signing build, or accept
-   `conveyor --passphrase=env:MY_PASS make`.
-
-   Back the encrypted phrase **and the passphrase** up in a password manager
-   immediately — losing the passphrase makes the key unusable, and after the
-   first release there is no safe way to replace it.
-3. Do **not** transfer keys into the repo. `conveyor.output/`, `.conveyor/` and
-   `defaults.conf` are already gitignored.
-
-## Rotating the signing key
-
-- **Signature matter:** never rotate once real releases exist. Every installed
-  app verifies future updates against the root key it signed with; a swapped
-  key makes installed copies distrust (or refuse) the update feed. Treat the
-  phrase as release-critical state that dies with the project.
-- **Before the first release** (no installed base yet), rotation is free:
-
-  ```bash
-  # 1. nuke the local identity (defaults.conf + apple.csr) and regenerate
-  rm ~/.config/hydraulic/conveyor/defaults.conf ~/.config/hydraulic/conveyor/apple.csr
-  conveyor keys generate   # prompts for the passphrase again
-
-  # 2. overwrite both GitHub secrets with the new values
-  gh secret set SIGNING_KEY --repo jamhour1g/Azkar-App \
-    < <(grep '^app.signing-key' ~/.config/hydraulic/conveyor/defaults.conf \
-        | sed 's/^app.signing-key *= *//' | tr -d '"' | tr -d '\n')
-  gh secret set SIGNING_PASSPHRASE --repo jamhour1g/Azkar-App
-  ```
-
-  Note the exact quoting: the pipeline yields the bare value (one line), which
-  match how the release action wires the key (`conveyor -Kapp.signing-key=<secret>`).
-
-  A **passphrase-only change** (keep the key itself) is safe at any time and
-  never disturbs the update chain:
-
-  ```bash
-  conveyor keys passphrase     # prompts old + new
-  gh secret set SIGNING_PASSPHRASE --repo jamhour1g/Azkar-App
-  ```
-
-## Releasing a version
-
-The tag version must equal the Gradle `version` at the top of
-[app/build.gradle.kts](../app/build.gradle.kts) — the workflow aborts on mismatch.
-The tag's commit must also already be on `production`; tags from `dev` cannot
-publish a stable release.
+The build checks for `rpmbuild` before packaging and gives the installation command when it is missing.
 
 ```bash
-# 1. bump "version = \"x.y.z\"" in app/build.gradle.kts and commit
-# 2. tag the commit, v-prefixed
-git tag -a v0.2.0 -m "Azkar 0.2.0"
-git push origin v0.2.0
+./gradlew :app:packageCurrentOS
 ```
 
-The [Release workflow](../.github/workflows/release.yml) then:
-
-1. Runs `./gradlew :app:checkTagParity`, which strips the leading `v` from the
-   pushed tag and fails the build unless it equals the Gradle `version`.
-2. Runs `./gradlew proguardReleaseJars` to shrink, optimize and obfuscate the
-    classpath with ProGuard (keep rules live in `app/proguard-rules.pro`;
-    output in `app/build/compose/tmp/main-release/proguard/`). This roughly
-    halves the dependency footprint (~94 MB -> ~40 MB; unused Material icons
-alone drop 36.9 MB -> 87 KB). ProGuard reads the JDK's own classes from its
-     `jmods` directory, and Temurin dropped that folder in 24 (JEP 493), so the
-     build (and CI) use **Zulu 25**, which still ships one. `:app:verifyJdkShipsJmods`
-     runs before it and fails with that explanation, rather than leaving ProGuard to
-     report the missing JDK as thousands of warnings about `java.lang.Object`.
-     Conveyor never runs Gradle itself; app code (`com.azkar.**`) is fully kept, so
-     verification only
-    re-names third-party classes — run the app once after any ProGuard/rules
-    or dependency change before tagging.
-3. Runs `conveyor make copied-site`, which builds every platform and pushes the
-   generated packages and `download.html` into the GitHub Release of that tag.
-
-Users install from the Release page (`download.html`); installed copies pick up
-later releases automatically (Windows background update, macOS Sparkle prompt,
-Linux `apt upgrade`).
-
-The download page is also published to GitHub Pages: `app.site.github.pages-branch`
-in [conveyor.conf](../conveyor.conf) points at the `gh-pages` branch, so the
-same `make copied-site` run leaves the page at
-`https://jamhour1g.github.io/Azkar-App/download.html`. The page is the
-storefront and the Release is the warehouse: the buttons on the page link
-straight to `releases/latest/download/…`, so the page is only useful once a
-release exists, and the auto-updates keep reading the Release either way.
-
-## Testing a dev preview
-
-Run the Release workflow manually with the `dev` branch selected to publish a
-GitHub prerelease named `dev-preview`. The workflow runs checks before packaging.
-The packages are
-labeled **Azkar Dev** and use a
-separate application identity (`com.azkar.app.dev` / `azkar-dev`), so testers
-can install them alongside production. The preview's complete update site is
-hosted at `https://jamhour1g.github.io/Azkar-App/dev-preview/`; publishing it to
-GitHub Pages preserves the directory paths required by Debian clients. The
-prerelease still provides a convenient place to download the build artifacts.
-The preview does not read or replace the production `releases/latest` feed.
-Previews do not run on ordinary pushes, so they consume Actions only when
-requested.
-
-Existing dev installations have the old GitHub Release URL saved in their APT
-source. Install the first `.deb` built after this change once; that package
-updates the source to the Pages repository, after which `apt upgrade` works.
-
-The dev preview version uses the release workflow run number. Production keeps
-using the Gradle version and the `v*` tag parity check. Promote code by opening a
-PR from `dev` into `production`; after it passes the three-platform promotion
-gate and merges, bump the Gradle version and tag that production commit.
-
-## Caveats
-
-- **Do not publish dev packages with `make copied-site`.** Production updates
-  read `releases/latest/download`, which ignores GitHub prereleases. The dev
-  workflow instead builds a separate preview identity and publishes a separate
-  update site, so neither channel can move the other's update feed.
-- **macOS is unsigned.** Without an Apple Developer ID the app is self-signed
-  and Gatekeeper will warn on first launch (right-click -> Open). Sparkle
-  signatures still protect updates from tampering; the EdDSA root key is the
-  `SIGNING_KEY` secret.
-- **Windows is self-signed with the same key.** For per-user MSIX installs, use
-  the generated `.appinstaller` link; enterprise devices can trust the
-  certificate bit further if desired.
-- **App icon** currently uses `assets/icons/azkar.png` (256x256). Re-export a
-  1024px PNG (macOS wants 1024) and point `app.icons` at it when available.
-- **Version bumps must be real commits** in `app/build.gradle.kts`; the tag
-  equality check is deliberately strict.
-- **Free-license duty.** Conveyor is free for this project under its
-  open-source license, which requires linking the tool in a reasonably visible
-  place (their EULA §6.5, "link to the Conveyor website … in the README or
-  download page"). Add a "Packaged with
-  [Hydraulic Conveyor](https://conveyor.hydraulic.dev)" line to the README.
-- **Local dry run needs `GITHUB_TOKEN=dummy`** exported; plugin include and
-  `site.github.oauth-token` are otherwise unresolved substitutions.
-
-## Local dry run
-
-To package the stable production identity for all platforms without publishing it, run:
+For a local Dev package, use a unique SemVer prerelease with a `-beta.N` suffix:
 
 ```bash
-./gradlew :app:packageStableRelease
+./gradlew :app:packageCurrentOS -PappVersion=0.1.2-beta.1
 ```
 
-This uses the production app identity and version from `app/build.gradle.kts`. It keeps the
-complete Conveyor site in `output/site/` and creates `output/packages/` with installer files
-grouped under `linux/`, `windows/`, and `macos/`. The grouped files are hard links to the site
-files when supported, so they do not duplicate large packages. Re-running the task replaces the
-generated `output/` directory. The GitHub release workflow still uploads the Conveyor site in its
-expected flat form; this task only organizes the local output. As with the preview task, provide
-`CONVEYOR_PASSPHRASE` in the environment when the local signing key is encrypted.
+Final packages, update metadata and `SHA256SUMS` are staged under `build/installers/<platform>/`, where platform is `linux-x64`, `windows-x64`, `macos-x64`, or `macos-arm64`. For example, a Dev AppImage is `build/installers/linux-x64/AppImage/azkar-0.1.2-beta.1-linux-x64.AppImage`. The staging task removes stale outputs for that platform. Intermediate Nucleus files stay under `app/build/compose/binaries/main-release/`.
 
-To package a local preview for Linux, Windows, and macOS without publishing it, run:
+`packageCurrentOS` also runs `smokeTestPackagedRuntime`: it launches the bundled release runtime in headless mode, opens/migrates a database in a fresh temporary profile, closes it, and requires a success marker within 90 seconds. It does not access the normal user profile, register startup tasks, or check for updates. The log is `app/build/reports/packaging/smoke-test.log`. Run `./gradlew :app:smokeTestPackagedRuntime` to check the runtime without rebuilding installer formats.
+
+Linux CI packages DEB, RPM and AppImage; Windows CI packages NSIS; macOS CI packages DMG and ZIP on both supported architectures. Windows installer/uninstaller and macOS DMG icons are configured separately from the app icons. An AppImage embeds its icon, but file-manager thumbnails still depend on desktop support.
+
+The release merger requires all eight platform/format artifacts and checks their exact versioned filenames, channel, manifest coverage, sizes and SHA-512 hashes. Duplicate filenames, missing architectures, unsafe URLs and unexpected files fail validation before output is written. Windows NSIS filenames include the Nucleus `-nsis` suffix, for example `azkar-0.1.2-windows-x64-nsis.exe`. Native EXE metadata may contain the numeric base version; macOS bundle versions offset the major by one (app 0.1.2 → bundle 1.1.2) because jpackage requires a positive major. App UI/JVM version and artifact names keep the original version; final update manifests always carry the full release version. Run its fixture tests with `./scripts/merge_nucleus_release.main.kts self-test` (requires `kotlinc`).
+
+Linux staging also checks the actual DEB/RPM internal versions and architectures. Both use `~beta.N` internally so Dev sorts below the next Stable version. The RPM task receives the full SemVer through Nucleus's public task API because its DSL validator rejects prereleases before electron-builder can convert them. Packaging regenerates each format's working directory because Nucleus 2.5.18 otherwise reuses an existing `package.json` and fallback manifest across versions.
+
+Local `act` runs never upload GitHub artifacts or publish releases. In a disposable checkout, run a Linux-only packaging rehearsal with a Dev event payload:
 
 ```bash
-./gradlew :app:packageDevPreview
+printf '%s\n' '{"ref":"refs/heads/dev","repository":{"default_branch":"dev"}}' > /tmp/azkar-act-event.json
+act push -W .github/workflows/release.yml -e /tmp/azkar-act-event.json -j package --matrix id:linux-x64 --bind
 ```
 
-The task uses the version from `app/build.gradle.kts`. To package a higher version, pass an
-optional `-PdevVersion=x.y.z` override. It first builds the ProGuard jars, then writes the flat
-Conveyor site to `output-dev/site/`. The task also creates `output-dev/packages/` with Linux,
-Windows, and macOS installer archives grouped by platform; these are hard links to the site files
-when supported, so they do not duplicate large packages. Keep the site directory intact because
-its adjacent metadata and update files support installation and updates. The `Azkar Dev` package
-identity allows preview installs to coexist with production. Since Gradle runs Conveyor without
-an interactive console, enter the local root key passphrase through the environment before
-invoking the task if the key is encrypted. Re-running the task replaces its previous generated
-site and package index:
+Local preparation uses `0.0.0-beta.0` without GitHub credentials. Outputs stay in that checkout's `build/installers/`; the publish job explicitly rejects `ACT=true`. Container-created files may have container-user ownership, so prefer the direct Gradle task in your working checkout. Linux containers cannot validate native Windows/macOS installers.
+
+Nucleus 2.5.18 was selected as a released, pinned baseline. It has Compose Gradle integration through reflection and an internal Compose JDK-probe dependency. The Linux DEB package was built successfully against this checkout's Kotlin 2.4.20, Compose 1.12.1 and Zulu JDK 25. Re-run package and installed-update checks when upgrading Compose or Nucleus. Review any future Compose bytecode patch before enabling it; the released 2.5.18 packaging path does not enable the later default text patch.
+
+## Stable releases
+
+Stable publication is an explicit version tag on `production`. First bump the default app version in `app/build.gradle.kts`, commit it to production, then tag that commit:
 
 ```bash
-read -rsp 'Conveyor root-key passphrase: ' CONVEYOR_PASSPHRASE
-printf '\n'
-export CONVEYOR_PASSPHRASE
-./gradlew :app:packageDevPreview
-unset CONVEYOR_PASSPHRASE
+git tag -a v0.1.2 -m "Azkar 0.1.2"
+git push origin v0.1.2
 ```
 
-For a key without a passphrase, run `conveyor keys passphrase` and set its new passphrase to
-empty; the task then runs without the environment variable. Check whether that key is also used
-by the GitHub release workflow before changing it, since CI's signing credentials may need to be
-updated too. Conveyor can also create a new root key without a passphrase with
-`conveyor keys generate --no-passphrase`, but that creates a different signing identity.
+The workflow verifies the tag is on `production`, checks the recorded [installed-release evidence](release-validation.md), runs source checks and packaged-runtime smoke tests, and builds on Linux, Windows, macOS Intel and Apple Silicon runners. It validates the complete artifact set, prepares a draft release, builds and verifies a fresh signed repository site, explicitly deploys it through Pages Actions, checks every live file against the build checksums, then exposes the release. Already published assets cannot be overwritten by a rerun. The release tag and Gradle package version must match. This is ordered publication across two services, not an atomic transaction: if final release publication fails after deployment, the Linux repositories may already contain the new version. Rerun failed jobs for the same run while its artifacts remain available; inspect the draft and deployed version markers first. Do not overwrite a published version. After artifact expiry, rerun the full Dev workflow (which selects a new version), or rebuild an unpublished Stable tag only after checking its existing draft. A failed build/signature check leaves the previously deployed site untouched.
 
-To install the Linux package, use the matching filename, for example:
+## Dev releases
+
+Every successful push to `dev` runs checks before packaging. The workflow selects the next patch after the latest Stable version and adds a unique Beta suffix based on the workflow run and attempt, for example `0.1.2-beta.84.1`. This suffix is what Nucleus's released GitHub provider uses to select the Dev feed. Dev packages use the same application identity and data directory as Stable.
+
+The workflow automatically publishes a versioned GitHub prerelease after deploying and verifying the signed Dev apt and RPM repositories. The active repository replaces its previous Dev packages; GitHub prereleases retain their unique versioned assets. Dev release notes describe changes since the previous successful Dev prerelease. Reruns receive a new version. Stable tags remain explicit and are accepted only from `production`.
+
+## Signed Linux repositories
+
+Repository metadata is signed by a dedicated GPG key, separate from any Windows or Apple signing identity. Before publishing, configure these GitHub Actions secrets:
+
+- `LINUX_REPO_SIGNING_KEY`: ASCII-armored private GPG key used only by the repository publication job.
+- `LINUX_REPO_SIGNING_PASSPHRASE`: its passphrase (may be empty for an unprotected automation key).
+
+The public key, repository metadata and newest Stable/Dev DEB/RPM pairs are generated into a disposable site directory and deployed as a Pages artifact. They are not committed to `gh-pages` or any other Git branch. The public identity is pinned in `assets/keys/azkar-repository.asc`; the workflow rejects a secret key with a different fingerprint. Back up the private key and its passphrase outside Git before rotating or removing either Actions secret. The public key URL is `https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc`. User-facing apt/dnf setup examples are maintained in [download.html](download.html). RPM repository metadata is signed; its package checksums are covered by that signed metadata. APT verifies package checksums through its signed Release metadata.
+
+The `publish_linux_repositories.main.kts` script accepts an input directory with optional `stable/` and `dev/` subdirectories, an empty output site directory, an exported public key and a fingerprint. Each channel must have exactly one matching versioned DEB/RPM pair and its release `SHA256SUMS`. It validates hashes and channels, builds/verifies signed metadata, and produces the download page and `<channel>-version.txt` markers. It never commits, pushes or deploys anything itself. The workflow supplies the current release packages and downloads the latest published counterpart channel from GitHub Releases. If that channel has never been published, it remains absent until its first release.
+
+The generated site must stay below 900 MiB, leaving space below Pages' 1 GB site limit. Only DEB/RPM files belong in the repositories; AppImage and other formats remain GitHub Release assets. The old `gh-pages` branch is left untouched and is no longer the deployment source.
+
+A repository release requires GitHub Pages **Source: GitHub Actions**, with the `github-pages` environment allowing deployments from `dev` and `v*` tags. The deployment job alone has `pages: write` and `id-token: write`; contributor CI receives neither. Linux packages use the same package name in Stable and Dev, so switching suites replaces the selected package source rather than adding a second application.
+
+Windows/macOS Stable installers may remain unsigned during development. Linux repository signatures are still required; this policy does not imply Apple notarization or Windows code signing exists.
+
+## Activation
+
+Land the workflow definitions on the default branch before relying on normal automatic dispatch. Owner-authored PRs can rehearse their own CI definitions from their same-repository head branch with manual dispatch; the workflow verifies the selected branch and SHA match that owner PR. Contributor approvals must use the default branch.
 
 ```bash
-sudo apt install ./output-dev/packages/linux/jamhour1g-azkar-dev_*_amd64.deb
+gh workflow run ci.yml --ref <owner-feature-branch> \
+  -f pr_number=<PR-number> -f reviewed_sha=<full-reviewed-SHA> -f validate_installers=true
 ```
 
-On Windows, open the `.msix` in `output-dev/packages/windows/`; on macOS, extract a `.zip` from
-`output-dev/packages/macos/` and launch `Azkar Dev.app`. For updates or web-based installation,
-use the files in `output-dev/site/`. This task only creates local files; publishing still happens
-through the release workflow.
+Before enabling Dev publication, configure the Linux signing secrets and switch Pages to Actions. Require `Azkar CI / Linux` on `dev`; require it plus `Azkar CI / Installers` on `production`. Keep strict/up-to-date checks, PRs, administrator enforcement, zero required approvals and no force pushes/deletion. Enable approval for all external fork contributors and keep default workflow permissions read-only, without PR review approval permission. Change the required contexts when the new workflow is available; the old `Production promotion gate` job has been replaced.
 
-GitHub Release assets stay at the release root because Conveyor's update metadata references
-their exact filenames. The release notes include a platform-organized index with direct installer
-links, while the full update and support files remain available in the asset list.
+A successful hosted four-platform CI rehearsal is still necessary. It may run before publication because it needs no repository signing secrets. No Stable release can pass the initially pending installed-release record.
 
-```bash
-GITHUB_TOKEN=dummy ./gradlew :app:printConveyorConfig   # show merged config
-./gradlew proguardReleaseJars                           # shrink jars into app/build/compose/tmp/main-release/proguard
-conveyor keys generate --no-passphrase -o /tmp/dummykeys --no-keyring  # throwaway key (linux)
-CONVEYOR_AGREE_TO_LICENSE=1 \
-  conveyor "-Kapp.signing-key=$(grep '^app.signing-key' /tmp/dummykeys/defaults.conf | sed 's/^app.signing-key *= *//' | tr -d '"' | tr -d '\n')" \
-  make site                                             # list tasks; builds via conveyor make site
-```
+## Package and runtime details
 
-The `-Kapp.signing-key=…` redirect lets you dry-run without decrypting the real
-key (`conveyor make` remembers the host key but needs a console prompt for the
-passphrase; headless runs must override).
+- H2 AUTO_SERVER binds to `127.0.0.1` in the packaged app and source launcher. This keeps the local database off network interfaces and avoids machine-hostname reverse DNS during startup; tests exercise a real local AUTO_SERVER connection.
 
-To rehearse the workflow itself — the same steps CI runs, on every platform —
-use act:
+- The Linux desktop entry sets `StartupWMClass=com-azkar-MainKt`, matching the main-thread AWT initialization in `Main.kt`. ProGuard keeps class names unchanged for the same reason.
+- The Nucleus AutoLaunch runtime identity is pinned to `com.azkar.app`; the macOS bundle identifier uses that same identity. macOS keeps its macOS 13 minimum for the AutoLaunch native bridge.
+- Linux `.deb` and `.rpm` package versions order Dev below the next Stable version. The app's settings show the current version and selected channel; the package manager decides when the repository transaction is applied.
+- Existing Conveyor migration is out of scope while Azkar is still in development. The new Windows installer has no in-place MSIX upgrade claim.
 
-```bash
-./gradlew :app:verifyReleaseWorkflow
-```
+## Verification boundary
 
-It needs Docker and the `conveyor` CLI on PATH, generates a throwaway signing
-key in `~/.conveyor-acttest` on first use, and builds and signs for roughly half
-an hour. Publishing is the one step that cannot succeed, and that is the
-point: the task strips the credentials from the staged workflow before the
-rehearsal runs, because `act` hands the container the GitHub token it finds
-on this host, and Conveyor would otherwise create a real release signed with
-the throwaway key. The run therefore ends with a failed publish step, which
-is the proof that nothing was published. Everything before it — the build, the
-signing, the packaging, the upload — is the real workflow.
-
-act copies its whole working directory into the runner container, and this
-repository is mostly `.git` and build output, so the task first mirrors a pruned
-copy into `app/build/act/staging/` (everything except `.git`, `.gradle`, `build`
-directories and the Conveyor output folders) and rehearses from there. That copy
-is what runs, so a rehearsal always tests the current working tree.
-
-The runners are containers that are discarded afterwards, so the `.msi`, `.dmg`
-and `.deb` files Conveyor produces are re-exported to
-`app/build/act/artifacts/` (as zipped uploads, one per platform). Inside a run
-they live in `conveyor.output/` in the container workspace.
-
-Stop a rehearsal with `Ctrl+C`; act removes its runner on the way out. If a run
-was killed hard (or the terminal closed) and left a container behind, clear it
-with:
-
-```bash
-docker ps -aq --filter ancestor=catthehacker/ubuntu:act-latest | xargs -r docker rm -f
-```
+A successful Gradle package task proves build-time packaging only. Before public production release, install each artifact and check launch, shortcuts, tray behavior, update replacement and restart. Test the AppImage on Arch and test apt/dnf install, signed metadata verification, updates and both channel switches in disposable supported distributions. Verify macOS ZIP replacement separately from DMG installation. Real login-session checks remain necessary for start-at-login behavior.

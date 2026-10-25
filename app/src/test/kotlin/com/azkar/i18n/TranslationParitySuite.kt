@@ -4,7 +4,8 @@ import de.infix.testBalloon.framework.core.testSuite
 import org.assertj.core.api.Assertions.assertThat
 import org.w3c.dom.Element
 import org.w3c.dom.Node
-import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
@@ -135,7 +136,7 @@ private data class Bundle(
                 DocumentBuilderFactory
                     .newInstance()
                     .newDocumentBuilder()
-                    .parse(locate(directory))
+                    .parse(locate(directory).toUri().toString())
             val root = document.documentElement
 
             val strings = mutableMapOf<String, String>()
@@ -204,13 +205,13 @@ private fun Node.elements(): List<Element> = (0 until childNodes.length).mapNotN
  * body during *discovery*, so a throw in here takes down the entire engine rather than failing one
  * test — and a missing file is a mistake worth one red test, not a whole red build.
  */
-private fun locate(directory: String): File {
-    val tail = File("src/main/composeResources/$directory/strings.xml")
-    var candidate: File? = File(System.getProperty("user.dir")).absoluteFile
+private fun locate(directory: String): Path {
+    val tail = Path.of("src/main/composeResources/$directory/strings.xml")
+    var candidate: Path? = Path.of(System.getProperty("user.dir")).toAbsolutePath()
     while (candidate != null) {
         val target = candidate.resolve(tail)
-        if (target.isFile) return target
-        candidate = candidate.parentFile
+        if (Files.isRegularFile(target)) return target
+        candidate = candidate.parent
     }
     error("No $tail at or above ${System.getProperty("user.dir")}")
 }

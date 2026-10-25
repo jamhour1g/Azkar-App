@@ -54,8 +54,9 @@ import org.jetbrains.skia.EncodedImageFormat
 import org.koin.compose.koinInject
 import org.koin.core.context.startKoin
 import org.koin.mp.KoinPlatform
-import java.io.File
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.SwingUtilities
@@ -82,11 +83,11 @@ import javax.swing.SwingUtilities
  */
 @Suppress("ForbiddenMethodCall")
 suspend fun main() {
-    val out = File(System.getProperty("azkar.screenshot.out") ?: "build/screenshot.png")
+    val out = Path.of(System.getProperty("azkar.screenshot.out") ?: "build/screenshot.png")
     val width = System.getProperty("azkar.screenshot.width")?.toInt() ?: 1440
     val height = System.getProperty("azkar.screenshot.height")?.toInt() ?: 900
     val target = System.getProperty("azkar.screenshot.screen") ?: SCREEN_APP
-    out.parentFile?.mkdirs()
+    out.parent?.let(Files::createDirectories)
 
     // The same container the real window gets, so a screenshot exercises the real graph rather than
     // a parallel one built for the harness: `AzkarApp` below resolves its gateways and its shell
@@ -120,8 +121,8 @@ suspend fun main() {
 
     val image = onEventDispatchThread { scene.render(frameNanos()) }
     val data = image.encodeToData(EncodedImageFormat.PNG, 100) ?: error("PNG encoding failed")
-    out.writeBytes(data.bytes)
-    println("wrote ${out.absolutePath} (${image.width}x${image.height}, ${data.bytes.size} bytes)")
+    Files.write(out, data.bytes)
+    println("wrote ${out.toAbsolutePath()} (${image.width}x${image.height}, ${data.bytes.size} bytes)")
 }
 
 /**
