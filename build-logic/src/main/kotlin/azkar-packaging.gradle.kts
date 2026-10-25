@@ -158,7 +158,13 @@ val stageInstallers =
                 check(
                     packaged.resolve("$directory/${installerPlatform.installerName(releaseVersion, extension)}").isFile,
                 ) {
-                    val found = packaged.resolve(directory).listFiles().orEmpty().filter { it.isFile }.map { it.name }
+                    val found =
+                        packaged
+                            .resolve(directory)
+                            .listFiles()
+                            .orEmpty()
+                            .filter { it.isFile }
+                            .map { it.name }
                     "Missing ${installerPlatform.installerName(releaseVersion, extension)}; found $found"
                 }
                 check(
