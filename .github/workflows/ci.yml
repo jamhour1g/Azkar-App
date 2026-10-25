@@ -208,7 +208,7 @@ jobs:
           retention-days: 7
 
   build-cross-platform:
-    name: Build (${{ matrix.os }})
+    name: Build installers (Windows/macOS)
     needs: select
     if: needs.select.outputs.installers == 'true'
     runs-on: ${{ matrix.os }}

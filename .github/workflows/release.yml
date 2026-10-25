@@ -48,7 +48,7 @@ jobs:
             prerelease=false
           else
             stable_tag="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
-              --jq '[.[][] | select(.draft == false and .prerelease == false) | .tag_name][0] // empty')"
+              | jq -r '[.[][] | select(.draft == false and .prerelease == false) | .tag_name][0] // empty')"
             base="${stable_tag#v}"
             if [[ -z "$stable_tag" ]]; then base=0.1.1; fi
             [[ "$base" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Latest stable release has an invalid version.'; exit 1; }
@@ -246,7 +246,7 @@ jobs:
               -f "tag_name=$RELEASE_TAG" -f "target_commitish=$GITHUB_SHA" --jq .body > "$notes_file"
           else
             previous="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
-              --jq '[.[][] | select(.draft == false and .prerelease == true and (.tag_name | contains("-beta."))) | .tag_name][0] // empty')"
+              | jq -r '[.[][] | select(.draft == false and .prerelease == true and (.tag_name | contains("-beta."))) | .tag_name][0] // empty')"
             note_args=()
             if [[ -n "$previous" ]]; then note_args+=(-f "previous_tag_name=$previous"); fi
             gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
