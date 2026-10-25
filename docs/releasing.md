@@ -8,7 +8,7 @@ Nucleus 2.5.18 packages the existing Compose Desktop JVM application. The Compos
 | macOS | DMG for installation; ZIP is the Nucleus replacement payload | Intel and Apple Silicon |
 | Linux | `.deb` and `.rpm` through signed apt/dnf repositories; AppImage through Nucleus | x64 |
 
-Linux repositories have Stable and Dev suites. apt/dnf owns package transactions; Azkar shows package-manager commands for updates and channel changes. AppImage, Windows and macOS use Nucleus in-app updates. The app checks on startup and from Settings, shows release notes, and waits for approval before downloading and installing. A channel change is an explicit request and can offer an older version; Azkar warns that the installer does not roll back database changes.
+Linux repositories have Stable and Dev suites and retain only the newest package in each suite. Historical installers remain on GitHub Releases. apt/dnf owns package transactions; Azkar shows package-manager commands for updates and channel changes. AppImage, Windows and macOS use Nucleus in-app updates. The app checks on startup and from Settings, shows release notes, and waits for approval before downloading and installing. A channel change is an explicit request and can offer an older version; Azkar warns that the installer does not roll back database changes.
 
 ## Local packaging
 
@@ -62,13 +62,13 @@ git tag -a v0.1.2 -m "Azkar 0.1.2"
 git push origin v0.1.2
 ```
 
-The workflow verifies the tag is on `production`, runs source checks and packaged-runtime smoke tests, and builds on Linux, Windows, macOS Intel and Apple Silicon runners. It validates the complete artifact set, prepares a draft release, builds and verifies signed repository metadata, pushes the repository branch, then exposes the release. Already published assets cannot be overwritten by a rerun. The release tag and Gradle package version must match. This is ordered publication across two services, not an atomic transaction: if final release publication fails, retry the existing draft after checking repository state.
+The workflow verifies the tag is on `production`, checks the recorded [installed-release evidence](release-validation.md), runs source checks and packaged-runtime smoke tests, and builds on Linux, Windows, macOS Intel and Apple Silicon runners. It validates the complete artifact set, prepares a draft release, builds and verifies a fresh signed repository site, explicitly deploys it through Pages Actions, checks every live file against the build checksums, then exposes the release. Already published assets cannot be overwritten by a rerun. The release tag and Gradle package version must match. This is ordered publication across two services, not an atomic transaction: if final release publication fails after deployment, the Linux repositories may already contain the new version. Rerun failed jobs for the same run while its artifacts remain available; inspect the draft and deployed version markers first. Do not overwrite a published version. After artifact expiry, rerun the full Dev workflow (which selects a new version), or rebuild an unpublished Stable tag only after checking its existing draft. A failed build/signature check leaves the previously deployed site untouched.
 
 ## Dev releases
 
 Every successful push to `dev` runs checks before packaging. The workflow selects the next patch after the latest Stable version and adds a unique Beta suffix based on the workflow run and attempt, for example `0.1.2-beta.84.1`. This suffix is what Nucleus's released GitHub provider uses to select the Dev feed. Dev packages use the same application identity and data directory as Stable.
 
-The workflow automatically publishes a versioned GitHub prerelease after updating the signed Dev apt and RPM repositories. Dev release notes describe changes since the previous successful Dev prerelease. Reruns receive a new version. Stable tags remain explicit and are accepted only from `production`.
+The workflow automatically publishes a versioned GitHub prerelease after deploying and verifying the signed Dev apt and RPM repositories. The active repository replaces its previous Dev packages; GitHub prereleases retain their unique versioned assets. Dev release notes describe changes since the previous successful Dev prerelease. Reruns receive a new version. Stable tags remain explicit and are accepted only from `production`.
 
 ## Signed Linux repositories
 
@@ -77,11 +77,28 @@ Repository metadata is signed by a dedicated GPG key, separate from any Windows 
 - `LINUX_REPO_SIGNING_KEY`: ASCII-armored private GPG key used only by the repository publication job.
 - `LINUX_REPO_SIGNING_PASSPHRASE`: its passphrase (may be empty for an unprotected automation key).
 
-The public key and repository metadata are published to the `gh-pages` branch. The public key URL is `https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc`. User-facing apt/dnf setup examples are maintained in [download.html](download.html). RPM repository metadata is signed; its package checksums are covered by that signed metadata. APT verifies package checksums through its signed Release metadata.
+The public key, repository metadata and newest Stable/Dev DEB/RPM pairs are generated into a disposable site directory and deployed as a Pages artifact. They are not committed to `gh-pages` or any other Git branch. The public identity is pinned in `assets/keys/azkar-repository.asc`; the workflow rejects a secret key with a different fingerprint. Back up the private key and its passphrase outside Git before rotating or removing either Actions secret. The public key URL is `https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc`. User-facing apt/dnf setup examples are maintained in [download.html](download.html). RPM repository metadata is signed; its package checksums are covered by that signed metadata. APT verifies package checksums through its signed Release metadata.
 
-The `publish_linux_repositories.main.kts` script builds and verifies repository metadata, then commits it to `gh-pages`; the release workflow prepares the key and worktree before invoking it.
+The `publish_linux_repositories.main.kts` script accepts an input directory with optional `stable/` and `dev/` subdirectories, an empty output site directory, an exported public key and a fingerprint. Each channel must have exactly one matching versioned DEB/RPM pair and its release `SHA256SUMS`. It validates hashes and channels, builds/verifies signed metadata, and produces the download page and `<channel>-version.txt` markers. It never commits, pushes or deploys anything itself. The workflow supplies the current release packages and downloads the latest published counterpart channel from GitHub Releases. If that channel has never been published, it remains absent until its first release.
 
-A repository release requires GitHub Pages publication to be enabled for `gh-pages`. Linux packages use the same package name in Stable and Dev, so switching suites replaces the selected package source rather than adding a second application.
+The generated site must stay below 900 MiB, leaving space below Pages' 1 GB site limit. Only DEB/RPM files belong in the repositories; AppImage and other formats remain GitHub Release assets. The old `gh-pages` branch is left untouched and is no longer the deployment source.
+
+A repository release requires GitHub Pages **Source: GitHub Actions**, with the `github-pages` environment allowing deployments from `dev` and `v*` tags. The deployment job alone has `pages: write` and `id-token: write`; contributor CI receives neither. Linux packages use the same package name in Stable and Dev, so switching suites replaces the selected package source rather than adding a second application.
+
+Windows/macOS Stable installers may remain unsigned during development. Linux repository signatures are still required; this policy does not imply Apple notarization or Windows code signing exists.
+
+## Activation
+
+Land the workflow definitions on the default branch before relying on normal automatic dispatch. Owner-authored PRs can rehearse their own CI definitions from their same-repository head branch with manual dispatch; the workflow verifies the selected branch and SHA match that owner PR. Contributor approvals must use the default branch.
+
+```bash
+gh workflow run ci.yml --ref <owner-feature-branch> \
+  -f pr_number=<PR-number> -f reviewed_sha=<full-reviewed-SHA> -f validate_installers=true
+```
+
+Before enabling Dev publication, configure the Linux signing secrets and switch Pages to Actions. Require `Azkar CI / Linux` on `dev`; require it plus `Azkar CI / Installers` on `production`. Keep strict/up-to-date checks, PRs, administrator enforcement, zero required approvals and no force pushes/deletion. Enable approval for all external fork contributors and keep default workflow permissions read-only, without PR review approval permission. Change the required contexts when the new workflow is available; the old `Production promotion gate` job has been replaced.
+
+A successful hosted four-platform CI rehearsal is still necessary. It may run before publication because it needs no repository signing secrets. No Stable release can pass the initially pending installed-release record.
 
 ## Package and runtime details
 

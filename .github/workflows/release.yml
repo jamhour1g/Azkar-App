@@ -13,6 +13,7 @@ permissions:
 concurrency:
   group: release-publishing
   cancel-in-progress: false
+  queue: max
 
 jobs:
   prepare:
@@ -88,6 +89,8 @@ jobs:
           java-version: '25'
           distribution: zulu
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-disabled: true
       - name: Install native test dependencies
         run: sudo apt-get update && sudo apt-get install -y libgl1
       - name: Run checks and verify release inputs
@@ -101,8 +104,15 @@ jobs:
         uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
         with:
           version: '2.4.20'
-      - name: Test release asset validation
-        run: ./scripts/merge_nucleus_release.main.kts self-test
+      - name: Test release validation scripts
+        run: |
+          ./scripts/merge_nucleus_release.main.kts self-test
+          ./scripts/publish_linux_repositories.main.kts self-test
+          ./scripts/check_release_validation.main.kts self-test
+      - name: Require installed-release evidence for Stable
+        if: needs.prepare.outputs.channel == 'stable'
+        run: ./scripts/check_release_validation.main.kts
+
 
   package:
     name: Package (${{ matrix.id }})
@@ -129,9 +139,11 @@ jobs:
           java-version: '25'
           distribution: zulu
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-disabled: true
       - name: Install Linux packaging tools
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y rpm
+        run: sudo apt-get update && sudo apt-get install -y rpm libgl1
       - name: Build packages for this host
         shell: bash
         env:
@@ -157,7 +169,7 @@ jobs:
           retention-days: 3
 
   publish:
-    name: Publish release and signed Linux repositories
+    name: Prepare release and signed repository site
     permissions:
       contents: write
     needs: [prepare, validate, package]
@@ -206,14 +218,14 @@ jobs:
           printf '%s\n' "$REPO_PRIVATE_KEY" | gpg --batch --import
           key_id="$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')"
           test -n "$key_id"
+          expected_key="$(gpg --batch --with-colons --show-keys assets/keys/azkar-repository.asc | awk -F: '$1 == "fpr" { print $10; exit }')"
+          test "$key_id" = "$expected_key"
           echo "$key_id" > "$RUNNER_TEMP/azkar-repo-key-id"
           gpg --batch --armor --export "$key_id" > "$RUNNER_TEMP/azkar-repo.asc"
           printf 'signing check\n' > "$RUNNER_TEMP/azkar-signing-check"
-          gpg --batch --yes --pinentry-mode loopback --passphrase "$REPO_PASSPHRASE" \
+          printf '%s\n' "$REPO_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
             --local-user "$key_id" --detach-sign --output "$RUNNER_TEMP/azkar-signing-check.sig" \
             "$RUNNER_TEMP/azkar-signing-check"
-      - name: Require GitHub Pages repository branch
-        run: git ls-remote --exit-code origin refs/heads/gh-pages >/dev/null
       - name: Prepare draft release and release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -248,22 +260,106 @@ jobs:
             gh release create "$RELEASE_TAG" release-assets/* --draft --title "Azkar $APP_VERSION" \
               --notes-file "$notes_file" --target "$GITHUB_SHA" "${release_args[@]}"
           fi
-      - name: Build and sign APT and RPM metadata
+      - name: Collect rolling repository packages
         env:
+          GH_TOKEN: ${{ github.token }}
           CHANNEL: ${{ needs.prepare.outputs.channel }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          mkdir -p "repository-input/$CHANNEL"
+          cp release-assets/*.deb release-assets/*.rpm release-assets/SHA256SUMS "repository-input/$CHANNEL/"
+          other=stable
+          if [[ "$CHANNEL" == stable ]]; then other=dev; fi
+          releases="$(gh api --paginate --slurp "repos/$REPOSITORY/releases?per_page=100")"
+          if [[ "$other" == stable ]]; then
+            tag="$(jq -r '[.[][] | select(.draft == false and .prerelease == false and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")))][0].tag_name // empty' <<< "$releases")"
+          else
+            tag="$(jq -r '[.[][] | select(.draft == false and .prerelease == true and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-beta\\.[0-9]+(\\.[0-9]+)*$")))][0].tag_name // empty' <<< "$releases")"
+          fi
+          if [[ -n "$tag" ]]; then
+            mkdir -p "repository-input/$other"
+            gh release download "$tag" --dir "repository-input/$other" \
+              --pattern '*-linux-x64.deb' --pattern '*-linux-x64.rpm' --pattern SHA256SUMS
+          fi
+      - name: Build and sign rolling APT and RPM repositories
+        env:
           REPO_PASSPHRASE: ${{ secrets.LINUX_REPO_SIGNING_PASSPHRASE }}
         shell: bash
         run: |
           export GNUPGHOME="$RUNNER_TEMP/azkar-repo-gnupg"
           key_id="$(cat "$RUNNER_TEMP/azkar-repo-key-id")"
-          git fetch origin gh-pages
-          pages="$RUNNER_TEMP/azkar-pages"
-          git worktree add --detach "$pages" FETCH_HEAD
           ./scripts/publish_linux_repositories.main.kts \
-            "$CHANNEL" release-assets "$pages" "$RUNNER_TEMP/azkar-repo.asc" "$key_id"
+            repository-input repository-site "$RUNNER_TEMP/azkar-repo.asc" "$key_id"
+          (cd repository-site && find . -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/site-SHA256SUMS"
+      - name: Upload expected deployed-file checksums
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: repository-site-checksums
+          path: ${{ runner.temp }}/site-SHA256SUMS
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload generated Pages site
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: repository-site
+
+  deploy:
+    name: Deploy signed Linux repositories
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+
+  finalize:
+    name: Verify live repositories and publish release
+    needs: [prepare, publish, deploy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: repository-site-checksums
+          path: expected
+      - name: Verify every deployed file against the signed site build
+        env:
+          PAGE_URL: ${{ needs.deploy.outputs.page_url }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+          APP_VERSION: ${{ needs.prepare.outputs.app_version }}
+        shell: bash
+        run: |
+          site_url="${PAGE_URL%/}"
+          for attempt in {1..12}; do
+            current="$(curl --fail --silent --show-error "$site_url/$CHANNEL-version.txt" || true)"
+            if [[ "$current" == "$APP_VERSION" ]]; then break; fi
+            if [[ "$attempt" == 12 ]]; then echo 'Deployed repository version did not become available'; exit 1; fi
+            sleep 5
+          done
+          mkdir verified
+          while IFS= read -r entry; do
+            file="${entry:66}"
+            [[ "$file" == ./* && "$file" != *..* ]]
+            mkdir -p "verified/$(dirname "$file")"
+            curl --fail --location --silent --show-error --retry 5 --retry-all-errors \
+              --output "verified/$file" "$site_url/${file#./}"
+          done < expected/site-SHA256SUMS
+          (cd verified && sha256sum --check ../expected/site-SHA256SUMS)
       - name: Publish validated release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
           PRE_RELEASE: ${{ needs.prepare.outputs.prerelease }}
         run: |

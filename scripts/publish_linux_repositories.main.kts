@@ -3,6 +3,7 @@
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
+import java.security.MessageDigest
 
 fun run(
     arguments: List<String>,
@@ -39,40 +40,70 @@ fun sign(
     keyId: String,
     passphrase: String,
     vararg arguments: String,
-) =
-    requireSuccess(
-        "signing repository metadata",
-        "gpg",
-        "--batch",
-        "--yes",
-        "--pinentry-mode",
-        "loopback",
-        "--passphrase-fd",
-        "0",
-        "--local-user",
-        keyId,
-        *arguments,
-        standardInput = "$passphrase\n",
-    )
+) = requireSuccess(
+    "signing repository metadata",
+    "gpg",
+    "--batch",
+    "--yes",
+    "--pinentry-mode",
+    "loopback",
+    "--passphrase-fd",
+    "0",
+    "--local-user",
+    keyId,
+    *arguments,
+    standardInput = "$passphrase\n",
+)
 
-fun publish(
+data class ChannelPackages(
+    val version: String,
+    val deb: Path,
+    val rpm: Path,
+)
+
+fun channelPackages(
     channel: String,
     assets: Path,
+): ChannelPackages {
+    require(channel in setOf("stable", "dev"))
+    val files = Files.list(assets).use { it.filter(Files::isRegularFile).toList() }
+    val deb = files.single { it.fileName.toString().endsWith(".deb") }
+    val rpm = files.single { it.fileName.toString().endsWith(".rpm") }
+    val version =
+        deb.fileName
+            .toString()
+            .removePrefix("azkar-")
+            .removeSuffix("-linux-x64.deb")
+    require(Regex("\\d+\\.\\d+\\.\\d+(-beta\\.\\d+(\\.\\d+)*)?").matches(version)) { "Invalid package version" }
+    require(("-beta." in version) == (channel == "dev")) { "Wrong channel for $version" }
+    require(deb.fileName.toString() == "azkar-$version-linux-x64.deb")
+    require(rpm.fileName.toString() == "azkar-$version-linux-x64.rpm") { "DEB/RPM versions differ" }
+    val checksums = Files.readAllLines(assets.resolve("SHA256SUMS"))
+    for (file in listOf(deb, rpm)) {
+        val entry = checksums.single { it.substringAfter("  ") == file.fileName.toString() }
+        val expected = entry.substringBefore("  ")
+        require(expected.matches(Regex("[0-9a-f]{64}")))
+        val hash = MessageDigest.getInstance("SHA-256")
+        Files.newInputStream(file).use { stream ->
+            val buffer = ByteArray(64 * 1024)
+            var count = stream.read(buffer)
+            while (count >= 0) {
+                hash.update(buffer, 0, count)
+                count = stream.read(buffer)
+            }
+        }
+        require(hash.digest().joinToString("") { "%02x".format(it) } == expected) { "Checksum mismatch: $file" }
+    }
+    return ChannelPackages(version, deb, rpm)
+}
+
+fun buildChannel(
+    channel: String,
+    packages: ChannelPackages,
     pages: Path,
-    publicKey: Path,
     keyId: String,
     passphrase: String,
 ) {
-    require(channel in setOf("stable", "dev")) { "Unsupported repository channel: $channel" }
-    require(Files.isDirectory(assets)) { "Missing release assets directory: $assets" }
-    require(Files.exists(pages.resolve(".git"))) { "Not a GitHub Pages worktree: $pages" }
-    require(Files.isRegularFile(publicKey)) { "Missing exported repository public key: $publicKey" }
-    require(keyId.matches(Regex("[A-Fa-f0-9]{16,}"))) { "Invalid repository signing key fingerprint" }
-
-    val debs = Files.list(assets).use { stream -> stream.filter { it.fileName.toString().endsWith(".deb") }.toList() }
-    val rpms = Files.list(assets).use { stream -> stream.filter { it.fileName.toString().endsWith(".rpm") }.toList() }
-    require(debs.isNotEmpty() && rpms.isNotEmpty()) { "Release assets must include at least one DEB and one RPM" }
-
     val apt = pages.resolve("apt")
     val aptPool = apt.resolve("pool/$channel/main/a/azkar")
     val aptBinary = apt.resolve("dists/$channel/main/binary-amd64")
@@ -80,15 +111,19 @@ fun publish(
     Files.createDirectories(aptPool)
     Files.createDirectories(aptBinary)
     Files.createDirectories(rpm)
-    Files.createDirectories(pages.resolve("keys"))
-    Files.copy(publicKey, pages.resolve("keys/azkar-repo.asc"), REPLACE_EXISTING)
-    debs.forEach { Files.copy(it, aptPool.resolve(it.fileName), REPLACE_EXISTING) }
-    rpms.forEach { Files.copy(it, rpm.resolve(it.fileName), REPLACE_EXISTING) }
+    Files.copy(packages.deb, aptPool.resolve(packages.deb.fileName), REPLACE_EXISTING)
+    Files.copy(packages.rpm, rpm.resolve(packages.rpm.fileName), REPLACE_EXISTING)
 
-    val packages = aptBinary.resolve("Packages")
-    requireSuccess("building APT package metadata", "apt-ftparchive", "packages", "pool/$channel", workingDirectory = apt, standardOutput = packages)
-    requireSuccess("compressing APT package metadata", "gzip", "-9fk", packages.toString())
-
+    val index = aptBinary.resolve("Packages")
+    requireSuccess(
+        "building APT package metadata",
+        "apt-ftparchive",
+        "packages",
+        "pool/$channel",
+        workingDirectory = apt,
+        standardOutput = index,
+    )
+    requireSuccess("compressing APT package metadata", "gzip", "-9fk", index.toString())
     val release = apt.resolve("dists/$channel/Release")
     requireSuccess(
         "building the APT release index",
@@ -110,7 +145,14 @@ fun publish(
         workingDirectory = apt,
         standardOutput = release,
     )
-    sign(keyId, passphrase, "--clearsign", "--output", apt.resolve("dists/$channel/InRelease").toString(), release.toString())
+    sign(
+        keyId,
+        passphrase,
+        "--clearsign",
+        "--output",
+        apt.resolve("dists/$channel/InRelease").toString(),
+        release.toString(),
+    )
     sign(
         keyId,
         passphrase,
@@ -120,49 +162,93 @@ fun publish(
         apt.resolve("dists/$channel/Release.gpg").toString(),
         release.toString(),
     )
-
-    requireSuccess("building RPM repository metadata", "createrepo_c", "--update", ".", workingDirectory = rpm)
+    requireSuccess("building RPM repository metadata", "createrepo_c", ".", workingDirectory = rpm)
     val rpmMetadata = rpm.resolve("repodata/repomd.xml")
     val rpmSignature = rpm.resolve("repodata/repomd.xml.asc")
     sign(keyId, passphrase, "--armor", "--detach-sign", "--output", rpmSignature.toString(), rpmMetadata.toString())
-
-    requireSuccess("verifying the APT InRelease signature", "gpg", "--verify", apt.resolve("dists/$channel/InRelease").toString())
+    requireSuccess("verifying the APT signature", "gpg", "--verify", apt.resolve("dists/$channel/InRelease").toString())
     requireSuccess(
-        "verifying the APT Release signature",
+        "verifying the APT detached signature",
         "gpg",
         "--verify",
         apt.resolve("dists/$channel/Release.gpg").toString(),
         release.toString(),
     )
-    requireSuccess("verifying the RPM metadata signature", "gpg", "--verify", rpmSignature.toString(), rpmMetadata.toString())
+    requireSuccess("verifying the RPM signature", "gpg", "--verify", rpmSignature.toString(), rpmMetadata.toString())
+    Files.writeString(pages.resolve("$channel-version.txt"), "${packages.version}\n")
+}
 
+fun publish(
+    assets: Path,
+    pages: Path,
+    publicKey: Path,
+    keyId: String,
+    passphrase: String,
+) {
+    require(Files.isDirectory(assets)) { "Missing repository inputs: $assets" }
+    require(!Files.exists(pages) || Files.list(pages).use { !it.findAny().isPresent }) { "Site output must be empty" }
+    require(Files.isRegularFile(publicKey)) { "Missing exported repository public key" }
+    require(keyId.matches(Regex("[A-Fa-f0-9]{16,}"))) { "Invalid repository signing key fingerprint" }
+    val channels = listOf("stable", "dev").filter { Files.isDirectory(assets.resolve(it)) }
+    require(channels.isNotEmpty()) { "No repository packages" }
+    // Validate both channels before writing any output.
+    val packages = channels.associateWith { channelPackages(it, assets.resolve(it)) }
+    Files.createDirectories(pages.resolve("keys"))
+    Files.copy(publicKey, pages.resolve("keys/azkar-repo.asc"), REPLACE_EXISTING)
+    packages.forEach { (channel, files) -> buildChannel(channel, files, pages, keyId, passphrase) }
     val workspace = System.getenv("GITHUB_WORKSPACE") ?: error("GITHUB_WORKSPACE is required")
     val downloadPage = Path.of(workspace, "docs/download.html")
-    require(Files.isRegularFile(downloadPage)) { "Missing download page: $downloadPage" }
     Files.copy(downloadPage, pages.resolve("download.html"), REPLACE_EXISTING)
-    check(pages.resolve("dev-preview").toFile().deleteRecursively()) { "Could not remove the obsolete dev-preview repository" }
-    requireSuccess("setting the GitHub Actions commit identity", "git", "config", "user.name", "github-actions[bot]", workingDirectory = pages)
-    requireSuccess(
-        "setting the GitHub Actions commit email",
-        "git",
-        "config",
-        "user.email",
-        "41898282+github-actions[bot]@users.noreply.github.com",
-        workingDirectory = pages,
-    )
-    requireSuccess("staging repository files", "git", "add", "-A", workingDirectory = pages)
-    when (run(listOf("git", "diff", "--cached", "--quiet"), pages)) {
-        0 -> println("Repository metadata already matches this release.")
-        1 -> {
-            requireSuccess("committing repository metadata", "git", "commit", "-m", "release: publish $channel repositories", workingDirectory = pages)
-            requireSuccess("publishing repository metadata", "git", "push", "origin", "HEAD:gh-pages", workingDirectory = pages)
+    Files.copy(downloadPage, pages.resolve("index.html"), REPLACE_EXISTING)
+    Files.writeString(pages.resolve(".nojekyll"), "")
+    val size = Files.walk(pages).use { it.filter(Files::isRegularFile).mapToLong(Files::size).sum() }
+    require(size < 900L * 1024 * 1024) { "Repository site approaches the Pages 1 GB limit: $size bytes" }
+    println("Built signed rolling repositories ($size bytes); no Git commits or network publication performed")
+}
+
+fun selfTest() {
+    val root = Files.createTempDirectory("azkar-repository-test-")
+    try {
+        fun fixture(
+            directory: String,
+            version: String,
+        ): Path {
+            val assets = Files.createDirectories(root.resolve(directory))
+            val sums =
+                listOf("deb", "rpm").map { extension ->
+                    val file = Files.writeString(assets.resolve("azkar-$version-linux-x64.$extension"), extension)
+                    val hash =
+                        MessageDigest
+                            .getInstance(
+                                "SHA-256",
+                            ).digest(Files.readAllBytes(file))
+                            .joinToString("") { "%02x".format(it) }
+                    "$hash  ${file.fileName}"
+                }
+            Files.writeString(assets.resolve("SHA256SUMS"), sums.joinToString("\n", postfix = "\n"))
+            return assets
         }
-        else -> error("Could not check staged repository changes")
+        val stable = fixture("stable", "1.2.3")
+        val dev = fixture("dev", "1.2.4-beta.5.1")
+        check(channelPackages("stable", stable).version == "1.2.3")
+        check(channelPackages("dev", dev).version == "1.2.4-beta.5.1")
+        check(runCatching { channelPackages("stable", dev) }.isFailure)
+        Files.writeString(dev.resolve("azkar-1.2.4-beta.5.1-linux-x64.deb"), "tampered")
+        check(runCatching { channelPackages("dev", dev) }.isFailure)
+        Files.writeString(stable.resolve("azkar-1.2.2-linux-x64.deb"), "old package")
+        check(runCatching { channelPackages("stable", stable) }.isFailure)
+        println("Repository input self-tests passed")
+    } finally {
+        Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) }
     }
 }
 
-require(args.size == 5) {
-    "Usage: publish_linux_repositories.main.kts <stable|dev> <release-assets> <gh-pages-worktree> <public-key-file> <key-fingerprint>"
+if (args.contentEquals(arrayOf("self-test"))) {
+    selfTest()
+} else {
+    require(
+        args.size == 4,
+    ) { "Usage: publish_linux_repositories.main.kts INPUTS SITE PUBLIC_KEY FINGERPRINT | self-test" }
+    val passphrase = System.getenv("REPO_PASSPHRASE") ?: error("REPO_PASSPHRASE is required")
+    publish(Path.of(args[0]), Path.of(args[1]), Path.of(args[2]), args[3], passphrase)
 }
-val passphrase = System.getenv("REPO_PASSPHRASE") ?: error("REPO_PASSPHRASE is required")
-publish(args[0], Path.of(args[1]), Path.of(args[2]), Path.of(args[3]), args[4], passphrase)

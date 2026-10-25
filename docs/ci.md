@@ -1,82 +1,94 @@
 # CI
 
-The branch flow is **feature PRs → `dev` → `production`**. CI runs on pull
-requests targeting either long-lived branch; ordinary pushes do not start CI:
+The branch flow is **feature PRs → `dev` → `production`**. Both long-lived branches
+require PRs and successful checks, including for administrators; no reviewer approval
+count is required for the solo-maintainer workflow.
 
-| Change | Checks |
-| --- | --- |
-| PR targeting `dev` | Linux build, tests, packaged-runtime smoke test, release-asset validator tests |
-| PR targeting `production` | Linux, Windows, and macOS builds; `Production promotion gate` requires all three |
-| Manual CI run | Linux, Windows, and macOS builds |
-| Push or manual Release run on `dev` | Checks, native packages, versioned Dev prerelease and signed Dev apt/RPM repositories |
-| `v*` tag on `production` | Publishes a stable release |
+| PR target | Required status | Work |
+|---|---|---|
+| `dev` | `Azkar CI / Linux` | Linux build/tests/static analysis, packaged-runtime smoke test, release-script self-tests |
+| `production` | Both `Azkar CI / Linux` and `Azkar CI / Installers` | Above plus Windows, Intel/ARM macOS, all eight installers and merged asset validation |
 
-The [CI workflow](../.github/workflows/ci.yml) cancels obsolete pull-request
-runs. Dispatch the [Release workflow](../.github/workflows/release.yml) manually
-with `dev` selected to request another Dev build; it runs checks before packaging.
-Stable releases must use a version tag whose commit is already on `production`.
+## Contributor approval
 
-## The JDK is Zulu, not Temurin
+Anyone can open or update a PR. The owner's PRs run automatically. Other authors'
+PRs start **no CI runners** until the owner reviews and manually dispatches CI with
+both the PR number and its full current head SHA. A new commit requires fresh approval.
 
-Every workflow installs **Zulu 25**, which is the same JDK the project is developed
-against (SDKMAN's default). It is not an arbitrary preference: Temurin 24 dropped the
-JDK's `jmods` directory ([JEP 493](https://openjdk.org/jeps/493)), and ProGuard reads
-the JDK's own classes from there. A build that shrinks the release classpath against a
-Temurin JDK therefore fails, which is what the release pipeline hit before it moved to
-Zulu. `docs/releasing.md` covers the release side of the same requirement.
-
-`setup-java` resolves `java-version: '25'` on the `zulu` distribution to the newest
-Zulu 25 available, so the patch level moves forward on its own.
-
-ProGuard's own reaction to a missing `jmods` directory is unreadable: thousands of
-"can't find referenced class java.lang.*" warnings, followed by an error that says
-nothing about the JDK at all. So the requirement is checked by the build instead of
-being rediscovered by whoever hits it. The task `:app:verifyJdkShipsJmods` fails with a
-sentence that names the JDK and the fix, and `:app:proguardReleaseJars` does not start
-until it has passed. The check runs wherever the build runs — on a laptop, in CI and in
-the release pipeline.
-
-## The release classpath is checked before promotion
-
-`./gradlew build` shrinks nothing: ProGuard only runs for the release build type, and
-`build` does not produce it. CI also runs `:app:smokeTestPackagedRuntime`, which depends on ProGuard and the linked release runtime, so a change
-that breaks the release classpath — for example, a dependency ProGuard cannot see or a
-keep rule that stops matching — is caught before the release workflow packages it. The smoke test starts the bundled launcher against a fresh temporary profile, migrates the database and requires a clean exit. It does not test windows, tray integration or native install/update behavior.
-
-The release workflow checks every required installer/architecture and update-manifest hash before preparing a draft release. Signed apt/RPM metadata is verified and pushed before the release becomes public. Local `act` runs skip artifact uploads and are blocked from publication; see [local packaging](releasing.md#local-packaging).
-
-## One line ending, everywhere
-
-A checkout of the repository has LF line endings on every platform, and the formatter
-writes LF as well. `.gitattributes` pins the line endings for git, and Spotless is told
-to write LF rather than to take the line endings from git's configuration — which
-differs between a Linux and a Windows machine.
-
-Without that, the Windows job checks out CRLF where the Linux job checks out LF, the two
-disagree about what a formatted file is supposed to look like, and the Windows build
-fails on files the Linux build accepts. The failure names one file and shows the whole
-file changed, which says nothing about the code.
-
-One trap hides in the same place. A file that git considers binary is not converted at
-all: `CollectionImport.kt` held a raw NUL byte — the separator in a lookup key — which
-made git treat it as binary, and it was therefore the one file in the repository that
-Windows checked out with LF while everything else was CRLF. The separator is now
-written as an escape, so the file is ordinary text like the rest.
-
-## Reports only when something fails
-
-Linux CI uploads detekt, test and coverage reports only for failed runs. Successful
-runs keep the built jars for seven days. Windows and macOS upload test reports when
-their build fails.
-
-## Running the same checks locally
+After reviewing the code, obtain the SHA and start the trusted default-branch workflow:
 
 ```bash
-./gradlew build                      # build, tests, detekt and Spotless
-./gradlew :app:smokeTestPackagedRuntime # linked release runtime and isolated database startup
-./scripts/merge_nucleus_release.main.kts self-test # release-asset validation fixtures (requires kotlinc)
+gh pr view 123 --json headRefOid --jq .headRefOid
+gh workflow run ci.yml --ref dev -f pr_number=123 -f reviewed_sha=<full-reviewed-SHA>
 ```
 
-`check` is included in `build`. Note that `build` behaves differently on purpose:
-it *applies* Spotless formatting when `CI` is unset, and only *verifies* it when
-`CI` is set, so a local build can quietly fix formatting while a CI build fails on it.
+The GitHub Actions “Run workflow” UI exposes the same inputs. Select `dev`, the default
+branch, rather than a contributor's branch. The dispatch must be performed by the
+repository owner. Retargeted PRs also need a fresh run. To rehearse workflow changes, the owner can
+manually select their own same-repository PR branch; its branch and commit must match
+the PR exactly. Contributor approvals must always use the trusted default branch.
+Use `-f validate_installers=true` for a full four-runner rehearsal of a dev PR.
+
+The `pull_request_target` trigger uses trusted base-branch workflow definitions. Its
+owner-only authorization job never checks out PR code. It resolves the live PR through
+the API and marks the reviewed head pending. Separate build jobs check out GitHub's
+PR merge revision and verify both parents match the approved head and selected base.
+This catches PR/base races before executing code. Contributors cannot bypass approval
+by editing the CI YAML in their PR.
+
+Build jobs use read-only repository permissions, no publishing secrets, and checkout
+with `persist-credentials: false`. All workflows disable Gradle Actions caches so
+contributor runs cannot poison caches later consumed by releases. A separate reporting
+runner, with no source checkout, writes the required statuses to the reviewed head
+from job results. A stale head never receives a successful status from that run.
+Manual workflow job checks alone do not satisfy PR branch protection, which is why the
+explicit `Azkar CI / …` commit statuses are used.
+
+Configure GitHub's **approval for all external contributors** as an additional layer
+for fork-authored workflows. Do not grant write access to untrusted contributors;
+write access permits pushing workflow code to repository branches. New PR-triggered
+workflows must preserve this approval model.
+
+## Installer and runtime checks
+
+Zulu JDK 25 is required because ProGuard needs `jmods`; `verifyJdkShipsJmods` fails early
+if they are absent. `smokeTestPackagedRuntime` launches the linked release runtime in
+headless mode against a fresh temporary database. It does not test native installation,
+tray/login behavior or update replacement. See [installed validation](release-validation.md).
+
+Production PRs build Linux DEB/RPM/AppImage, Windows EXE, and macOS DMG/ZIP on Intel and
+Apple Silicon. The merger requires all eight files, matching versions, update metadata,
+sizes and SHA-512 hashes. Failed/skipped packaging cannot produce a successful installer
+status. Native build reports and installer artifacts are retained briefly for diagnosis.
+
+## Release publication
+
+Validated pushes to `dev` publish uniquely versioned Dev prereleases. Stable publication
+uses explicit `vMAJOR.MINOR.PATCH` tags on `production` and requires current recorded
+installed-release evidence. The release queue preserves waiting runs (up to GitHub's
+100-pending-run queue limit); Dev and Stable publication is serialized.
+
+Repositories contain only the newest Stable and newest Dev DEB/RPM pair. Publication
+builds a fresh signed site from those GitHub release assets, deploys it explicitly with
+Pages Actions, verifies every live file against the generated site's checksums, and
+then publishes the draft GitHub release. No package binaries are committed to Git.
+See [releasing](releasing.md) for secrets and recovery.
+
+Local `act` runs cannot upload artifacts or reach publication: all CI/package uploads
+exclude `ACT=true`, and publication exits before any release or repository mutation.
+Linux containers do not validate native Windows/macOS behavior.
+
+## Local checks
+
+```bash
+./gradlew spotlessApply detekt test
+./gradlew :app:smokeTestPackagedRuntime
+./scripts/merge_nucleus_release.main.kts self-test
+./scripts/publish_linux_repositories.main.kts self-test
+./scripts/check_release_validation.main.kts self-test
+```
+
+CI verifies formatting; local Gradle `build` applies it. Git and Spotless both enforce LF.
+Use `actionlint` for workflow expressions and shell syntax. Native multi-platform jobs
+and Pages deployment must still be validated on GitHub after the new workflow definitions
+reach the default branch.

@@ -1,28 +1,120 @@
-# Validate changes on dev and require all supported platforms before a PR reaches production.
+# Trusted orchestration: contributor code runs only after owner approval, on read-only runners.
 name: CI
 
 on:
-  pull_request:
+  pull_request_target:
     branches: ['dev', 'production']
-  # Manual trigger for a full three-platform run.
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number approved by the maintainer'
+        required: true
+        type: string
+      reviewed_sha:
+        description: 'Full 40-character PR head SHA you reviewed'
+        required: true
+        type: string
+      validate_installers:
+        description: 'Also build and validate all eight installers (always required for production PRs)'
+        type: boolean
+        default: false
 
 concurrency:
-  # Cancel stale PR runs while keeping manual runs independent.
-  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || format('ci-{0}-{1}', github.ref, github.run_id) }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-pr-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
+  select:
+    name: Authorize reviewed PR revision
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.user.login == github.repository_owner
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+    outputs:
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+      base_sha: ${{ steps.pr.outputs.base_sha }}
+      base_branch: ${{ steps.pr.outputs.base_branch }}
+      installers: ${{ steps.pr.outputs.installers }}
+    steps:
+      - name: Resolve and authorize the PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          ACTOR: ${{ github.actor }}
+          EVENT: ${{ github.event_name }}
+          DISPATCH_REF: ${{ github.ref }}
+          FULL_INSTALLERS: ${{ inputs.validate_installers }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+          REVIEWED_SHA: ${{ github.event.pull_request.head.sha || inputs.reviewed_sha }}
+        run: |
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          [[ "$REVIEWED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          if [[ "$EVENT" == workflow_dispatch ]]; then
+            test "$ACTOR" = "$OWNER"
+            default_branch="$(gh api "repos/$REPOSITORY" --jq .default_branch)"
+          fi
+          pr="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")"
+          test "$(jq -r .state <<< "$pr")" = open
+          test "$(jq -r .head.sha <<< "$pr")" = "$REVIEWED_SHA"
+          test "$(jq -r .base.repo.full_name <<< "$pr")" = "$REPOSITORY"
+          if [[ "$EVENT" == workflow_dispatch && "$DISPATCH_REF" != "refs/heads/$default_branch" ]]; then
+            # The owner can rehearse their own workflow changes before landing on dev.
+            test "$(jq -r .user.login <<< "$pr")" = "$OWNER"
+            test "$(jq -r .head.repo.full_name <<< "$pr")" = "$REPOSITORY"
+            test "$DISPATCH_REF" = "refs/heads/$(jq -r .head.ref <<< "$pr")"
+            test "$GITHUB_SHA" = "$REVIEWED_SHA"
+          fi
+          if [[ "$EVENT" == pull_request_target ]]; then
+            test "$(jq -r .user.login <<< "$pr")" = "$OWNER"
+          fi
+          base="$(jq -r .base.ref <<< "$pr")"
+          [[ "$base" == dev || "$base" == production ]]
+          installers=false
+          if [[ "$base" == production || "$FULL_INSTALLERS" == true ]]; then installers=true; fi
+          {
+            echo "installers=$installers"
+            echo "pr_number=$PR_NUMBER"
+            echo "head_sha=$REVIEWED_SHA"
+            echo "base_sha=$(jq -r .base.sha <<< "$pr")"
+            echo "base_branch=$base"
+          } >> "$GITHUB_OUTPUT"
+          contexts=('Azkar CI / Linux')
+          if [[ "$installers" == true ]]; then contexts+=('Azkar CI / Installers'); fi
+          for context in "${contexts[@]}"; do
+            gh api --method POST "repos/$REPOSITORY/statuses/$REVIEWED_SHA" \
+              -f state=pending -f "context=$context" -f description='Reviewed revision queued for CI' \
+              -f "target_url=$GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          done
+
   build-linux:
     name: Build (ubuntu-24.04)
+    needs: select
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 120
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: refs/pull/${{ needs.select.outputs.pr_number }}/merge
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify the approved merge revision
+        shell: bash
+        env:
+          REVIEWED_SHA: ${{ needs.select.outputs.head_sha }}
+          BASE_SHA: ${{ needs.select.outputs.base_sha }}
+        run: |
+          test "$(git rev-parse HEAD^2)" = "$REVIEWED_SHA"
+          test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
 
       - name: Set up JDK 25
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
@@ -33,6 +125,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-disabled: true
 
       - name: Install native test dependencies
         run: sudo apt-get update && sudo apt-get install -y libgl1
@@ -47,8 +141,28 @@ jobs:
         with:
           version: '2.4.20'
 
-      - name: Test release asset validation
-        run: ./scripts/merge_nucleus_release.main.kts self-test
+      - name: Test release validation scripts
+        run: |
+          ./scripts/merge_nucleus_release.main.kts self-test
+          ./scripts/publish_linux_repositories.main.kts self-test
+          ./scripts/check_release_validation.main.kts self-test
+          ./scripts/test_ci_authorization.main.kts
+
+      - name: Package Linux installers for promotion
+        if: needs.select.outputs.installers == 'true'
+        env:
+          CI: true
+        run: |
+          sudo apt-get update && sudo apt-get install -y rpm
+          ./gradlew :app:packageCurrentOS -PappVersion="0.0.0-beta.$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" --console=plain
+      - name: Upload promotion installers
+        if: needs.select.outputs.installers == 'true' && env.ACT != 'true'
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: promotion-linux
+          path: build/installers/
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Upload detekt reports
         if: failure() && env.ACT != 'true'
@@ -86,10 +200,10 @@ jobs:
 
   build-cross-platform:
     name: Build (${{ matrix.os }})
-    # Full platform validation gates promotions to production. Feature PRs into dev stay fast.
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.base_ref == 'production')
+    needs: select
+    if: needs.select.outputs.installers == 'true'
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -97,6 +211,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: refs/pull/${{ needs.select.outputs.pr_number }}/merge
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify the approved merge revision
+        shell: bash
+        env:
+          REVIEWED_SHA: ${{ needs.select.outputs.head_sha }}
+          BASE_SHA: ${{ needs.select.outputs.base_sha }}
+        run: |
+          test "$(git rev-parse HEAD^2)" = "$REVIEWED_SHA"
+          test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
 
       - name: Set up JDK 25
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
@@ -106,11 +232,27 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-disabled: true
 
       - name: Build and test with Gradle
         run: ./gradlew build :app:smokeTestPackagedRuntime --console=plain
         env:
           CI: true
+
+      - name: Package installers for promotion
+        shell: bash
+        env:
+          CI: true
+        run: ./gradlew :app:packageCurrentOS -PappVersion="0.0.0-beta.$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" --console=plain
+      - name: Upload promotion installers
+        if: env.ACT != 'true'
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: promotion-${{ matrix.os }}
+          path: build/installers/
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Upload test reports
         if: failure() && env.ACT != 'true'
@@ -122,13 +264,68 @@ jobs:
             app/build/reports/packaging/
           retention-days: 14
 
-  production-promotion:
-    name: Production promotion gate
-    if: ${{ always() && github.event_name == 'pull_request' && github.base_ref == 'production' }}
-    needs: [build-linux, build-cross-platform]
+  validate-installers:
+    name: Validate all eight promotion installers
+    needs: [select, build-linux, build-cross-platform]
+    if: needs.select.outputs.installers == 'true'
     runs-on: ubuntu-24.04
     steps:
-      - name: Require Linux and cross-platform builds
-        if: ${{ needs.build-linux.result != 'success' || needs.build-cross-platform.result != 'success' }}
-        run: exit 1
-      - run: echo "Linux, Windows, and macOS builds passed."
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: refs/pull/${{ needs.select.outputs.pr_number }}/merge
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify the approved merge revision
+        shell: bash
+        env:
+          REVIEWED_SHA: ${{ needs.select.outputs.head_sha }}
+          BASE_SHA: ${{ needs.select.outputs.base_sha }}
+        run: |
+          test "$(git rev-parse HEAD^2)" = "$REVIEWED_SHA"
+          test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
+      - name: Set up Kotlin compiler
+        uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
+        with:
+          version: '2.4.20'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: promotion-*
+          path: promotion-input
+          merge-multiple: true
+      - name: Validate complete installer set
+        run: ./scripts/merge_nucleus_release.main.kts promotion-input promotion-validated "0.0.0-beta.$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT"
+
+  report:
+    name: Report required checks on the reviewed commit
+    needs: [select, build-linux, build-cross-platform, validate-installers]
+    if: always() && needs.select.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: read
+      statuses: write
+    steps:
+      - name: Publish required commit statuses
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ needs.select.outputs.pr_number }}
+          REVIEWED_SHA: ${{ needs.select.outputs.head_sha }}
+          INSTALLERS_REQUIRED: ${{ needs.select.outputs.installers }}
+          LINUX_RESULT: ${{ needs.build-linux.result }}
+          CROSS_RESULT: ${{ needs.build-cross-platform.result }}
+          INSTALLERS_RESULT: ${{ needs.validate-installers.result }}
+        run: |
+          current="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" --jq .head.sha)"
+          post_status() {
+            gh api --method POST "repos/$REPOSITORY/statuses/$REVIEWED_SHA" \
+              -f "state=$1" -f "context=$2" -f "description=$3" \
+              -f "target_url=$GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          }
+          state=failure
+          if [[ "$LINUX_RESULT" == success && "$current" == "$REVIEWED_SHA" ]]; then state=success; fi
+          post_status "$state" 'Azkar CI / Linux' "Linux: $LINUX_RESULT; reviewed revision checked"
+          if [[ "$INSTALLERS_REQUIRED" == true ]]; then
+            state=failure
+            if [[ "$LINUX_RESULT" == success && "$CROSS_RESULT" == success && "$INSTALLERS_RESULT" == success && "$current" == "$REVIEWED_SHA" ]]; then state=success; fi
+            post_status "$state" 'Azkar CI / Installers' "Installer validation: $INSTALLERS_RESULT"
+          fi
