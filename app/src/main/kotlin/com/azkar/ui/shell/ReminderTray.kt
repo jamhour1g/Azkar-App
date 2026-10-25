@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Density
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.nextPrayerLabel
 import com.azkar.generated.resources.title
@@ -22,13 +23,40 @@ import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.notifications.DesktopPlatform
 import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
 import dev.nucleusframework.composenativetray.tray.api.NativeTray
+import dev.nucleusframework.composenativetray.utils.IconRenderProperties
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import java.awt.GraphicsEnvironment
+import com.azkar.ui.notifications.trayAvailable as isTrayAvailable
 
 private val logger = KotlinLogging.logger {}
+
+internal data class TrayIconSize(
+    val width: Int,
+    val height: Int,
+)
+
+internal fun trayIconSize(platform: DesktopPlatform): TrayIconSize =
+    when (platform) {
+        DesktopPlatform.LINUX -> TrayIconSize(22, 22)
+        DesktopPlatform.WINDOWS -> TrayIconSize(16, 16)
+        DesktopPlatform.MACOS -> TrayIconSize(22, 22)
+        DesktopPlatform.UNKNOWN -> TrayIconSize(32, 32)
+    }
+
+private fun trayIconRenderProperties(platform: DesktopPlatform): IconRenderProperties {
+    val iconSize = trayIconSize(platform)
+    return IconRenderProperties(
+        sceneWidth = TRAY_ICON_RENDER_SIZE,
+        sceneHeight = TRAY_ICON_RENDER_SIZE,
+        sceneDensity = Density(TRAY_ICON_RENDER_DENSITY),
+        targetWidth = iconSize.width,
+        targetHeight = iconSize.height,
+        jvmOwnsDownscaling = false,
+    )
+}
 
 private data class TrayMenuActions(
     val openApp: () -> Unit,
@@ -150,6 +178,7 @@ private fun PrayerTrayNativeHost(
             modifier = Modifier.fillMaxSize(),
         )
     }
+    val iconRenderProperties = trayIconRenderProperties(DesktopPlatform.current)
     LaunchedEffect(tray, tooltip, menuKey) {
         if (hasSubmittedTray) {
             logger.debug { "Updating prayer tray text: tooltip='$tooltip', menu='$menuPrayerLine'" }
@@ -160,6 +189,7 @@ private fun PrayerTrayNativeHost(
             runCatching {
                 tray.updateComposable(
                     iconContent = iconContent,
+                    iconRenderProperties = iconRenderProperties,
                     tooltip = tooltip,
                     primaryAction = { currentPrimaryAction() },
                     menuContent = currentMenu,
@@ -182,6 +212,8 @@ private fun PrayerTrayNativeHost(
 
 /** One tooltip tick per second, read off the wall clock the moment it lands. */
 private const val COUNTDOWN_TICK_MS = 1_000L
+private const val TRAY_ICON_RENDER_SIZE = 192
+private const val TRAY_ICON_RENDER_DENSITY = 2f
 
 /**
  * Whether hiding the window would still leave the user a way back into the app.
@@ -191,15 +223,13 @@ private const val COUNTDOWN_TICK_MS = 1_000L
  * and the safe answer is the conservative one: never hide into a state the user cannot leave. A
  * machine with no display has no tray by definition. On Linux the icon is a `StatusNotifierItem`,
  * which needs a session bus to exist at all, so a session without one has no tray host to draw it
- * and the window stays. Everywhere else the OS owns the tray and a desktop session always has one.
+ * and the window stays. An unrecognized OS is conservative too; only the three supported desktop
+ * platforms are assumed to provide a native tray.
  *
  * This is deliberately not `SystemTray.isSupported()`: that is the JDK's own answer, it reports
  * false on Linux for every session, and this app no longer uses the JDK tray for anything.
  */
 internal fun trayAvailable(): Boolean {
     val headless = runCatching { GraphicsEnvironment.isHeadless() }.getOrDefault(true)
-    val linuxWithoutSessionBus =
-        DesktopPlatform.current == DesktopPlatform.LINUX &&
-            System.getenv("DBUS_SESSION_BUS_ADDRESS").isNullOrBlank()
-    return !headless && !linuxWithoutSessionBus
+    return isTrayAvailable(headless, DesktopPlatform.current, System.getenv("DBUS_SESSION_BUS_ADDRESS"))
 }
