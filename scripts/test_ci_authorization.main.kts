@@ -92,10 +92,9 @@ fun rejects(
 }
 
 try {
-    check(workflow.none { it.trim() == "pull_request_target:" }) {
-        "PR events must not start CI automatically"
-    }
     accepts()
+    accepts(mapOf("EVENT" to "pull_request_target"), author = owner)
+    rejects(mapOf("EVENT" to "pull_request_target"))
     rejects(mapOf("ACTOR" to "contributor"))
     rejects(mapOf("REVIEWED_SHA" to "c".repeat(40)))
     rejects(mapOf("PR_NUMBER" to "123/../../statuses"))

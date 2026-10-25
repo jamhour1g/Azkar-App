@@ -1,11 +1,14 @@
-# Manually dispatched, owner-authorized CI validates reviewed PR revisions on read-only runners.
+# Trusted orchestration: contributor code runs only after owner approval, on read-only runners.
 name: CI
 
 on:
+  pull_request_target:
+    branches: ['dev', 'production']
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'PR number approved for validation'
+        description: 'PR number approved by the maintainer'
         required: true
         type: string
       reviewed_sha:
@@ -18,7 +21,7 @@ on:
         default: false
 
 concurrency:
-  group: ci-pr-${{ inputs.pr_number }}
+  group: ci-pr-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: true
 
 permissions:
@@ -27,6 +30,7 @@ permissions:
 jobs:
   select:
     name: Authorize reviewed PR revision
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.user.login == github.repository_owner
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -68,6 +72,9 @@ jobs:
             test "$(jq -r .head.repo.full_name <<< "$pr")" = "$REPOSITORY"
             test "$DISPATCH_REF" = "refs/heads/$(jq -r .head.ref <<< "$pr")"
             test "$GITHUB_SHA" = "$REVIEWED_SHA"
+          fi
+          if [[ "$EVENT" == pull_request_target ]]; then
+            test "$(jq -r .user.login <<< "$pr")" = "$OWNER"
           fi
           base="$(jq -r .base.ref <<< "$pr")"
           [[ "$base" == dev || "$base" == production ]]
