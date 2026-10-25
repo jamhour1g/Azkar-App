@@ -1,6 +1,6 @@
 /*
  * The root project owns the sources that are shared by every module and therefore cannot live
- * inside any single one of them. Today that is only the log-capture helper in
+ * inside any single one of them: release scripts and the log-capture helper in
  * `config/testing`, which `azkar-common` compiles into the test source set of all three modules.
  *
  * The formatting configuration is duplicated from that convention plugin rather than shared,
@@ -14,12 +14,9 @@
  */
 import com.diffplug.spotless.LineEnding
 
-// Applied unversioned: `buildSrc` already puts Spotless on the build classpath, pinning it to
-// `com-diffplug-spotless` in the version catalog. This mirrors how `:app` applies the plugin.
+// Use the shared version catalog so root formatting matches the convention plugin.
 plugins {
-    id("com.diffplug.spotless")
-    alias(libs.plugins.org.jetbrains.compose) apply false
-    alias(libs.plugins.org.jetbrains.compose.hot.reload) apply false
+    alias(libs.plugins.com.diffplug.spotless)
 }
 
 // Spotless resolves the ktlint CLI from here, exactly as `azkar-common` does for every module.
@@ -33,7 +30,15 @@ spotless {
     lineEndings = LineEnding.UNIX
 
     kotlin {
-        target("config/testing/**/*.kt")
+        target(
+            "config/testing/**/*.kt",
+            "scripts/merge_nucleus_release.main.kts",
+            "build-logic/build.gradle.kts",
+            "build-logic/settings.gradle.kts",
+            "build-logic/src/main/kotlin/*.gradle.kts",
+            "build-logic/src/main/kotlin/azkar/buildlogic/AzkarInstallerPlatform.kt",
+            "build-logic/src/main/kotlin/azkar/**/*.kt",
+        )
         targetExclude("**/build/**")
         ktlint()
     }

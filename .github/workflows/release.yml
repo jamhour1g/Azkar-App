@@ -1,202 +1,270 @@
-# Stable releases come from version tags on production. Dev previews are built
-# only when manually dispatched from dev, keeping ordinary pushes inexpensive.
 name: Release
 
 on:
   push:
+    branches: [dev]
     tags: ['v*']
   workflow_dispatch:
+    inputs: {}
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-publishing
+  cancel-in-progress: false
 
 jobs:
-  release-production:
-    name: Publish production release
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+  prepare:
+    name: Choose release version and channel
+    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev') }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    concurrency:
-      group: release-publishing
-      cancel-in-progress: false
-
+    outputs:
+      app_version: ${{ steps.version.outputs.app_version }}
+      release_tag: ${{ steps.version.outputs.release_tag }}
+      channel: ${{ steps.version.outputs.channel }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+      - name: Resolve version
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          if [[ "${ACT:-false}" == true ]]; then
+            version=0.0.0-beta.0
+            tag="v$version"
+            channel=dev
+            prerelease=true
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Stable tags must be vMAJOR.MINOR.PATCH.'; exit 1; }
+            tag="$GITHUB_REF_NAME"
+            channel=stable
+            prerelease=false
+          else
+            stable_tag="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq '[.[][] | select(.draft == false and .prerelease == false) | .tag_name][0] // empty')"
+            base="${stable_tag#v}"
+            if [[ -z "$stable_tag" ]]; then base=0.1.1; fi
+            [[ "$base" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Latest stable release has an invalid version.'; exit 1; }
+            IFS=. read -r major minor patch <<< "$base"
+            next_patch=$((10#$patch + 1))
+            version="${major}.${minor}.${next_patch}-beta.${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+            tag="v$version"
+            channel=dev
+            prerelease=true
+          fi
+          {
+            echo "app_version=$version"
+            echo "release_tag=$tag"
+            echo "channel=$channel"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Require the tag to be on production
+  validate:
+    name: Validate source and release shrinking
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Require stable tag to be on production
+        if: needs.prepare.outputs.channel == 'stable'
         run: |
           git fetch origin production
           git merge-base --is-ancestor "$GITHUB_SHA" origin/production || {
             echo "Refusing a stable release: $GITHUB_SHA is not on production."
             exit 1
           }
-
       - name: Set up JDK 25
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           java-version: '25'
-          # ProGuard needs jmods; Zulu still ships them for JDK 25.
-          distribution: 'zulu'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
-
-      - name: Run release checks and build ProGuard jars
-        shell: bash
+          distribution: zulu
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - name: Install native test dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgl1
+      - name: Run checks and verify release inputs
         env:
           CI: true
+          APP_VERSION: ${{ needs.prepare.outputs.app_version }}
         run: |
           chmod +x ./gradlew
-          ./gradlew check :app:checkTagParity :app:proguardReleaseJars --console=plain
-
-      - name: Build and publish the production release
-        uses: hydraulic-software/conveyor/actions/build@7370ce828ff1cbc38b95426ffb2fd613492016d5 # v22.3
+          ./gradlew check :app:checkTagParity :app:proguardReleaseJars -PappVersion="$APP_VERSION" --console=plain
+      - name: Set up Kotlin compiler
+        uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
         with:
-          command: make copied-site
-          signing_key: ${{ secrets.SIGNING_KEY }}
-          extra_flags: "--passphrase=env:SIGNING_PASSPHRASE"
-          agree_to_license: 1
-          conveyor_version: '22.3'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          version: '2.4.20'
+      - name: Test release asset validation
+        run: ./scripts/merge_nucleus_release.main.kts self-test
 
-      - name: Generate and apply release notes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          notes_file="$RUNNER_TEMP/release-notes.md"
-          gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
-            -f "tag_name=${GITHUB_REF_NAME}" \
-            -f "target_commitish=${GITHUB_SHA}" \
-            --jq .body > "$notes_file"
-          ./scripts/release_download_index.main.kts "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$notes_file"
-          gh release edit "$GITHUB_REF_NAME" --notes-file "$notes_file"
-
-  release-dev:
-    name: Publish dev preview
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    concurrency:
-      group: release-publishing
-      cancel-in-progress: false
-
+  package:
+    name: Package (${{ matrix.id }})
+    needs: [prepare, validate]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: linux-x64
+            runner: ubuntu-24.04
+          - id: windows-x64
+            runner: windows-2025
+          - id: macos-x64
+            runner: macos-15-intel
+          - id: macos-arm64
+            runner: macos-15
     steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Set up JDK 25
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          java-version: '25'
+          distribution: zulu
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+      - name: Install Linux packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+      - name: Build packages for this host
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.prepare.outputs.app_version }}
+          CI: true
+        run: |
+          if [[ "${ACT:-false}" == true ]]; then APP_VERSION="${APP_VERSION:-0.0.0-beta.0}"; fi
+          test -n "$APP_VERSION"
+          ./gradlew :app:packageCurrentOS -PappVersion="$APP_VERSION" --console=plain
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        if: env.ACT != 'true'
+        with:
+          name: packages-${{ matrix.id }}
+          path: build/installers/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload packaging diagnostics
+        if: failure() && env.ACT != 'true'
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: packaging-diagnostics-${{ matrix.id }}
+          path: app/build/reports/packaging/
+          retention-days: 3
+
+  publish:
+    name: Publish release and signed Linux repositories
+    permissions:
+      contents: write
+    needs: [prepare, validate, package]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Refuse publication from local act runs
+        shell: bash
+        run: |
+          if [[ "${ACT:-false}" == true ]]; then
+            echo 'Local act runs only build installers; publication is disabled.'
+            exit 1
+          fi
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-
       - name: Set up JDK 25
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           java-version: '25'
           distribution: 'zulu'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
-
-      # Manual previews are self-contained: validate before spending time on packaging.
-      - name: Run checks and build ProGuard jars
-        run: ./gradlew check :app:proguardReleaseJars --console=plain
-        env:
-          CI: true
-
-      - name: Build the preview update site
-        uses: hydraulic-software/conveyor/actions/build@7370ce828ff1cbc38b95426ffb2fd613492016d5 # v22.3
+      - name: Set up Kotlin compiler
+        uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
         with:
-          command: make site
-          signing_key: ${{ secrets.SIGNING_KEY }}
-          extra_flags: >-
-            --passphrase=env:SIGNING_PASSPHRASE
-            -Kapp.version=0.1.${{ github.run_number }}
-            -Kapp.revision=${{ github.run_attempt }}
-            -Kapp.display-name="Azkar Dev"
-            -Kapp.fsname=azkar-dev
-            -Kapp.rdns-name=com.azkar.app.dev
-            -Kapp.site.base-url=https://jamhour1g.github.io/Azkar-App/dev-preview
-          agree_to_license: 1
-          conveyor_version: '22.3'
+          version: '2.4.20'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: packages-*
+          path: release-input
+          merge-multiple: true
+      - name: Prepare release assets and merge architecture manifests
         env:
-          # `make site` only needs this config substitution; the publishing step
-          # below receives the write token separately.
-          GITHUB_TOKEN: dummy
-          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
-
-      - name: Publish GitHub prerelease
+          APP_VERSION: ${{ needs.prepare.outputs.app_version }}
+        run: ./scripts/merge_nucleus_release.main.kts release-input release-assets "$APP_VERSION"
+      - name: Install repository tooling
+        run: sudo apt-get update && sudo apt-get install -y apt-utils createrepo-c gnupg
+      - name: Import and verify Linux repository signing key
+        env:
+          REPO_PRIVATE_KEY: ${{ secrets.LINUX_REPO_SIGNING_KEY }}
+          REPO_PASSPHRASE: ${{ secrets.LINUX_REPO_SIGNING_PASSPHRASE }}
+        shell: bash
+        run: |
+          test -n "$REPO_PRIVATE_KEY" || { echo 'Set LINUX_REPO_SIGNING_KEY before publishing.'; exit 1; }
+          export GNUPGHOME="$RUNNER_TEMP/azkar-repo-gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          printf '%s\n' "$REPO_PRIVATE_KEY" | gpg --batch --import
+          key_id="$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')"
+          test -n "$key_id"
+          echo "$key_id" > "$RUNNER_TEMP/azkar-repo-key-id"
+          gpg --batch --armor --export "$key_id" > "$RUNNER_TEMP/azkar-repo.asc"
+          printf 'signing check\n' > "$RUNNER_TEMP/azkar-signing-check"
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$REPO_PASSPHRASE" \
+            --local-user "$key_id" --detach-sign --output "$RUNNER_TEMP/azkar-signing-check.sig" \
+            "$RUNNER_TEMP/azkar-signing-check"
+      - name: Require GitHub Pages repository branch
+        run: git ls-remote --exit-code origin refs/heads/gh-pages >/dev/null
+      - name: Prepare draft release and release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PREVIEW_SHA: ${{ github.sha }}
-          PREVIEW_RUN: ${{ github.run_number }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+          APP_VERSION: ${{ needs.prepare.outputs.app_version }}
+          RELEASE_CHANNEL: ${{ needs.prepare.outputs.channel }}
+          PRE_RELEASE: ${{ needs.prepare.outputs.prerelease }}
+        shell: bash
         run: |
-          short_sha="${PREVIEW_SHA:0:7}"
-          tag="dev-preview"
-          title="Azkar Dev ${PREVIEW_RUN} (${short_sha})"
-          notes="Rolling preview from dev commit $PREVIEW_SHA. This prerelease has its own app identity and update feed."
-          mapfile -d '' -t site_files < <(find output -type f -print0)
-
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "${site_files[@]}" --clobber
-            gh release edit "$tag" --title "$title" --notes "$notes"
-            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/$tag" \
-              -f "sha=$PREVIEW_SHA" -F force=true >/dev/null
+          notes_file="$RUNNER_TEMP/release-notes.md"
+          if [[ "$RELEASE_CHANNEL" == stable ]]; then
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f "tag_name=$RELEASE_TAG" -f "target_commitish=$GITHUB_SHA" --jq .body > "$notes_file"
           else
-            gh release create "$tag" "${site_files[@]}" \
-              --title "$title" \
-              --notes "$notes" \
-              --prerelease \
-              --target "$PREVIEW_SHA"
+            previous="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+              --jq '[.[][] | select(.draft == false and .prerelease == true and (.tag_name | contains("-beta."))) | .tag_name][0] // empty')"
+            note_args=()
+            if [[ -n "$previous" ]]; then note_args+=(-f "previous_tag_name=$previous"); fi
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f "tag_name=$RELEASE_TAG" -f "target_commitish=$GITHUB_SHA" "${note_args[@]}" --jq .body > "$notes_file"
           fi
-
-          mapfile -t current_assets < <(find output -type f -printf '%f\n' | sort -u)
-          while IFS=$'\t' read -r asset_id asset_name; do
-            keep=false
-            for current_asset in "${current_assets[@]}"; do
-              if [[ "$current_asset" == "$asset_name" ]]; then
-                keep=true
-                break
-              fi
-            done
-            if [[ "$keep" == false ]]; then
-              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/$asset_id"
-            fi
-          done < <(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$tag" --jq '.assets[] | [.id, .name] | @tsv')
-
-          notes_file="$RUNNER_TEMP/dev-release-notes.md"
-          printf '%s\n\n' "$notes" > "$notes_file"
-          ./scripts/release_download_index.main.kts "$GITHUB_REPOSITORY" "$tag" "$notes_file"
-          gh release edit "$tag" --notes-file "$notes_file"
-
-      - name: Publish the dev update site to GitHub Pages
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" == true || {
+              echo 'Refusing to replace an already published release. Use a new version.'
+              exit 1
+            }
+            gh release upload "$RELEASE_TAG" release-assets/* --clobber
+            gh release edit "$RELEASE_TAG" --title "Azkar $APP_VERSION" --notes-file "$notes_file"
+          else
+            release_args=()
+            if [[ "$PRE_RELEASE" == true ]]; then release_args+=(--prerelease); fi
+            gh release create "$RELEASE_TAG" release-assets/* --draft --title "Azkar $APP_VERSION" \
+              --notes-file "$notes_file" --target "$GITHUB_SHA" "${release_args[@]}"
+          fi
+      - name: Build and sign APT and RPM metadata
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+          REPO_PASSPHRASE: ${{ secrets.LINUX_REPO_SIGNING_PASSPHRASE }}
+        shell: bash
         run: |
+          export GNUPGHOME="$RUNNER_TEMP/azkar-repo-gnupg"
+          key_id="$(cat "$RUNNER_TEMP/azkar-repo-key-id")"
           git fetch origin gh-pages
-          pages_dir="$(mktemp -d "$RUNNER_TEMP/gh-pages.XXXXXX")"
-          git worktree add --detach "$pages_dir" FETCH_HEAD
-
-          # Debian clients request repository metadata through directory paths,
-          # which GitHub Release asset URLs cannot serve. Pages serves the complete
-          # Conveyor tree with its paths intact.
-          rm -rf "$pages_dir/dev-preview"
-          mkdir -p "$pages_dir/dev-preview"
-          cp -a output/. "$pages_dir/dev-preview/"
-
-          stable_releases="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases" \
-            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name')"
-          if [[ -z "$stable_releases" ]]; then
-            cp output/download.html "$pages_dir/download.html"
-            cp output/icon.png "$pages_dir/icon.png"
-          fi
-
-          git -C "$pages_dir" config user.name "github-actions[bot]"
-          git -C "$pages_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C "$pages_dir" add -A dev-preview download.html icon.png
-          if git -C "$pages_dir" diff --cached --quiet; then
-            echo "The GitHub Pages dev update site is already current."
-          else
-            git -C "$pages_dir" commit -m "build: publish dev update site to Pages"
-            git -C "$pages_dir" push origin HEAD:gh-pages
-          fi
+          pages="$RUNNER_TEMP/azkar-pages"
+          git worktree add --detach "$pages" FETCH_HEAD
+          ./scripts/publish_linux_repositories.main.kts \
+            "$CHANNEL" release-assets "$pages" "$RUNNER_TEMP/azkar-repo.asc" "$key_id"
+      - name: Publish validated release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+          PRE_RELEASE: ${{ needs.prepare.outputs.prerelease }}
+        run: |
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease="$PRE_RELEASE" --latest="$([[ "$PRE_RELEASE" == false ]] && echo true || echo false)"

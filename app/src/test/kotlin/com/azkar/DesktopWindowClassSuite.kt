@@ -10,7 +10,7 @@ import java.lang.reflect.Modifier
  * A Linux desktop manager matches a window to its `.desktop` entry by comparing the entry's
  * `StartupWMClass` with the window's `WM_CLASS`. The two strings are computed independently:
  *
- * - Conveyor writes `StartupWMClass` by taking the packaged entry point's class name and
+ * - Nucleus writes `StartupWMClass` by taking the packaged entry point's class name and
  *   replacing its dots with hyphens (`com.azkar.MainKt` becomes `com-azkar-MainKt`),
  * - AWT reports `WM_CLASS` from the class name of the bottom stack frame of whichever thread
  *   first constructed the AWT toolkit, with the same dots-to-hyphens substitution.
@@ -38,7 +38,7 @@ val DesktopWindowClassSuite by testSuite("The Linux desktop entry") {
     }
 
     test("the window class the entry declares is one a desktop entry can express") {
-        // AWT's `getCorrectXIDString` and the Conveyor Gradle plugin make the same
+        // AWT's `getCorrectXIDString` and the Nucleus Gradle plugin make the same
         // substitution, so this is the exact string the packaged desktop entry will carry.
         val startupWmClass = packagedMainClass().replace('.', '-')
 

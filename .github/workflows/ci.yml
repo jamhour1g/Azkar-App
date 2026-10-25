@@ -34,13 +34,24 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
+      - name: Install native test dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgl1
+
       - name: Build, test, and check release shrinking
-        run: ./gradlew build :app:proguardReleaseJars --console=plain
+        run: ./gradlew build :app:smokeTestPackagedRuntime --console=plain
         env:
           CI: true
 
+      - name: Set up Kotlin compiler
+        uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
+        with:
+          version: '2.4.20'
+
+      - name: Test release asset validation
+        run: ./scripts/merge_nucleus_release.main.kts self-test
+
       - name: Upload detekt reports
-        if: failure()
+        if: failure() && env.ACT != 'true'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: detekt-reports
@@ -48,15 +59,17 @@ jobs:
           retention-days: 14
 
       - name: Upload test reports
-        if: failure()
+        if: failure() && env.ACT != 'true'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: test-reports
-          path: '**/build/reports/tests/'
+          path: |
+            **/build/reports/tests/
+            app/build/reports/packaging/
           retention-days: 14
 
       - name: Upload JaCoCo coverage reports
-        if: failure()
+        if: failure() && env.ACT != 'true'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: coverage-reports
@@ -64,7 +77,7 @@ jobs:
           retention-days: 14
 
       - name: Upload build artifacts
-        if: success()
+        if: success() && env.ACT != 'true'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: build-jars
@@ -80,7 +93,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2025, macos-15]
+        os: [windows-2025, macos-15-intel, macos-15]
 
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -95,16 +108,18 @@ jobs:
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
 
       - name: Build and test with Gradle
-        run: ./gradlew build --console=plain
+        run: ./gradlew build :app:smokeTestPackagedRuntime --console=plain
         env:
           CI: true
 
       - name: Upload test reports
-        if: failure()
+        if: failure() && env.ACT != 'true'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: test-reports-${{ matrix.os }}
-          path: '**/build/reports/tests/'
+          path: |
+            **/build/reports/tests/
+            app/build/reports/packaging/
           retention-days: 14
 
   production-promotion:

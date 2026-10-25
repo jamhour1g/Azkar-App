@@ -1,10 +1,6 @@
 plugins {
     `java-library`
     id("azkar-common")
-    // Applied unversioned: buildSrc owns it on the classpath (detekt needs the
-    // Kotlin plugin to resolve source sets), and the version must match the
-    // catalog's Kotlin exactly.
-    id("org.jetbrains.kotlin.jvm")
 }
 
 java {

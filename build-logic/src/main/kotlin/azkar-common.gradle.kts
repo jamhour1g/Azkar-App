@@ -8,6 +8,7 @@ repositories {
 plugins {
     id("com.diffplug.spotless")
     id("dev.detekt")
+    id("org.jetbrains.kotlin.jvm")
     // `org.jetbrains.kotlin.jvm` already applies this; it is listed because the `sourceSets` and
     // `java` extension lookups below resolve through it rather than through the Kotlin plugin.
     id("java")
@@ -170,8 +171,8 @@ jacoco {
 tasks.named<JacocoReport>("jacocoTestReport") {
     dependsOn(tasks.test)
     reports {
-        xml.required = true   // needed for CI integrations
-        html.required = true  // human-readable report
+        xml.required = true // needed for CI integrations
+        html.required = true // human-readable report
         csv.required = false
     }
 }

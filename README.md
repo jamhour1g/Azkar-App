@@ -21,16 +21,15 @@ transformation details are recorded in the [seed data notice](data/src/main/reso
 ## Download
 
 Get the latest stable installer from the [download page](https://jamhour1g.github.io/Azkar-App/download.html).
-The page detects your operating system and provides installation instructions.
+The page links to the supported installers and Linux repository setup instructions.
 
 | Platform | Package | Updates |
 | --- | --- | --- |
-| Windows | MSIX + `.appinstaller` | Background updates through Windows App Installer |
-| macOS | `.app.tar.gz` | Sparkle update prompts |
-| Linux | `.deb` package | Signed apt repository; update with `apt upgrade` |
+| Windows | NSIS `.exe` | Nucleus in-app updates |
+| macOS | DMG installer | Nucleus replaces the app from a ZIP update |
+| Linux | `.deb`, `.rpm`, AppImage | Signed apt/dnf repositories; Nucleus updates AppImage |
 
-The macOS build is self-signed, so Gatekeeper may require you to right-click the app and choose
-**Open** the first time. Release and preview details are in [docs/releasing.md](docs/releasing.md).
+Release and Dev channel details are in [docs/releasing.md](docs/releasing.md).
 
 ## Run from source
 
@@ -74,12 +73,12 @@ The screenshot task also accepts `home`, `settings`, `collection-detail`, and op
 | `app/` | Compose Desktop UI, app startup, settings, prayer times, and reminders |
 | `domain/` | Library models, repository interfaces, and domain services |
 | `data/` | H2 persistence, schema setup, repositories, and bundled seed data |
-| `buildSrc/` | Shared Gradle build conventions |
+| `build-logic/` | Shared Gradle convention plugins and packaging tasks |
 | `docs/` | CI, release, logging, and notification overlay documentation |
 
 The main CI workflow runs for pull requests targeting `dev` or `production`; Windows and macOS
 builds run for production pull requests and manual CI runs. Stable releases are published from
-version tags on `production`, while preview releases are dispatched manually from `dev`. See
+version tags on `production`, while validated pushes to `dev` publish versioned prereleases. See
 [docs/ci.md](docs/ci.md) and [docs/releasing.md](docs/releasing.md).
 
 For implementation details, see [docs/logging.md](docs/logging.md) and
@@ -91,5 +90,3 @@ The application is licensed under the [MIT License](LICENSE). The bundled seed d
 separate attribution and license described in its [provenance notice](data/src/main/resources/db/seed/SEED_DATA_NOTICE.md).
 
 ---
-
-Packages and auto-updates are built with [Hydraulic Conveyor](https://conveyor.hydraulic.dev/).

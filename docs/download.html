@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Download Azkar</title>
+  <style>
+    :root { color-scheme: light dark; font: 16px/1.6 system-ui, sans-serif; }
+    body { max-width: 52rem; margin: 3rem auto; padding: 0 1.25rem; }
+    h1, h2 { line-height: 1.2; }
+    code, pre { font-family: ui-monospace, monospace; }
+    pre { overflow-x: auto; padding: 1rem; border-radius: .5rem; background: color-mix(in srgb, CanvasText 8%, Canvas); }
+    a { color: LinkText; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Download Azkar</h1>
+    <p>Choose an installer from the <a href="https://github.com/jamhour1g/Azkar-App/releases/latest">latest stable release</a>.
+       Windows uses the installer executable. macOS uses the disk image. Linux users can install from a signed repository or download the AppImage.</p>
+
+    <h2>Debian and Ubuntu</h2>
+    <p>Stable updates are delivered through apt. Replace <code>stable</code> with <code>dev</code> to use the Dev channel.</p>
+    <pre><code>curl -fsSL https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc | gpg --dearmor | sudo tee /usr/share/keyrings/azkar-repo.gpg &gt;/dev/null
+echo 'deb [signed-by=/usr/share/keyrings/azkar-repo.gpg] https://jamhour1g.github.io/Azkar-App/apt stable main' | sudo tee /etc/apt/sources.list.d/azkar.list
+sudo apt update
+sudo apt install azkar</code></pre>
+
+    <h2>Fedora and other DNF distributions</h2>
+    <p>Stable updates are delivered through dnf. Change <code>stable</code> in the repository name and URL to <code>dev</code> to switch channels.</p>
+    <pre><code>sudo rpm --import https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc
+sudo tee /etc/yum.repos.d/azkar.repo &gt;/dev/null &lt;&lt;'EOF'
+[azkar-stable]
+name=Azkar Stable
+baseurl=https://jamhour1g.github.io/Azkar-App/rpm/stable/
+enabled=1
+gpgcheck=0
+repo_gpgcheck=1
+gpgkey=https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc
+EOF
+sudo dnf makecache
+sudo dnf install azkar</code></pre>
+
+    <h2>Arch and other distributions</h2>
+    <p>Download the Linux AppImage from the <a href="https://github.com/jamhour1g/Azkar-App/releases/latest">release assets</a>, make it executable, then launch it:</p>
+    <pre><code>chmod +x Azkar-*.AppImage
+./Azkar-*.AppImage</code></pre>
+    <p>Some AppImages need FUSE 2. On Arch, install it with <code>sudo pacman -S fuse2</code>.</p>
+  </main>
+</body>
+</html>

@@ -33,6 +33,7 @@ ktor = "3.3.3"
 compose-native-tray = "2.1.7"
 # AutoLaunch is independent of the tray and packaging plugins.
 nucleus-autolaunch = "2.5.18"
+nucleus = "2.5.18"
 # detekt is the Kotlin/Compose static-analysis gate; it replaces SpotBugs.
 detekt = "2.0.0-alpha.5"
 # Compose Multiplatform versions its Material 3 / extended-icons artifacts independently
@@ -81,12 +82,6 @@ coil = "3.6.3"
 # app already has a `suspend () -> String?` seam for the chooser that every host supplies, so
 # adopting it would mean wrapping a function the app has rather than deleting one.
 filekit = "0.16.0"
-# Hydraulic Conveyor (conveyor.hydraulic.dev) is the desktop packaging + auto-update tool.
-# Its Gradle plugin's whole job is to define the per-OS Compose configurations that
-# `conveyor.conf` reads back through `printConveyorConfig`; the packaging itself is driven by
-# the Conveyor CI action, which is released upstream on its own cadence, so this pin tracks
-# the Gradle plugin only. Starter pin was 1.12, but 2.0 is current as of March 2026.
-dev-hydraulic-conveyor = "2.0"
 
 [libraries]
 # Database Dependencies
@@ -114,13 +109,6 @@ org-jetbrains-compose-material-icons-extended = { module = "org.jetbrains.compos
 org-jetbrains-compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "jetbrains-compose" }
 org-jetbrains-compose-ui-test = { module = "org.jetbrains.compose.ui:ui-test", version.ref = "jetbrains-compose" }
 org-jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "jetbrains-compose" }
-# The per-platform Compose Desktop runtime that Conveyor packages. The Compose plugin's own
-# `compose.desktop.linux_x64` and its siblings are deprecated ("Specify dependency directly"),
-# so the artifacts are named here instead, on the same version as the plugin.
-org-jetbrains-compose-desktop-linux-x64 = { module = "org.jetbrains.compose.desktop:desktop-jvm-linux-x64", version.ref = "jetbrains-compose" }
-org-jetbrains-compose-desktop-macos-x64 = { module = "org.jetbrains.compose.desktop:desktop-jvm-macos-x64", version.ref = "jetbrains-compose" }
-org-jetbrains-compose-desktop-macos-arm64 = { module = "org.jetbrains.compose.desktop:desktop-jvm-macos-arm64", version.ref = "jetbrains-compose" }
-org-jetbrains-compose-desktop-windows-x64 = { module = "org.jetbrains.compose.desktop:desktop-jvm-windows-x64", version.ref = "jetbrains-compose" }
 org-jetbrains-kotlinx-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "jetbrains-serialization" }
 io-ktor-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 io-ktor-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
@@ -129,6 +117,7 @@ io-ktor-ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = 
 io-ktor-ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 dev-nucleusframework-compose-native-tray = { module = "dev.nucleusframework:composenativetray", version.ref = "compose-native-tray" }
 dev-nucleusframework-autolaunch = { module = "dev.nucleusframework:nucleus.autolaunch", version.ref = "nucleus-autolaunch" }
+dev-nucleusframework-updater-runtime = { module = "dev.nucleusframework:nucleus.updater-runtime", version.ref = "nucleus" }
 org-jetbrains-kotlinx-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "jetbrains-coroutines" }
 # Jetpack DataStore, the `common`/`jvm` artifact. `-core` is the variant without the Android
 # dependencies, which is the one a desktop-only build can use; `datastore-preferences` itself
@@ -185,10 +174,10 @@ ch-qos-logback-logback-classic = { module = "ch.qos.logback:logback-classic", ve
 [plugins]
 org-jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrains-kotlin" }
 org-jetbrains-kotlin-plugin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "jetbrains-kotlin" }
-org-jetbrains-compose = { id = "org.jetbrains.compose", version.ref = "jetbrains-compose" }
-org-jetbrains-compose-hot-reload = { id = "org.jetbrains.compose.hot-reload", version.ref = "compose-hot-reload" }
+jetbrains-compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "jetbrains-compose" }
+jetbrains-compose-hot-reload = { id = "org.jetbrains.compose.hot-reload", version.ref = "compose-hot-reload" }
 org-jetbrains-kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "jetbrains-kotlin" }
 com-diffplug-spotless = { id = "com.diffplug.spotless", version = "7.2.1" }
 dev-detekt = { id = "dev.detekt", version.ref = "detekt" }
 de-infix-test-balloon = { id = "de.infix.testBalloon", version.ref = "de-infix-test-balloon" }
-dev-hydraulic-conveyor = { id = "dev.hydraulic.conveyor", version.ref = "dev-hydraulic-conveyor" }
+dev-nucleusframework = { id = "dev.nucleusframework", version.ref = "nucleus" }

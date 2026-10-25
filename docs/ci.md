@@ -5,15 +5,15 @@ requests targeting either long-lived branch; ordinary pushes do not start CI:
 
 | Change | Checks |
 | --- | --- |
-| PR targeting `dev` | Linux build, tests, release shrinking |
+| PR targeting `dev` | Linux build, tests, packaged-runtime smoke test, release-asset validator tests |
 | PR targeting `production` | Linux, Windows, and macOS builds; `Production promotion gate` requires all three |
 | Manual CI run | Linux, Windows, and macOS builds |
-| Manual Release run on `dev` | Checks, then publishes the separate preview release and update site |
+| Push or manual Release run on `dev` | Checks, native packages, versioned Dev prerelease and signed Dev apt/RPM repositories |
 | `v*` tag on `production` | Publishes a stable release |
 
 The [CI workflow](../.github/workflows/ci.yml) cancels obsolete pull-request
 runs. Dispatch the [Release workflow](../.github/workflows/release.yml) manually
-with `dev` selected when you want a preview; it runs checks before packaging.
+with `dev` selected to request another Dev build; it runs checks before packaging.
 Stable releases must use a version tag whose commit is already on `production`.
 
 ## The JDK is Zulu, not Temurin
@@ -39,9 +39,11 @@ the release pipeline.
 ## The release classpath is checked before promotion
 
 `./gradlew build` shrinks nothing: ProGuard only runs for the release build type, and
-`build` does not produce it. Linux CI also runs `:app:proguardReleaseJars`, so a change
+`build` does not produce it. CI also runs `:app:smokeTestPackagedRuntime`, which depends on ProGuard and the linked release runtime, so a change
 that breaks the release classpath — for example, a dependency ProGuard cannot see or a
-keep rule that stops matching — is caught before the release workflow packages it.
+keep rule that stops matching — is caught before the release workflow packages it. The smoke test starts the bundled launcher against a fresh temporary profile, migrates the database and requires a clean exit. It does not test windows, tray integration or native install/update behavior.
+
+The release workflow checks every required installer/architecture and update-manifest hash before preparing a draft release. Signed apt/RPM metadata is verified and pushed before the release becomes public. Local `act` runs skip artifact uploads and are blocked from publication; see [local packaging](releasing.md#local-packaging).
 
 ## One line ending, everywhere
 
@@ -71,7 +73,8 @@ their build fails.
 
 ```bash
 ./gradlew build                      # build, tests, detekt and Spotless
-./gradlew :app:proguardReleaseJars   # the release classpath, exactly as CI checks it
+./gradlew :app:smokeTestPackagedRuntime # linked release runtime and isolated database startup
+./scripts/merge_nucleus_release.main.kts self-test # release-asset validation fixtures (requires kotlinc)
 ```
 
 `check` is included in `build`. Note that `build` behaves differently on purpose:
