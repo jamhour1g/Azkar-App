@@ -157,6 +157,7 @@ tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
 }
 
 tasks.test {
+    systemProperty("h2.bindAddress", "127.0.0.1")
     // testBalloon registers itself as a JUnit Platform TestEngine, so the Platform is still
     // what runs the tests — only the engine behind it changed.
     useJUnitPlatform()

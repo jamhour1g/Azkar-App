@@ -102,6 +102,8 @@ A successful hosted four-platform CI rehearsal is still necessary. It may run be
 
 ## Package and runtime details
 
+- H2 AUTO_SERVER binds to `127.0.0.1` in the packaged app and source launcher. This keeps the local database off network interfaces and avoids machine-hostname reverse DNS during startup; tests exercise a real local AUTO_SERVER connection.
+
 - The Linux desktop entry sets `StartupWMClass=com-azkar-MainKt`, matching the main-thread AWT initialization in `Main.kt`. ProGuard keeps class names unchanged for the same reason.
 - The Nucleus AutoLaunch runtime identity is pinned to `com.azkar.app`; the macOS bundle identifier uses that same identity. macOS keeps its macOS 13 minimum for the AutoLaunch native bridge.
 - Linux `.deb` and `.rpm` package versions order Dev below the next Stable version. The app's settings show the current version and selected channel; the package manager decides when the repository transaction is applied.

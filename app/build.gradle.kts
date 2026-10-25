@@ -231,7 +231,7 @@ tasks.register<JavaExec>("runScreenshot") {
     classpath = screenshot.runtimeClasspath
     // Skiko loads its native library through System.loadLibrary; DataStore's bundled protobuf
     // currently uses sun.misc.Unsafe on Java 25.
-    jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow")
+    jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow", "-Dh2.bindAddress=127.0.0.1")
     systemProperty(
         "azkar.screenshot.out",
         providers.gradleProperty("azkar.screenshot.out").getOrElse("build/screenshot.png"),
@@ -356,6 +356,8 @@ nucleus.application {
     jvmArgs(
         "--enable-native-access=ALL-UNNAMED",
         "--sun-misc-unsafe-memory-access=allow",
+        // AUTO_SERVER is local-only; avoid reverse DNS of a machine's network address during startup.
+        "-Dh2.bindAddress=127.0.0.1",
         "-Dnucleus.app.id=com.azkar.app",
         "-Dnucleus.app.version=${project.version}",
     )
