@@ -113,7 +113,41 @@ val smokeTestPackagedRuntime =
                                 "\"-Duser.home=$profile\" \"-Dazkar.packaging.smoke.profile=$profile\" -Djava.awt.headless=true"
                         }.start()
                 try {
-                    check(process.waitFor(90, TimeUnit.SECONDS)) { "Packaged runtime timed out; see $log" }
+                    if (!process.waitFor(90, TimeUnit.SECONDS)) {
+                        val threadDump = log.resolveSibling("smoke-thread-dump.log")
+                        val jcmd = Path.of(System.getProperty("java.home"), "bin", "jcmd").toFile()
+                        val diagnostic =
+                            ProcessBuilder(jcmd.absolutePath, process.pid().toString(), "Thread.print", "-l")
+                                .redirectErrorStream(true)
+                                .redirectOutput(threadDump)
+                                .start()
+                        try {
+                            diagnostic.waitFor(15, TimeUnit.SECONDS)
+                        } finally {
+                            diagnostic.destroyForcibly().waitFor()
+                        }
+                        if (installerPlatform.os == "macos") {
+                            val nativeDump = log.resolveSibling("smoke-native-sample.log")
+                            val sample =
+                                ProcessBuilder(
+                                    "/usr/bin/sample",
+                                    process.pid().toString(),
+                                    "1",
+                                    "-file",
+                                    nativeDump.absolutePath,
+                                ).redirectErrorStream(true)
+                                    .redirectOutput(log.resolveSibling("smoke-native-sample-tool.log"))
+                                    .start()
+                            try {
+                                sample.waitFor(10, TimeUnit.SECONDS)
+                            } finally {
+                                sample.destroyForcibly().waitFor()
+                            }
+                        }
+                        logger.error(log.readText())
+                        logger.error(threadDump.readText())
+                        error("Packaged runtime timed out; see $log and $threadDump")
+                    }
                     check(process.exitValue() == 0 && "AZKAR_PACKAGING_SMOKE_OK" in log.readText()) {
                         "Packaged runtime failed; see $log"
                     }
