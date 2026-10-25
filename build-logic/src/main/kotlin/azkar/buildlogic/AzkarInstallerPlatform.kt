@@ -6,6 +6,14 @@ data class AzkarInstallerPlatform(
 ) {
     val id: String get() = "$os-$arch"
 
+    fun installerName(
+        version: String,
+        extension: String,
+    ): String {
+        val suffix = if (os == "windows" && extension == "exe") "-nsis" else ""
+        return "azkar-$version-$id$suffix.$extension"
+    }
+
     companion object {
         fun current(): AzkarInstallerPlatform {
             val osName = System.getProperty("os.name")
@@ -25,4 +33,11 @@ data class AzkarInstallerPlatform(
             return AzkarInstallerPlatform(os, arch)
         }
     }
+}
+
+fun macPackageVersion(version: String): String {
+    val components = version.substringBefore('-').split('.').map(String::toBigInteger)
+    require(components.size == 3 && components.all { it.signum() >= 0 }) { "Expected a numeric three-part version" }
+    // jpackage requires a positive macOS major; offset every major to keep native versions ordered.
+    return listOf(components[0] + java.math.BigInteger.ONE, components[1], components[2]).joinToString(".")
 }

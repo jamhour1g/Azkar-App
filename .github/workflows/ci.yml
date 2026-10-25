@@ -172,6 +172,13 @@ jobs:
           path: '**/build/reports/detekt/'
           retention-days: 14
 
+      - name: Show native packaging errors
+        if: failure()
+        shell: bash
+        run: |
+          if [[ -d app/build/compose/logs ]]; then
+            find app/build/compose/logs -name '*-err.txt' -exec cat {} +
+          fi
       - name: Upload test reports
         if: failure() && env.ACT != 'true'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
@@ -180,6 +187,8 @@ jobs:
           path: |
             **/build/reports/tests/
             app/build/reports/packaging/
+            app/build/compose/logs/
+            app/build/compose/tmp/*.args.txt
           retention-days: 14
 
       - name: Upload JaCoCo coverage reports
@@ -254,6 +263,13 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
+      - name: Show native packaging errors
+        if: failure()
+        shell: bash
+        run: |
+          if [[ -d app/build/compose/logs ]]; then
+            find app/build/compose/logs -name '*-err.txt' -exec cat {} +
+          fi
       - name: Upload test reports
         if: failure() && env.ACT != 'true'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
@@ -262,6 +278,8 @@ jobs:
           path: |
             **/build/reports/tests/
             app/build/reports/packaging/
+            app/build/compose/logs/
+            app/build/compose/tmp/*.args.txt
           retention-days: 14
 
   validate-installers:
@@ -327,5 +345,5 @@ jobs:
           if [[ "$INSTALLERS_REQUIRED" == true ]]; then
             state=failure
             if [[ "$LINUX_RESULT" == success && "$CROSS_RESULT" == success && "$INSTALLERS_RESULT" == success && "$current" == "$REVIEWED_SHA" ]]; then state=success; fi
-            post_status "$state" 'Azkar CI / Installers' "Installer validation: $INSTALLERS_RESULT"
+            post_status "$state" 'Azkar CI / Installers' "Native builds: $CROSS_RESULT; asset validation: $INSTALLERS_RESULT"
           fi

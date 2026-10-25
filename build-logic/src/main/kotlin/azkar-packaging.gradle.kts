@@ -143,8 +143,8 @@ val stageInstallers =
         into(output)
         from(layout.buildDirectory.dir("compose/binaries/main-release")) {
             formats.forEach { (directory, extension) ->
-                include("$directory/azkar-$releaseVersion-${installerPlatform.id}.$extension")
-                include("$directory/azkar-$releaseVersion-${installerPlatform.id}.$extension.blockmap")
+                include("$directory/${installerPlatform.installerName(releaseVersion, extension)}")
+                include("$directory/${installerPlatform.installerName(releaseVersion, extension)}.blockmap")
                 include("$directory/$channel*.yml")
             }
         }
@@ -155,8 +155,11 @@ val stageInstallers =
                     .get()
                     .asFile
             formats.forEach { (directory, extension) ->
-                check(packaged.resolve("$directory/azkar-$releaseVersion-${installerPlatform.id}.$extension").isFile) {
-                    "Missing $extension installer for ${installerPlatform.id}"
+                check(
+                    packaged.resolve("$directory/${installerPlatform.installerName(releaseVersion, extension)}").isFile,
+                ) {
+                    val found = packaged.resolve(directory).listFiles().orEmpty().filter { it.isFile }.map { it.name }
+                    "Missing ${installerPlatform.installerName(releaseVersion, extension)}; found $found"
                 }
                 check(
                     packaged

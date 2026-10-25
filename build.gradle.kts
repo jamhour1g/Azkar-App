@@ -41,6 +41,7 @@ spotless {
             "build-logic/src/main/kotlin/*.gradle.kts",
             "build-logic/src/main/kotlin/azkar/buildlogic/AzkarInstallerPlatform.kt",
             "build-logic/src/main/kotlin/azkar/**/*.kt",
+            "build-logic/src/test/kotlin/**/*.kt",
         )
         targetExclude("**/build/**")
         ktlint()
@@ -55,4 +56,9 @@ tasks.build {
     } else {
         dependsOn(tasks.named("spotlessApply"))
     }
+}
+
+// Included-build tests are not part of the application's normal test task graph.
+tasks.named("check") {
+    dependsOn(gradle.includedBuild("build-logic").task(":test"))
 }

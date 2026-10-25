@@ -8,6 +8,7 @@ plugins {
 }
 
 dependencies {
+    testImplementation(kotlin("test-junit"))
 
     implementation(plugin(libs.plugins.com.diffplug.spotless))
     implementation(plugin(libs.plugins.dev.detekt))

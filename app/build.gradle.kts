@@ -1,4 +1,5 @@
 import azkar.buildlogic.AzkarInstallerPlatform
+import azkar.buildlogic.macPackageVersion
 import org.gradle.api.artifacts.ExternalModuleDependency
 import java.util.jar.JarFile
 
@@ -415,6 +416,7 @@ nucleus.application {
             }
         }
         macOS {
+            packageVersion = macPackageVersion(fullVersion)
             iconFile.set(project.file("../assets/icons/azkar.icns"))
             dmg {
                 icon.set(project.file("../assets/icons/azkar.icns"))

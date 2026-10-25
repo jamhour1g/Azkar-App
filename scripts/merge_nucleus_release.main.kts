@@ -29,6 +29,15 @@ data class Manifest(
     val releaseDate: String?,
 )
 
+fun installerName(
+    version: String,
+    platform: String,
+    format: String,
+): String {
+    val suffix = if (platform == "windows-x64" && format == "exe") "-nsis" else ""
+    return "azkar-$version-$platform$suffix.$format"
+}
+
 fun scalar(value: String): String = value.trim().removeSurrounding("'").removeSurrounding("\"")
 
 fun readManifest(path: Path): Manifest {
@@ -122,7 +131,7 @@ fun mergeRelease(
         val platformDir = sourceDir.resolve(platform)
         check(Files.isDirectory(platformDir)) { "Missing platform: $platform" }
         val paths = allPaths.filter { it.startsWith(platformDir) }
-        val expectedNames = formats.mapTo(linkedSetOf()) { "azkar-$version-$platform.$it" }
+        val expectedNames = formats.mapTo(linkedSetOf()) { installerName(version, platform, it) }
         val foundNames =
             paths
                 .filter { it.fileName.toString().substringAfterLast('.') in formats }
@@ -154,8 +163,14 @@ fun mergeRelease(
                     file.url.endsWith(".exe") ||
                         file.url.endsWith(".dmg") ||
                         file.url.endsWith(".zip")
+                val nativeBase = version.substringBefore('-')
+                val components = nativeBase.split('.')
+                val macMajor = components[0].toBigInteger() + java.math.BigInteger.ONE
+                val macVersion = "$macMajor.${components[1]}.${components[2]}"
                 check(
-                    manifest.version == version || (nativeVersion && manifest.version == version.substringBefore('-')),
+                    manifest.version == version ||
+                        (nativeVersion && manifest.version == nativeBase) ||
+                        (platform.startsWith("macos") && manifest.version == macVersion),
                 ) {
                     "Unexpected version ${manifest.version} in $path (release $version)"
                 }
@@ -221,7 +236,7 @@ fun selfTest() {
         platformFormats.forEach { (platform, formats) ->
             formats.forEach { format ->
                 val directory = Files.createDirectories(input.resolve("$platform/$format"))
-                val filename = "azkar-$fixtureVersion-$platform.$format"
+                val filename = installerName(fixtureVersion, platform, format)
                 val artifact = Files.writeString(directory.resolve(filename), "$platform $format")
                 val manifestName =
                     (if ("-beta." in fixtureVersion) "beta" else "latest") +
@@ -270,6 +285,15 @@ fun selfTest() {
         )
         mergeRelease(nativeInput, root.resolve("native-out"), version)
         check(readManifest(root.resolve("native-out/beta.yml")).version == version)
+        val macInput = fixture("mac-native-version")
+        val macManifest = macInput.resolve("macos-x64/dmg/beta-mac.yml")
+        Files.writeString(macManifest, Files.readString(macManifest).replace("version: $version", "version: 2.2.3"))
+        mergeRelease(macInput, root.resolve("mac-native-out"), version)
+        check(readManifest(root.resolve("mac-native-out/beta-mac.yml")).version == version)
+        rejects("wrong-windows-name") { input ->
+            val source = input.resolve("windows-x64/exe/azkar-$version-windows-x64-nsis.exe")
+            Files.move(source, source.resolveSibling("azkar-$version-windows-x64.exe"))
+        }
         rejects("missing-arch") { it.resolve("macos-arm64").toFile().deleteRecursively() }
         rejects("missing-format") { Files.delete(it.resolve("linux-x64/rpm/azkar-$version-linux-x64.rpm")) }
         rejects("missing-manifest") { Files.delete(it.resolve("windows-x64/exe/beta.yml")) }

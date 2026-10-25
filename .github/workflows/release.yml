@@ -165,7 +165,12 @@ jobs:
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
           name: packaging-diagnostics-${{ matrix.id }}
-          path: app/build/reports/packaging/
+          path: |
+            app/build/reports/packaging/
+            app/build/compose/logs/
+            app/build/compose/tmp/*.args.txt
+            app/build/compose/binaries/main-release/*/electron-builder.yml
+            app/build/compose/binaries/main-release/*/builder-debug.yml
           retention-days: 3
 
   publish:
