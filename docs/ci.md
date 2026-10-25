@@ -9,11 +9,12 @@ count is required for the solo-maintainer workflow.
 | `dev` | `Azkar CI / Linux` | Linux build/tests/static analysis, packaged-runtime smoke test, release-script self-tests |
 | `production` | Both `Azkar CI / Linux` and `Azkar CI / Installers` | Above plus Windows, Intel/ARM macOS, all eight installers and merged asset validation |
 
-## Contributor approval
+## Manual PR CI
 
-Anyone can open or update a PR. The owner's PRs run automatically. Other authors'
-PRs start **no CI runners** until the owner reviews and manually dispatches CI with
-both the PR number and its full current head SHA. A new commit requires fresh approval.
+Anyone can open or update a PR. PR events do not start CI. After reviewing a revision,
+the owner manually dispatches CI with the PR number and its full current head SHA. A
+new commit requires a fresh review and a new CI run before merge. This applies to the
+owner's PRs too; the required status stays pending until that exact revision passes.
 
 After reviewing the code, obtain the SHA and start the trusted default-branch workflow:
 
@@ -22,23 +23,23 @@ gh pr view 123 --json headRefOid --jq .headRefOid
 gh workflow run ci.yml --ref dev -f pr_number=123 -f reviewed_sha=<full-reviewed-SHA>
 ```
 
-The GitHub Actions “Run workflow” UI exposes the same inputs. Select `dev`, the default
-branch, rather than a contributor's branch. The dispatch must be performed by the
-repository owner. Retargeted PRs also need a fresh run. To rehearse workflow changes, the owner can
-manually select their own same-repository PR branch; its branch and commit must match
-the PR exactly. Contributor approvals must always use the trusted default branch.
-Use `-f validate_installers=true` for a full four-runner rehearsal of a dev PR.
+The GitHub Actions “Run workflow” UI exposes the same inputs. The dispatch must be
+performed by the repository owner. For contributor PRs, select `dev`, the default
+branch, so the trusted workflow definition runs. To rehearse workflow changes in an
+owner-authored PR, select that same-repository PR branch; its branch and commit must
+match the PR exactly. Retargeted PRs need a fresh run. Use
+`-f validate_installers=true` for a full four-runner rehearsal of a dev PR.
 
-The `pull_request_target` trigger uses trusted base-branch workflow definitions. Its
-owner-only authorization job never checks out PR code. It resolves the live PR through
-the API and marks the reviewed head pending. Separate build jobs check out GitHub's
-PR merge revision and verify both parents match the approved head and selected base.
-This catches PR/base races before executing code. Contributors cannot bypass approval
-by editing the CI YAML in their PR.
+The manually dispatched workflow resolves the live PR through the API and marks the
+reviewed head pending.
+Separate build jobs check out GitHub's PR merge revision and verify both parents match
+the approved head and selected base. This catches PR/base races before executing code.
+For contributor PRs, the workflow definition comes from trusted `dev`; contributor
+workflow files are never used for their CI run.
 
 Build jobs use read-only repository permissions, no publishing secrets, and checkout
 with `persist-credentials: false`. All workflows disable Gradle Actions caches so
-contributor runs cannot poison caches later consumed by releases. A separate reporting
+PR runs cannot poison caches later consumed by releases. A separate reporting
 runner, with no source checkout, writes the required statuses to the reviewed head
 from job results. A stale head never receives a successful status from that run.
 Manual workflow job checks alone do not satisfy PR branch protection, which is why the
