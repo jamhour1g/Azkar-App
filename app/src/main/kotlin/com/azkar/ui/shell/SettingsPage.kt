@@ -39,6 +39,7 @@ import com.azkar.generated.resources.settingsReminderCardTitle
 import com.azkar.generated.resources.settingsStartupTitle
 import com.azkar.generated.resources.settingsThemeHeader
 import com.azkar.generated.resources.settingsTypographyHeader
+import com.azkar.generated.resources.settingsUpdatesTitle
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarCard
 import com.azkar.ui.components.pressableClick
@@ -135,6 +136,7 @@ enum class SettingsSection(
     STARTUP(SettingsGroup.GENERAL),
     THEME(SettingsGroup.GENERAL),
     TEXT(SettingsGroup.GENERAL),
+    UPDATES(SettingsGroup.GENERAL),
     REMINDER_SCHEDULE(SettingsGroup.REMINDERS),
     REMINDER_CARD(SettingsGroup.REMINDERS),
     PRAYER_CALCULATION(SettingsGroup.PRAYER),
@@ -147,6 +149,7 @@ fun settingsSectionLabel(section: SettingsSection): String =
     when (section) {
         SettingsSection.LANGUAGE -> stringResource(Res.string.settingsLanguageHeader)
         SettingsSection.STARTUP -> stringResource(Res.string.settingsStartupTitle)
+        SettingsSection.UPDATES -> stringResource(Res.string.settingsUpdatesTitle)
         SettingsSection.THEME -> stringResource(Res.string.settingsThemeHeader)
         SettingsSection.TEXT -> stringResource(Res.string.settingsTypographyHeader)
         SettingsSection.REMINDER_CARD -> stringResource(Res.string.settingsReminderCardTitle)

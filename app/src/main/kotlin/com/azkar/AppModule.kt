@@ -27,6 +27,7 @@ import com.azkar.ui.notifications.presentation.NotificationPublisher
 import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
 import com.azkar.ui.shell.ThemePreferenceStore
 import com.azkar.ui.shell.TypographyStore
+import com.azkar.updates.UpdateManager
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
@@ -106,6 +107,10 @@ val appModule =
         single<CoroutineScope>(named("notificationScope")) {
             CoroutineScope(SupervisorJob() + notificationDispatcher())
         }
+        single<CoroutineScope>(named("updateScope")) {
+            CoroutineScope(SupervisorJob() + notificationDispatcher())
+        }
+        single { UpdateManager(get(), get(), get(named("updateScope"))) }
         single {
             OverlayNotificationPresenter(
                 scope = get(named("notificationScope")),
