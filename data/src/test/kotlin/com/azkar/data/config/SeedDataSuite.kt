@@ -48,14 +48,18 @@ val SeedDataSuite by testSuite("Seed data") {
             }
         }
 
-        test("seeds exactly one 'muslim data' tag") { database ->
+        test("stores citations as sources, occasion context as explanations, and no publisher tag") { database ->
             transaction(database) {
-                val matches = TagTable.selectAll().where { TagTable.name eq "muslim data" }
-
-                assertThat(matches.count()).isEqualTo(1)
-                assertThat(matches.single()[TagTable.name])
-                    .describedAs("The seed writes the tag folded, as the column stores it")
-                    .isEqualTo("muslim data")
+                assertThat(TagTable.selectAll().where { TagTable.name eq "muslim data" }.count()).isZero()
+                val first = RemembranceTable.selectAll().first()
+                assertThat(first[RemembranceTable.sourceText]).contains("Al-Bukhari")
+                val explanation =
+                    ExplanationTranslationTable
+                        .selectAll()
+                        .where { ExplanationTranslationTable.localeCode eq "en" }
+                        .first()
+                assertThat(explanation[ExplanationTranslationTable.text]).isEqualTo("When waking up")
+                assertThat(RemembranceTable.selectAll().count()).isEqualTo(287)
             }
         }
     }

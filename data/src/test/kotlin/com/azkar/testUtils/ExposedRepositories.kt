@@ -6,6 +6,8 @@ import com.azkar.data.repo.exposed.ExposedRecitationRepository
 import com.azkar.data.repo.exposed.ExposedRemembranceRepository
 import com.azkar.data.repo.exposed.ExposedTagRepository
 import com.azkar.data.seed.CollectionSeed
+import com.azkar.data.table.CollectionMemberTable
+import com.azkar.data.table.CollectionTable
 import com.azkar.data.transaction.ExposedTransactionRunner
 import de.infix.testBalloon.framework.core.Test
 import de.infix.testBalloon.framework.core.TestFixture
@@ -13,6 +15,8 @@ import de.infix.testBalloon.framework.core.TestSuiteScope
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 /**
@@ -102,22 +106,25 @@ fun TestSuiteScope.seededRemembrances(content: TestLevelFixtureScope<ExposedRepo
     } asParameterForEach content
 }
 
-/**
- * A per-test fixture over a database of its own, with the shipped collections in place.
- *
- * The official collections are seeded *after* the reference remembrances, which is the order
- * [com.azkar.data.config.migrateToLatestSchema] uses and the order that matters: an official collection
- * resolves its members through tag rows that have to exist first. The reference tags are the
- * two the catalogue knows by name — `morning` and `evening`, stored folded while the catalogue
- * spells them `Morning` and `Evening`, which is what keeps the tag match honest — so the resulting
- * shelf has two populated collections, one favorites-backed collection and eleven empty ones.
- */
+/** A small, explicit collection-membership fixture, independent of the shipped content. */
 fun TestSuiteScope.seededCollections(content: TestLevelFixtureScope<ExposedRepositories>.() -> Unit) {
     testFixture {
         val migrated = TestDatabase.bootstrapWithH2()
         TestDatabase.reset(migrated)
         seedReferenceRemembrances(migrated)
-        transaction(migrated) { CollectionSeed.load() }
+        transaction(migrated) {
+            CollectionSeed.load()
+            val ids = CollectionTable.selectAll().associate { it[CollectionTable.name] to it[CollectionTable.id].value }
+            listOf("Morning Azkar" to listOf(1L, 3L), "Evening Azkar" to listOf(2L)).forEach { (name, members) ->
+                members.forEachIndexed { position, remembranceId ->
+                    CollectionMemberTable.insert {
+                        it[collectionId] = ids.getValue(name)
+                        it[CollectionMemberTable.remembranceId] = remembranceId
+                        it[CollectionMemberTable.position] = position
+                    }
+                }
+            }
+        }
         repositories(migrated)
     } asParameterForEach content
 }

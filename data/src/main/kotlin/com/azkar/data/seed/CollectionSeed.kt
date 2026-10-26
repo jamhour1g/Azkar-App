@@ -5,15 +5,12 @@ import com.azkar.data.table.CollectionMemberTable
 import com.azkar.data.table.CollectionTable
 import com.azkar.data.table.CollectionTagTable
 import com.azkar.data.table.CollectionTranslationTable
-import com.azkar.data.table.RemembranceTable
-import com.azkar.data.table.RemembranceTagTable
 import com.azkar.data.table.TagTable
 import com.azkar.data.table.TagTranslationTable
 import com.azkar.domain.model.CollectionKind
 import com.azkar.domain.model.Tag
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -21,29 +18,12 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.time.OffsetDateTime
 
-/**
- * Writes the shipped collections and the memberships that go with them into an empty database.
- *
- * Membership is written as ordinary [CollectionMemberTable] rows rather than left to be resolved from a
- * tag at read time, because there is now one answer to "what is in this collection" and it lives in
- * one table. Resolving it from a tag on every read meant a second place to spell a collection's
- * contents, one the user could never correct, and a shelf that quietly emptied itself when a tag was
- * renamed in a dataset release.
- *
- * The cost is honest and worth naming: shipping azkar in a later release no longer flows into these
- * collections by itself, because nothing is left watching for it. That has to be a migration somebody
- * writes, which is a good property — it shows up in a diff instead of being a no-op on installs that
- * already exist.
- *
- * Runs exactly once, on the first launch, from [LibraryBootstrapper]. It does not upsert and does not
- * recognise rows it wrote before: it has no stable handle on a collection to recognise one by, because
- * the handle the user could also have edited has since been removed from the model on purpose.
- *
- * Must be called from inside a transaction, after the remembrances are in: a collection seeded
- * against a database with no tags or no remembrances in it comes up empty and stays empty.
- */
+/** Inserts shipped collections using explicit seed keys, never tag-derived membership. */
 internal object CollectionSeed {
-    fun load(logger: KLogger = KotlinLogging.logger {}) {
+    fun load(
+        remembranceIds: Map<String, Long> = emptyMap(),
+        logger: KLogger = KotlinLogging.logger {},
+    ) {
         val catalogue = OfficialCollectionCatalogue.entries
 
         // Belt and braces rather than the real gate — [LibraryBootstrapper] decides whether to call
@@ -54,14 +34,13 @@ internal object CollectionSeed {
         }
 
         val tagIds = resolveTagIds(catalogue)
-        warnAboutTagsTheDatasetNoLongerCarries(logger, catalogue, tagIds)
 
         val timestamp = now()
         val collections = insertCollections(catalogue, timestamp)
         insertTranslations(collections, timestamp)
         insertTagTranslations(timestamp)
         insertLabels(collections, tagIds)
-        insertMembership(collections, tagIds)
+        insertMembership(collections, remembranceIds)
 
         logger.info { "Seeded ${collections.size} official collection(s)" }
     }
@@ -83,27 +62,6 @@ internal object CollectionSeed {
             .associate { it[TagTable.name] to it[TagTable.id].value }
     }
 
-    /**
-     * Says so when a collection's tag is not in the dataset, which is the one way this seed can
-     * quietly produce an empty shelf.
-     *
-     * A warning rather than a failure: the tag may have been renamed, or dropped on purpose, and the
-     * collection is still worth having as an empty shelf the user can fill.
-     */
-    private fun warnAboutTagsTheDatasetNoLongerCarries(
-        logger: KLogger,
-        entries: List<OfficialCollectionCatalogue.Entry>,
-        tagIds: Map<String, Long>,
-    ) {
-        val missing = entries.mapNotNull { it.tagName }.filter { Tag.fold(it) !in tagIds }.distinct()
-        if (missing.isNotEmpty()) {
-            logger.warn {
-                "Collection seed found no tag for: ${missing.joinToString()}. " +
-                    "Those collections will be seeded empty."
-            }
-        }
-    }
-
     /** Each catalogue entry paired with the id of the row it just became. */
     private fun insertCollections(
         entries: List<OfficialCollectionCatalogue.Entry>,
@@ -114,6 +72,7 @@ internal object CollectionSeed {
                 CollectionTable
                     .insert { row ->
                         row[CollectionTable.name] = entry.name
+                        row[CollectionTable.nameLocaleCode] = entry.nameLocale
                         row[CollectionTable.description] = entry.description
                         row[CollectionTable.kind] = CollectionKind.OFFICIAL
                         row[CollectionTable.iconKey] = entry.iconKey
@@ -130,17 +89,7 @@ internal object CollectionSeed {
             entry to id
         }
 
-    /**
-     * Writes the wording of each collection in every language the catalogue carries for it.
-     *
-     * In the same transaction as the rows themselves, and for the same reason membership is: a shelf
-     * that exists in one language only for the first launch of an installation is the exact state this
-     * whole change exists to remove, and a translation written on the next read would arrive too late
-     * to matter to the screen that noticed.
-     *
-     * The English row duplicates the canonical columns, which [OfficialCollectionCatalogue.entry]
-     * explains is deliberate rather than redundant.
-     */
+    /** Writes collection wording in the same transaction as its membership. */
     private fun insertTranslations(
         collections: List<Pair<OfficialCollectionCatalogue.Entry, Long>>,
         timestamp: OffsetDateTime,
@@ -170,18 +119,7 @@ internal object CollectionSeed {
         }
     }
 
-    /**
-     * Gives every shipped label the wording [OfficialTagVocabulary] holds for it.
-     *
-     * Over the whole tag table rather than over [resolveTagIds]'s handful of catalogue tags, because
-     * the vocabulary covers a label no collection is seeded from: `muslim data` is the publisher's own
-     * tag and never names a shelf, but it is on every row the reader can reach. Reading the ids here
-     * rather than passing them in keeps that difference from being the caller's problem.
-     *
-     * Written here rather than where the tag rows are made ([SeedDataLoader.insertTags]) because this
-     * is the object that already owns "what the shipped library says". Anything the vocabulary does
-     * not carry — a tag the user has since added, a slug nobody has worded — is simply not written.
-     */
+    /** Writes supplied wording for seed tags without inventing translations for user tags. */
     private fun insertTagTranslations(timestamp: OffsetDateTime) {
         val idsByName =
             TagTable
@@ -224,26 +162,19 @@ internal object CollectionSeed {
         }
     }
 
-    /**
-     * Writes one row per member, numbered from zero.
-     *
-     * Ordered by remembrance id rather than left to whatever order the join returns, so the shelf's
-     * sequence is the same on every machine that seeds the same dataset.
-     */
+    /** Writes the resource's explicit member order, numbered from zero. */
     private fun insertMembership(
         collections: List<Pair<OfficialCollectionCatalogue.Entry, Long>>,
-        tagIds: Map<String, Long>,
+        remembranceIds: Map<String, Long>,
     ) {
-        val tagIdByCollection =
-            collections.mapNotNull { (entry, collectionId) ->
-                entry.tagName?.let { tagIds[Tag.fold(it)] }?.let { collectionId to it }
-            }
-        val memberIds = remembranceIdsByTag(tagIdByCollection.map { it.second }.distinct())
-
+        // Catalogue-only fixtures can create empty shelves; production supplies every inserted key.
+        if (remembranceIds.isEmpty()) {
+            return
+        }
         val links =
-            tagIdByCollection.flatMap { (collectionId, tagId) ->
-                memberIds[tagId].orEmpty().mapIndexed { position, remembranceId ->
-                    MembershipLink(collectionId, remembranceId, position)
+            collections.flatMap { (entry, collectionId) ->
+                entry.members.mapIndexed { position, key ->
+                    MembershipLink(collectionId, remembranceIds.getValue(key), position)
                 }
             }
         CollectionMemberTable.batchInsert(links, shouldReturnGeneratedValues = false) { link ->
@@ -251,20 +182,6 @@ internal object CollectionSeed {
             this[CollectionMemberTable.remembranceId] = link.remembranceId
             this[CollectionMemberTable.position] = link.position
         }
-    }
-
-    private fun remembranceIdsByTag(tagIds: List<Long>): Map<Long, List<Long>> {
-        if (tagIds.isEmpty()) {
-            return emptyMap()
-        }
-        return (RemembranceTagTable innerJoin RemembranceTable)
-            .select(RemembranceTagTable.tagId, RemembranceTable.id)
-            .where { RemembranceTagTable.tagId inList tagIds }
-            .orderBy(RemembranceTagTable.tagId to SortOrder.ASC, RemembranceTable.id to SortOrder.ASC)
-            .groupBy(
-                { it[RemembranceTagTable.tagId].value },
-                { it[RemembranceTable.id].value },
-            )
     }
 
     private data class LabelLink(

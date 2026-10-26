@@ -13,19 +13,7 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
-/**
- * The collection seed, and the two things about it that can fail silently.
- *
- * The seed writes a collection's membership out as rows rather than deriving it, so a catalogue tag
- * that no longer matches anything in the dataset produces a collection that loads cleanly, reports
- * no error, and is permanently and quietly empty. The tag checks here exist to make that loud —
- * they are the same guards the derived design needed, and they are still the only thing standing
- * between a renamed tag and a shelf of empty cards.
- *
- * The other half is that the seed runs exactly once, behind the bootstrap's gate. It is therefore an
- * insert, not an upsert: there is no catalogue-owned column left to restore, because every column is
- * the user's now. What it must still guarantee is that running it again is harmless.
- */
+/** Shipped collection content, initial user state and idempotent bootstrap. */
 val CollectionSeedSuite by testSuite("Seeding the official collections") {
     test("every shipped collection is present, official, and fully described") {
         withSeed { seeded ->
@@ -61,16 +49,22 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
                     seeded.collectionNamed(entry).members.isEmpty()
                 }
 
-            // The guard the derived-membership design needed and cannot get from the DDL: a tag
-            // renamed in `muslim_data.tsv` without the catalogue following leaves a collection that
-            // loads fine, reports no error, and is permanently empty.
             assertThat(empty.map { it.name })
-                .describedAs("A shipped collection with no members means its tag matched nothing")
+                .describedAs("Every shipped collection must have its explicit members")
                 .isEmpty()
         }
     }
 
-    test("every catalogue tag is a tag the seed dataset actually uses") {
+    test("stored membership follows seed keys and order independently of subject labels") {
+        withSeed { seeded ->
+            OfficialCollectionCatalogue.entries.forEach { entry ->
+                assertThat(seeded.collectionNamed(entry).members.map { it.id })
+                    .containsExactlyElementsOf(entry.members.map { seeded.remembranceIds.getValue(it) })
+            }
+        }
+    }
+
+    test("every collection label is a tag the seed dataset actually uses") {
         withSeed { seeded ->
             val datasetTags = tagNamesIn(seeded.database)
             val missing =
@@ -78,17 +72,17 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
                     .mapNotNull { it.tagName }
                     .filterNot { it.lowercase() in datasetTags }
 
-            assertThat(missing).describedAs("A catalogue tag no row carries can never resolve").isEmpty()
+            assertThat(missing).describedAs("A shipped label must be used by the dataset").isEmpty()
         }
     }
 
-    test("no two catalogue entries claim the same tag") {
+    test("no two catalogue entries have the same canonical name") {
         val entries = OfficialCollectionCatalogue.entries
 
-        assertThat(entries.mapNotNull { it.tagName }).doesNotHaveDuplicates()
+        assertThat(entries.map { it.name }).doesNotHaveDuplicates()
     }
 
-    test("every entry is tag-driven, because the starred shelf is not shipped any more") {
+    test("every entry has a subject label independent of membership") {
         val entries = OfficialCollectionCatalogue.entries
 
         assertThat(entries.mapNotNull { it.tagName })
@@ -103,11 +97,9 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
                     entry.name to seeded.collectionNamed(entry).tags.map { it.name.lowercase() }
                 }
 
-            // The same tag both resolves the members and names the shelf, which is what lets the
-            // card derive its icon without the catalogue carrying an icon rule per collection.
             labels.forEach { (name, tags) ->
                 assertThat(tags)
-                    .describedAs("$name should be labelled with the tag it filters by")
+                    .describedAs("$name should carry its subject label")
                     .hasSize(1)
             }
         }
@@ -173,6 +165,7 @@ val CollectionSeedSuite by testSuite("Seeding the official collections") {
 private class SeededCollections(
     val database: Database,
     val collections: ExposedCollectionRepository,
+    val remembranceIds: Map<String, Long>,
 ) {
     /**
      * The collection a catalogue entry produced.
@@ -187,23 +180,23 @@ private class SeededCollections(
         }
 }
 
-/**
- * Runs [block] against a database of its own, with the real seed dataset already in it.
- *
- * The dataset goes first for the same reason the bootstrapper loads it first: the collections
- * resolve their membership through the tags the dataset creates, so a collection seeded into a
- * database with no tags in it would come up permanently empty.
- *
- * The database is per test rather than per suite because some of these tests write — one renames a
- * shipped collection, another adds one — and a test that writes has to be writing to a database
- * nothing else can see.
- */
+/** Runs each test against a fresh database with the complete shipped dataset. */
 private suspend fun withSeed(block: suspend (SeededCollections) -> Unit) {
     val database = TestDatabase.bootstrapWithH2()
-    transaction(database) { SeedDataLoader.load() }
-    transaction(database) { CollectionSeed.load() }
+    val ids =
+        transaction(database) {
+            val seeded = SeedDataLoader.load()
+            CollectionSeed.load(seeded.remembranceIds)
+            seeded.remembranceIds
+        }
     val transactions = ExposedTransactionRunner(database)
-    block(SeededCollections(database, ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))))
+    block(
+        SeededCollections(
+            database,
+            ExposedCollectionRepository(transactions, ExposedTagRepository(transactions)),
+            ids,
+        ),
+    )
 }
 
 /** Runs the seed the way a second call to the bootstrapper would. */

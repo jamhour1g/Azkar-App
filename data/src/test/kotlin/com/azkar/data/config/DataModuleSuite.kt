@@ -49,8 +49,8 @@ val DataModuleSuite by testSuite("DataModule") {
     testFixture {
         val database = TestDatabase.bootstrapWithH2()
         transaction(database) {
-            SeedDataLoader.load()
-            CollectionSeed.load()
+            val seeded = SeedDataLoader.load()
+            CollectionSeed.load(seeded.remembranceIds)
         }
         startKoin {
             modules(
