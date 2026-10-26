@@ -153,7 +153,13 @@ tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
     // without a compile classpath, so the default config's type-aware rules — `ForbiddenMethodCall`
     // among them — were all inert. This is the price of admitting they are: it surfaces the
     // backlog they had been hiding, which is the point.
-    classpath.setFrom(sourceSets["main"].compileClasspath, sourceSets["test"].compileClasspath)
+    val analysisClasspaths =
+        buildList {
+            add(sourceSets["main"].compileClasspath)
+            add(sourceSets["test"].compileClasspath)
+            sourceSets.findByName("screenshot")?.let { add(it.compileClasspath) }
+        }
+    classpath.setFrom(analysisClasspaths)
 }
 
 tasks.test {
