@@ -61,8 +61,7 @@ style:
         reason: >-
           Log through kotlin-logging so the line honours `logback.xml`: its level is
           configurable, it reaches the configured appenders, and it can carry a throwable. The
-          single justified exception is the `runScreenshot` tool, whose stdout is its contract,
-          and which suppresses this rule locally.
+          diagnostics and test reports belong in a logger or test result, not stdout.
       - value: 'kotlin.io.print'
         reason: >-
           Log through kotlin-logging so the line honours `logback.xml`. Unbuffered writes to

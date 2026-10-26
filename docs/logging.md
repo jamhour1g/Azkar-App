@@ -271,10 +271,7 @@ One detekt task runs in `verification`, configured by `config/detekt/detekt.yml`
 - detekt's built-in `PrintStackTrace` covers stack-trace printing.
 
 `println` is not a logging API, but it behaves like one: it bypasses `logback.xml`, ignores
-`AZKAR_LOG_LEVEL`, and never reaches the appenders. The single legitimate use is
-`app/src/screenshot/kotlin/com/azkar/Screenshot.kt`, whose `stdout` is the `runScreenshot` task's
-contract and whose source set is excluded from the shipped jar; it carries a `@Suppress` with that
-justification.
+`AZKAR_LOG_LEVEL`, and never reaches the appenders. Screenshot fixtures now run through the test source set and report through Gradle and Roborazzi.
 
 ## Adding logging to new code
 

@@ -132,7 +132,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libgl1
 
       - name: Build, test, and check release shrinking
-        run: ./gradlew build :app:smokeTestPackagedRuntime :app:captureDownloadScreenshots --console=plain
+        run: ./gradlew build :app:smokeTestPackagedRuntime :app:verifyRoborazziJvm -Proborazzi.dumpUiTree=true --console=plain
+        env:
+          CI: true
+
+      - name: Render documentation gallery
+        run: ./gradlew :app:captureDownloadScreenshots --console=plain
         env:
           CI: true
 
@@ -186,6 +191,9 @@ jobs:
           name: test-reports
           path: |
             **/build/reports/tests/
+            app/build/reports/roborazzi/
+            app/build/outputs/roborazzi/
+            app/build/test-results/roborazzi/
             app/build/reports/packaging/
             app/build/compose/logs/
             app/build/compose/tmp/*.args.txt
