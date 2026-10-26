@@ -46,10 +46,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -83,6 +83,7 @@ import com.azkar.generated.resources.settingsUpdateVersionTitle
 import com.azkar.generated.resources.settingsUpdatesBody
 import com.azkar.generated.resources.settingsUpdatesTitle
 import com.azkar.ui.components.SelectRow
+import com.azkar.ui.library.setPlainText
 import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationPreferencesRepository
@@ -255,7 +256,7 @@ private fun UpdateSettingsSection() {
     val channel by manager.channel.collectAsState()
     val status by manager.status.collectAsState()
     val scope = rememberCoroutineScope()
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     SettingsSectionBlock(
         title = stringResource(Res.string.settingsUpdatesTitle),
         subtitle = stringResource(Res.string.settingsUpdatesBody),
@@ -268,7 +269,7 @@ private fun UpdateSettingsSection() {
                     onSelectChannel = { scope.launch { manager.selectChannel(it) } },
                     onCheck = { scope.launch { manager.checkManually() } },
                 )
-                if (manager.isRepositoryManaged) RepositoryUpdateActions(manager, channel, clipboard)
+                if (manager.isRepositoryManaged) RepositoryUpdateActions(manager, channel, clipboard, scope)
                 if (status !is UpdateStatus.Idle && status !is UpdateStatus.Current) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         UpdateStatusContent(manager, channel, status, clipboard, scope)
@@ -340,7 +341,8 @@ private fun UpdateSettingsCard(
 private fun RepositoryUpdateActions(
     manager: UpdateManager,
     channel: UpdateChannel,
-    clipboard: androidx.compose.ui.platform.ClipboardManager,
+    clipboard: Clipboard,
+    scope: kotlinx.coroutines.CoroutineScope,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -349,7 +351,7 @@ private fun RepositoryUpdateActions(
             fontSize = 12.sp,
         )
         Button(onClick = {
-            clipboard.setText(AnnotatedString(manager.packageManagerCommands(channel, null, false)))
+            scope.launch { clipboard.setPlainText(manager.packageManagerCommands(channel, null, false)) }
         }) {
             Text(stringResource(Res.string.settingsUpdateCopyCommands))
         }
@@ -439,7 +441,7 @@ private fun UpdateStatusContent(
     manager: UpdateManager,
     channel: UpdateChannel,
     status: UpdateStatus,
-    clipboard: androidx.compose.ui.platform.ClipboardManager,
+    clipboard: Clipboard,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
     val colors = AzkarTheme.colors
@@ -464,7 +466,7 @@ private fun AvailableUpdateContent(
     manager: UpdateManager,
     channel: UpdateChannel,
     update: UpdateStatus.Available,
-    clipboard: androidx.compose.ui.platform.ClipboardManager,
+    clipboard: Clipboard,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
     val colors = AzkarTheme.colors
@@ -485,9 +487,9 @@ private fun AvailableUpdateContent(
     if (update.isDowngrade) DowngradeWarning()
     if (manager.isRepositoryManaged) {
         Button(onClick = {
-            clipboard.setText(
-                AnnotatedString(manager.packageManagerCommands(channel, update.info.version, update.isDowngrade)),
-            )
+            scope.launch {
+                clipboard.setPlainText(manager.packageManagerCommands(channel, update.info.version, update.isDowngrade))
+            }
         }) {
             Text(stringResource(Res.string.settingsUpdateCopyCommands))
         }

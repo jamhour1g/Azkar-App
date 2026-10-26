@@ -37,10 +37,11 @@ This catches PR/base races before executing code. Contributors cannot bypass app
 by editing the CI YAML in their PR.
 
 Build jobs use read-only repository permissions, no publishing secrets, and checkout
-with `persist-credentials: false`. All workflows disable Gradle Actions caches so
-contributor runs cannot poison caches later consumed by releases. A separate reporting
-runner, with no source checkout, writes the required statuses to the reviewed head
-from job results. A stale head never receives a successful status from that run.
+with `persist-credentials: false`. Contributor CI disables Gradle caching. The trusted
+Release workflow caches Gradle state: only validation on the default `dev` branch writes
+entries, while its parallel packaging/screenshot jobs and release tags are read-only. A
+separate reporting runner, with no source checkout, writes the required statuses to the
+reviewed head from job results. A stale head never receives a successful status from that run.
 Manual workflow job checks alone do not satisfy PR branch protection, which is why the
 explicit `Azkar CI / …` commit statuses are used.
 
