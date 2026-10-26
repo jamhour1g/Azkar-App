@@ -197,9 +197,17 @@ fun publish(
     Files.copy(publicKey, pages.resolve("keys/azkar-repo.asc"), REPLACE_EXISTING)
     packages.forEach { (channel, files) -> buildChannel(channel, files, pages, keyId, passphrase) }
     val workspace = System.getenv("GITHUB_WORKSPACE") ?: error("GITHUB_WORKSPACE is required")
-    val downloadPage = Path.of(workspace, "docs/download.html")
+    val downloadPage = Path.of(workspace, "site/download.html")
     Files.copy(downloadPage, pages.resolve("download.html"), REPLACE_EXISTING)
     Files.copy(downloadPage, pages.resolve("index.html"), REPLACE_EXISTING)
+    val imageDirectory = Files.createDirectories(pages.resolve("images"))
+    val downloadImageDirectory = Path.of(workspace, "site/images")
+    Files.copy(downloadImageDirectory.resolve("azkar.png"), imageDirectory.resolve("azkar.png"), REPLACE_EXISTING)
+    listOf("screen-home", "screen-library", "screen-reader", "screen-session", "screen-collection", "screen-reminder")
+        .flatMap { name -> listOf("$name-light.png", "$name-dark.png") }
+        .forEach { screenshot ->
+            Files.copy(downloadImageDirectory.resolve(screenshot), imageDirectory.resolve(screenshot), REPLACE_EXISTING)
+        }
     Files.writeString(pages.resolve(".nojekyll"), "")
     val size = Files.walk(pages).use { it.filter(Files::isRegularFile).mapToLong(Files::size).sum() }
     require(size < 900L * 1024 * 1024) { "Repository site approaches the Pages 1 GB limit: $size bytes" }

@@ -53,14 +53,14 @@ val LoggingPatternSuite by testSuite("The shipped log pattern") {
     test("a message with no payload still renders in full, and adds no stray field") {
         val logs =
             captureLogs { logger ->
-                logger.warn { "Seed resource [/db/seed/muslim_data.tsv] holds no rows" }
+                logger.warn { "Seed resource [/db/seed/library.json] holds no rows" }
             }
 
         val rendered = renderAsProduction(logs.at(Level.WARN).single())
 
         assertThat(rendered)
             .describedAs("A payload-free warning, which is the majority of what the app logs")
-            .contains("Seed resource [/db/seed/muslim_data.tsv] holds no rows")
+            .contains("Seed resource [/db/seed/library.json] holds no rows")
             // Nothing but a `key=value` pair can produce an `=`, and the date pattern uses `@`.
             // One here would mean `%kvp` was rendering something it should not have.
             .doesNotContain("=")

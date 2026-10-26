@@ -132,7 +132,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libgl1
 
       - name: Build, test, and check release shrinking
-        run: ./gradlew build :app:smokeTestPackagedRuntime --console=plain
+        run: ./gradlew build :app:smokeTestPackagedRuntime :app:captureDownloadScreenshots --console=plain
         env:
           CI: true
 

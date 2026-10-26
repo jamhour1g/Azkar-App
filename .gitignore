@@ -8,6 +8,9 @@ target/
 .kotlin/
 build
 
+# Generated Compose screenshots used by the download page and README.
+site/images/screen-*.png
+
 ### IntelliJ IDEA ###
 .idea
 *.iws

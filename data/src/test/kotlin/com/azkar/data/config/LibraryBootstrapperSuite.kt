@@ -88,8 +88,8 @@ val LibraryBootstrapperSuite by testSuite("Library bootstrapper") {
         val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
         val collectionService = CollectionService(collections, transactions)
         transactions.run {
-            SeedDataLoader.load()
-            CollectionSeed.load()
+            val seeded = SeedDataLoader.load()
+            CollectionSeed.load(seeded.remembranceIds)
         }
         val existingFavorites =
             collectionService.create(

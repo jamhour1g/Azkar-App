@@ -3,6 +3,9 @@ plugins {
     id("azkar-common")
 }
 
+// Apply from the convention plugin classpath, shared with the app.
+apply(plugin = "org.jetbrains.kotlin.plugin.serialization")
+
 java {
     // `azkar-common` turns module-path inference on for every module. Exposed is a
     // plain classpath library with no JPMS descriptor, and this module no longer
@@ -12,6 +15,7 @@ java {
 
 dependencies {
     implementation(project(":domain"))
+    implementation(libs.org.jetbrains.kotlinx.kotlinx.serialization.json)
 
     // Database: Exposed owns the schema, the queries and the seed data.
     implementation(libs.org.jetbrains.exposed.exposed.core)

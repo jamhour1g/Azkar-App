@@ -1,6 +1,8 @@
 import azkar.buildlogic.AzkarInstallerPlatform
 import azkar.buildlogic.macPackageVersion
 import org.gradle.api.artifacts.ExternalModuleDependency
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.jar.JarFile
 
 plugins {
@@ -41,6 +43,12 @@ kotlin {
         // (`foundation-desktop`) ships the API on its own, which is why only the opt-in is needed.
         freeCompilerArgs.add("-opt-in=androidx.compose.foundation.style.ExperimentalFoundationStyleApi")
     }
+}
+
+tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
+    // Detekt runs its own Kotlin analysis rather than reusing KotlinCompile's arguments. Keep it
+    // aligned with the module compiler opt-in so Compose Styles API usages resolve cleanly.
+    optIn.add("androidx.compose.foundation.style.ExperimentalFoundationStyleApi")
 }
 
 java {
@@ -199,13 +207,12 @@ tasks.jar {
 //
 //   ./gradlew :app:runScreenshot -Pazkar.screenshot.screen=collections
 //
-// `screen` accepts `app` (default), `home`, `settings`, `collections` or
-// `collection-detail`. Two extra switches exercise the appearance axes that
-// are otherwise only reachable through user interaction, so a single headless
-// run can check both of them:
+// `screen` accepts each target listed by `-Pazkar.screenshot.list=true` (screens and
+// selected reusable components). `targets` and `themes` batch a deterministic set of images:
 //
-//   ./gradlew :app:runScreenshot -Pazkar.screenshot.locale=ar   # RTL mirroring
-//   ./gradlew :app:runScreenshot -Pazkar.screenshot.dark=true   # dark palette
+//   ./gradlew :app:runScreenshot -Pazkar.screenshot.targets=home,component.home-rail \
+//       -Pazkar.screenshot.themes=light,dark -Pazkar.screenshot.outDir=build/screenshots
+//   ./gradlew :app:runScreenshot -Pazkar.screenshot.locale=ar  # RTL mirroring
 //
 // `collection-detail` has one further switch, because its member grid is only half
 // reachable from the way the page opens:
@@ -254,7 +261,59 @@ tasks.register<JavaExec>("runScreenshot") {
     providers.gradleProperty("azkar.screenshot.memberView").orNull?.let {
         systemProperty("azkar.screenshot.memberView", it)
     }
+    listOf("targets", "themes", "outDir", "list", "userName", "home").forEach { propertyName ->
+        providers.gradleProperty("azkar.screenshot.$propertyName").orNull?.let {
+            systemProperty("azkar.screenshot.$propertyName", it)
+        }
+    }
     dependsOn(tasks.named("screenshotClasses"))
+}
+
+val downloadScreenshotStaging = layout.buildDirectory.dir("download-screenshots")
+val downloadScreenshotNames =
+    listOf(
+        "screen-home",
+        "screen-library",
+        "screen-reader",
+        "screen-session",
+        "screen-collection",
+        "screen-reminder",
+    )
+
+tasks.register<JavaExec>("captureDownloadScreenshots") {
+    group = "verification"
+    description = "Capture the download page gallery in light and dark themes"
+    mainClass.set("com.azkar.ScreenshotKt")
+    classpath = screenshot.runtimeClasspath
+    jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow", "-Dh2.bindAddress=127.0.0.1")
+    systemProperty(
+        "azkar.screenshot.targets",
+        "app,collections,remembrance,collection-session,collection-detail,reminder-card",
+    )
+    systemProperty("azkar.screenshot.themes", "light,dark")
+    systemProperty("azkar.screenshot.userName", "Azkar")
+    systemProperty("azkar.screenshot.locale", "en")
+    systemProperty("azkar.screenshot.outDir", downloadScreenshotStaging.get().asFile.absolutePath)
+    systemProperty("azkar.screenshot.width", "1440")
+    systemProperty("azkar.screenshot.height", "900")
+    dependsOn(tasks.named("screenshotClasses"))
+    doLast {
+        val stagedFiles = downloadScreenshotNames.flatMap { name -> listOf("$name-light.png", "$name-dark.png") }
+        val stagedDirectory = downloadScreenshotStaging.get().asFile.toPath()
+        val missing = stagedFiles.filterNot { Files.isRegularFile(stagedDirectory.resolve(it)) }
+        require(
+            missing.isEmpty(),
+        ) { "Screenshot capture did not produce all download page images: ${missing.joinToString()}" }
+        val destination = rootProject.file("site/images").toPath()
+        Files.createDirectories(destination)
+        stagedFiles.forEach { file ->
+            Files.copy(
+                stagedDirectory.resolve(file),
+                destination.resolve(file),
+                StandardCopyOption.REPLACE_EXISTING,
+            )
+        }
+    }
 }
 
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {

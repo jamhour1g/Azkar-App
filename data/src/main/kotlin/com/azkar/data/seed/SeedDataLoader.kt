@@ -6,6 +6,7 @@ import com.azkar.data.table.RemembranceTagTable
 import com.azkar.data.table.RemembranceTranslationTable
 import com.azkar.data.table.TagTable
 import com.azkar.domain.model.HadithGrade
+import com.azkar.domain.model.Tag
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.jdbc.batchInsert
@@ -26,31 +27,11 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 internal data class SeedCounts(
     val remembrances: Int,
     val tags: Int,
+    val remembranceIds: Map<String, Long> = emptyMap(),
 )
 
-/**
- * Loads the bundled azkar dataset into an empty database.
- *
- * The dataset is a tab-separated resource rather than code or SQL: one line per remembrance, one
- * batch insert per table, the whole thing inside the caller's transaction. `scripts/
- * generate_seed_migration.main.kts` regenerates it — see `SEED_DATA_NOTICE.md` next to the file for
- * provenance.
- *
- * Must be called from inside a transaction, like every other write in this module.
- */
+/** Loads the validated library into an empty database inside the caller's transaction. */
 internal object SeedDataLoader {
-    private const val RESOURCE = "/db/seed/muslim_data.tsv"
-    private const val COMMENT_PREFIX = '#'
-    private const val TAG_SEPARATOR = '|'
-    private const val COLUMN_SEPARATOR = '\t'
-
-    // The dataset ships Arabic and English only; the resource columns are the two of them plus
-    // the commentary that stands in for a missing reference.
-    private const val ARABIC_LOCALE = "ar"
-    private const val ENGLISH_LOCALE = "en"
-
-    private const val COLUMN_COUNT = 6
-
     /**
      * Inserts the dataset, unless the database already holds remembrances, and reports what it
      * inserted.
@@ -79,13 +60,9 @@ internal object SeedDataLoader {
      * itself are two functions, each with a single way out.
      */
     private fun seed(logger: KLogger): SeedCounts {
-        val rows = readRows()
-        if (rows.isEmpty()) {
-            logger.warn { "Seed resource [$RESOURCE] holds no rows" }
-            return SeedCounts(remembrances = 0, tags = 0)
-        }
-
-        val tagIds = insertTags(rows)
+        val dataset = SeedDataset.bundled
+        val rows = dataset.remembrances
+        val tagIds = insertTags(dataset.tags)
         val remembranceIds = insertRemembrances(rows)
         insertTranslations(rows, remembranceIds)
         insertExplanations(rows, remembranceIds)
@@ -93,60 +70,34 @@ internal object SeedDataLoader {
 
         logger.info { "Seeded ${rows.size} remembrances and ${tagIds.size} tags" }
 
-        return SeedCounts(remembrances = rows.size, tags = tagIds.size)
-    }
-
-    private fun readRows(): List<SeedRow> =
-        openResource()
-            .bufferedReader(Charsets.UTF_8)
-            .useLines { lines ->
-                lines
-                    .filterNot { it.isBlank() || it.startsWith(COMMENT_PREFIX) }
-                    .map(::parseRow)
-                    .toList()
-            }
-
-    private fun openResource() =
-        checkNotNull(SeedDataLoader::class.java.getResourceAsStream(RESOURCE)) {
-            "Seed resource [$RESOURCE] is missing from the classpath"
-        }
-
-    private fun parseRow(line: String): SeedRow {
-        val columns = line.split(COLUMN_SEPARATOR)
-        require(columns.size == COLUMN_COUNT) {
-            "Seed row must have $COLUMN_COUNT tab separated columns, found ${columns.size}: $line"
-        }
-        return SeedRow(
-            source = columns[0],
-            arabic = columns[1],
-            english = columns[2],
-            explanationArabic = columns[3],
-            explanationEnglish = columns[4],
-            tags = columns[5].split(TAG_SEPARATOR),
+        return SeedCounts(
+            remembrances = rows.size,
+            tags = tagIds.size,
+            remembranceIds = rows.map { it.key }.zip(remembranceIds).toMap(),
         )
     }
 
-    private fun insertTags(rows: List<SeedRow>): Map<String, Long> {
-        val names = rows.flatMap { it.tags }.distinct()
+    private fun insertTags(tags: List<SeedTag>): Map<String, Long> {
         val generated =
-            TagTable.batchInsert(names) { tagName ->
-                this[TagTable.name] = tagName
+            TagTable.batchInsert(tags) { tag ->
+                this[TagTable.name] = Tag.fold(tag.name)
+                this[TagTable.nameLocaleCode] = tag.nameLocale
             }
-        return names.zip(generated.map { it[TagTable.id].value }).toMap()
+        return tags.map { it.key }.zip(generated.map { it[TagTable.id].value }).toMap()
     }
 
-    private fun insertRemembrances(rows: List<SeedRow>): List<Long> =
+    private fun insertRemembrances(rows: List<SeedRemembrance>): List<Long> =
         RemembranceTable
             .batchInsert(rows) { row ->
                 this[RemembranceTable.sourceText] = row.source
-                this[RemembranceTable.grade] = HadithGrade.UNSPECIFIED
+                this[RemembranceTable.grade] = HadithGrade.valueOf(row.grade)
             }.map { it[RemembranceTable.id].value }
 
     private fun insertTranslations(
-        rows: List<SeedRow>,
+        rows: List<SeedRemembrance>,
         remembranceIds: List<Long>,
     ) {
-        val localized = rows.localized(remembranceIds, SeedRow::arabic, SeedRow::english)
+        val localized = rows.localized(remembranceIds) { it.text }
         RemembranceTranslationTable.batchInsert(localized) { row ->
             this[RemembranceTranslationTable.ownerId] = row.remembranceId
             this[RemembranceTranslationTable.localeCode] = row.localeCode
@@ -155,11 +106,11 @@ internal object SeedDataLoader {
     }
 
     private fun insertExplanations(
-        rows: List<SeedRow>,
+        rows: List<SeedRemembrance>,
         remembranceIds: List<Long>,
     ) {
         ExplanationTranslationTable.batchInsert(
-            rows.localized(remembranceIds, SeedRow::explanationArabic, SeedRow::explanationEnglish),
+            rows.localized(remembranceIds) { it.explanation },
         ) { row ->
             this[ExplanationTranslationTable.ownerId] = row.remembranceId
             this[ExplanationTranslationTable.localeCode] = row.localeCode
@@ -168,7 +119,7 @@ internal object SeedDataLoader {
     }
 
     private fun insertTagLinks(
-        rows: List<SeedRow>,
+        rows: List<SeedRemembrance>,
         remembranceIds: List<Long>,
         tagIds: Map<String, Long>,
     ) {
@@ -183,28 +134,17 @@ internal object SeedDataLoader {
         }
     }
 
-    /** One per locale per remembrance, in the order the resource stores them. */
-    private fun List<SeedRow>.localized(
+    private fun List<SeedRemembrance>.localized(
         remembranceIds: List<Long>,
-        arabicText: (SeedRow) -> String,
-        englishText: (SeedRow) -> String,
+        text: (SeedTranslation) -> String?,
     ): List<LocalizedText> =
         flatMapIndexed { index, row ->
-            val remembranceId = remembranceIds[index]
-            listOf(
-                LocalizedText(remembranceId, ARABIC_LOCALE, arabicText(row)),
-                LocalizedText(remembranceId, ENGLISH_LOCALE, englishText(row)),
-            )
+            row.translations.mapNotNull { (locale, translation) ->
+                text(translation)?.takeIf { it.isNotBlank() }?.let {
+                    LocalizedText(remembranceIds[index], locale, it)
+                }
+            }
         }
-
-    private data class SeedRow(
-        val source: String,
-        val arabic: String,
-        val english: String,
-        val explanationArabic: String,
-        val explanationEnglish: String,
-        val tags: List<String>,
-    )
 
     private data class LocalizedText(
         val remembranceId: Long,

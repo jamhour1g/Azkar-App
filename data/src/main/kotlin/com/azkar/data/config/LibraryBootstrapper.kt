@@ -113,14 +113,13 @@ class LibraryBootstrapper(
     private suspend fun isDatasetPresent(): Boolean = transactions.run { RemembranceTable.selectAll().limit(1).any() }
 
     /**
-     * One transaction, and in this order: the collections resolve their membership through tags that
-     * loading the remembrances creates, so a dataset seeded after them would find nothing to resolve.
+     * One transaction: resolve explicit collection member keys to the remembrance IDs just inserted.
      */
     private suspend fun writeShippedDataset() {
         transactions.run {
             logger.info { "Writing the shipped library into an empty database" }
-            SeedDataLoader.load()
-            CollectionSeed.load()
+            val seeded = SeedDataLoader.load()
+            CollectionSeed.load(seeded.remembranceIds)
         }
     }
 

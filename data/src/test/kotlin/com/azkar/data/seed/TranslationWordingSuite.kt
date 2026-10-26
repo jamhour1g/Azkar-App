@@ -306,8 +306,10 @@ private class SeededLibrary(
  */
 private suspend fun withLibrary(block: suspend (SeededLibrary) -> Unit) {
     val database = TestDatabase.bootstrapWithH2()
-    transaction(database) { SeedDataLoader.load() }
-    transaction(database) { CollectionSeed.load() }
+    transaction(database) {
+        val seeded = SeedDataLoader.load()
+        CollectionSeed.load(seeded.remembranceIds)
+    }
     val transactions = ExposedTransactionRunner(database)
     val tags = ExposedTagRepository(transactions)
     block(SeededLibrary(database, ExposedCollectionRepository(transactions, tags), tags))

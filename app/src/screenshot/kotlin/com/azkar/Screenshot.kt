@@ -1,7 +1,10 @@
 package com.azkar
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -11,6 +14,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
@@ -20,6 +24,7 @@ import com.azkar.data.storage.CoverStorage
 import com.azkar.i18n.LocaleStore
 import com.azkar.i18n.activateLocale
 import com.azkar.ui.home.HomeCollectionRail
+import com.azkar.ui.home.HomeGateway
 import com.azkar.ui.home.HomeScreen
 import com.azkar.ui.library.CollectionCoverCache
 import com.azkar.ui.library.CollectionDetailScreen
@@ -28,8 +33,11 @@ import com.azkar.ui.library.CollectionSessionScreen
 import com.azkar.ui.library.CollectionsCatalogue
 import com.azkar.ui.library.CollectionsScreen
 import com.azkar.ui.library.RemembranceReaderScreen
+import com.azkar.ui.library.TagsScreen
+import com.azkar.ui.library.TagsState
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.data.HomeCollections
+import com.azkar.ui.library.data.TagGateway
 import com.azkar.ui.library.model.CollectionMemberView
 import com.azkar.ui.library.rememberCollectionDetailState
 import com.azkar.ui.library.rememberCollectionSessionState
@@ -37,6 +45,7 @@ import com.azkar.ui.library.rememberRemembranceReaderState
 import com.azkar.ui.notifications.NotificationAction
 import com.azkar.ui.notifications.NotificationContent
 import com.azkar.ui.notifications.presentation.NotificationCard
+import com.azkar.ui.notifications.presentation.OverlayCardSizing
 import com.azkar.ui.notifications.presentation.PresentedNotice
 import com.azkar.ui.preview.previewRailCards
 import com.azkar.ui.preview.previewReminders
@@ -57,6 +66,7 @@ import org.koin.mp.KoinPlatform
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.SwingUtilities
@@ -83,47 +93,238 @@ import javax.swing.SwingUtilities
  */
 @Suppress("ForbiddenMethodCall")
 suspend fun main() {
-    val out = Path.of(System.getProperty("azkar.screenshot.out") ?: "build/screenshot.png")
     val width = System.getProperty("azkar.screenshot.width")?.toInt() ?: 1440
     val height = System.getProperty("azkar.screenshot.height")?.toInt() ?: 900
-    val target = System.getProperty("azkar.screenshot.screen") ?: SCREEN_APP
-    out.parent?.let(Files::createDirectories)
+    require(width > 0 && height > 0) { "Screenshot width and height must be positive: ${width}x$height" }
 
-    // The same container the real window gets, so a screenshot exercises the real graph rather than
-    // a parallel one built for the harness: `AzkarApp` below resolves its gateways and its shell
-    // state out of it, and those reach the same seeded database `Main.kt` does.
+    if (System.getProperty("azkar.screenshot.list") == "true") {
+        println(SCREENSHOT_TARGETS.joinToString("\n") { (name, description) -> "$name\t$description" })
+        return
+    }
+
+    val config = screenshotConfig(width, height)
+    prepareScreenshotEnvironment(config)
+
+    config.targets.forEach { target ->
+        config.themes.forEach { theme -> renderScreenshot(config, target, theme) }
+    }
+}
+
+private data class ScreenshotConfig(
+    val out: Path,
+    val width: Int,
+    val height: Int,
+    val home: Path,
+    val targets: List<ScreenshotTarget>,
+    val themes: List<ScreenshotTheme>,
+    val outputDirectory: Path?,
+)
+
+private data class ScreenshotSelection(
+    val targets: List<ScreenshotTarget>,
+    val themes: List<ScreenshotTheme>,
+)
+
+private fun screenshotConfig(
+    width: Int,
+    height: Int,
+): ScreenshotConfig {
+    val out = Path.of(System.getProperty("azkar.screenshot.out") ?: "build/screenshot.png")
+    val home = Path.of(System.getProperty("azkar.screenshot.home") ?: "build/screenshot-home")
+    val selection = screenshotSelection()
+    val batch =
+        System.getProperty("azkar.screenshot.targets") != null || System.getProperty("azkar.screenshot.themes") != null
+    val outputDirectory =
+        System.getProperty("azkar.screenshot.outDir")?.let(Path::of)
+            ?: if (batch) out.parent ?: Path.of("build") else null
+
+    outputDirectory?.let(Files::createDirectories)
+    if (outputDirectory == null) out.parent?.let(Files::createDirectories)
+
+    return ScreenshotConfig(out, width, height, home, selection.targets, selection.themes, outputDirectory)
+}
+
+private fun screenshotSelection(): ScreenshotSelection {
+    val requestedTargets =
+        System
+            .getProperty("azkar.screenshot.targets")
+            ?.split(',')
+            ?.map(String::trim)
+            ?.filter(String::isNotEmpty)
+            ?: listOf(System.getProperty("azkar.screenshot.screen") ?: SCREEN_APP)
+    require(requestedTargets.isNotEmpty()) { "Specify at least one screenshot target" }
+
+    val targets = requestedTargets.map(::resolveTarget)
+    require(targets.map(ScreenshotTarget::outputName).distinct().size == targets.size) {
+        "Screenshot targets resolve to duplicate output names"
+    }
+
+    val legacyDark =
+        System.getProperty("azkar.screenshot.dark")?.let { raw ->
+            raw.toBooleanStrictOrNull() ?: error("Invalid azkar.screenshot.dark value '$raw'; expected true or false")
+        }
+    val requestedThemes =
+        System
+            .getProperty("azkar.screenshot.themes")
+            ?.split(',')
+            ?.map(String::trim)
+            ?.filter(String::isNotEmpty)
+            ?: listOf(legacyDark?.let { if (it) THEME_DARK else THEME_LIGHT } ?: THEME_SYSTEM)
+    require(requestedThemes.isNotEmpty()) { "Specify at least one screenshot theme" }
+
+    val themes = requestedThemes.map(::resolveTheme)
+    require(themes.map(ScreenshotTheme::name).distinct().size == themes.size) {
+        "Specify each screenshot theme at most once"
+    }
+
+    return ScreenshotSelection(targets, themes)
+}
+
+private suspend fun prepareScreenshotEnvironment(config: ScreenshotConfig) {
+    if (System.getProperty("azkar.screenshot.home") == null) deleteTree(config.home)
+    Files.createDirectories(config.home)
+    System.setProperty("user.home", config.home.toAbsolutePath().toString())
+    System.setProperty("user.name", System.getProperty("azkar.screenshot.userName") ?: "Azkar")
+
+    // Use the same dependency graph as the real window so screenshots exercise actual app state.
     startKoin {
         modules(dataModule, appModule)
     }
 
+    if (config.targets.any { it.name == SCREEN_APP || it.name == SCREEN_HOME }) {
+        val homeGateway = KoinPlatform.getKoin().get<HomeGateway>()
+        homeGateway.findHomeCollections()
+        homeGateway.findFavorites()
+        homeGateway.findDailyRemembrance()
+    }
+
     KoinPlatform.getKoin().get<LocaleStore>().readAndActivate()
-    // Deliberately not `persist`: rendering in another language must not rewrite the real
-    // setting, so this only moves the JVM default the resources read.
+
+    // Deliberately do not persist this locale; screenshot rendering must not rewrite app settings.
     System
         .getProperty("azkar.screenshot.locale")
         ?.takeIf { it.isNotBlank() }
         ?.let { tag -> Locale.forLanguageTag(tag).activateLocale() }
+}
 
+private fun renderScreenshot(
+    config: ScreenshotConfig,
+    target: ScreenshotTarget,
+    theme: ScreenshotTheme,
+) {
+    val density = if (target.name == SCREEN_REMINDER_CARD) 3f else 1f
     val scene =
-        ImageComposeScene(width = width, height = height, density = Density(1f)) {
-            ScreenshotContent(target = target, width = width, height = height)
+        ImageComposeScene(
+            width = config.width,
+            height = config.height,
+            density = Density(density),
+        ) {
+            ScreenshotContent(target = target.name, width = config.width, height = config.height, dark = theme.dark)
         }
 
-    // Both screens fill themselves from the H2 database on a background coroutine. A single render
-    // catches the frame before any of that lands, so the image would only ever prove that the
-    // placeholders line up — which is exactly the half of the layout that is not in question.
-    //
-    // `ImageComposeScene.render` drives the frame clock from the `nanoTime` it is handed, and its
-    // default is `0` — so a naive render loop freezes every animation on its first frame. Passing
-    // a real clock is what lets the crossfades finish, and draining the pending work is what lets
-    // the background loads land. Without both, a screenshot shows the frame the screen started on.
-    onEventDispatchThread { renderUntilIdle(scene) }
+    try {
+        // Wait for H2-backed content and Compose animations before saving the frame.
+        onEventDispatchThread { renderUntilIdle(scene, target.name, theme.name) }
+        saveScreenshot(config, target, theme, scene)
+    } finally {
+        onEventDispatchThread { scene.close() }
+    }
+}
 
+@Suppress("ForbiddenMethodCall")
+private fun saveScreenshot(
+    config: ScreenshotConfig,
+    target: ScreenshotTarget,
+    theme: ScreenshotTheme,
+    scene: ImageComposeScene,
+) {
     val image = onEventDispatchThread { scene.render(frameNanos()) }
     val data = image.encodeToData(EncodedImageFormat.PNG, 100) ?: error("PNG encoding failed")
-    Files.write(out, data.bytes)
-    println("wrote ${out.toAbsolutePath()} (${image.width}x${image.height}, ${data.bytes.size} bytes)")
+    val destination = config.outputDirectory?.resolve("${target.outputName}-${theme.name}.png") ?: config.out
+    val temporary = destination.resolveSibling(".${destination.fileName}.tmp")
+
+    try {
+        Files.write(temporary, data.bytes)
+        Files.move(temporary, destination, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+    } finally {
+        Files.deleteIfExists(temporary)
+    }
+
+    println("wrote ${destination.toAbsolutePath()} (${image.width}x${image.height}, ${data.bytes.size} bytes)")
 }
+
+private data class ScreenshotTarget(
+    val name: String,
+    val outputName: String,
+    val description: String,
+)
+
+private data class ScreenshotTheme(
+    val name: String,
+    val dark: Boolean?,
+)
+
+private fun deleteTree(root: Path) {
+    if (!Files.exists(root)) return
+    Files.walk(root).use { paths ->
+        paths.sorted(Comparator<Path> { first, second -> second.compareTo(first) }).forEach(Files::deleteIfExists)
+    }
+}
+
+private val SCREENSHOT_TARGETS =
+    listOf(
+        "app" to "Full app shell",
+        "home" to "Home screen",
+        "settings" to "Settings screen",
+        "settings-prayer" to "Prayer settings screen",
+        "settings-reminders" to "Reminder settings screen",
+        "collections" to "Collections library screen",
+        "library" to "Collections library screen (legacy alias)",
+        "collection-detail" to "Collection detail screen",
+        "collection-session" to "Recitation session screen",
+        "remembrance" to "Remembrance reader screen",
+        "tags" to "Tag management screen",
+        "home-rail" to "Component: home collection rail",
+        "notifications" to "Component: notification stack",
+        "reminder-card" to "Component: passage reminder at presentation scale",
+    )
+
+private val SCREENSHOT_TARGET_ALIASES =
+    mapOf(
+        "component.home-rail" to "home-rail",
+        "component.notification-stack" to "notifications",
+    )
+
+private val SCREENSHOT_OUTPUT_NAMES =
+    mapOf(
+        "app" to "screen-home",
+        "home" to "screen-home-content",
+        "collections" to "screen-library",
+        "remembrance" to "screen-reader",
+        "collection-session" to "screen-session",
+        "settings-reminders" to "screen-schedule",
+        "settings-prayer" to "screen-prayer",
+        "collection-detail" to "screen-collection",
+        "reminder-card" to "screen-reminder",
+    )
+
+private fun resolveTarget(requested: String): ScreenshotTarget {
+    val name = SCREENSHOT_TARGET_ALIASES[requested] ?: requested
+    val description =
+        SCREENSHOT_TARGETS.firstOrNull { it.first == name }?.second
+            ?: error(
+                "Unknown screenshot target '$requested'. Set azkar.screenshot.list=true to list available targets.",
+            )
+    return ScreenshotTarget(name, SCREENSHOT_OUTPUT_NAMES[name] ?: name, description)
+}
+
+private fun resolveTheme(requested: String): ScreenshotTheme =
+    when (requested) {
+        THEME_LIGHT -> ScreenshotTheme(THEME_LIGHT, false)
+        THEME_DARK -> ScreenshotTheme(THEME_DARK, true)
+        THEME_SYSTEM -> ScreenshotTheme(THEME_SYSTEM, null)
+        else -> error("Unknown screenshot theme '$requested'; expected light, dark, or system")
+    }
 
 /**
  * Runs [block] on the AWT event dispatch thread and rethrows whatever it threw, unwrapped.
@@ -155,18 +356,28 @@ private fun <T> onEventDispatchThread(block: () -> T): T {
  * means both no pending recomposition and no running animation — neither of which a fixed sleep can
  * promise, since the frame clock only moves when a frame is rendered.
  */
-private fun renderUntilIdle(scene: ImageComposeScene) {
-    val deadline = System.nanoTime() + RENDER_BUDGET_NANOS
+private fun renderUntilIdle(
+    scene: ImageComposeScene,
+    target: String,
+    theme: String,
+) {
+    val started = System.nanoTime()
+    val deadline = started + RENDER_BUDGET_NANOS
     var idleFrames = 0
     while (System.nanoTime() < deadline) {
         scene.render(frameNanos())
         if (!scene.hasPendingWork()) {
-            if (++idleFrames >= IDLE_FRAMES_REQUIRED) return
+            if (++idleFrames >= IDLE_FRAMES_REQUIRED && System.nanoTime() - started >= MINIMUM_RENDER_NANOS) return
         } else {
             idleFrames = 0
         }
         Thread.sleep(FRAME_INTERVAL_MILLIS)
     }
+    val timeoutSeconds = RENDER_BUDGET_NANOS / 1_000_000_000
+    error(
+        "Screenshot '$target' ($theme) did not settle within $timeoutSeconds seconds; " +
+            "last idle run was $idleFrames frames",
+    )
 }
 
 private fun frameNanos(): Long = System.nanoTime()
@@ -174,6 +385,7 @@ private fun frameNanos(): Long = System.nanoTime()
 private fun ImageComposeScene.hasPendingWork(): Boolean = hasInvalidations() || Snapshot.current.hasPendingChanges()
 
 private const val FRAME_INTERVAL_MILLIS = 40L
+private const val MINIMUM_RENDER_NANOS = 1_000_000_000L
 private const val RENDER_BUDGET_NANOS = 20_000_000_000L
 
 /**
@@ -185,12 +397,17 @@ private const val RENDER_BUDGET_NANOS = 20_000_000_000L
 private const val IDLE_FRAMES_REQUIRED = 3
 
 private const val SCREEN_APP = "app"
+private const val THEME_LIGHT = "light"
+private const val THEME_DARK = "dark"
+private const val THEME_SYSTEM = "system"
 private const val SCREEN_HOME = "home"
 private const val SCREEN_SETTINGS = "settings"
 private const val SCREEN_SETTINGS_PRAYER = "settings-prayer"
+private const val SCREEN_SETTINGS_REMINDERS = "settings-reminders"
 private const val SCREEN_COLLECTIONS = "collections"
 private const val SCREEN_LIBRARY = "library"
 private const val SCREEN_COLLECTION_DETAIL = "collection-detail"
+private const val SCREEN_TAGS = "tags"
 
 /** `-Pazkar.screenshot.memberView=list` renders the collection's members as a list rather than a grid. */
 private const val SCREENSHOT_MEMBER_VIEW = "azkar.screenshot.memberView"
@@ -198,16 +415,17 @@ private const val SCREEN_COLLECTION_SESSION = "collection-session"
 private const val SCREEN_REMEMBRANCE = "remembrance"
 private const val SCREEN_HOME_RAIL = "home-rail"
 private const val SCREEN_NOTIFICATIONS = "notifications"
+private const val SCREEN_REMINDER_CARD = "reminder-card"
 
 @Composable
 private fun ScreenshotContent(
     target: String,
     width: Int,
     height: Int,
+    dark: Boolean?,
 ) {
-    val override = System.getProperty("azkar.screenshot.dark")?.toBooleanStrictOrNull()
-    if (target.substringAfterLast('.') == SCREEN_APP) {
-        AzkarApp(rememberAzkarAppState(override.asThemePreference()))
+    if (target == SCREEN_APP) {
+        AzkarApp(rememberAzkarAppState(dark.asThemePreference()))
         return
     }
 
@@ -224,7 +442,7 @@ private fun ScreenshotContent(
     // The one shared holder the screens that show reminders read. Built over a fixture rather than
     // over the database because a schedule cannot be in the local one — nothing sets a reminder until
     // a user does — so a screenshot of the real screen would only ever prove an absent row.
-    val reminders = remember { previewReminders(SCREENSHOT_COLLECTION_ID) }
+    val reminders = remember { previewReminders(SCREENSHOT_REMINDER_FIXTURE_ID) }
     // The catalogue the shell owns, reproduced here for the same reason as the reminders above: the
     // screens no longer build one of their own, so a screenshot that skipped this would render an
     // empty shelf. Built over the real gateway rather than a fixture because the library *is* the
@@ -238,23 +456,25 @@ private fun ScreenshotContent(
     val covers = remember(coverStorage) { CollectionCoverCache(coverStorage) }
     val catalogue = remember(scope, locale, covers) { CollectionsCatalogue(scope, locale, gateway, covers) }
     AzkarTheme(
-        darkTheme = override ?: rememberSystemTheme().isDark,
+        darkTheme = dark ?: rememberSystemTheme().isDark,
         uiLocale = locale,
     ) {
         key(locale) {
             CompositionLocalProvider(
                 LocalWindowSizeClass provides windowSizeClassFor(width.dp, height.dp),
             ) {
-                // As in the shell: the read is asked for once here rather than by each screen, and
-                // the screens' own calls are no-ops because the catalogue has already been asked.
-                LaunchedEffect(catalogue) { catalogue.loadLabels() }
-                LaunchedEffect(catalogue) { catalogue.loadData() }
-                ScreenshotScreen(
-                    screen = target.substringAfterLast('.'),
-                    catalogue = catalogue,
-                    reminders = reminders,
-                    themePreference = override.asThemePreference(),
-                )
+                Box(Modifier.fillMaxSize().background(AzkarTheme.colors.background)) {
+                    // As in the shell: the read is asked for once here rather than by each screen, and
+                    // the screens' own calls are no-ops because the catalogue has already been asked.
+                    LaunchedEffect(catalogue) { catalogue.loadLabels() }
+                    LaunchedEffect(catalogue) { catalogue.loadData() }
+                    ScreenshotScreen(
+                        screen = target,
+                        catalogue = catalogue,
+                        reminders = reminders,
+                        themePreference = dark.asThemePreference(),
+                    )
+                }
             }
         }
     }
@@ -288,12 +508,16 @@ private fun ScreenshotScreen(
         SCREEN_SETTINGS -> SettingsScreen(rememberAzkarAppState(themePreference), onClose = {})
         SCREEN_SETTINGS_PRAYER ->
             SettingsScreen(rememberAzkarAppState(themePreference), onClose = {}, initialGroup = SettingsGroup.PRAYER)
+        SCREEN_SETTINGS_REMINDERS ->
+            SettingsScreen(rememberAzkarAppState(themePreference), onClose = {}, initialGroup = SettingsGroup.REMINDERS)
 
-        SCREEN_COLLECTION_DETAIL -> CollectionDetailShot(catalogue, reminders)
+        SCREEN_COLLECTION_DETAIL -> CollectionDetailShot(catalogue)
 
-        SCREEN_COLLECTION_SESSION -> CollectionSessionShot(catalogue, reminders)
+        SCREEN_COLLECTION_SESSION -> CollectionSessionShot(catalogue)
 
         SCREEN_REMEMBRANCE -> RemembranceShot(catalogue)
+
+        SCREEN_TAGS -> TagsShot(catalogue)
 
         SCREEN_HOME_RAIL ->
             Column(
@@ -302,7 +526,7 @@ private fun ScreenshotScreen(
             ) {
                 HomeCollectionRail(
                     cards = HomeCollections.pick(previewRailCards(), RAIL_SHOT_LIMIT),
-                    reminderIds = setOf(SCREENSHOT_COLLECTION_ID + 1L),
+                    reminderIds = setOf(SCREENSHOT_REMINDER_FIXTURE_ID + 1L),
                     onOpen = {},
                 )
             }
@@ -324,6 +548,11 @@ private fun ScreenshotScreen(
         // only asks whether text was drawn, and would look like an unstyled rectangle in practice.
         SCREEN_NOTIFICATIONS -> NotificationStackShot()
 
+        SCREEN_REMINDER_CARD ->
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(Modifier.width(420.dp).padding(16.dp)) { PassageReminderShot() }
+            }
+
         else -> error("Unknown screenshot target \"$screen\"")
     }
 }
@@ -342,26 +571,7 @@ private fun NotificationStackShot() {
         modifier = Modifier.width(380.dp).padding(AzkarSpacing.screenPaddingHorizontal),
         verticalArrangement = Arrangement.spacedBy(AzkarSpacing.dashboard),
     ) {
-        NotificationCard(
-            item =
-                PresentedNotice(
-                    id = 0L,
-                    title = "Azkar reminder",
-                    message = "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
-                    action = NotificationAction.Remembrance(0L),
-                    content =
-                        NotificationContent.Remembrance(
-                            text = "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
-                            position = 1,
-                            total = 3,
-                            isFavorite = true,
-                        ),
-                ),
-            onOpen = {},
-            onDismiss = {},
-            onPauseChanged = {},
-            onToggleFavorite = { _, _ -> true },
-        )
+        PassageReminderShot()
         listOf(
             "After Fajr" to "Say it once, slowly, and mean it.",
             "Asr is due in 20 minutes" to "Reminder queued from your morning collection.",
@@ -383,11 +593,35 @@ private fun NotificationStackShot() {
 }
 
 @Composable
-private fun CollectionDetailShot(
-    catalogue: CollectionsCatalogue,
-    reminders: CollectionReminderState,
-) {
-    val detail = rememberCollectionDetailState(catalogue, SCREENSHOT_COLLECTION_ID, reminders)
+private fun PassageReminderShot() {
+    NotificationCard(
+        item =
+            PresentedNotice(
+                id = 0L,
+                title = "Azkar reminder",
+                message = "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
+                action = NotificationAction.Remembrance(0L),
+                content =
+                    NotificationContent.Remembrance(
+                        text = "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
+                        position = 1,
+                        total = 3,
+                        isFavorite = true,
+                    ),
+            ),
+        sizing = OverlayCardSizing.FIT,
+        onOpen = {},
+        onDismiss = {},
+        onPauseChanged = {},
+        onToggleFavorite = { _, _ -> true },
+    )
+}
+
+@Composable
+private fun CollectionDetailShot(catalogue: CollectionsCatalogue) {
+    val collectionId = featuredCollectionId(catalogue) ?: return
+    val collectionReminders = remember(collectionId) { previewReminders(collectionId) }
+    val detail = rememberCollectionDetailState(catalogue, collectionId, collectionReminders)
     // The grid's two axes are the one part of this page a screenshot of it as it first appears cannot
     // reach, so the list is named here rather than left unshot. Applied in an effect rather than in
     // the body because these are state writes, and a state write during composition is a write that
@@ -409,12 +643,11 @@ private fun CollectionDetailShot(
 }
 
 @Composable
-private fun CollectionSessionShot(
-    catalogue: CollectionsCatalogue,
-    reminders: CollectionReminderState,
-) {
+private fun CollectionSessionShot(catalogue: CollectionsCatalogue) {
+    val collectionId = featuredCollectionId(catalogue) ?: return
+    val collectionReminders = remember(collectionId) { previewReminders(collectionId) }
     CollectionSessionScreen(
-        session = rememberCollectionSessionState(catalogue, SCREENSHOT_COLLECTION_ID, reminders),
+        session = rememberCollectionSessionState(catalogue, collectionId, collectionReminders),
         onBack = {},
         onOpenRemembrance = {},
         showToast = { _, _, _ -> },
@@ -435,18 +668,45 @@ private fun RemembranceShot(catalogue: CollectionsCatalogue) {
     // change to the catalogue would quietly invalidate. A shot of an empty page is
     // worse than no shot, and this cannot quietly become one.
     val firstMemberId =
-        catalogue.allCollections
-            .firstOrNull { it.id == SCREENSHOT_COLLECTION_ID }
-            ?.members
-            ?.firstOrNull()
-            ?.id
-            ?: 1L
+        featuredCollectionId(catalogue)
+            ?.let { id ->
+                catalogue.allCollections
+                    .firstOrNull { it.id == id }
+                    ?.members
+                    ?.firstOrNull()
+                    ?.id
+            }
+            ?: return
     RemembranceReaderScreen(
         detail = rememberRemembranceReaderState(catalogue = catalogue, remembranceId = firstMemberId),
         onBack = {},
         showToast = { _, _, _ -> },
     )
 }
+
+@Composable
+private fun TagsShot(catalogue: CollectionsCatalogue) {
+    val scope = rememberCoroutineScope()
+    val gateway = koinInject<TagGateway>()
+    val tags =
+        remember(gateway, scope, catalogue) {
+            TagsState(scope = scope, gateway = gateway, onTagsChanged = catalogue::tagsChanged)
+        }
+    LaunchedEffect(tags) { tags.load() }
+    TagsScreen(
+        state = tags,
+        onBack = {},
+        showToast = { _, _, _ -> },
+        onOpenCollection = {},
+        onOpenRemembrance = {},
+    )
+}
+
+private fun featuredCollectionId(catalogue: CollectionsCatalogue): Long? =
+    (
+        catalogue.allCollections.firstOrNull { it.name == "Praising Allah" }
+            ?: catalogue.allCollections.firstOrNull { it.members.isNotEmpty() }
+    )?.id
 
 /** `null` (the default) keeps [AzkarApp]'s own system-aware resolution in charge. */
 private fun Boolean?.asThemePreference(): ThemePreference =
@@ -456,17 +716,8 @@ private fun Boolean?.asThemePreference(): ThemePreference =
         null -> ThemePreference.SYSTEM
     }
 
-/**
- * The collection the detail screen is rendered on.
- *
- * Row `11` of a fresh seed — the shipped "Praising Allah", twenty-nine remembrances in it. It is an
- * official collection, which is the interesting case since it shows the shipped label and hides the
- * editing controls, and it is also the only row whose size exercises the grid: the members have to be
- * laid out in five columns, sorted, and given a progress bar with something in it, and a two-member
- * row like Favorites proves none of that. A custom collection would exercise the opposite branch, and
- * the harness has no way to create one before the render.
- */
-private const val SCREENSHOT_COLLECTION_ID = 11L
+/** Synthetic reminder identifiers for the preview-only Home rail and notification state. */
+private const val SCREENSHOT_REMINDER_FIXTURE_ID = 11L
 
 /** Matches the rail's own limit, so a screenshot shows what the screen would actually draw. */
 private const val RAIL_SHOT_LIMIT = 4

@@ -196,6 +196,10 @@ jobs:
         with:
           java-version: '25'
           distribution: 'zulu'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-disabled: true
       - name: Set up Kotlin compiler
         uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
         with:
@@ -210,7 +214,9 @@ jobs:
           APP_VERSION: ${{ needs.prepare.outputs.app_version }}
         run: ./scripts/merge_nucleus_release.main.kts release-input release-assets "$APP_VERSION"
       - name: Install repository tooling
-        run: sudo apt-get update && sudo apt-get install -y apt-utils createrepo-c gnupg
+        run: sudo apt-get update && sudo apt-get install -y apt-utils createrepo-c gnupg libgl1
+      - name: Refresh download page screenshots
+        run: ./gradlew :app:captureDownloadScreenshots --console=plain
       - name: Import and verify Linux repository signing key
         env:
           REPO_PRIVATE_KEY: ${{ secrets.LINUX_REPO_SIGNING_KEY }}
