@@ -460,6 +460,13 @@ nucleus.application {
     }
 }
 
+tasks.matching { it.name == "proguardReleaseJars" }.configureEach {
+    if (providers.environmentVariable("CI").map(String::toBoolean).getOrElse(false)) {
+        // ProGuard sends its long informational notes to stdout; keep them available with --debug.
+        logging.captureStandardOutput(org.gradle.api.logging.LogLevel.DEBUG)
+    }
+}
+
 // A release tag that disagrees with the declared version would ship an installer whose name lies.
 // GitHub Actions identifies tags through GITHUB_REF; branch builds skip this check.
 tasks.register("checkTagParity") {
