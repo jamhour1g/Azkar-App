@@ -765,7 +765,7 @@ internal fun SettingsScreenPreview() {
     // Assembled from the parts rather than by calling [SettingsScreen], because that composable
     // reaches Koin for the notification holder and a preview has no container to resolve it against.
     Column(
-        modifier = Modifier.fillMaxWidth().padding(40.dp),
+        modifier = Modifier.width(760.dp).padding(40.dp),
         verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
     ) {
         SettingsPageHeader(onClose = {})

@@ -153,7 +153,7 @@ fun CollectionMosaic(
 @Composable
 internal fun CollectionMosaicPreview() {
     Row(
-        modifier = Modifier.width(1100.dp),
+        modifier = Modifier.width(692.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         CollectionMosaic(

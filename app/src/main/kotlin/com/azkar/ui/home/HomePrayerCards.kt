@@ -31,6 +31,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -168,26 +170,22 @@ fun PrayerTimesCard(
 
 @AzkarPreview
 @Composable
-internal fun PrayerTimesCardPreview() {
-    Column(
-        modifier = Modifier.width(520.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+internal fun PrayerTimesCardPreview(
+    @PreviewParameter(PrayerNotificationStateProvider::class) notificationsEnabled: Boolean,
+) {
+    Column(modifier = Modifier.width(520.dp)) {
         PrayerTimesCard(
             rows = previewPrayerRows(),
             countdown = previewCountdown(),
-            notificationsEnabled = true,
-            onGlobalToggle = {},
-            onNotificationToggled = { _, _ -> },
-        )
-        PrayerTimesCard(
-            rows = previewPrayerRows(),
-            countdown = previewCountdown(),
-            notificationsEnabled = false,
+            notificationsEnabled = notificationsEnabled,
             onGlobalToggle = {},
             onNotificationToggled = { _, _ -> },
         )
     }
+}
+
+internal class PrayerNotificationStateProvider : PreviewParameterProvider<Boolean> {
+    override val values = sequenceOf(true, false)
 }
 
 /**

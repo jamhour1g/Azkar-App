@@ -122,7 +122,7 @@ fun HomeCollectionRail(
 @Composable
 internal fun HomeCollectionRailPreview() {
     Column(
-        modifier = Modifier.width(1100.dp),
+        modifier = Modifier.width(380.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         HomeCollectionRail(

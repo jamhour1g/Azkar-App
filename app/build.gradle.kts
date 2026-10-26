@@ -183,6 +183,8 @@ roborazzi {
         enable = previewScannerEnabled
         packages = listOf("com.azkar.ui")
         includePrivatePreviews = true
+        testerQualifiedClassName = "com.azkar.ui.preview.AzkarDesktopPreviewTester"
+        useScanOptionParametersInTester = true
         annotationFilter =
             com.github.takahirom.roborazzi.AnnotationFilter.Exclude(
                 "com.azkar.ui.preview.RoborazziDesktopPreviewExclude",

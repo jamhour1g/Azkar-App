@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
@@ -264,9 +265,11 @@ internal fun AzkarTimePickerDialogPreview() {
 @AzkarPreview
 @Composable
 internal fun AzkarDayPickerPreview() {
-    AzkarDayPicker(
-        activeDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
-        onDayChange = { _, _ -> },
-        dayLabel = { day -> day.name.take(3) },
-    )
+    Box(Modifier.width(420.dp)) {
+        AzkarDayPicker(
+            activeDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+            onDayChange = { _, _ -> },
+            dayLabel = { day -> day.name.take(3) },
+        )
+    }
 }
