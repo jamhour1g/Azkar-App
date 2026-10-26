@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,8 +51,8 @@ import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarOutlinedField
 import com.azkar.ui.components.BorderedStateBox
 import com.azkar.ui.components.TooltipIconButton
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
 
 /** How long the open/close chevron takes to flip, long enough to read as a rotation. */
@@ -236,17 +235,15 @@ internal fun CollectionStateStar(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionStateStarPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(340.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CollectionStateStar(loading = true)
-            CollectionStateStar(loading = false)
-        }
+internal fun CollectionStateStarPreview() {
+    Row(
+        modifier = Modifier.width(340.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        CollectionStateStar(loading = true)
+        CollectionStateStar(loading = false)
     }
 }
 
@@ -274,12 +271,10 @@ internal fun CollectionsLoadingState(modifier: Modifier = Modifier) {
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionsLoadingStatePreview() {
-    AzkarThemePreview {
-        CollectionsLoadingState(modifier = Modifier.width(420.dp))
-    }
+internal fun CollectionsLoadingStatePreview() {
+    CollectionsLoadingState(modifier = Modifier.width(420.dp))
 }
 
 /**
@@ -328,26 +323,24 @@ internal fun CollectionsEmptyState(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionsEmptyStatePreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(420.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CollectionsEmptyState(
-                title = "No collections yet",
-                hint = "Start from a built-in set, or make one of your own.",
-            )
-            CollectionsEmptyState(
-                title = "Nothing matches that search",
-                hint = "Try a different word, or widen the filters.",
-                action = {
-                    CollectionsInfoLine(text = "3 of 12 collections")
-                },
-            )
-        }
+internal fun CollectionsEmptyStatePreview() {
+    Column(
+        modifier = Modifier.width(420.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        CollectionsEmptyState(
+            title = "No collections yet",
+            hint = "Start from a built-in set, or make one of your own.",
+        )
+        CollectionsEmptyState(
+            title = "Nothing matches that search",
+            hint = "Try a different word, or widen the filters.",
+            action = {
+                CollectionsInfoLine(text = "3 of 12 collections")
+            },
+        )
     }
 }
 
@@ -387,12 +380,10 @@ internal fun CollectionsInfoLine(
     )
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionsInfoLinePreview() {
-    AzkarThemePreview {
-        CollectionsInfoLine(text = "12 collections · 96 remembrances")
-    }
+internal fun CollectionsInfoLinePreview() {
+    CollectionsInfoLine(text = "12 collections · 96 remembrances")
 }
 
 /**
@@ -426,16 +417,14 @@ internal fun EmptyStateAction(
     )
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun EmptyStateActionPreview() {
-    AzkarThemePreview {
-        EmptyStateAction(
-            icon = ActionIcons.addMembers,
-            description = "Create a collection",
-            onClick = {},
-        )
-    }
+internal fun EmptyStateActionPreview() {
+    EmptyStateAction(
+        icon = ActionIcons.addMembers,
+        description = "Create a collection",
+        onClick = {},
+    )
 }
 
 /** Comfortably past the 48dp a pointer target is asked to be, because this is often the only one. */

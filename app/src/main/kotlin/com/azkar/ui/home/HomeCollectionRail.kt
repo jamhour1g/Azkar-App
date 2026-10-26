@@ -22,7 +22,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -42,9 +41,9 @@ import com.azkar.ui.library.data.HomeCollection
 import com.azkar.ui.library.data.HomeCollections
 import com.azkar.ui.preview.previewDueCollectionIds
 import com.azkar.ui.preview.previewRailCards
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
 
@@ -119,21 +118,19 @@ fun HomeCollectionRail(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun HomeCollectionRailPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(1100.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            HomeCollectionRail(
-                cards = previewRailCards(),
-                reminderIds = previewDueCollectionIds(),
-                onOpen = {},
-            )
-            HomeCollectionRail(cards = emptyList(), reminderIds = emptySet(), onOpen = {})
-        }
+internal fun HomeCollectionRailPreview() {
+    Column(
+        modifier = Modifier.width(1100.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        HomeCollectionRail(
+            cards = previewRailCards(),
+            reminderIds = previewDueCollectionIds(),
+            onOpen = {},
+        )
+        HomeCollectionRail(cards = emptyList(), reminderIds = emptySet(), onOpen = {})
     }
 }
 

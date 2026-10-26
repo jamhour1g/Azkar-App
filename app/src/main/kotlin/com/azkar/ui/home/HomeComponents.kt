@@ -29,7 +29,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -42,8 +41,8 @@ import com.azkar.ui.components.TooltipIconButton
 import com.azkar.ui.components.mirrorHorizontalGradient
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.preview.previewFavoriteState
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
 
@@ -185,21 +184,19 @@ fun FavoritesCard(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun FavoritesCardPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(560.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            FavoritesCard(
-                state = previewFavoriteState(),
-                onPrevious = {},
-                onNext = {},
-                onBrowse = {},
-            )
-        }
+internal fun FavoritesCardPreview() {
+    Column(
+        modifier = Modifier.width(560.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        FavoritesCard(
+            state = previewFavoriteState(),
+            onPrevious = {},
+            onNext = {},
+            onBrowse = {},
+        )
     }
 }
 

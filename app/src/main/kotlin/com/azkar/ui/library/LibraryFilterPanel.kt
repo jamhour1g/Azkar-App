@@ -13,7 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,8 +23,8 @@ import com.azkar.ui.components.AzkarCard
 import com.azkar.ui.components.AzkarFilterChip
 import com.azkar.ui.library.model.CollectionScope
 import com.azkar.ui.library.model.CollectionSort
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.stringResource
 
@@ -99,18 +98,16 @@ internal fun LibraryFilterPanel(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun LibraryFilterPanelPreview() {
-    AzkarThemePreview {
-        LibraryFilterPanel(
-            scope = CollectionScope.PINNED,
-            onScopeSelected = {},
-            sort = CollectionSort.NAME,
-            onSortSelected = {},
-            modifier = Modifier.width(320.dp),
-        )
-    }
+internal fun LibraryFilterPanelPreview() {
+    LibraryFilterPanel(
+        scope = CollectionScope.PINNED,
+        onScopeSelected = {},
+        sort = CollectionSort.NAME,
+        onSortSelected = {},
+        modifier = Modifier.width(320.dp),
+    )
 }
 
 /**

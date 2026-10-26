@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -30,8 +29,8 @@ import com.azkar.ui.components.CompletionTrack
 import com.azkar.ui.components.mirrorHorizontalGradient
 import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.preview.previewCollectionStatsVariants
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
 
@@ -152,17 +151,15 @@ private data class StripCaptions(
     val remaining: String?,
 )
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionSessionProgressStripPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(1200.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            previewCollectionStatsVariants().forEach { stats ->
-                CollectionSessionProgressStrip(stats = stats, memberCount = stats.totalMembers)
-            }
+internal fun CollectionSessionProgressStripPreview() {
+    Column(
+        modifier = Modifier.width(1200.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        previewCollectionStatsVariants().forEach { stats ->
+            CollectionSessionProgressStrip(stats = stats, memberCount = stats.totalMembers)
         }
     }
 }

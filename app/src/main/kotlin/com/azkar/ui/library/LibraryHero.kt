@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
@@ -58,8 +57,8 @@ import com.azkar.ui.library.model.CollectionScope
 import com.azkar.ui.library.model.CollectionSort
 import com.azkar.ui.preview.previewLibraryHeroControls
 import com.azkar.ui.theme.AzkarColors
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import java.time.LocalTime
@@ -118,17 +117,15 @@ fun LibraryHero(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun LibraryHeroPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(1200.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            LibraryHero(controls = previewLibraryHeroControls(), compact = false)
-            LibraryHero(controls = previewLibraryHeroControls(query = "Ar-Rahman"), compact = true)
-        }
+internal fun LibraryHeroPreview() {
+    Column(
+        modifier = Modifier.width(1200.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        LibraryHero(controls = previewLibraryHeroControls(), compact = false)
+        LibraryHero(controls = previewLibraryHeroControls(query = "Ar-Rahman"), compact = true)
     }
 }
 

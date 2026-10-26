@@ -45,7 +45,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
@@ -77,9 +76,9 @@ import com.azkar.ui.notifications.presentation.NotificationPresentationSettings
 import com.azkar.ui.preview.previewAzkarAppState
 import com.azkar.ui.preview.rememberPreviewNotificationSettingsState
 import com.azkar.ui.theme.AppTypography
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.SystemFontCatalogue
 import com.azkar.ui.theme.azkarTypography
 import org.jetbrains.compose.resources.stringResource
@@ -732,20 +731,18 @@ private val FONT_MENU_GAP = 4.dp
 /** The empty family name represents the bundled Inter/Amiri choice and must be a stable LazyColumn key. */
 private const val AZKAR_FONT_OPTION_KEY = "__azkar_bundled_font__"
 
-@Preview
+@AzkarPreview
 @Composable
-private fun SettingsAppearanceSectionsPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(760.dp).padding(AzkarSpacing.xl),
-            verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
-        ) {
-            SettingsThemeSection(state = previewAzkarAppState())
-            SettingsTypographySection(state = previewAzkarAppState())
-            SettingsReminderCardSection(
-                presentation = NotificationPresentationSettings(),
-                settings = rememberPreviewNotificationSettingsState(),
-            )
-        }
+internal fun SettingsAppearanceSectionsPreview() {
+    Column(
+        modifier = Modifier.width(760.dp).padding(AzkarSpacing.xl),
+        verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
+    ) {
+        SettingsThemeSection(state = previewAzkarAppState())
+        SettingsTypographySection(state = previewAzkarAppState())
+        SettingsReminderCardSection(
+            presentation = NotificationPresentationSettings(),
+            settings = rememberPreviewNotificationSettingsState(),
+        )
     }
 }

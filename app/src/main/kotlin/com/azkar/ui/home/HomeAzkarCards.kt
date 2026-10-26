@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -32,8 +31,8 @@ import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarSurfaceCard
 import com.azkar.ui.components.mirrorHorizontalGradient
 import com.azkar.ui.components.pressableClick
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
 
@@ -95,27 +94,25 @@ fun TodaysAzkarCard(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun TodaysAzkarCardPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(720.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            TodaysAzkarCard(
-                arabic = "اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ",
-                english = "O Allah, help me to remember You, thank You, and worship You well.",
-                source = "Abu Dawud 1521",
-                onClick = {},
-            )
-            TodaysAzkarCard(
-                arabic = "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ",
-                english = "Glory to Allah, and praise be to Him.",
-                source = null,
-                onClick = {},
-            )
-        }
+internal fun TodaysAzkarCardPreview() {
+    Column(
+        modifier = Modifier.width(720.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        TodaysAzkarCard(
+            arabic = "اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ",
+            english = "O Allah, help me to remember You, thank You, and worship You well.",
+            source = "Abu Dawud 1521",
+            onClick = {},
+        )
+        TodaysAzkarCard(
+            arabic = "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ",
+            english = "Glory to Allah, and praise be to Him.",
+            source = null,
+            onClick = {},
+        )
     }
 }
 

@@ -30,7 +30,6 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,9 +38,9 @@ import com.azkar.generated.resources.settingsNavGroup
 import com.azkar.generated.resources.settingsNavStorageNote
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.pressableClick
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
 
 // `ui/shell/SettingsNavRail.kt` — the left-hand column: what is on the page and where the reader is
@@ -383,15 +382,13 @@ private fun RailRow(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun SettingsNavRailPreview() {
-    AzkarThemePreview {
-        SettingsNavRail(
-            active = SettingsSection.THEME,
-            selectedGroup = SettingsGroup.GENERAL,
-            onSelect = {},
-            onSelectGroup = {},
-        )
-    }
+internal fun SettingsNavRailPreview() {
+    SettingsNavRail(
+        active = SettingsSection.THEME,
+        selectedGroup = SettingsGroup.GENERAL,
+        onSelect = {},
+        onSelectGroup = {},
+    )
 }

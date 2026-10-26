@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.domain.model.RemembranceCollection
@@ -66,8 +65,8 @@ import com.azkar.ui.preview.previewCollection
 import com.azkar.ui.preview.previewCollectionHeroActions
 import com.azkar.ui.preview.previewCollectionStats
 import com.azkar.ui.preview.previewCollectionStatsVariants
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.AzkarWindowSize
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.painterResource
@@ -279,36 +278,34 @@ private fun HeroCopy(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionDetailHeroPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(1200.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CollectionDetailHero(
-                collection = previewCollection(),
-                memberCount = 54,
-                stats = previewCollectionStats(),
-                inReminders = true,
-                actions = previewCollectionHeroActions(),
-            )
-            CollectionDetailHero(
-                collection = previewCollection(homePinnedAt = null, iconKey = "compass"),
-                memberCount = 12,
-                stats = previewCollectionStatsVariants().last(),
-                inReminders = false,
-                actions = previewCollectionHeroActions(),
-            )
-            CollectionDetailHero(
-                collection = previewCollection(),
-                memberCount = 54,
-                stats = previewCollectionStatsVariants()[1],
-                inReminders = false,
-                actions = previewCollectionHeroActions(),
-            )
-        }
+internal fun CollectionDetailHeroPreview() {
+    Column(
+        modifier = Modifier.width(1200.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        CollectionDetailHero(
+            collection = previewCollection(),
+            memberCount = 54,
+            stats = previewCollectionStats(),
+            inReminders = true,
+            actions = previewCollectionHeroActions(),
+        )
+        CollectionDetailHero(
+            collection = previewCollection(homePinnedAt = null, iconKey = "compass"),
+            memberCount = 12,
+            stats = previewCollectionStatsVariants().last(),
+            inReminders = false,
+            actions = previewCollectionHeroActions(),
+        )
+        CollectionDetailHero(
+            collection = previewCollection(),
+            memberCount = 54,
+            stats = previewCollectionStatsVariants()[1],
+            inReminders = false,
+            actions = previewCollectionHeroActions(),
+        )
     }
 }
 
@@ -372,17 +369,15 @@ internal fun HeroFacts(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun HeroFactsPreview() {
-    AzkarThemePreview {
-        HeroFacts(
-            collection = previewCollection(),
-            memberCount = 54,
-            stats = previewCollectionStats(),
-            modifier = Modifier.width(900.dp),
-        )
-    }
+internal fun HeroFactsPreview() {
+    HeroFacts(
+        collection = previewCollection(),
+        memberCount = 54,
+        stats = previewCollectionStats(),
+        modifier = Modifier.width(900.dp),
+    )
 }
 
 /**
@@ -466,12 +461,10 @@ internal fun HeroFactDivider(modifier: Modifier = Modifier) {
     )
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun HeroFactDividerPreview() {
-    AzkarThemePreview {
-        HeroFactDivider(modifier = Modifier.width(400.dp))
-    }
+internal fun HeroFactDividerPreview() {
+    HeroFactDivider(modifier = Modifier.width(400.dp))
 }
 
 /**
@@ -734,17 +727,15 @@ internal fun HeroIconAction(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun HeroIconActionPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(340.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            HeroIconAction(icon = ActionIcons.pin(on = false), contentDescription = "Pin", onClick = {})
-            HeroIconAction(icon = ActionIcons.pin(on = true), contentDescription = "Unpin", onClick = {}, filled = true)
-        }
+internal fun HeroIconActionPreview() {
+    Row(
+        modifier = Modifier.width(340.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HeroIconAction(icon = ActionIcons.pin(on = false), contentDescription = "Pin", onClick = {})
+        HeroIconAction(icon = ActionIcons.pin(on = true), contentDescription = "Unpin", onClick = {}, filled = true)
     }
 }
 
@@ -805,18 +796,16 @@ internal fun HeroPill(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun HeroPillPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(420.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            HeroPill(icon = AzkarIcons.Bell, label = "Daily, 06:30", onClick = {}, selected = true)
-            HeroPill(icon = AzkarIcons.BellOff, label = "Paused", onClick = {})
-            HeroPill(icon = ActionIcons.read, label = "Start session", onClick = {})
-        }
+internal fun HeroPillPreview() {
+    Row(
+        modifier = Modifier.width(420.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HeroPill(icon = AzkarIcons.Bell, label = "Daily, 06:30", onClick = {}, selected = true)
+        HeroPill(icon = AzkarIcons.BellOff, label = "Paused", onClick = {})
+        HeroPill(icon = ActionIcons.read, label = "Start session", onClick = {})
     }
 }
 

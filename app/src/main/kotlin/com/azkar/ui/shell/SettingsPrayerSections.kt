@@ -28,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -75,9 +74,9 @@ import com.azkar.ui.notifications.PrayerCalculationMethod
 import com.azkar.ui.notifications.PrayerLocationSettings
 import com.azkar.ui.notifications.PrayerPlace
 import com.azkar.ui.preview.rememberPreviewNotificationSettingsState
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
 
 // `ui/shell/SettingsPrayerSections.kt` — the two blocks under Prayer: the place, and the convention that
@@ -473,22 +472,20 @@ private fun locationNoticeMessage(notice: LocationNotice?): String? =
         is LocationNotice.PlaceSelected -> stringResource(Res.string.settingsPrayerPlaceSelected, notice.city)
     }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun SettingsPrayerSectionsPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(820.dp).padding(AzkarSpacing.lg),
-            verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
-        ) {
-            SettingsPrayerLocationSection(
-                location = PrayerLocationSettings(),
-                settings = rememberPreviewNotificationSettingsState(),
-            )
-            SettingsPrayerCalculationSection(
-                location = PrayerLocationSettings(),
-                settings = rememberPreviewNotificationSettingsState(),
-            )
-        }
+internal fun SettingsPrayerSectionsPreview() {
+    Column(
+        modifier = Modifier.width(820.dp).padding(AzkarSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
+    ) {
+        SettingsPrayerLocationSection(
+            location = PrayerLocationSettings(),
+            settings = rememberPreviewNotificationSettingsState(),
+        )
+        SettingsPrayerCalculationSection(
+            location = PrayerLocationSettings(),
+            settings = rememberPreviewNotificationSettingsState(),
+        )
     }
 }

@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -52,8 +51,8 @@ import com.azkar.ui.components.pressableClick
 import com.azkar.ui.components.rememberContextMenuState
 import com.azkar.ui.library.model.CollectionTile
 import com.azkar.ui.preview.previewCollectionTiles
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -137,28 +136,26 @@ fun CollectionCard(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionCardPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(1100.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                previewCollectionTiles().forEach { tile ->
-                    CollectionCard(
-                        tile = tile,
-                        preview = "The most beloved of deeds to Allah are the most consistent.",
-                        items =
-                            listOf(
-                                AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),
-                            ),
-                        onOpen = {},
-                        covers = null,
-                        modifier = Modifier.width(240.dp),
-                    )
-                }
+internal fun CollectionCardPreview() {
+    Column(
+        modifier = Modifier.width(1100.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            previewCollectionTiles().forEach { tile ->
+                CollectionCard(
+                    tile = tile,
+                    preview = "The most beloved of deeds to Allah are the most consistent.",
+                    items =
+                        listOf(
+                            AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),
+                        ),
+                    onOpen = {},
+                    covers = null,
+                    modifier = Modifier.width(240.dp),
+                )
             }
         }
     }

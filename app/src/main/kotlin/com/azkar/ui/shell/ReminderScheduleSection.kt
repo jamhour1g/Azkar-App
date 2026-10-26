@@ -8,7 +8,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -46,9 +45,9 @@ import com.azkar.ui.notifications.cadenceLabel
 import com.azkar.ui.notifications.intervalLabel
 import com.azkar.ui.notifications.queueModeLabel
 import com.azkar.ui.preview.rememberPreviewReminderScheduleEditor
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
 
 /*
@@ -274,13 +273,11 @@ private fun LabelledTimePicker(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun ReminderScheduleCardPreview() {
-    AzkarThemePreview {
-        ReminderScheduleCard(
-            config = ReminderQueueConfig(enabled = true, cadence = QueueCadence.CONTINUOUS),
-            schedule = rememberPreviewReminderScheduleEditor(),
-        )
-    }
+internal fun ReminderScheduleCardPreview() {
+    ReminderScheduleCard(
+        config = ReminderQueueConfig(enabled = true, cadence = QueueCadence.CONTINUOUS),
+        schedule = rememberPreviewReminderScheduleEditor(),
+    )
 }

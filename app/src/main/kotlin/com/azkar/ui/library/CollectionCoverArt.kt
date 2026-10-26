@@ -18,15 +18,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionsCoverPhoto
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -124,17 +123,15 @@ fun CollectionCoverArt(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionCoverArtPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(1100.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            listOf("sunrise", "sunset", "mosque", "compass", "khatim").forEach { iconKey ->
-                CollectionCoverArt(iconKey = iconKey, modifier = Modifier.size(200.dp))
-            }
+internal fun CollectionCoverArtPreview() {
+    Row(
+        modifier = Modifier.width(1100.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        listOf("sunrise", "sunset", "mosque", "compass", "khatim").forEach { iconKey ->
+            CollectionCoverArt(iconKey = iconKey, modifier = Modifier.size(200.dp))
         }
     }
 }

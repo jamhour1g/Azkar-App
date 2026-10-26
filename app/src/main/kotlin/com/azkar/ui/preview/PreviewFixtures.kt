@@ -1,17 +1,14 @@
 /**
  * Sample states shared by the IDE `@Preview` functions and the screenshot harness.
  *
- * These live in `src/main` rather than in either of the two places that want them because the two
- * places are different source sets: `src/test` is invisible to `src/main`, and `src/screenshot`
- * cannot see `src/test`'s `internal`s either. That is why `Screenshot.kt` ended up with its own
- * hand-rolled copies of the rail cards and the reminder gateway. Lifting them here means the states
- * a developer sees while iterating on a component and the states a screenshot is graded against are
- * the same objects, so a preview cannot quietly disagree with the rendered PNG.
+ * These live in `src/main` so both IDE previews and test-source-set screenshots can use the same
+ * sample state. A developer preview and a screenshot therefore render the same fixture instead of
+ * carrying separate copies that can drift.
  *
  * **Nothing in this file may be registered in `appModule`.** These are in-memory objects with no
  * database behind them: a preview that resolved one of them from the container would show fixture
  * data and look like it worked. They are reachable only from a `@Preview` body or from
- * `Screenshot.kt`, both of which name the fake they want at the call site.
+ * `RoborazziScreenshotSuite`, both of which name the fake they want at the call site.
  *
  * They do ship in the jar, which is the price of not adding a fourth source set for a few hundred
  * lines of literals. Nothing here opens a file, a socket or a database, so the cost is a little
@@ -62,9 +59,6 @@ import com.azkar.ui.notifications.ReminderQueueProgress
 import com.azkar.ui.shell.AzkarAppState
 import com.azkar.ui.shell.ThemePreference
 import com.azkar.ui.theme.AppTypography
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import java.nio.file.Files
 import java.time.Duration
 import java.time.Instant
@@ -299,13 +293,8 @@ fun previewRemembrance(
 @Composable
 fun rememberPreviewSettingsStore(): SettingsStore {
     val path = remember { Files.createTempFile("azkar-preview-", ".preferences_pb") }
-    val store =
-        remember(path) {
-            SettingsStore.create(
-                file = path,
-                scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-            )
-        }
+    val scope = rememberCoroutineScope()
+    val store = remember(path, scope) { SettingsStore.create(file = path, scope = scope) }
     DisposableEffect(path) {
         onDispose { runCatching { Files.deleteIfExists(path) } }
     }
@@ -726,16 +715,6 @@ fun previewAzkarAppState(
     )
 
 /**
- * A [CoverStorage] pointed at a directory no preview will ever write to.
- *
- * Previews render covers but never choose one, and [CollectionCoverCache] only ever *reads*. Giving
- * it the real [CoverStorage.defaultDirectory] would mean a preview reaching into `~/.azkar` for
- * pictures that do not exist, so it is pointed at an empty temp directory instead and every preview
- * cover falls through to the generated wash.
- */
-private fun previewCoverStorage(): CoverStorage = CoverStorage(Files.createTempDirectory("azkar-preview-covers"))
-
-/**
  * The shelf, wired to [previewGateway].
  *
  * `remember`ed rather than rebuilt per composition so that a preview which re-renders does not hand
@@ -751,7 +730,11 @@ private fun previewCoverStorage(): CoverStorage = CoverStorage(Files.createTempD
 fun rememberPreviewCatalogue(uiLocale: Locale = ENGLISH): CollectionsCatalogue {
     val scope = rememberCoroutineScope()
     val gateway = remember { previewGateway() }
-    val covers = remember { CollectionCoverCache(previewCoverStorage()) }
+    val coverDirectory = remember { Files.createTempDirectory("azkar-preview-covers-") }
+    val covers = remember { CollectionCoverCache(CoverStorage(coverDirectory)) }
+    DisposableEffect(coverDirectory) {
+        onDispose { Files.deleteIfExists(coverDirectory) }
+    }
     return remember(uiLocale, scope, gateway, covers) { CollectionsCatalogue(scope, uiLocale, gateway, covers) }
 }
 

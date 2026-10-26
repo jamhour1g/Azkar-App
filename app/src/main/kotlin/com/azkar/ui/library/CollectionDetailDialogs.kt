@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -55,8 +54,8 @@ import com.azkar.ui.components.SecondaryButton
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.preview.previewRemembranceTile
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -81,63 +80,70 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun AddRemembrancesDialog(detail: CollectionDetailState) {
     val picker = detail.addPicker
-    val candidates = picker.candidates
     Dialog(onDismissRequest = picker::close) {
-        AzkarDialogSurface(
-            modifier =
-                Modifier
-                    .widthIn(min = 560.dp, max = 760.dp)
-                    .heightIn(min = 320.dp, max = 620.dp),
-        ) {
-            Column {
-                PickerHeading()
-                Spacer(Modifier.height(12.dp))
-                AzkarOutlinedField(
-                    value = picker.query,
-                    onValueChange = picker::onQueryChanged,
-                    placeholder = stringResource(Res.string.collectionsSearchRemembrances),
-                    leadingIcon = Icons.Filled.Search,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(10.dp))
-                PickerSelectionBar(picker = picker, candidateCount = candidates.size)
-                Spacer(Modifier.height(10.dp))
+        AddRemembrancesContent(detail)
+    }
+}
 
-                val tiles = picker.tiles
-                if (tiles.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().weight(1f),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(Res.string.collectionDetailAddPickerEmpty),
-                            color = AzkarTheme.colors.textSecondary,
-                            fontSize = 12.sp,
+/** The production dialog pane without its native window host, so previews and screenshot tests can compose it. */
+@Composable
+internal fun AddRemembrancesContent(detail: CollectionDetailState) {
+    val picker = detail.addPicker
+    val candidates = picker.candidates
+    AzkarDialogSurface(
+        modifier =
+            Modifier
+                .widthIn(min = 560.dp, max = 760.dp)
+                .heightIn(min = 320.dp, max = 620.dp),
+    ) {
+        Column {
+            PickerHeading()
+            Spacer(Modifier.height(12.dp))
+            AzkarOutlinedField(
+                value = picker.query,
+                onValueChange = picker::onQueryChanged,
+                placeholder = stringResource(Res.string.collectionsSearchRemembrances),
+                leadingIcon = Icons.Filled.Search,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(10.dp))
+            PickerSelectionBar(picker = picker, candidateCount = candidates.size)
+            Spacer(Modifier.height(10.dp))
+
+            val tiles = picker.tiles
+            if (tiles.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(Res.string.collectionDetailAddPickerEmpty),
+                        color = AzkarTheme.colors.textSecondary,
+                        fontSize = 12.sp,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    items(items = tiles, key = { it.id }) { tile ->
+                        PickerRow(
+                            tile = tile,
+                            selected = tile.id in picker.selected,
+                            onToggle = { picker.toggleSelection(tile.id) },
                         )
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxWidth().weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        items(items = tiles, key = { it.id }) { tile ->
-                            PickerRow(
-                                tile = tile,
-                                selected = tile.id in picker.selected,
-                                onToggle = { picker.toggleSelection(tile.id) },
-                            )
-                        }
-                    }
                 }
-
-                Spacer(Modifier.height(12.dp))
-                DetailDialogActions(
-                    confirmLabel = stringResource(Res.string.collectionDetailAdd),
-                    confirmEnabled = picker.selected.isNotEmpty(),
-                    onDismiss = picker::close,
-                    onConfirm = picker::confirm,
-                )
             }
+
+            Spacer(Modifier.height(12.dp))
+            DetailDialogActions(
+                confirmLabel = stringResource(Res.string.collectionDetailAdd),
+                confirmEnabled = picker.selected.isNotEmpty(),
+                onDismiss = picker::close,
+                onConfirm = picker::confirm,
+            )
         }
     }
 }
@@ -159,12 +165,10 @@ internal fun PickerHeading() {
     )
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun PickerHeadingPreview() {
-    AzkarThemePreview {
-        PickerHeading()
-    }
+internal fun PickerHeadingPreview() {
+    PickerHeading()
 }
 
 /**
@@ -252,17 +256,15 @@ internal fun PickerRow(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun PickerRowPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(520.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            PickerRow(tile = previewRemembranceTile(), selected = false, onToggle = {})
-            PickerRow(tile = previewRemembranceTile(id = 102L, isFavorite = true), selected = true, onToggle = {})
-        }
+internal fun PickerRowPreview() {
+    Column(
+        modifier = Modifier.width(520.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        PickerRow(tile = previewRemembranceTile(), selected = false, onToggle = {})
+        PickerRow(tile = previewRemembranceTile(id = 102L, isFavorite = true), selected = true, onToggle = {})
     }
 }
 
@@ -275,28 +277,37 @@ internal fun ConfirmRemovalDialog(
     onConfirm: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        AzkarDialogSurface(modifier = Modifier.widthIn(min = 380.dp, max = 520.dp)) {
-            Column {
-                Text(
-                    text = stringResource(Res.string.collectionDetailRemoveTitle),
-                    color = AzkarTheme.colors.textPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(Res.string.collectionDetailRemoveBody, count),
-                    color = AzkarTheme.colors.textSecondary,
-                    fontSize = 12.sp,
-                )
-                Spacer(Modifier.height(16.dp))
-                DetailDialogActions(
-                    confirmLabel = stringResource(Res.string.collectionDetailRemove),
-                    confirmEnabled = true,
-                    onDismiss = onDismiss,
-                    onConfirm = onConfirm,
-                )
-            }
+        ConfirmRemovalContent(count, onDismiss, onConfirm)
+    }
+}
+
+@Composable
+internal fun ConfirmRemovalContent(
+    count: Int,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AzkarDialogSurface(modifier = Modifier.widthIn(min = 380.dp, max = 520.dp)) {
+        Column {
+            Text(
+                text = stringResource(Res.string.collectionDetailRemoveTitle),
+                color = AzkarTheme.colors.textPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(Res.string.collectionDetailRemoveBody, count),
+                color = AzkarTheme.colors.textSecondary,
+                fontSize = 12.sp,
+            )
+            Spacer(Modifier.height(16.dp))
+            DetailDialogActions(
+                confirmLabel = stringResource(Res.string.collectionDetailRemove),
+                confirmEnabled = true,
+                onDismiss = onDismiss,
+                onConfirm = onConfirm,
+            )
         }
     }
 }
@@ -307,28 +318,36 @@ internal fun ConfirmDeleteRemembranceDialog(
     onConfirm: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        AzkarDialogSurface(modifier = Modifier.widthIn(min = 380.dp, max = 520.dp)) {
-            Column {
-                Text(
-                    text = stringResource(Res.string.collectionDetailDeleteRemembranceTitle),
-                    color = AzkarTheme.colors.textPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(Res.string.collectionDetailDeleteRemembranceBody),
-                    color = AzkarTheme.colors.textSecondary,
-                    fontSize = 12.sp,
-                )
-                Spacer(Modifier.height(16.dp))
-                DetailDialogActions(
-                    confirmLabel = stringResource(Res.string.collectionDetailDeleteRemembrance),
-                    confirmEnabled = true,
-                    onDismiss = onDismiss,
-                    onConfirm = onConfirm,
-                )
-            }
+        ConfirmDeleteRemembranceContent(onDismiss, onConfirm)
+    }
+}
+
+@Composable
+internal fun ConfirmDeleteRemembranceContent(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AzkarDialogSurface(modifier = Modifier.widthIn(min = 380.dp, max = 520.dp)) {
+        Column {
+            Text(
+                text = stringResource(Res.string.collectionDetailDeleteRemembranceTitle),
+                color = AzkarTheme.colors.textPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(Res.string.collectionDetailDeleteRemembranceBody),
+                color = AzkarTheme.colors.textSecondary,
+                fontSize = 12.sp,
+            )
+            Spacer(Modifier.height(16.dp))
+            DetailDialogActions(
+                confirmLabel = stringResource(Res.string.collectionDetailDeleteRemembrance),
+                confirmEnabled = true,
+                onDismiss = onDismiss,
+                onConfirm = onConfirm,
+            )
         }
     }
 }
@@ -355,17 +374,15 @@ internal fun DetailDialogActions(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun DetailDialogActionsPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(420.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            DetailDialogActions(confirmLabel = "Add", confirmEnabled = true, onDismiss = {}, onConfirm = {})
-            DetailDialogActions(confirmLabel = "Add", confirmEnabled = false, onDismiss = {}, onConfirm = {})
-        }
+internal fun DetailDialogActionsPreview() {
+    Column(
+        modifier = Modifier.width(420.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        DetailDialogActions(confirmLabel = "Add", confirmEnabled = true, onDismiss = {}, onConfirm = {})
+        DetailDialogActions(confirmLabel = "Add", confirmEnabled = false, onDismiss = {}, onConfirm = {})
     }
 }
 
