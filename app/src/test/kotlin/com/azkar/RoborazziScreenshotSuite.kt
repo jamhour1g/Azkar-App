@@ -100,9 +100,6 @@ val RoborazziScreenshotSuite by testSuite("Compose Desktop screenshots") {
                 AppLayout(AzkarDestination.Home, HeaderCallbacks({}, {}, {})) { HomeShot() }
             }
         }
-        test("home content $theme") {
-            capture("home/screen-home-content-$theme", dark, readyText = "Friday, 20 February") { HomeShot() }
-        }
         test("update available $theme") {
             capture("settings/settings-update-available-$theme", dark) {
                 Column(Modifier.width(720.dp).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -160,7 +160,7 @@ dependencies {
 }
 
 val previewScannerEnabled =
-    providers.gradleProperty("azkar.previewScanner").map(String::toBoolean).getOrElse(false)
+    providers.gradleProperty("azkar.previewScanner").map(String::toBoolean).getOrElse(true)
 
 if (previewScannerEnabled) {
     dependencies {
@@ -173,13 +173,13 @@ if (previewScannerEnabled) {
 
 roborazzi {
     if (previewScannerEnabled) {
-        outputDir.set(layout.buildDirectory.dir("roborazzi-preview-scanner"))
+        outputDir.set(layout.projectDirectory.dir("src/test/roborazzi/previews"))
     } else {
         outputDir.set(layout.projectDirectory.dir("src/test/roborazzi"))
     }
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     generateComposePreviewDesktopTests {
-        // Opt in with -Pazkar.previewScanner=true; scanner output is kept outside reviewed goldens.
+        // Keep scanner captures beside the versioned references so the default CI verify checks them.
         enable = previewScannerEnabled
         packages = listOf("com.azkar.ui")
         includePrivatePreviews = true
