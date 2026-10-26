@@ -90,7 +90,7 @@ jobs:
           distribution: zulu
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
-          cache-disabled: true
+          cache-read-only: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
       - name: Install native test dependencies
         run: sudo apt-get update && sudo apt-get install -y libgl1
       - name: Run checks and verify release inputs
@@ -116,7 +116,7 @@ jobs:
 
   package:
     name: Package (${{ matrix.id }})
-    needs: [prepare, validate]
+    needs: prepare
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     strategy:
@@ -140,7 +140,7 @@ jobs:
           distribution: zulu
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
-          cache-disabled: true
+          cache-read-only: true
       - name: Install Linux packaging tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y rpm libgl1
@@ -173,11 +173,38 @@ jobs:
             app/build/compose/binaries/main-release/*/builder-debug.yml
           retention-days: 3
 
+  screenshots:
+    name: Capture website and README screenshots
+    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Set up JDK 25
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          java-version: '25'
+          distribution: zulu
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          cache-read-only: true
+      - name: Install screenshot runtime dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgl1
+      - name: Capture download page screenshots
+        run: ./gradlew :app:captureDownloadScreenshots --console=plain
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        if: env.ACT != 'true'
+        with:
+          name: website-screenshots
+          path: site/images/screen-*.png
+          if-no-files-found: error
+          retention-days: 3
+
   publish:
     name: Prepare release and signed repository site
     permissions:
       contents: write
-    needs: [prepare, validate, package]
+    needs: [prepare, validate, package, screenshots]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -196,10 +223,6 @@ jobs:
         with:
           java-version: '25'
           distribution: 'zulu'
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
-        with:
-          cache-disabled: true
       - name: Set up Kotlin compiler
         uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
         with:
@@ -209,14 +232,16 @@ jobs:
           pattern: packages-*
           path: release-input
           merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: website-screenshots
+          path: site/images
       - name: Prepare release assets and merge architecture manifests
         env:
           APP_VERSION: ${{ needs.prepare.outputs.app_version }}
         run: ./scripts/merge_nucleus_release.main.kts release-input release-assets "$APP_VERSION"
       - name: Install repository tooling
         run: sudo apt-get update && sudo apt-get install -y apt-utils createrepo-c gnupg libgl1
-      - name: Refresh download page screenshots
-        run: ./gradlew :app:captureDownloadScreenshots --console=plain
       - name: Import and verify Linux repository signing key
         env:
           REPO_PRIVATE_KEY: ${{ secrets.LINUX_REPO_SIGNING_KEY }}

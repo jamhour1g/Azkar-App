@@ -64,13 +64,30 @@
 }
 -keep interface kotlinx.serialization.KSerializer { *; }
 
-# H2 and Hikari reference method-handle signatures ProGuard cannot resolve, and
-# the JDK's own classes are read from jmods rather than rt.jar, so some member
-# shapes differ from what the program classes expect. Optional integration hooks
-# of the kept libraries (servlet containers, mail, metrics backends, lucene/geo
-# hooks in H2, janino hooks in logback…) are absent from this desktop app. All of
-# it is inert at runtime - silence the warnings wholesale.
--ignorewarnings
+# These libraries ship optional integration classes in their main jars, but the
+# corresponding APIs are not part of this desktop app: Logback's servlet, mail,
+# XZ, and Janino features; Hikari's Hibernate/metrics/Javassist adapters; and
+# H2's web, Lucene, geometry, and OSGi integrations. The warned methods are on
+# Java's signature-polymorphic MethodHandle/VarHandle types; ProGuard cannot
+# resolve their call-site-specific signatures even though the JDK classes exist.
+-dontwarn com.codahale.metrics.**
+-dontwarn io.dropwizard.metrics5.**
+-dontwarn io.micrometer.core.**
+-dontwarn io.prometheus.client.**
+-dontwarn jakarta.mail.**
+-dontwarn jakarta.servlet.**
+-dontwarn javax.servlet.**
+-dontwarn javassist.**
+-dontwarn java.lang.invoke.MethodHandle
+-dontwarn java.lang.invoke.VarHandle
+-dontwarn org.apache.lucene.**
+-dontwarn org.codehaus.commons.compiler.**
+-dontwarn org.codehaus.janino.**
+-dontwarn org.hibernate.**
+-dontwarn org.locationtech.jts.**
+-dontwarn org.osgi.**
+-dontwarn org.tukaani.xz.**
+-dontwarn org.h2.server.web.**
 
 # Generic signatures + annotations are needed by serialization and DI lookups.
 -keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*,SourceFile,LineNumberTable
