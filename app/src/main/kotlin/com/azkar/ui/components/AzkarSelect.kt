@@ -31,12 +31,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.ui.theme.AzkarExpressive
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 
 private val TRIGGER_HEIGHT = 40.dp
 private val TRIGGER_TEXT_SP = 13.sp
@@ -185,23 +184,21 @@ private fun AzkarSelectMenu(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun AzkarSelectPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(360.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            AzkarSelect(
-                label = "Name A-Z",
-                icon = Icons.AutoMirrored.Outlined.Sort,
-                items =
-                    listOf(
-                        AzkarMenuItem(label = "Name A-Z", onClick = {}, icon = Icons.Filled.Check),
-                        AzkarMenuItem(label = "Most used", onClick = {}, icon = Icons.AutoMirrored.Filled.Label),
-                    ),
-            )
-        }
+internal fun AzkarSelectPreview() {
+    Row(
+        modifier = Modifier.width(360.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        AzkarSelect(
+            label = "Name A-Z",
+            icon = Icons.AutoMirrored.Outlined.Sort,
+            items =
+                listOf(
+                    AzkarMenuItem(label = "Name A-Z", onClick = {}, icon = Icons.Filled.Check),
+                    AzkarMenuItem(label = "Most used", onClick = {}, icon = Icons.AutoMirrored.Filled.Label),
+                ),
+        )
     }
 }

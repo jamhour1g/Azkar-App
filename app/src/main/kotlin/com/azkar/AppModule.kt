@@ -46,9 +46,7 @@ import org.koin.dsl.module
  * The upper half of the dependency graph: the settings file, and the gateways the composables reach
  * for instead of the database.
  *
- * Composed with [com.azkar.data.config.dataModule] at the entry point — `main` in [Main.kt], and the
- * screenshot harness in its own `main` — so there is one list of modules rather than one per entry
- * point, and both halves come from the same file.
+ * Composed with [com.azkar.data.config.dataModule] at the application's entry point in [Main].
  *
  * Everything here is a `single`. The settings store owns a `DataStore` and the scope that keeps it
  * alive, the theme, locale and seed stores are the three places that decide how a stored preference

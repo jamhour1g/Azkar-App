@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -36,9 +35,10 @@ import com.azkar.generated.resources.reminderManagerTimePickerClock
 import com.azkar.generated.resources.reminderManagerTimePickerConfirm
 import com.azkar.generated.resources.reminderManagerTimePickerTitle
 import com.azkar.generated.resources.reminderManagerTimePickerToggleDisplay
+import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
 import java.time.DayOfWeek
 
@@ -244,34 +244,29 @@ private const val MINUTES_IN_HOUR = 60
 private const val HOURS_IN_DAY = 24
 private val DIAL_MAX_HEIGHT = 380.dp
 
-@Preview
+@AzkarPreview
 @Composable
-private fun AzkarTimePickerPreview() {
-    AzkarThemePreview {
-        AzkarTimePicker(minuteOfDay = 8 * 60 + 30, onMinuteChange = {})
-    }
+internal fun AzkarTimePickerPreview() {
+    AzkarTimePicker(minuteOfDay = 8 * 60 + 30, onMinuteChange = {})
 }
 
-@Preview
+@AzkarPreview
+@RoborazziDesktopPreviewExclude
 @Composable
-private fun AzkarTimePickerDialogPreview() {
-    AzkarThemePreview {
-        AzkarTimePickerDialog(
-            minuteOfDay = 8 * 60 + 30,
-            onConfirm = {},
-            onDismiss = {},
-        )
-    }
+internal fun AzkarTimePickerDialogPreview() {
+    AzkarTimePickerDialog(
+        minuteOfDay = 8 * 60 + 30,
+        onConfirm = {},
+        onDismiss = {},
+    )
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun AzkarDayPickerPreview() {
-    AzkarThemePreview {
-        AzkarDayPicker(
-            activeDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
-            onDayChange = { _, _ -> },
-            dayLabel = { day -> day.name.take(3) },
-        )
-    }
+internal fun AzkarDayPickerPreview() {
+    AzkarDayPicker(
+        activeDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+        onDayChange = { _, _ -> },
+        dayLabel = { day -> day.name.take(3) },
+    )
 }

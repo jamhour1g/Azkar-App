@@ -9,7 +9,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -31,9 +30,9 @@ import com.azkar.ui.notifications.NotificationSettingsState
 import com.azkar.ui.notifications.StartupNotice
 import com.azkar.ui.preview.previewAzkarAppState
 import com.azkar.ui.preview.rememberPreviewNotificationSettingsState
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
 
 // `ui/shell/SettingsGeneralSections.kt` — the two blocks under General: the language the app speaks in,
@@ -178,19 +177,17 @@ internal fun StartupNoticeText(
     )
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun SettingsGeneralSectionsPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(760.dp).padding(AzkarSpacing.xl),
-            verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
-        ) {
-            SettingsLanguageSection(state = previewAzkarAppState())
-            SettingsStartupSection(
-                startOnLogin = true,
-                settings = rememberPreviewNotificationSettingsState(),
-            )
-        }
+internal fun SettingsGeneralSectionsPreview() {
+    Column(
+        modifier = Modifier.width(760.dp).padding(AzkarSpacing.xl),
+        verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
+    ) {
+        SettingsLanguageSection(state = previewAzkarAppState())
+        SettingsStartupSection(
+            startOnLogin = true,
+            settings = rememberPreviewNotificationSettingsState(),
+        )
     }
 }

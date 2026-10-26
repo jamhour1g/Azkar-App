@@ -205,8 +205,8 @@ mitigation for someone about to play is to pause, not to hope.
 ```
 ./gradlew :app:run                     # then close the window: reminders must keep arriving
 azkar --overlay-poc                    # six cards, three seconds apart, no scheduler
-./gradlew :app:runScreenshot -Pazkar.screenshot.screen=notifications
-./gradlew :app:runScreenshot -Pazkar.screenshot.screen=notifications -Dazkar.screenshot.dark=true
+./gradlew :app:recordRoborazziJvm
+./gradlew :app:verifyRoborazziJvm
 ```
 
 `--overlay-poc` starts the app **hidden**, does not start `NotificationRuntime`, and publishes

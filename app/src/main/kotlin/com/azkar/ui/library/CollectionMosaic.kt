@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -36,8 +35,8 @@ import androidx.compose.ui.unit.sp
 import com.azkar.domain.model.CollectionKind
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.preview.previewMosaicSnippets
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 
 /**
  * Resolves a collection's stored `icon_key` to a glyph.
@@ -150,31 +149,29 @@ fun CollectionMosaic(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionMosaicPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(1100.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CollectionMosaic(
-                iconKey = "sunrise",
-                memberSnippets = previewMosaicSnippets(),
-                modifier = Modifier.size(220.dp),
-            )
-            CollectionMosaic(
-                iconKey = "compass",
-                memberSnippets = previewMosaicSnippets(),
-                modifier = Modifier.size(220.dp),
-                cornerRadius = 24.dp,
-            )
-            CollectionMosaic(
-                iconKey = "khatim",
-                memberSnippets = emptyList(),
-                modifier = Modifier.size(220.dp),
-            )
-        }
+internal fun CollectionMosaicPreview() {
+    Row(
+        modifier = Modifier.width(1100.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        CollectionMosaic(
+            iconKey = "sunrise",
+            memberSnippets = previewMosaicSnippets(),
+            modifier = Modifier.size(220.dp),
+        )
+        CollectionMosaic(
+            iconKey = "compass",
+            memberSnippets = previewMosaicSnippets(),
+            modifier = Modifier.size(220.dp),
+            cornerRadius = 24.dp,
+        )
+        CollectionMosaic(
+            iconKey = "khatim",
+            memberSnippets = emptyList(),
+            modifier = Modifier.size(220.dp),
+        )
     }
 }
 

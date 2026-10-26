@@ -16,6 +16,8 @@ import com.diffplug.spotless.LineEnding
 
 // Use the shared version catalog so root formatting matches the convention plugin.
 plugins {
+    // Load the Kotlin Gradle plugin once at the root so subprojects share its classloader.
+    alias(libs.plugins.org.jetbrains.kotlin.jvm) apply false
     alias(libs.plugins.com.diffplug.spotless)
 }
 

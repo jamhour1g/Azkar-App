@@ -15,6 +15,7 @@ ch-qos-logback = "1.5.32"
 io-github-oshai-kotlin-logging = "7.0.7"
 jetbrains-kotlin = "2.4.20"
 jetbrains-compose = "1.12.1"
+roborazzi = "1.76.0"
 compose-hot-reload = "1.3.0-beta01"
 jetbrains-coroutines = "1.11.0"
 # Collection import/export is the first place in the app that needs a machine-readable
@@ -109,6 +110,11 @@ org-jetbrains-compose-material-icons-extended = { module = "org.jetbrains.compos
 org-jetbrains-compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "jetbrains-compose" }
 org-jetbrains-compose-ui-test = { module = "org.jetbrains.compose.ui:ui-test", version.ref = "jetbrains-compose" }
 org-jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "jetbrains-compose" }
+io-github-takahirom-roborazzi-compose-desktop = { module = "io.github.takahirom.roborazzi:roborazzi-compose-desktop", version.ref = "roborazzi" }
+io-github-takahirom-roborazzi-compose-desktop-preview-scanner-support = { module = "io.github.takahirom.roborazzi:roborazzi-compose-desktop-preview-scanner-support", version.ref = "roborazzi" }
+io-github-sergio-sastre-composable-preview-scanner-android = { module = "io.github.sergio-sastre.ComposablePreviewScanner:android", version = "0.9.0" }
+junit-junit = { module = "junit:junit", version = "4.13.2" }
+org-junit-vintage-junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version = "5.13.4" }
 org-jetbrains-kotlinx-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "jetbrains-serialization" }
 io-ktor-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 io-ktor-ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
@@ -181,3 +187,4 @@ com-diffplug-spotless = { id = "com.diffplug.spotless", version = "7.2.1" }
 dev-detekt = { id = "dev.detekt", version.ref = "detekt" }
 de-infix-test-balloon = { id = "de.infix.testBalloon", version.ref = "de-infix-test-balloon" }
 dev-nucleusframework = { id = "dev.nucleusframework", version.ref = "nucleus" }
+io-github-takahirom-roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }

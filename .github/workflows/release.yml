@@ -190,7 +190,7 @@ jobs:
           cache-read-only: true
       - name: Install screenshot runtime dependencies
         run: sudo apt-get update && sudo apt-get install -y libgl1
-      - name: Capture download page screenshots
+      - name: Render download page and README gallery
         run: ./gradlew :app:captureDownloadScreenshots --console=plain
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         if: env.ACT != 'true'

@@ -111,31 +111,44 @@ fun AzkarApp(
                 CompositionLocalProvider(
                     LocalWindowSizeClass provides windowSizeClassFor(maxWidth, maxHeight),
                 ) {
-                    Box(Modifier.fillMaxSize()) {
-                        Column(Modifier.fillMaxSize()) {
-                            MainScreenHeader(
-                                activeTab = navigator.current,
-                                callbacks =
-                                    HeaderCallbacks(
-                                        onHome = navigator::showHome,
-                                        onLibrary = navigator::showLibrary,
-                                        onSettings = navigator::showSettings,
-                                    ),
-                            )
-                            HeaderBottomBorder()
-                            AzkarContent(
-                                navigator = navigator,
-                                state = state,
-                                showToast = showToast,
-                                library = LibraryContent(reminders, catalogue, tagsGateway, sortStore),
-                            )
-                        }
-
-                        ToastHost(state)
+                    AppLayout(
+                        activeTab = navigator.current,
+                        callbacks =
+                            HeaderCallbacks(
+                                onHome = navigator::showHome,
+                                onLibrary = navigator::showLibrary,
+                                onSettings = navigator::showSettings,
+                            ),
+                        overlay = { ToastHost(state) },
+                    ) {
+                        AzkarContent(
+                            navigator = navigator,
+                            state = state,
+                            showToast = showToast,
+                            library = LibraryContent(reminders, catalogue, tagsGateway, sortStore),
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+/** Shared app chrome; callers supply the active page and overlays. */
+@Composable
+internal fun AppLayout(
+    activeTab: AzkarDestination,
+    callbacks: HeaderCallbacks,
+    overlay: @Composable () -> Unit = {},
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            MainScreenHeader(activeTab = activeTab, callbacks = callbacks)
+            HeaderBottomBorder()
+            content()
+        }
+        overlay()
     }
 }
 

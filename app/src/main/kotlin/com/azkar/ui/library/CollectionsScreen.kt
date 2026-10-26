@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.domain.model.RemembranceCollection
@@ -60,8 +59,8 @@ import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.preview.rememberPreviewCatalogue
 import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ShowToast
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.CardSize
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
@@ -182,19 +181,17 @@ internal fun CollectionsScreenContent(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionsScreenContentPreview() {
-    AzkarThemePreview {
-        val catalogue = rememberPreviewCatalogue()
-        CollectionsScreenContent(
-            state = CollectionsState(rememberCoroutineScope(), catalogue),
-            onOpenCollection = {},
-            onOpenRemembrance = {},
-            onManageTags = {},
-            showToast = { _, _, _ -> },
-        )
-    }
+internal fun CollectionsScreenContentPreview() {
+    val catalogue = rememberPreviewCatalogue()
+    CollectionsScreenContent(
+        state = CollectionsState(rememberCoroutineScope(), catalogue),
+        onOpenCollection = {},
+        onOpenRemembrance = {},
+        onManageTags = {},
+        showToast = { _, _, _ -> },
+    )
 }
 
 /**
@@ -302,25 +299,23 @@ internal fun ShelfBody(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun ShelfBodyPreview() {
-    AzkarThemePreview {
-        ShelfBody(
-            state = CollectionsState(rememberCoroutineScope(), rememberPreviewCatalogue()),
-            callbacks =
-                ShelfCallbacks(
-                    onCreate = {},
-                    onOpen = {},
-                    onEdit = {},
-                    onDuplicate = { _, _ -> },
-                    onDelete = {},
-                    onRead = {},
-                    onCopy = {},
-                    onManageTags = {},
-                ),
-        )
-    }
+internal fun ShelfBodyPreview() {
+    ShelfBody(
+        state = CollectionsState(rememberCoroutineScope(), rememberPreviewCatalogue()),
+        callbacks =
+            ShelfCallbacks(
+                onCreate = {},
+                onOpen = {},
+                onEdit = {},
+                onDuplicate = { _, _ -> },
+                onDelete = {},
+                onRead = {},
+                onCopy = {},
+                onManageTags = {},
+            ),
+    )
 }
 
 // ---- dialogs ------------------------------------------------------------------------------------------

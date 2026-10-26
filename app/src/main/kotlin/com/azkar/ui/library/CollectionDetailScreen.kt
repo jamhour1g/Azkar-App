@@ -20,7 +20,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
@@ -63,8 +62,8 @@ import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewCatalogue
 import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ShowToast
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -279,24 +278,22 @@ internal fun CollectionDetailContent(
     )
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionDetailContentPreview() {
-    AzkarThemePreview {
-        val catalogue = rememberPreviewCatalogue()
-        val reminders = previewReminders()
-        CollectionDetailContent(
-            collections = catalogue,
-            detail = CollectionDetailState(catalogue, PREVIEW_COLLECTION_ID, reminders),
-            navigation =
-                DetailNavigation(
-                    onBack = {},
-                    onStartSession = {},
-                    onOpenRemembrance = {},
-                ),
-            showToast = { _, _, _ -> },
-        )
-    }
+internal fun CollectionDetailContentPreview() {
+    val catalogue = rememberPreviewCatalogue()
+    val reminders = previewReminders()
+    CollectionDetailContent(
+        collections = catalogue,
+        detail = CollectionDetailState(catalogue, PREVIEW_COLLECTION_ID, reminders),
+        navigation =
+            DetailNavigation(
+                onBack = {},
+                onStartSession = {},
+                onOpenRemembrance = {},
+            ),
+        showToast = { _, _, _ -> },
+    )
 }
 
 /**

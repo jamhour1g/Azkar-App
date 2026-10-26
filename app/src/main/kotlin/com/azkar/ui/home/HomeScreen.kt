@@ -21,11 +21,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.azkar.domain.model.Remembrance
 import com.azkar.generated.resources.*
-import com.azkar.i18n.ENGLISH
 import com.azkar.i18n.RemembranceI18n
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.home.FavoritesState
@@ -38,10 +36,15 @@ import com.azkar.ui.preview.previewHadithState
 import com.azkar.ui.preview.previewRailCards
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewSettingsStore
+import com.azkar.ui.theme.AzkarArabicPreview
+import com.azkar.ui.theme.AzkarCompactPreview
+import com.azkar.ui.theme.AzkarDarkPreview
+import com.azkar.ui.theme.AzkarMediumPreview
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.AzkarWindowSize
+import com.azkar.ui.theme.LocalUiLocale
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
@@ -301,24 +304,52 @@ internal fun HomeContent(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun HomeContentPreview() {
-    AzkarThemePreview {
-        HomeContent(
-            inputs =
-                HomeInputs(
-                    prayerTimes = PrayerTimesState(ENGLISH),
-                    favorites = FavoritesState(ENGLISH),
-                    notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
-                    rail = remember { HomeRailState().apply { replace(previewRailCards()) } },
-                    reminders = previewReminders(),
-                    navigation = HomeNavigation(onOpenLibrary = {}, onOpenRemembrance = {}, onOpenCollection = {}),
-                ),
-            dateText = "Friday, 20 February",
-            hadith = previewHadithState(),
-        )
-    }
+internal fun HomeContentPreview() {
+    HomeContentPreviewContent()
+}
+
+@AzkarDarkPreview
+@Composable
+internal fun HomeContentDarkPreview() {
+    HomeContentPreviewContent()
+}
+
+@AzkarArabicPreview
+@Composable
+internal fun HomeContentArabicPreview() {
+    HomeContentPreviewContent()
+}
+
+@AzkarCompactPreview
+@Composable
+internal fun HomeContentCompactPreview() {
+    HomeContentPreviewContent()
+}
+
+@AzkarMediumPreview
+@Composable
+internal fun HomeContentMediumPreview() {
+    HomeContentPreviewContent()
+}
+
+@Composable
+private fun HomeContentPreviewContent() {
+    val uiLocale = LocalUiLocale.current
+    HomeContent(
+        inputs =
+            HomeInputs(
+                prayerTimes = PrayerTimesState(uiLocale),
+                favorites = FavoritesState(uiLocale),
+                notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
+                rail = remember { HomeRailState().apply { replace(previewRailCards()) } },
+                reminders = previewReminders(),
+                navigation = HomeNavigation(onOpenLibrary = {}, onOpenRemembrance = {}, onOpenCollection = {}),
+            ),
+        dateText = "Friday, 20 February",
+        hadith = previewHadithState(),
+    )
 }
 
 /**

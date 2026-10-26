@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.settingsNotificationsScheduleHint
@@ -14,8 +13,8 @@ import com.azkar.generated.resources.settingsNotificationsScheduleTitle
 import com.azkar.ui.notifications.NotificationSettingsState
 import com.azkar.ui.notifications.ReminderQueueConfig
 import com.azkar.ui.preview.rememberPreviewNotificationSettingsState
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
 
 // `ui/shell/SettingsReminderSections.kt` — the two blocks under Reminders: when a reminder is due, and
@@ -56,18 +55,16 @@ internal fun SettingsReminderScheduleSection(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun SettingsReminderSectionsPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(820.dp).padding(AzkarSpacing.lg),
-            verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
-        ) {
-            SettingsReminderScheduleSection(
-                queue = ReminderQueueConfig(enabled = true),
-                settings = rememberPreviewNotificationSettingsState(),
-            )
-        }
+internal fun SettingsReminderSectionsPreview() {
+    Column(
+        modifier = Modifier.width(820.dp).padding(AzkarSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
+    ) {
+        SettingsReminderScheduleSection(
+            queue = ReminderQueueConfig(enabled = true),
+            settings = rememberPreviewNotificationSettingsState(),
+        )
     }
 }

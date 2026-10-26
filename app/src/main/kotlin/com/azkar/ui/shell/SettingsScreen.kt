@@ -51,7 +51,6 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -93,9 +92,9 @@ import com.azkar.ui.notifications.ReminderQueueConfig
 import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationPresentationSettings
 import com.azkar.ui.preview.previewAzkarAppState
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.updates.UpdateChannel
 import com.azkar.updates.UpdateManager
 import com.azkar.updates.UpdateStatus
@@ -269,7 +268,9 @@ private fun UpdateSettingsSection() {
                     onSelectChannel = { scope.launch { manager.selectChannel(it) } },
                     onCheck = { scope.launch { manager.checkManually() } },
                 )
-                if (manager.isRepositoryManaged) RepositoryUpdateActions(manager, channel, clipboard, scope)
+                if (manager.isRepositoryManaged && (status == UpdateStatus.Idle || status == UpdateStatus.Current)) {
+                    RepositoryUpdateActions(manager, channel, clipboard, scope)
+                }
                 if (status !is UpdateStatus.Idle && status !is UpdateStatus.Current) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         UpdateStatusContent(manager, channel, status, clipboard, scope)
@@ -469,34 +470,62 @@ private fun AvailableUpdateContent(
     clipboard: Clipboard,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
-    val colors = AzkarTheme.colors
-    Text(
-        stringResource(Res.string.settingsUpdateAvailable, update.info.version, update.info.releaseDate),
-        color = colors.textPrimary,
-        fontWeight = FontWeight.SemiBold,
-    )
-    Text(
-        stringResource(Res.string.settingsUpdateReleaseNotes),
-        color = colors.textPrimary,
-        fontWeight = FontWeight.SemiBold,
-    )
-    Text(
-        update.releaseNotes.ifBlank { stringResource(Res.string.settingsUpdateNoReleaseNotes) },
-        color = colors.textSecondary,
-    )
-    if (update.isDowngrade) DowngradeWarning()
-    if (manager.isRepositoryManaged) {
-        Button(onClick = {
+    UpdateAvailablePanel(
+        state =
+            UpdateAvailablePanelState(
+                version = update.info.version,
+                releaseDate = update.info.releaseDate,
+                releaseNotes = update.releaseNotes,
+                isDowngrade = update.isDowngrade,
+                isRepositoryManaged = manager.isRepositoryManaged,
+                actionLabel =
+                    stringResource(
+                        if (manager.isRepositoryManaged) {
+                            Res.string.settingsUpdateCopyCommands
+                        } else {
+                            Res.string.settingsUpdateDownload
+                        },
+                    ),
+            ),
+        onAction = {
             scope.launch {
-                clipboard.setPlainText(manager.packageManagerCommands(channel, update.info.version, update.isDowngrade))
+                if (manager.isRepositoryManaged) {
+                    clipboard.setPlainText(
+                        manager.packageManagerCommands(channel, update.info.version, update.isDowngrade),
+                    )
+                } else {
+                    manager.download(update.info)
+                }
             }
-        }) {
-            Text(stringResource(Res.string.settingsUpdateCopyCommands))
+        },
+    )
+}
+
+internal data class UpdateAvailablePanelState(
+    val version: String,
+    val releaseDate: String,
+    val releaseNotes: String,
+    val isDowngrade: Boolean,
+    val isRepositoryManaged: Boolean,
+    val actionLabel: String,
+)
+
+@Composable
+internal fun UpdateAvailablePanel(
+    state: UpdateAvailablePanelState,
+    onAction: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (state.isRepositoryManaged) {
+            Text(
+                stringResource(Res.string.settingsUpdateManaged),
+                color = AzkarTheme.colors.textSecondary,
+                fontSize = 12.sp,
+            )
         }
-    } else {
-        Button(onClick = { scope.launch { manager.download(update.info) } }) {
-            Text(stringResource(Res.string.settingsUpdateDownload))
-        }
+        UpdateDetailsCard(state.version, state.releaseDate, state.releaseNotes)
+        if (state.isDowngrade) DowngradeWarning()
+        Button(onClick = onAction) { Text(state.actionLabel) }
     }
 }
 
@@ -506,19 +535,66 @@ private fun ReadyToInstallContent(
     update: UpdateStatus.ReadyToInstall,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
-    val colors = AzkarTheme.colors
-    Text(
-        stringResource(Res.string.settingsUpdateAvailable, update.info.version, update.info.releaseDate),
-        color = colors.textPrimary,
-        fontWeight = FontWeight.SemiBold,
-    )
-    Text(
-        update.releaseNotes.ifBlank { stringResource(Res.string.settingsUpdateNoReleaseNotes) },
-        color = colors.textSecondary,
-    )
+    UpdateDetailsCard(update.info.version, update.info.releaseDate, update.releaseNotes)
     if (update.isDowngrade) DowngradeWarning()
     Button(onClick = { scope.launch { manager.installAndRestart(update.file) } }) {
         Text(stringResource(Res.string.settingsUpdateInstall))
+    }
+}
+
+@Composable
+internal fun UpdateDetailsCard(
+    version: String,
+    releaseDate: String,
+    releaseNotes: String,
+) {
+    val colors = AzkarTheme.colors
+    SettingsGroupCard {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                stringResource(Res.string.settingsUpdateAvailable, version, releaseDate),
+                color = colors.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                stringResource(Res.string.settingsUpdateReleaseNotes),
+                color = colors.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            ReleaseNotes(releaseNotes.ifBlank { stringResource(Res.string.settingsUpdateNoReleaseNotes) })
+        }
+    }
+}
+
+@Composable
+private fun ReleaseNotes(markdown: String) {
+    val colors = AzkarTheme.colors
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        markdown
+            .lineSequence()
+            .filterNot { it.trim().startsWith("<!--") }
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .forEach { line ->
+                val heading = line.startsWith('#')
+                val content =
+                    line
+                        .replace(Regex("^#{1,6}\\s*"), "")
+                        .replace(Regex("^[-*+]\\s+"), "•  ")
+                        .replace(Regex("\\[([^]]+)]\\(([^)]+)\\)"), "\$1")
+                        .replace(Regex("<!--.*?-->"), "")
+                        .replace("**", "")
+                        .replace("__", "")
+                        .replace("`", "")
+                if (content.isNotBlank()) {
+                    Text(
+                        content,
+                        color = if (heading) colors.textPrimary else colors.textSecondary,
+                        fontSize = if (heading) 14.sp else 13.sp,
+                        fontWeight = if (heading) FontWeight.SemiBold else FontWeight.Normal,
+                    )
+                }
+            }
     }
 }
 
@@ -683,20 +759,18 @@ private fun rememberNotificationSettingsValues(): NotificationSettingsValues {
     return NotificationSettingsValues(queue, prayerLocation, presentation)
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun SettingsScreenPreview() {
-    AzkarThemePreview {
-        // Assembled from the parts rather than by calling [SettingsScreen], because that composable
-        // reaches Koin for the notification holder and a preview has no container to resolve it against.
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(40.dp),
-            verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
-        ) {
-            SettingsPageHeader(onClose = {})
-            SettingsLanguageSection(state = previewAzkarAppState())
-            SettingsThemeSection(state = previewAzkarAppState())
-            SettingsTypographySection(state = previewAzkarAppState())
-        }
+internal fun SettingsScreenPreview() {
+    // Assembled from the parts rather than by calling [SettingsScreen], because that composable
+    // reaches Koin for the notification holder and a preview has no container to resolve it against.
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(40.dp),
+        verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
+    ) {
+        SettingsPageHeader(onClose = {})
+        SettingsLanguageSection(state = previewAzkarAppState())
+        SettingsThemeSection(state = previewAzkarAppState())
+        SettingsTypographySection(state = previewAzkarAppState())
     }
 }

@@ -1,12 +1,11 @@
 import azkar.buildlogic.AzkarInstallerPlatform
 import azkar.buildlogic.macPackageVersion
 import org.gradle.api.artifacts.ExternalModuleDependency
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.jar.JarFile
 
 plugins {
     id("azkar-app")
+    alias(libs.plugins.io.github.takahirom.roborazzi)
 }
 
 // The release tag has to match this number exactly, without the `v`: the release workflow
@@ -144,6 +143,10 @@ dependencies {
     // `runTest` supplies virtual time and a deterministic scheduler, which is what makes the
     // library's debounced search assertable without a real 180 ms wait.
     testImplementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.test)
+    testImplementation(libs.io.github.takahirom.roborazzi.compose.desktop)
+    testImplementation(libs.io.github.takahirom.roborazzi.compose.desktop.preview.scanner.support)
+    testImplementation(libs.io.github.sergio.sastre.composable.preview.scanner.android)
+    testImplementation(libs.junit.junit)
 
     // Compose UI tests, for the controls. `runComposeUiTest` renders off-screen and drives input
     // through `mainClock`, so the recomposition cost of a hover can be counted a frame at a time
@@ -154,6 +157,37 @@ dependencies {
     // driven through canned responses without a socket. `ktor-client-mock` is already in the
     // version catalog above the `ktor` line; this is where it becomes a test dependency.
     testImplementation(libs.io.ktor.ktor.client.mock)
+}
+
+val previewScannerEnabled =
+    providers.gradleProperty("azkar.previewScanner").map(String::toBoolean).getOrElse(false)
+
+if (previewScannerEnabled) {
+    dependencies {
+        testRuntimeOnly(libs.org.junit.vintage.junit.vintage.engine)
+    }
+    tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+        filter.includeTestsMatching("com.github.takahirom.roborazzi.RoborazziDesktopPreviewParameterizedTests")
+    }
+}
+
+roborazzi {
+    if (previewScannerEnabled) {
+        outputDir.set(layout.buildDirectory.dir("roborazzi-preview-scanner"))
+    } else {
+        outputDir.set(layout.projectDirectory.dir("src/test/roborazzi"))
+    }
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    generateComposePreviewDesktopTests {
+        // Opt in with -Pazkar.previewScanner=true; scanner output is kept outside reviewed goldens.
+        enable = previewScannerEnabled
+        packages = listOf("com.azkar.ui")
+        includePrivatePreviews = true
+        annotationFilter =
+            com.github.takahirom.roborazzi.AnnotationFilter.Exclude(
+                "com.azkar.ui.preview.RoborazziDesktopPreviewExclude",
+            )
+    }
 }
 
 // Compose Multiplatform re-publishes part of the Compose runtime under
@@ -198,122 +232,40 @@ tasks.jar {
     from(sourceSets.main.get().output)
 }
 
-// ---------------------------------------------------------------------------
-// Off-screen screenshot harness.
-//
-// Rasterises a screen to a PNG without needing a display server, which is how
-// the UI gets visually verified on a headless machine. It lives in its own
-// source set so it never ends up in the shipped jar.
-//
-//   ./gradlew :app:runScreenshot -Pazkar.screenshot.screen=collections
-//
-// `screen` accepts each target listed by `-Pazkar.screenshot.list=true` (screens and
-// selected reusable components). `targets` and `themes` batch a deterministic set of images:
-//
-//   ./gradlew :app:runScreenshot -Pazkar.screenshot.targets=home,component.home-rail \
-//       -Pazkar.screenshot.themes=light,dark -Pazkar.screenshot.outDir=build/screenshots
-//   ./gradlew :app:runScreenshot -Pazkar.screenshot.locale=ar  # RTL mirroring
-//
-// `collection-detail` has one further switch, because its member grid is only half
-// reachable from the way the page opens:
-//
-//   ./gradlew :app:runScreenshot -Pazkar.screenshot.screen=collection-detail \
-//       -Pazkar.screenshot.memberView=list
-// ---------------------------------------------------------------------------
-
-val screenshot =
-    sourceSets.create("screenshot") {
-        compileClasspath += sourceSets.main.get().compileClasspath + sourceSets.main.get().output
-        runtimeClasspath += sourceSets.main.get().runtimeClasspath + sourceSets.main.get().output
+// Gallery generation is an executable, separate from regression tests and their baselines.
+val gallery =
+    sourceSets.create("gallery") {
+        compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+        runtimeClasspath += sourceSets.main.get().output + sourceSets.main.get().runtimeClasspath
     }
-
-configurations["screenshotImplementation"].extendsFrom(configurations.implementation.get())
-
-configurations["screenshotRuntimeOnly"].extendsFrom(configurations.runtimeOnly.get())
-
-tasks.register<JavaExec>("runScreenshot") {
-    group = "verification"
-    description = "Rasterise a screen to a PNG (headless UI check)"
-    mainClass.set("com.azkar.ScreenshotKt")
-    classpath = screenshot.runtimeClasspath
-    // Skiko loads its native library through System.loadLibrary; DataStore's bundled protobuf
-    // currently uses sun.misc.Unsafe on Java 25.
-    jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow", "-Dh2.bindAddress=127.0.0.1")
-    systemProperty(
-        "azkar.screenshot.out",
-        providers.gradleProperty("azkar.screenshot.out").getOrElse("build/screenshot.png"),
-    )
-    providers.gradleProperty("azkar.screenshot.screen").orNull?.let {
-        systemProperty("azkar.screenshot.screen", it)
-    }
-    providers.gradleProperty("azkar.screenshot.width").orNull?.let {
-        systemProperty("azkar.screenshot.width", it)
-    }
-    providers.gradleProperty("azkar.screenshot.height").orNull?.let {
-        systemProperty("azkar.screenshot.height", it)
-    }
-    providers.gradleProperty("azkar.screenshot.locale").orNull?.let {
-        systemProperty("azkar.screenshot.locale", it)
-    }
-    providers.gradleProperty("azkar.screenshot.dark").orNull?.let {
-        systemProperty("azkar.screenshot.dark", it)
-    }
-    providers.gradleProperty("azkar.screenshot.memberView").orNull?.let {
-        systemProperty("azkar.screenshot.memberView", it)
-    }
-    listOf("targets", "themes", "outDir", "list", "userName", "home").forEach { propertyName ->
-        providers.gradleProperty("azkar.screenshot.$propertyName").orNull?.let {
-            systemProperty("azkar.screenshot.$propertyName", it)
-        }
-    }
-    dependsOn(tasks.named("screenshotClasses"))
+configurations[gallery.implementationConfigurationName].extendsFrom(configurations.implementation.get())
+kotlin {
+    sourceSets.named("test") { kotlin.srcDir("src/screenshotFixtures/kotlin") }
+    sourceSets.named("gallery") { kotlin.srcDir("src/screenshotFixtures/kotlin") }
+    target.compilations.named("gallery") { associateWith(target.compilations.getByName("main")) }
 }
 
-val downloadScreenshotStaging = layout.buildDirectory.dir("download-screenshots")
-val downloadScreenshotNames =
-    listOf(
-        "screen-home",
-        "screen-library",
-        "screen-reader",
-        "screen-session",
-        "screen-collection",
-        "screen-reminder",
-    )
+dependencies {
+    add(gallery.implementationConfigurationName, libs.io.github.takahirom.roborazzi.compose.desktop)
+    add(gallery.implementationConfigurationName, libs.org.jetbrains.compose.ui.test)
+}
 
 tasks.register<JavaExec>("captureDownloadScreenshots") {
-    group = "verification"
-    description = "Capture the download page gallery in light and dark themes"
-    mainClass.set("com.azkar.ScreenshotKt")
-    classpath = screenshot.runtimeClasspath
-    jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow", "-Dh2.bindAddress=127.0.0.1")
+    group = "documentation"
+    description = "Render fresh light and dark images for the download page and README"
+    mainClass.set("com.azkar.GalleryKt")
+    classpath = gallery.runtimeClasspath
+    dependsOn(tasks.named("galleryClasses"))
+    args(rootProject.file("site/images").absolutePath)
+    jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow")
+    systemProperty("roborazzi.test.record", "true")
     systemProperty(
-        "azkar.screenshot.targets",
-        "app,collections,remembrance,collection-session,collection-detail,reminder-card",
+        "roborazzi.result.dir",
+        layout.buildDirectory
+            .dir("gallery-results")
+            .get()
+            .asFile.absolutePath,
     )
-    systemProperty("azkar.screenshot.themes", "light,dark")
-    systemProperty("azkar.screenshot.userName", "Azkar")
-    systemProperty("azkar.screenshot.locale", "en")
-    systemProperty("azkar.screenshot.outDir", downloadScreenshotStaging.get().asFile.absolutePath)
-    systemProperty("azkar.screenshot.width", "1440")
-    systemProperty("azkar.screenshot.height", "900")
-    dependsOn(tasks.named("screenshotClasses"))
-    doLast {
-        val stagedFiles = downloadScreenshotNames.flatMap { name -> listOf("$name-light.png", "$name-dark.png") }
-        val stagedDirectory = downloadScreenshotStaging.get().asFile.toPath()
-        val missing = stagedFiles.filterNot { Files.isRegularFile(stagedDirectory.resolve(it)) }
-        require(
-            missing.isEmpty(),
-        ) { "Screenshot capture did not produce all download page images: ${missing.joinToString()}" }
-        val destination = rootProject.file("site/images").toPath()
-        Files.createDirectories(destination)
-        stagedFiles.forEach { file ->
-            Files.copy(
-                stagedDirectory.resolve(file),
-                destination.resolve(file),
-                StandardCopyOption.REPLACE_EXISTING,
-            )
-        }
-    }
 }
 
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
@@ -505,6 +457,13 @@ nucleus.application {
                     }
             }
         }
+    }
+}
+
+tasks.matching { it.name == "proguardReleaseJars" }.configureEach {
+    if (providers.environmentVariable("CI").map(String::toBoolean).getOrElse(false)) {
+        // ProGuard sends its long informational notes to stdout; keep them available with --debug.
+        logging.captureStandardOutput(org.gradle.api.logging.LogLevel.DEBUG)
     }
 }
 

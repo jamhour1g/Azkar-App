@@ -1,12 +1,15 @@
 package com.azkar.ui.theme
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.PreviewWrapperProvider
 import androidx.compose.ui.unit.Dp
 import com.azkar.i18n.ENGLISH
-import com.azkar.ui.theme.AzkarTheme
 import java.util.Locale
 
 /**
@@ -32,7 +35,9 @@ import java.util.Locale
  * compact rail and the medium shelf go unseen until someone resizes the real window.
  *
  * Nothing here reads or writes real state. Content is drawn from the fixtures in
- * `com.azkar.ui.preview`, which are in-memory and never wired into the Koin graph.
+ * `com.azkar.ui.preview`, which are in-memory and never wired into the Koin graph. The preview
+ * surface uses the app background so component previews render as opaque images in the IDE and
+ * Roborazzi.
  */
 @Composable
 fun AzkarThemePreview(
@@ -48,7 +53,18 @@ fun AzkarThemePreview(
         AzkarTheme(
             darkTheme = darkTheme,
             uiLocale = uiLocale,
-            content = content,
-        )
+        ) {
+            Surface(Modifier.fillMaxSize(), color = AzkarTheme.colors.background) {
+                content()
+            }
+        }
+    }
+}
+
+/** Applies the deterministic app theme to Android Studio and Roborazzi generated previews. */
+class AzkarPreviewWrapperProvider : PreviewWrapperProvider {
+    @Composable
+    override fun Wrap(content: @Composable () -> Unit) {
+        AzkarPreviewSurface(content = content)
     }
 }

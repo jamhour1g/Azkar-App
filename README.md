@@ -84,7 +84,8 @@ For release channels and packaging details, see the [release guide](docs/releasi
 ## Contribute
 
 Bug reports and focused improvements are welcome. Include your operating system, app version, and
-steps to reproduce. For UI changes, include screenshots in light and dark appearances.
+steps to reproduce. For UI changes, update the Roborazzi light and dark baselines; their image diffs
+are included in the pull request. CI comparison artifacts are available when verification fails.
 
 Start with the [development guide](docs/development.md) for setup, local checks, screenshots, and
 the project layout. Read [CI documentation](docs/ci.md) before opening a pull request.

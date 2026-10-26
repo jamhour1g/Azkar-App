@@ -29,7 +29,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.domain.model.RemembranceCollection
@@ -54,8 +53,8 @@ import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.preview.previewCollection
 import com.azkar.ui.preview.previewCollectionStats
 import com.azkar.ui.preview.previewCollectionStatsVariants
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -279,46 +278,44 @@ private fun SessionControls(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionSessionHeroPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(1200.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CollectionSessionHero(
-                collection = previewCollection(),
-                publisher = "Sahih al-Bukhari",
-                stats = previewCollectionStats(),
-                inReminders = true,
-                actions =
-                    SessionHeroActions(
-                        onBack = {},
-                        onNext = {},
-                        onToggleFavorite = {},
-                        onToggleReminder = {},
-                        menuItems =
-                            listOf(
-                                AzkarMenuItem(label = "Restart", onClick = {}, icon = ActionIcons.restart),
-                            ),
-                    ),
-            )
-            CollectionSessionHero(
-                collection = previewCollection(),
-                publisher = "Sahih al-Bukhari",
-                stats = previewCollectionStatsVariants()[1],
-                inReminders = false,
-                actions =
-                    SessionHeroActions(
-                        onBack = {},
-                        onNext = {},
-                        onToggleFavorite = {},
-                        onToggleReminder = {},
-                        menuItems = emptyList(),
-                    ),
-            )
-        }
+internal fun CollectionSessionHeroPreview() {
+    Column(
+        modifier = Modifier.width(1200.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        CollectionSessionHero(
+            collection = previewCollection(),
+            publisher = "Sahih al-Bukhari",
+            stats = previewCollectionStats(),
+            inReminders = true,
+            actions =
+                SessionHeroActions(
+                    onBack = {},
+                    onNext = {},
+                    onToggleFavorite = {},
+                    onToggleReminder = {},
+                    menuItems =
+                        listOf(
+                            AzkarMenuItem(label = "Restart", onClick = {}, icon = ActionIcons.restart),
+                        ),
+                ),
+        )
+        CollectionSessionHero(
+            collection = previewCollection(),
+            publisher = "Sahih al-Bukhari",
+            stats = previewCollectionStatsVariants()[1],
+            inReminders = false,
+            actions =
+                SessionHeroActions(
+                    onBack = {},
+                    onNext = {},
+                    onToggleFavorite = {},
+                    onToggleReminder = {},
+                    menuItems = emptyList(),
+                ),
+        )
     }
 }
 

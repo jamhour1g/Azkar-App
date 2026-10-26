@@ -28,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -54,8 +53,8 @@ import com.azkar.ui.components.rememberContextMenuState
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.preview.previewRemembranceTile
 import com.azkar.ui.preview.previewRemembranceTileActions
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -220,28 +219,26 @@ private fun ColumnScope.TileBody(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun RemembranceTileCardPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(1100.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            previewRemembranceTile().let { tile ->
-                RemembranceTileCard(
-                    tile = tile,
-                    actions = previewRemembranceTileActions(),
-                    memberCount = 54,
-                    modifier = Modifier.width(320.dp),
-                )
-                RemembranceTileCard(
-                    tile = tile,
-                    actions = previewRemembranceTileActions(removable = true),
-                    selected = true,
-                    modifier = Modifier.width(320.dp),
-                )
-            }
+internal fun RemembranceTileCardPreview() {
+    Row(
+        modifier = Modifier.width(1100.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        previewRemembranceTile().let { tile ->
+            RemembranceTileCard(
+                tile = tile,
+                actions = previewRemembranceTileActions(),
+                memberCount = 54,
+                modifier = Modifier.width(320.dp),
+            )
+            RemembranceTileCard(
+                tile = tile,
+                actions = previewRemembranceTileActions(removable = true),
+                selected = true,
+                modifier = Modifier.width(320.dp),
+            )
         }
     }
 }
@@ -555,26 +552,24 @@ private fun RowText(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun RemembranceTileRowPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(640.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            previewRemembranceTile().let { tile ->
-                RemembranceTileRow(
-                    tile = tile,
-                    actions = previewRemembranceTileActions(),
-                    memberCount = 54,
-                )
-                RemembranceTileRow(
-                    tile = tile.copy(id = 102L, isFavorite = true, position = 0),
-                    actions = previewRemembranceTileActions(removable = true),
-                    selected = true,
-                )
-            }
+internal fun RemembranceTileRowPreview() {
+    Column(
+        modifier = Modifier.width(640.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        previewRemembranceTile().let { tile ->
+            RemembranceTileRow(
+                tile = tile,
+                actions = previewRemembranceTileActions(),
+                memberCount = 54,
+            )
+            RemembranceTileRow(
+                tile = tile.copy(id = 102L, isFavorite = true, position = 0),
+                actions = previewRemembranceTileActions(removable = true),
+                selected = true,
+            )
         }
     }
 }

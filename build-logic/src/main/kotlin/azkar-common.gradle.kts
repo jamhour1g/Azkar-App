@@ -157,7 +157,6 @@ tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
         buildList {
             add(sourceSets["main"].compileClasspath)
             add(sourceSets["test"].compileClasspath)
-            sourceSets.findByName("screenshot")?.let { add(it.compileClasspath) }
         }
     classpath.setFrom(analysisClasspaths)
 }

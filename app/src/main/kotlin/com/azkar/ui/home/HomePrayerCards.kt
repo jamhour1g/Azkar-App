@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -46,8 +45,8 @@ import com.azkar.ui.components.pressFeedback
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.preview.previewCountdown
 import com.azkar.ui.preview.previewPrayerRows
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.stringResource
 
@@ -167,29 +166,27 @@ fun PrayerTimesCard(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun PrayerTimesCardPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(520.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            PrayerTimesCard(
-                rows = previewPrayerRows(),
-                countdown = previewCountdown(),
-                notificationsEnabled = true,
-                onGlobalToggle = {},
-                onNotificationToggled = { _, _ -> },
-            )
-            PrayerTimesCard(
-                rows = previewPrayerRows(),
-                countdown = previewCountdown(),
-                notificationsEnabled = false,
-                onGlobalToggle = {},
-                onNotificationToggled = { _, _ -> },
-            )
-        }
+internal fun PrayerTimesCardPreview() {
+    Column(
+        modifier = Modifier.width(520.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        PrayerTimesCard(
+            rows = previewPrayerRows(),
+            countdown = previewCountdown(),
+            notificationsEnabled = true,
+            onGlobalToggle = {},
+            onNotificationToggled = { _, _ -> },
+        )
+        PrayerTimesCard(
+            rows = previewPrayerRows(),
+            countdown = previewCountdown(),
+            notificationsEnabled = false,
+            onGlobalToggle = {},
+            onNotificationToggled = { _, _ -> },
+        )
     }
 }
 

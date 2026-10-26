@@ -13,14 +13,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.HoverInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,10 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.style.Style
 import androidx.compose.foundation.style.styleable
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -81,7 +74,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
@@ -92,7 +84,6 @@ import com.azkar.ui.theme.AzkarColors
 import com.azkar.ui.theme.AzkarExpressive
 import com.azkar.ui.theme.AzkarMotion
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.CardSize
 import com.azkar.ui.theme.dialogEnter
 import com.azkar.ui.theme.inertStyleState
@@ -150,30 +141,6 @@ fun AzkarCard(
     }
 }
 
-@Preview
-@Composable
-private fun AzkarCardPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(340.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            CardSize.entries.forEach { size ->
-                AzkarCard(modifier = Modifier.fillMaxWidth(), size = size) {
-                    Column {
-                        Text(text = size.name, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            text = "Padding and elevation both follow the size.",
-                            color = AzkarTheme.colors.textSecondary,
-                            fontSize = 13.sp,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
 /**
  * [AzkarCard] for surfaces that are painted rather than filled.
  *
@@ -219,35 +186,6 @@ fun AzkarSurfaceCard(
                 .padding(contentPadding),
     ) {
         content()
-    }
-}
-
-@Preview
-@Composable
-private fun AzkarSurfaceCardPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(340.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            AzkarSurfaceCard(
-                modifier = Modifier.fillMaxWidth(),
-                background =
-                    mirrorHorizontalGradient(
-                        colors = listOf(AzkarTheme.colors.primary, AzkarTheme.colors.secondary),
-                        isRtl = isRtlLayout(),
-                    ),
-            ) {
-                Column {
-                    Text(text = "Painted card", color = AzkarTheme.colors.onPrimary)
-                    Text(
-                        text = "A wash instead of a flat fill.",
-                        color = AzkarTheme.colors.onPrimary.copy(alpha = 0.8f),
-                        fontSize = 13.sp,
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -329,23 +267,6 @@ fun PrimaryButton(
     }
 }
 
-@Preview
-@Composable
-private fun PrimaryButtonPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(340.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PrimaryButton(text = "Start session", onClick = {}, leadingIcon = ActionIcons.read)
-                PrimaryButton(text = "With icon", onClick = {}, leadingIcon = ActionIcons.duplicate)
-            }
-            PrimaryButton(text = "Disabled", onClick = {}, enabled = false)
-        }
-    }
-}
-
 /**
  * `.btn-secondary` — the quieter sibling of [PrimaryButton], and now Material 3's [OutlinedButton].
  *
@@ -404,23 +325,6 @@ fun SecondaryButton(
             fontWeight = FontWeight.Medium,
             maxLines = 1,
         )
-    }
-}
-
-@Preview
-@Composable
-private fun SecondaryButtonPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(340.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SecondaryButton(text = "Cancel", onClick = {})
-                SecondaryButton(text = "Disabled", onClick = {}, enabled = false)
-            }
-            SecondaryButton(text = "Choose image…", onClick = {}, leadingIcon = Icons.Outlined.Image)
-        }
     }
 }
 
@@ -515,21 +419,6 @@ fun NavButton(
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
         )
-    }
-}
-
-@Preview
-@Composable
-private fun NavButtonPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(420.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            NavButton(text = "Home", selected = true, onClick = {}, leadingIcon = AzkarIcons.Home)
-            NavButton(text = "Library", selected = false, onClick = {}, leadingIcon = AzkarIcons.Library)
-            NavButton(text = "Settings", selected = false, onClick = {}, leadingIcon = AzkarIcons.Settings)
-        }
     }
 }
 
@@ -638,35 +527,6 @@ fun IconActionButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 modifier = Modifier.size(iconSize),
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun IconActionButtonPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(340.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            IconActionButton(
-                icon = ActionIcons.pin(on = false),
-                contentDescription = "Pin to top",
-                onClick = {},
-            )
-            IconActionButton(
-                icon = ActionIcons.favorite(on = true),
-                contentDescription = "Favourite",
-                onClick = {},
-                selected = true,
-            )
-            IconActionButton(
-                icon = ActionIcons.delete,
-                contentDescription = "Delete",
-                onClick = {},
-                tint = AzkarTheme.colors.dialogValidation,
             )
         }
     }
@@ -854,31 +714,6 @@ fun CircleIconButton(
     }
 }
 
-@Preview
-@Composable
-private fun CircleIconButtonPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(340.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            CircleIconButton(icon = ActionIcons.copy, contentDescription = "Duplicate", onClick = {})
-            CircleIconButton(
-                icon = ActionIcons.favorite(on = true),
-                contentDescription = "Favourite",
-                onClick = {},
-                favorite = true,
-            )
-            CircleIconButton(
-                icon = ActionIcons.delete,
-                contentDescription = "Delete",
-                onClick = {},
-                enabled = false,
-            )
-        }
-    }
-}
-
 /**
  * The one tooltip the app draws, and every control that wants one goes through here.
  *
@@ -1015,34 +850,6 @@ fun TooltipIconActionButton(
     }
 }
 
-@Preview
-@Composable
-private fun TooltipIconButtonPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(340.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            TooltipIconButton(
-                icon = ActionIcons.addMembers,
-                tooltip = "Add remembrances",
-                onClick = {},
-            )
-            TooltipIconButton(
-                icon = ActionIcons.cover,
-                tooltip = "Change cover",
-                onClick = {},
-            )
-            TooltipIconActionButton(
-                icon = AzkarIcons.Settings,
-                tooltip = "Settings",
-                onClick = {},
-                tint = AzkarTheme.colors.textSecondary,
-            )
-        }
-    }
-}
-
 /**
  * `.toggle-switch` — the ControlsFX switch, and now Material 3's [Switch].
  *
@@ -1078,21 +885,6 @@ fun AzkarToggleSwitch(
                 uncheckedBorderColor = colors.switchThumbBorder,
             ),
     )
-}
-
-@Preview
-@Composable
-private fun AzkarToggleSwitchPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(340.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            AzkarToggleSwitch(checked = true, onCheckedChange = {})
-            AzkarToggleSwitch(checked = false, onCheckedChange = {})
-            AzkarToggleSwitch(checked = false, onCheckedChange = {}, enabled = false)
-        }
-    }
 }
 
 /**
@@ -1140,20 +932,6 @@ fun PillToggle(
                 selectedLeadingIconColor = colors.primary,
             ),
     )
-}
-
-@Preview
-@Composable
-private fun PillTogglePreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(420.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            PillToggle(text = "Grid", selected = true, onClick = {}, leadingIcon = AzkarIcons.Library)
-            PillToggle(text = "List", selected = false, onClick = {})
-        }
-    }
 }
 
 /**
@@ -1205,21 +983,6 @@ fun AzkarFilterChip(
                 selectedLeadingIconColor = colors.onPrimary,
             ),
     )
-}
-
-@Preview
-@Composable
-private fun AzkarFilterChipPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(420.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AzkarFilterChip(text = "All", selected = true, onClick = {})
-            AzkarFilterChip(text = "Official", selected = false, onClick = {})
-            AzkarFilterChip(text = "Yours", selected = false, onClick = {})
-        }
-    }
 }
 
 /**
@@ -1285,34 +1048,6 @@ fun AzkarOverflowMenu(
                     AzkarMenuItemRow(item = item, onDismiss = { expanded = false })
                 }
             }
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun AzkarOverflowMenuPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(340.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            AzkarOverflowMenu(
-                icon = Icons.Outlined.MoreVert,
-                contentDescription = "More actions",
-                items =
-                    listOf(
-                        AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),
-                        AzkarMenuItem(label = "Duplicate", onClick = {}, icon = ActionIcons.duplicate),
-                        AzkarMenuItem(label = "Delete", onClick = {}, icon = ActionIcons.delete),
-                    ),
-            )
-            AzkarOverflowMenu(
-                icon = Icons.Outlined.MoreVert,
-                contentDescription = "More actions",
-                items = emptyList(),
-                enabled = false,
-            )
         }
     }
 }
@@ -1481,43 +1216,6 @@ private fun FieldHint(
     )
 }
 
-@Preview
-@Composable
-private fun AzkarOutlinedFieldPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(340.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            AzkarOutlinedField(
-                value = "",
-                onValueChange = {},
-                placeholder = "Search remembrances",
-                leadingIcon = Icons.Outlined.Search,
-            )
-            AzkarOutlinedField(
-                value = "Ar-Rahman",
-                onValueChange = {},
-                placeholder = "Name",
-                active = true,
-            )
-            AzkarOutlinedField(
-                value = "Every morning after Fajr",
-                onValueChange = {},
-                placeholder = "Description",
-                singleLine = false,
-                trailingContent = {
-                    IconActionButton(
-                        icon = Icons.Outlined.Search,
-                        contentDescription = "Search",
-                        onClick = {},
-                    )
-                },
-            )
-        }
-    }
-}
-
 /**
  * `.library-tabs-pane` — the segmented tab strip that replaced the JavaFX `TabPane`, now a Material 3
  * [PrimaryTabRow].
@@ -1565,20 +1263,6 @@ fun AzkarTabStrip(
     }
 }
 
-@Preview
-@Composable
-private fun AzkarTabStripPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(420.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-        ) {
-            AzkarTabStrip(tabs = listOf("All", "Official", "Yours"), selectedIndex = 0, onSelect = {})
-            AzkarTabStrip(tabs = listOf("All", "Official", "Yours"), selectedIndex = 2, onSelect = {})
-        }
-    }
-}
-
 /**
  * Full-bleed container used by the empty/loading panes inside the browse stack.
  *
@@ -1609,48 +1293,12 @@ fun BorderedStateBox(
     }
 }
 
-@Preview
-@Composable
-private fun BorderedStateBoxPreview() {
-    AzkarThemePreview {
-        BorderedStateBox(modifier = Modifier.width(340.dp)) {
-            Text(text = "Nothing here yet", fontWeight = FontWeight.SemiBold)
-            Text(
-                text = "The empty and loading panes draw their chrome from here.",
-                color = AzkarTheme.colors.textSecondary,
-                fontSize = 13.sp,
-            )
-        }
-    }
-}
-
 /** Utility that keeps icon tint inheritance consistent inside card rows. */
 @Composable
 fun IconTint(
     color: Color,
     content: @Composable () -> Unit,
 ) = CompositionLocalProvider(LocalContentColor provides color, content = content)
-
-@Preview
-@Composable
-private fun IconTintPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(340.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            IconTint(color = AzkarTheme.colors.accentInk) {
-                Icon(imageVector = AzkarIcons.Star, contentDescription = null)
-            }
-            IconTint(color = AzkarTheme.colors.primaryStrong) {
-                Icon(imageVector = AzkarIcons.Clock, contentDescription = null)
-            }
-            IconTint(color = AzkarTheme.colors.textSecondary) {
-                Icon(imageVector = AzkarIcons.Bell, contentDescription = null)
-            }
-        }
-    }
-}
 
 /**
  * `.library-dialog-pane` — the chrome every `Dialog` in the app is drawn on.
@@ -1692,21 +1340,6 @@ fun AzkarDialogSurface(
                 ),
         ) {
             content()
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun AzkarDialogSurfacePreview() {
-    AzkarThemePreview {
-        AzkarDialogSurface(modifier = Modifier.width(340.dp)) {
-            Text(text = "Remove reminder?", fontWeight = FontWeight.SemiBold)
-            Text(
-                text = "Every dialog in the app draws on this pane, so they share a padding.",
-                color = AzkarTheme.colors.textSecondary,
-                fontSize = 13.sp,
-            )
         }
     }
 }

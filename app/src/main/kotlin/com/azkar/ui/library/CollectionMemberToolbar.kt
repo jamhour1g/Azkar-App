@@ -38,7 +38,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -61,8 +60,8 @@ import com.azkar.ui.library.model.CollectionMemberSort
 import com.azkar.ui.library.model.CollectionMemberView
 import com.azkar.ui.preview.previewCollectionStats
 import com.azkar.ui.preview.previewCollectionStatsVariants
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -557,19 +556,32 @@ internal data class ToolbarGates(
     val canResetProgress: Boolean,
 )
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CollectionMemberToolbarPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(1200.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
+internal fun CollectionMemberToolbarPreview() {
+    Column(
+        modifier = Modifier.width(1200.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        CollectionMemberToolbar(
+            stats = previewCollectionStats(),
+            sort = CollectionMemberSort.SEQUENCE,
+            view = CollectionMemberView.GRID,
+            gates = ToolbarGates(canStart = true, canResetProgress = true),
+            actions =
+                MemberToolbarActions(
+                    onStart = {},
+                    onRequestReset = {},
+                    onSortSelected = {},
+                    onViewSelected = {},
+                ),
+        )
+        previewCollectionStatsVariants().forEach { stats ->
             CollectionMemberToolbar(
-                stats = previewCollectionStats(),
-                sort = CollectionMemberSort.SEQUENCE,
-                view = CollectionMemberView.GRID,
-                gates = ToolbarGates(canStart = true, canResetProgress = true),
+                stats = stats,
+                sort = CollectionMemberSort.CATEGORY,
+                view = CollectionMemberView.LIST,
+                gates = ToolbarGates(canStart = true, canResetProgress = false),
                 actions =
                     MemberToolbarActions(
                         onStart = {},
@@ -578,21 +590,6 @@ private fun CollectionMemberToolbarPreview() {
                         onViewSelected = {},
                     ),
             )
-            previewCollectionStatsVariants().forEach { stats ->
-                CollectionMemberToolbar(
-                    stats = stats,
-                    sort = CollectionMemberSort.CATEGORY,
-                    view = CollectionMemberView.LIST,
-                    gates = ToolbarGates(canStart = true, canResetProgress = false),
-                    actions =
-                        MemberToolbarActions(
-                            onStart = {},
-                            onRequestReset = {},
-                            onSortSelected = {},
-                            onViewSelected = {},
-                        ),
-                )
-            }
         }
     }
 }

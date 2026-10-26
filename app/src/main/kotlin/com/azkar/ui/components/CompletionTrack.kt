@@ -18,12 +18,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.azkar.ui.theme.AzkarMotion
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 
 /**
  * A completion rule that grows to [completion] instead of jumping to it.
@@ -91,19 +90,17 @@ fun CompletionTrack(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun CompletionTrackPreview() {
-    AzkarThemePreview {
-        Column(
-            modifier = Modifier.width(420.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            listOf(0f, 0.17f, 0.5f, 1f).forEach { value ->
-                CompletionTrack(completion = value, modifier = Modifier.fillMaxWidth())
-            }
-            CompletionTrack(completion = 0.5f, modifier = Modifier.fillMaxWidth(), height = 12.dp)
+internal fun CompletionTrackPreview() {
+    Column(
+        modifier = Modifier.width(420.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        listOf(0f, 0.17f, 0.5f, 1f).forEach { value ->
+            CompletionTrack(completion = value, modifier = Modifier.fillMaxWidth())
         }
+        CompletionTrack(completion = 0.5f, modifier = Modifier.fillMaxWidth(), height = 12.dp)
     }
 }
 

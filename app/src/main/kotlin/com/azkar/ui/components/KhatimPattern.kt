@@ -12,11 +12,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -66,28 +65,26 @@ internal fun KhatimPattern(
     }
 }
 
-@Preview
+@AzkarPreview
 @Composable
-private fun KhatimPatternPreview() {
-    AzkarThemePreview {
-        Row(
-            modifier = Modifier.width(420.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            KhatimPattern(
-                tint = AzkarTheme.colors.accent.copy(alpha = 0.22f),
-                modifier = Modifier.size(180.dp),
-            )
-            KhatimPattern(
-                tint = AzkarTheme.colors.primary.copy(alpha = 0.18f),
-                modifier = Modifier.size(180.dp),
-                tile = 24.dp,
-            )
-            KhatimPattern(
-                tint = Color.Transparent,
-                modifier = Modifier.size(180.dp),
-            )
-        }
+internal fun KhatimPatternPreview() {
+    Row(
+        modifier = Modifier.width(420.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        KhatimPattern(
+            tint = AzkarTheme.colors.accent.copy(alpha = 0.22f),
+            modifier = Modifier.size(180.dp),
+        )
+        KhatimPattern(
+            tint = AzkarTheme.colors.primary.copy(alpha = 0.18f),
+            modifier = Modifier.size(180.dp),
+            tile = 24.dp,
+        )
+        KhatimPattern(
+            tint = Color.Transparent,
+            modifier = Modifier.size(180.dp),
+        )
     }
 }
 

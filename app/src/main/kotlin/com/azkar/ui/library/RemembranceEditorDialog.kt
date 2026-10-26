@@ -67,6 +67,18 @@ internal fun RemembranceEditorDialog(
     onDismiss: () -> Unit,
     onConfirm: (arabic: String, english: String?) -> Unit,
 ) {
+    Dialog(onDismissRequest = onDismiss) {
+        RemembranceEditorContent(remembrance, onDismiss, onConfirm)
+    }
+}
+
+/** The production editor pane without its native window host, for previews and screenshot tests. */
+@Composable
+internal fun RemembranceEditorContent(
+    remembrance: Remembrance,
+    onDismiss: () -> Unit,
+    onConfirm: (arabic: String, english: String?) -> Unit,
+) {
     val colors = AzkarTheme.colors
     val draft =
         remember(remembrance.id) {
@@ -75,43 +87,41 @@ internal fun RemembranceEditorDialog(
                 english = remembrance.textIn(CollectionPresenter.ENGLISH_LOCALE),
             )
         }
-    Dialog(onDismissRequest = onDismiss) {
-        // The Box inside AzkarDialogSurface has no arrangement of its own, so the children need a
-        // Column of their own to stack. The reset dialog learned this the hard way.
-        AzkarDialogSurface(modifier = Modifier.widthIn(min = 380.dp, max = 560.dp)) {
-            Column {
-                Text(
-                    text = stringResource(Res.string.remembranceEditorTitle),
-                    color = colors.textPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.height(14.dp))
-                EditorField(
-                    value = draft.arabic,
-                    onValueChange = draft::typeArabic,
-                    spec = arabicBoxSpec(),
-                )
-                if (draft.arabicRejected) {
-                    ValidationNote(stringResource(Res.string.remembranceEditorArabicRequired))
-                }
-                Spacer(Modifier.height(12.dp))
-                EditorField(
-                    value = draft.english,
-                    onValueChange = draft::typeEnglish,
-                    spec = englishBoxSpec(),
-                )
-                Text(
-                    text = stringResource(Res.string.remembranceEditorTranslationHelp),
-                    color = colors.textSecondary,
-                    fontSize = 11.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 6.dp),
-                )
-                Spacer(Modifier.height(18.dp))
-                EditorButtons(draft = draft, onDismiss = onDismiss, onConfirm = onConfirm)
+    // The Box inside AzkarDialogSurface has no arrangement of its own, so the children need a
+    // Column of their own to stack. The reset dialog learned this the hard way.
+    AzkarDialogSurface(modifier = Modifier.widthIn(min = 380.dp, max = 560.dp)) {
+        Column {
+            Text(
+                text = stringResource(Res.string.remembranceEditorTitle),
+                color = colors.textPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(14.dp))
+            EditorField(
+                value = draft.arabic,
+                onValueChange = draft::typeArabic,
+                spec = arabicBoxSpec(),
+            )
+            if (draft.arabicRejected) {
+                ValidationNote(stringResource(Res.string.remembranceEditorArabicRequired))
             }
+            Spacer(Modifier.height(12.dp))
+            EditorField(
+                value = draft.english,
+                onValueChange = draft::typeEnglish,
+                spec = englishBoxSpec(),
+            )
+            Text(
+                text = stringResource(Res.string.remembranceEditorTranslationHelp),
+                color = colors.textSecondary,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            Spacer(Modifier.height(18.dp))
+            EditorButtons(draft = draft, onDismiss = onDismiss, onConfirm = onConfirm)
         }
     }
 }

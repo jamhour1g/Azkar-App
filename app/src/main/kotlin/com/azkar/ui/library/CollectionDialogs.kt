@@ -104,6 +104,7 @@ import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.library.model.TranslationEntry
 import com.azkar.ui.library.model.missingLanguages
 import com.azkar.ui.library.model.survivingRename
+import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarColors
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
@@ -1530,6 +1531,7 @@ internal class CollectionEditorNavigation(
  * the preview that would have hidden the problem.
  */
 @Preview
+@RoborazziDesktopPreviewExclude
 @Composable
 private fun CollectionEditorDetailsPreview() {
     AzkarThemePreview(width = 640.dp, height = 640.dp) {
@@ -1546,6 +1548,7 @@ private fun CollectionEditorDetailsPreview() {
 }
 
 @Preview
+@RoborazziDesktopPreviewExclude
 @Composable
 private fun CollectionEditorTagsPreview() {
     AzkarThemePreview(width = 640.dp, height = 640.dp) {
@@ -1562,6 +1565,7 @@ private fun CollectionEditorTagsPreview() {
 }
 
 @Preview
+@RoborazziDesktopPreviewExclude
 @Composable
 private fun CollectionEditorCoverPreview() {
     AzkarThemePreview(width = 640.dp, height = 640.dp) {
@@ -1588,6 +1592,7 @@ private fun previewEditorEnvironment() =
     )
 
 @Preview
+@RoborazziDesktopPreviewExclude
 @Composable
 private fun ConfirmCollectionDeleteDialogPreview() {
     AzkarThemePreview(width = 520.dp) {
