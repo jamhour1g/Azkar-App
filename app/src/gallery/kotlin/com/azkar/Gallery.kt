@@ -18,6 +18,7 @@ import com.azkar.ui.library.CollectionsScreen
 import com.azkar.ui.shell.AppLayout
 import com.azkar.ui.shell.AzkarDestination
 import com.azkar.ui.shell.HeaderCallbacks
+import com.github.takahirom.roborazzi.RoborazziOptions
 import io.github.takahirom.roborazzi.captureRoboImage
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,22 +32,22 @@ fun main(args: Array<String>) {
     System.setProperty("user.name", "Azkar")
     listOf(false, true).forEach { dark ->
         val theme = if (dark) "dark" else "light"
-        galleryImage(output.resolve("screen-home-$theme.png"), dark) { ready ->
+        galleryImage(output.resolve("screen-home-$theme.webp"), dark) { ready ->
             AppLayout(AzkarDestination.Home, HeaderCallbacks({}, {}, {})) { HomeShot(onReady = ready) }
         }
-        galleryImage(output.resolve("screen-library-$theme.png"), dark) { ready ->
+        galleryImage(output.resolve("screen-library-$theme.webp"), dark) { ready ->
             LibraryShot(onReady = ready) { CollectionsScreen({}, {}, {}, { _, _, _ -> }, catalogue = it) }
         }
-        galleryImage(output.resolve("screen-collection-$theme.png"), dark) { ready ->
+        galleryImage(output.resolve("screen-collection-$theme.webp"), dark) { ready ->
             LibraryShot(onReady = ready) { CollectionDetailShot(it) }
         }
-        galleryImage(output.resolve("screen-session-$theme.png"), dark) { ready ->
+        galleryImage(output.resolve("screen-session-$theme.webp"), dark) { ready ->
             LibraryShot(onReady = ready) { CollectionSessionShot(it) }
         }
-        galleryImage(output.resolve("screen-reader-$theme.png"), dark) { ready ->
+        galleryImage(output.resolve("screen-reader-$theme.webp"), dark) { ready ->
             LibraryShot(onReady = ready) { RemembranceShot(it) }
         }
-        galleryImage(output.resolve("screen-reminder-$theme.png"), dark, density = 3f) { ready ->
+        galleryImage(output.resolve("screen-reminder-$theme.webp"), dark, density = 3f) { ready ->
             SideEffect(ready)
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(Modifier.width(420.dp).padding(16.dp)) { PassageReminderShot() }
@@ -67,6 +68,6 @@ private fun galleryImage(
         setContent { ScreenshotFrame(dark, density) { content { ready.set(true) } } }
         waitUntil(timeoutMillis = 30_000) { ready.get() }
         waitForIdle()
-        onRoot().captureRoboImage(filePath = file.toString())
+        onRoot().captureRoboImage(filePath = file.toString(), roborazziOptions = RoborazziOptions().withLosslessWebp())
     }
 }

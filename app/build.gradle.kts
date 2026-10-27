@@ -247,6 +247,7 @@ kotlin {
 
 dependencies {
     add(gallery.implementationConfigurationName, libs.io.github.takahirom.roborazzi.compose.desktop)
+    add(gallery.implementationConfigurationName, libs.io.github.darkxanter.webp.imageio)
     add(gallery.implementationConfigurationName, libs.org.jetbrains.compose.ui.test)
 }
 

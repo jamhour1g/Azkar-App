@@ -24,10 +24,17 @@ function updateThemeControl() {
 
   themeMeta.content = dark ? "#0B1220" : "#F8FAFC";
 
+  updateScreenshotImages(dark);
+}
+
+function updateScreenshotImages(dark = activeTheme() === "dark") {
   document
     .querySelectorAll("img[data-light-src][data-dark-src]")
     .forEach((image) => {
-      image.src = dark ? image.dataset.darkSrc : image.dataset.lightSrc;
+      if (image.closest(".screenshot-card")?.hidden) return;
+
+      const source = dark ? image.dataset.darkSrc : image.dataset.lightSrc;
+      if (image.getAttribute("src") !== source) image.src = source;
     });
 }
 
@@ -65,8 +72,13 @@ document
       screenshotWarning.hidden = false;
     };
 
-    if (image.complete && image.naturalWidth === 0)
+    if (
+      image.hasAttribute("src") &&
+      image.complete &&
+      image.naturalWidth === 0
+    ) {
       warnAboutMissingScreenshot();
+    }
 
     image.addEventListener("error", warnAboutMissingScreenshot, {
       once: true,
@@ -81,6 +93,8 @@ function showScreen(index, moveFocus = false) {
     tab.tabIndex = selected ? 0 : -1;
     screenPanels[tabIndex].hidden = !selected;
   });
+
+  updateScreenshotImages();
 
   if (moveFocus) screenTabs[selectedIndex].focus();
 }
