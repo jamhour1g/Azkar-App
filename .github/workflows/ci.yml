@@ -367,8 +367,7 @@ jobs:
           CROSS_RESULT: ${{ needs.build-cross-platform.result }}
           INSTALLERS_RESULT: ${{ needs.validate-installers.result }}
         run: |
-          current_pr="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")"
-          current_head="$(jq -r .head.sha <<< "$current_pr")"
+          current="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" --jq .head.sha)"
           post_status() {
             gh api --method POST "repos/$REPOSITORY/statuses/$REVIEWED_SHA" \
               -f "state=$1" -f "context=$2" -f "description=$3" \
@@ -377,10 +376,10 @@ jobs:
           state=failure
           description="Linux: $LINUX_RESULT; reviewed revision checked"
           if [[ "$SKIP_CHECKS" == true ]]; then description='Owner-approved documentation-only CI skip'; fi
-          if [[ "$current_head" == "$REVIEWED_SHA" && ( "$LINUX_RESULT" == success || "$SKIP_CHECKS" == true ) ]]; then state=success; fi
+          if [[ "$current" == "$REVIEWED_SHA" && ( "$LINUX_RESULT" == success || "$SKIP_CHECKS" == true ) ]]; then state=success; fi
           post_status "$state" 'Azkar CI / Linux' "$description"
           if [[ "$INSTALLERS_REQUIRED" == true ]]; then
             state=failure
-            if [[ "$LINUX_RESULT" == success && "$CROSS_RESULT" == success && "$INSTALLERS_RESULT" == success && "$current_head" == "$REVIEWED_SHA" ]]; then state=success; fi
+            if [[ "$LINUX_RESULT" == success && "$CROSS_RESULT" == success && "$INSTALLERS_RESULT" == success && "$current" == "$REVIEWED_SHA" ]]; then state=success; fi
             post_status "$state" 'Azkar CI / Installers' "Native builds: $CROSS_RESULT; asset validation: $INSTALLERS_RESULT"
           fi
