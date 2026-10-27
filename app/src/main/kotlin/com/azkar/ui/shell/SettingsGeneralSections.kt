@@ -191,3 +191,17 @@ internal fun SettingsGeneralSectionsPreview() {
         )
     }
 }
+
+@AzkarPreview
+@Composable
+internal fun SettingsStartupNoticesPreview() {
+    Column(
+        modifier = Modifier.width(760.dp).padding(AzkarSpacing.xl),
+        verticalArrangement = Arrangement.spacedBy(AzkarSpacing.md),
+    ) {
+        StartupNoticeText(StartupNotice.DisabledByUser)
+        StartupNoticeText(StartupNotice.ManagedByPolicy)
+        StartupNoticeText(StartupNotice.Unsupported)
+        StartupNoticeText(StartupNotice.Unavailable(reason = "Login manager unavailable"))
+    }
+}

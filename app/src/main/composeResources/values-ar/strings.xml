@@ -75,8 +75,8 @@
     <!-- Authoring: naming a collection or a tag in a language other than the app's -->
     <string name="contentLanguageNote">يُحفظ كما تكتبه. وعند تغيير لغة التطبيق سيظهر كما هو حتى تضيف ترجمة.</string>
     <string name="contentTranslationAdd">إضافة ترجمة</string>
-    <string name="contentTranslationFor">الاسم بـ %s</string>
-    <string name="contentPrimaryLanguage">الاسم الأساسي بـ %s</string>
+    <string name="contentTranslationFor">الاسم بـ %1$s</string>
+    <string name="contentPrimaryLanguage">الاسم الأساسي بـ %1$s</string>
     <string name="contentTranslationRemove">إزالة هذه الترجمة</string>
     <string name="contentTranslationLanguageTaken">توجد بالفعل نسخة بـ %s.</string>
     <!-- Library: the collections hub -->

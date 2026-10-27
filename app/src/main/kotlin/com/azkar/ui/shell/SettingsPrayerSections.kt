@@ -489,3 +489,15 @@ internal fun SettingsPrayerSectionsPreview() {
         )
     }
 }
+
+@AzkarPreview
+@Composable
+internal fun SettingsPrayerLocationErrorsPreview() {
+    Column(
+        modifier = Modifier.width(760.dp).padding(AzkarSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(AzkarSpacing.md),
+    ) {
+        LocationNoticeText(LocationNotice.InvalidCoordinates)
+        LocationNoticeText(LocationNotice.InvalidTimeZone)
+    }
+}
