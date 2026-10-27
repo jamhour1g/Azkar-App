@@ -24,8 +24,8 @@ import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionsCoverPhoto
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarWidePreview
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -123,11 +123,11 @@ fun CollectionCoverArt(
     }
 }
 
-@AzkarPreview
+@AzkarWidePreview
 @Composable
 internal fun CollectionCoverArtPreview() {
     Row(
-        modifier = Modifier.width(1100.dp),
+        modifier = Modifier.width(1064.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         listOf("sunrise", "sunset", "mosque", "compass", "khatim").forEach { iconKey ->

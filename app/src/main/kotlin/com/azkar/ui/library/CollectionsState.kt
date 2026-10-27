@@ -61,6 +61,8 @@ class CollectionsState(
      * order is simply the default and is forgotten when the shelf goes.
      */
     private val sortStore: CollectionSortStore? = null,
+    /** A settled cross-collection search to restore when the screen opens. */
+    initialRemembranceQuery: String = "",
 ) {
     // ---- the shared data, read straight through --------------------------------------------------
 
@@ -280,9 +282,9 @@ class CollectionsState(
      * scanning every member of every collection, so running it per keystroke would make typing into
      * an empty shelf progressively slower as the answer grows.
      */
-    var remembranceQuery: String by mutableStateOf("")
+    var remembranceQuery: String by mutableStateOf(initialRemembranceQuery)
 
-    private var settledRemembranceQuery: String by mutableStateOf("")
+    private var settledRemembranceQuery: String by mutableStateOf(initialRemembranceQuery)
         private set
 
     private var searchDebounce: Job? = null

@@ -61,8 +61,6 @@ import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import java.time.LocalTime
-import java.time.ZoneId
 
 /**
  * The banner across the top of the shelf.
@@ -347,23 +345,19 @@ private fun HeroEyebrow() {
 /**
  * Which of the two shipped illustrations the banner shows.
  *
- * Chosen by the hour rather than by the system theme, because the two pictures are sunrise and
- * nightfall: at nine in the morning a night sky behind "Your Daily Remembrances" is wrong however
- * bright the room happens to be. A screenshot run therefore has to pin the hour to be reproducible,
- * which is what the harness's own clock override is for.
+ * The illustration follows the active theme so light and dark renders stay consistent and
+ * reproducible regardless of when they are captured.
  *
  * Internal rather than private because [TagsHero] is a banner too, and drawing a third colour of
  * sky for it is how a page ends up looking borrowed from somewhere else.
  */
+@Composable
 internal fun heroIllustration() =
-    if (isNightHour(LocalTime.now(ZoneId.systemDefault()).hour)) {
+    if (AzkarTheme.colors.isDark) {
         Res.drawable.hero_night
     } else {
         Res.drawable.hero_day
     }
-
-/** Whether the hour belongs to the night illustration: dusk through to before dawn. */
-private fun isNightHour(hour: Int): Boolean = hour < 6 || hour >= 18
 
 /** How tall the banner is, in dp. Room for the title, the subtitle and the control row. */
 private val HERO_HEIGHT = 236.dp

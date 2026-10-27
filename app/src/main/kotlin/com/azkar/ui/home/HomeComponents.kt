@@ -29,6 +29,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -186,18 +188,35 @@ fun FavoritesCard(
 
 @AzkarPreview
 @Composable
-internal fun FavoritesCardPreview() {
-    Column(
+internal fun FavoritesCardPreview(
+    @PreviewParameter(FavoriteCardStateProvider::class) state: FavoriteState,
+) {
+    FavoritesCard(
+        state = state,
+        onPrevious = {},
+        onNext = {},
+        onBrowse = {},
         modifier = Modifier.width(560.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        FavoritesCard(
-            state = previewFavoriteState(),
-            onPrevious = {},
-            onNext = {},
-            onBrowse = {},
+    )
+}
+
+internal class FavoriteCardStateProvider : PreviewParameterProvider<FavoriteState> {
+    private val middle = previewFavoriteState()
+    override val values =
+        sequenceOf(
+            middle.copy(position = 1),
+            middle,
+            middle.copy(position = middle.total),
+            middle.copy(position = 1, total = 1, navigationEnabled = false),
+            FavoriteState(
+                arabic = "No favorites yet",
+                english = "Save a remembrance to keep it close.",
+                source = "",
+                navigationEnabled = false,
+                position = 0,
+                total = 0,
+            ),
         )
-    }
 }
 
 /**

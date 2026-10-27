@@ -58,6 +58,7 @@ private val HERO_HEIGHT = 190.dp
 @Composable
 fun HomeHero(
     dateText: String,
+    name: String = userDisplayName(),
     modifier: Modifier = Modifier,
 ) {
     val colors = AzkarTheme.colors
@@ -89,14 +90,14 @@ fun HomeHero(
                         ),
                     ),
         )
-        HeroCopy(dateText = dateText, modifier = Modifier.align(Alignment.CenterStart))
+        HeroCopy(name = name, dateText = dateText, modifier = Modifier.align(Alignment.CenterStart))
     }
 }
 
 @AzkarPreview
 @Composable
 internal fun HomeHeroPreview() {
-    HomeHero(dateText = "Friday, 20 February")
+    HomeHero(dateText = "Friday, 20 February", name = "Azkar")
 }
 
 /**
@@ -109,11 +110,11 @@ internal fun HomeHeroPreview() {
  */
 @Composable
 private fun HeroCopy(
+    name: String,
     dateText: String,
     modifier: Modifier = Modifier,
 ) {
     val colors = AzkarTheme.colors
-    val name = userDisplayName()
 
     Column(
         modifier = modifier.padding(start = 34.dp, end = 34.dp),

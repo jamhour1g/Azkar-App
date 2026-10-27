@@ -106,6 +106,7 @@ import com.azkar.ui.library.model.missingLanguages
 import com.azkar.ui.library.model.survivingRename
 import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarColors
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
@@ -1543,6 +1544,48 @@ private fun CollectionEditorDetailsPreview() {
             environment = previewEditorEnvironment(),
             onDismiss = {},
             onConfirm = { _, _, _, _, _ -> },
+        )
+    }
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionEditorNameRequiredPreview() {
+    val draft = remember { CollectionEditorDraft.create().apply { submit() } }
+    Column(modifier = Modifier.width(600.dp).padding(24.dp)) {
+        CollectionNameField(draft)
+    }
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionEditorLongTextPreview() {
+    val draft =
+        remember {
+            CollectionEditorDraft.create().apply {
+                updateName("A deliberately long collection name for layout review")
+                updateDescription(
+                    "A longer description checks the multi-line field, its character counter, and the " +
+                        "spacing between the collection name and its supporting text.",
+                )
+            }
+        }
+    Column(modifier = Modifier.width(600.dp).padding(24.dp), verticalArrangement = Arrangement.spacedBy(FIELD_GAP)) {
+        CollectionNameField(draft)
+        CollectionDescriptionField(draft)
+    }
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionEditorSelectedCoverPreview() {
+    val draft = remember { CollectionEditorDraft.create().apply { updateCoverImage("missing-preview-cover.jpg") } }
+    Column(modifier = Modifier.width(600.dp).padding(24.dp)) {
+        CoverEditorPanel(
+            draft = draft,
+            covers = null,
+            picking = false,
+            onPick = {},
         )
     }
 }

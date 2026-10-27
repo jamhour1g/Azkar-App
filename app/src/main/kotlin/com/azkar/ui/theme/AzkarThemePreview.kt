@@ -1,16 +1,18 @@
 package com.azkar.ui.theme
 
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.PreviewWrapperProvider
 import androidx.compose.ui.unit.Dp
 import com.azkar.i18n.ENGLISH
 import java.util.Locale
+
+internal const val AZKAR_PREVIEW_CAPTURE_TAG = "azkar-preview-capture"
 
 /**
  * The wrapper every `@Preview` in this app is expected to sit inside.
@@ -54,7 +56,7 @@ fun AzkarThemePreview(
             darkTheme = darkTheme,
             uiLocale = uiLocale,
         ) {
-            Surface(Modifier.fillMaxSize(), color = AzkarTheme.colors.background) {
+            Surface(Modifier.testTag(AZKAR_PREVIEW_CAPTURE_TAG), color = AzkarTheme.colors.background) {
                 content()
             }
         }

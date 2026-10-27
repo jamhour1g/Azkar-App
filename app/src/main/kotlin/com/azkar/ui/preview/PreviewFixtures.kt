@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.azkar.data.storage.CoverStorage
 import com.azkar.domain.model.CollectionKind
+import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
@@ -361,7 +362,13 @@ fun previewCollectionTile(
  */
 fun previewCollectionTiles(): List<CollectionTile> =
     listOf(
-        previewCollectionTile(id = 1L, name = "Morning Azkar", iconKey = "sunrise", isPinned = true),
+        previewCollectionTile(
+            id = 1L,
+            name = "Morning Azkar",
+            iconKey = "sunrise",
+            isPinned = true,
+            isFavorite = true,
+        ).copy(inReminders = true),
         previewCollectionTile(
             id = 2L,
             name = "Evening Azkar",
@@ -633,66 +640,6 @@ fun previewLibraryHeroControls(
     )
 
 /**
- * The catalogue-shaped fixture the three library screens preview against.
- *
- * Two collections and five remembrances, chosen so that the shelf is not uniform: one official set
- * that is part-way through, one of the user's own that has barely started, and a favourite. A screen
- * previewed with one collection per row proves the row works and nothing about how the row behaves
- * next to a row that is a different kind of thing.
- */
-internal fun previewGateway(): PreviewCollectionsGateway =
-    PreviewCollectionsGateway(
-        collections =
-            listOf(
-                previewCollection(
-                    id = PREVIEW_COLLECTION_ID,
-                    name = "Morning Azkar",
-                    iconKey = "sunrise",
-                    memberCount = 54,
-                ),
-                previewCollection(
-                    id = 12L,
-                    name = "My night route",
-                    description = "Remembrances for driving.",
-                    kind = CollectionKind.CUSTOM,
-                    iconKey = "compass",
-                    homePinnedAt = null,
-                    isFavorite = true,
-                ),
-            ),
-        remembrances =
-            listOf(
-                previewRemembrance(101L),
-                previewRemembrance(
-                    102L,
-                    arabic = "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ",
-                    english = "Glory to Allah, and praise be to Him.",
-                    source = "Muslim 2691",
-                    favorite = true,
-                ),
-                previewRemembrance(
-                    103L,
-                    arabic = "اللَّهُمَّ إِنِّي أَسْأَلُكَ الْعَافِيَةَ",
-                    english = "O Allah, I ask You for wellbeing.",
-                    source = "Ibn Majah 3871",
-                ),
-                previewRemembrance(
-                    104L,
-                    arabic = "أَسْتَغْفِرُ اللَّهَ وَأَتُوبُ إِلَيْهِ",
-                    english = "I seek Allah's forgiveness and turn to Him in repentance.",
-                    source = "Abu Dawud 1516",
-                ),
-                previewRemembrance(
-                    105L,
-                    arabic = "رَبِّ زِدْنِي عِلْمًا",
-                    english = "My Lord, increase me in knowledge.",
-                    source = "Tirmidhi 3161",
-                ),
-            ),
-        recitedCounts = mapOf(PREVIEW_COLLECTION_ID to 31, 12L to 3),
-    )
-
-/**
  * An [AzkarAppState] with all three persistence callbacks stubbed out.
  *
  * The callbacks are required rather than defaulted precisely so that nothing can write to the
@@ -727,9 +674,23 @@ fun previewAzkarAppState(
  * the preview is supposed to be able to show.
  */
 @Composable
-fun rememberPreviewCatalogue(uiLocale: Locale = ENGLISH): CollectionsCatalogue {
+fun rememberPreviewCatalogue(
+    uiLocale: Locale = ENGLISH,
+    includeEmptyCollection: Boolean = false,
+    emptyLibrary: Boolean = false,
+    progressByCollection: Map<Long, List<RecitationProgress>> = emptyMap(),
+    failSnapshot: Boolean = false,
+): CollectionsCatalogue {
     val scope = rememberCoroutineScope()
-    val gateway = remember { previewGateway() }
+    val gateway =
+        remember(includeEmptyCollection, emptyLibrary, progressByCollection, failSnapshot) {
+            previewGateway(
+                includeEmptyCollection = includeEmptyCollection,
+                emptyLibrary = emptyLibrary,
+                progressByCollection = progressByCollection,
+                failSnapshot = failSnapshot,
+            )
+        }
     val coverDirectory = remember { Files.createTempDirectory("azkar-preview-covers-") }
     val covers = remember { CollectionCoverCache(CoverStorage(coverDirectory)) }
     DisposableEffect(coverDirectory) {

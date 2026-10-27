@@ -101,13 +101,22 @@ internal fun LibraryFilterPanel(
 @AzkarPreview
 @Composable
 internal fun LibraryFilterPanelPreview() {
-    LibraryFilterPanel(
-        scope = CollectionScope.PINNED,
-        onScopeSelected = {},
-        sort = CollectionSort.NAME,
-        onSortSelected = {},
-        modifier = Modifier.width(320.dp),
-    )
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        LibraryFilterPanel(
+            scope = CollectionScope.ALL,
+            onScopeSelected = {},
+            sort = CollectionSort.RECENTLY_UPDATED,
+            onSortSelected = {},
+            modifier = Modifier.width(320.dp),
+        )
+        LibraryFilterPanel(
+            scope = CollectionScope.PINNED,
+            onScopeSelected = {},
+            sort = CollectionSort.NAME,
+            onSortSelected = {},
+            modifier = Modifier.width(320.dp),
+        )
+    }
 }
 
 /**

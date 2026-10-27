@@ -1243,6 +1243,7 @@ fun AzkarTabStrip(
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (tabs.isEmpty()) return
     val colors = AzkarTheme.colors
     PrimaryTabRow(
         selectedTabIndex = selectedIndex,

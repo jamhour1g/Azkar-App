@@ -66,6 +66,7 @@ import com.azkar.ui.components.IconActionButton
 import com.azkar.ui.components.PrimaryButton
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.library.model.TagOption
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
@@ -387,6 +388,26 @@ private fun TagPickerPanelPreview() {
             modifier = Modifier.width(520.dp),
         )
     }
+}
+
+@AzkarPreview
+@Composable
+internal fun TagPickerPanelUnselectedPreview() {
+    TagPickerPanel(
+        draft = CollectionEditorDraft.create(),
+        availableTags = listOf("morning", "sleep", "travel", "after prayer", "commute").map(TagOption::of),
+        modifier = Modifier.width(520.dp),
+    )
+}
+
+@AzkarPreview
+@Composable
+internal fun TagPickerPanelEmptyPreview() {
+    TagPickerPanel(
+        draft = CollectionEditorDraft.create(),
+        availableTags = emptyList(),
+        modifier = Modifier.width(520.dp),
+    )
 }
 
 // ---- plumbing -------------------------------------------------------------------------------------

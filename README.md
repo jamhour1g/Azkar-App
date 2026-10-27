@@ -8,9 +8,9 @@ reminders from the passages you choose—on Windows, macOS, and Linux.
 [Report an issue](https://github.com/jamhour1g/Azkar-App/issues)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-home-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-home-light.png">
-  <img src="https://jamhour1g.github.io/Azkar-App/images/screen-home-light.png" alt="Azkar Home with a daily remembrance, today's prayer times, and a countdown to the next prayer" width="1440" height="900">
+  <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-home-dark.webp">
+  <source media="(prefers-color-scheme: light)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-home-light.webp">
+  <img src="https://jamhour1g.github.io/Azkar-App/images/screen-home-light.webp" alt="Azkar Home with a daily remembrance, today's prayer times, and a countdown to the next prayer" width="1440" height="900">
 </picture>
 
 ## Make room for remembrance in your day
@@ -31,16 +31,16 @@ reminders from the passages you choose—on Windows, macOS, and Linux.
       <strong>Find your daily adhkar</strong><br>
       Browse collections and topics, or search for a passage.
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-library-dark.png">
-        <img src="https://jamhour1g.github.io/Azkar-App/images/screen-library-light.png" alt="Azkar library with collections, topic filters, and search">
+        <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-library-dark.webp">
+        <img src="https://jamhour1g.github.io/Azkar-App/images/screen-library-light.webp" alt="Azkar library with collections, topic filters, and search">
       </picture>
     </td>
     <td width="50%">
       <strong>Read with context</strong><br>
       Keep the Arabic text, meaning, and references together.
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-reader-dark.png">
-        <img src="https://jamhour1g.github.io/Azkar-App/images/screen-reader-light.png" alt="A remembrance reader with Arabic text, translation, and source details">
+        <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-reader-dark.webp">
+        <img src="https://jamhour1g.github.io/Azkar-App/images/screen-reader-light.webp" alt="A remembrance reader with Arabic text, translation, and source details">
       </picture>
     </td>
   </tr>
@@ -49,16 +49,16 @@ reminders from the passages you choose—on Windows, macOS, and Linux.
       <strong>Keep your place</strong><br>
       Follow a recitation session and track your progress.
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-session-dark.png">
-        <img src="https://jamhour1g.github.io/Azkar-App/images/screen-session-light.png" alt="An Azkar recitation session with passage navigation and progress">
+        <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-session-dark.webp">
+        <img src="https://jamhour1g.github.io/Azkar-App/images/screen-session-light.webp" alt="An Azkar recitation session with passage navigation and progress">
       </picture>
     </td>
     <td width="50%">
       <strong>A reminder during your day</strong><br>
       Read a passage on your desktop and save it as a favorite.
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-reminder-dark.png">
-        <img src="https://jamhour1g.github.io/Azkar-App/images/screen-reminder-light.png" alt="An Azkar reminder card with Arabic text, favorite and dismiss controls">
+        <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-reminder-dark.webp">
+        <img src="https://jamhour1g.github.io/Azkar-App/images/screen-reminder-light.webp" alt="An Azkar reminder card with Arabic text, favorite and dismiss controls">
       </picture>
     </td>
   </tr>

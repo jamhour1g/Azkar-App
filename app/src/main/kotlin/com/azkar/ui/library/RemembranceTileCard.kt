@@ -223,7 +223,7 @@ private fun ColumnScope.TileBody(
 @Composable
 internal fun RemembranceTileCardPreview() {
     Row(
-        modifier = Modifier.width(1100.dp),
+        modifier = Modifier.width(656.dp).height(MEMBER_TILE_HEIGHT),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         previewRemembranceTile().let { tile ->

@@ -75,8 +75,8 @@
     <!-- Authoring: naming a collection or a tag in a language other than the app's -->
     <string name="contentLanguageNote">Saved as you type it. Switch the app language and this will read the same until you add a translation.</string>
     <string name="contentTranslationAdd">Add a translation</string>
-    <string name="contentTranslationFor">Name in %s</string>
-    <string name="contentPrimaryLanguage">Primary name in %s</string>
+    <string name="contentTranslationFor">Name in %1$s</string>
+    <string name="contentPrimaryLanguage">Primary name in %1$s</string>
     <string name="contentTranslationRemove">Remove this translation</string>
     <string name="contentTranslationLanguageTaken">There is already a %s version.</string>
     <!-- Library: the collections hub -->

@@ -73,6 +73,7 @@ import com.azkar.ui.shell.UpdateAvailablePanelState
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.updates.UpdateManager
+import com.github.takahirom.roborazzi.RoborazziOptions
 import de.infix.testBalloon.framework.core.testSuite
 import io.github.takahirom.roborazzi.captureRoboImage
 import io.ktor.client.HttpClient
@@ -99,9 +100,6 @@ val RoborazziScreenshotSuite by testSuite("Compose Desktop screenshots") {
             capture("home/screen-home-$theme", dark, readyText = "Friday, 20 February") {
                 AppLayout(AzkarDestination.Home, HeaderCallbacks({}, {}, {})) { HomeShot() }
             }
-        }
-        test("home content $theme") {
-            capture("home/screen-home-content-$theme", dark, readyText = "Friday, 20 February") { HomeShot() }
         }
         test("update available $theme") {
             capture("settings/settings-update-available-$theme", dark) {
@@ -315,10 +313,8 @@ private fun capture(
     content: @Composable () -> Unit,
 ) {
     val originalLocale = Locale.getDefault()
-    val originalName = System.getProperty("user.name")
     try {
         Locale.ENGLISH.activateLocale()
-        System.setProperty("user.name", "Azkar")
         runDesktopComposeUiTest(width = 1440, height = 900) {
             setContent {
                 ScreenshotFrame(dark, density, content)
@@ -333,11 +329,10 @@ private fun capture(
                 onAllNodesWithText(readyText, substring = true).onFirst().assertIsDisplayed()
             }
             waitForIdle()
-            onRoot().captureRoboImage("src/test/roborazzi/$name.png")
+            onRoot().captureRoboImage("src/test/roborazzi/$name.webp", RoborazziOptions().withLosslessWebp())
         }
     } finally {
         originalLocale.activateLocale()
-        originalName?.let { System.setProperty("user.name", it) } ?: System.clearProperty("user.name")
     }
 }
 

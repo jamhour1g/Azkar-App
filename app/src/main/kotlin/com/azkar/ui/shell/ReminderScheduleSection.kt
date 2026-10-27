@@ -8,6 +8,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -45,10 +47,13 @@ import com.azkar.ui.notifications.cadenceLabel
 import com.azkar.ui.notifications.intervalLabel
 import com.azkar.ui.notifications.queueModeLabel
 import com.azkar.ui.preview.rememberPreviewReminderScheduleEditor
+import com.azkar.ui.theme.AzkarArabicPreview
+import com.azkar.ui.theme.AzkarCompactPreview
 import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import org.jetbrains.compose.resources.stringResource
+import java.time.DayOfWeek
 
 /*
  * The queue's schedule, on the settings page's notifications tab.
@@ -275,9 +280,69 @@ private fun LabelledTimePicker(
 
 @AzkarPreview
 @Composable
-internal fun ReminderScheduleCardPreview() {
+internal fun ReminderScheduleCardPreview(
+    @PreviewParameter(ReminderScheduleConfigProvider::class) config: ReminderQueueConfig,
+) {
     ReminderScheduleCard(
-        config = ReminderQueueConfig(enabled = true, cadence = QueueCadence.CONTINUOUS),
+        config = config,
         schedule = rememberPreviewReminderScheduleEditor(),
     )
+}
+
+internal class ReminderScheduleConfigProvider : PreviewParameterProvider<ReminderQueueConfig> {
+    override val values =
+        sequenceOf(
+            ReminderQueueConfig(enabled = true, cadence = QueueCadence.CONTINUOUS),
+            ReminderQueueConfig(enabled = false, cadence = QueueCadence.INTERVAL),
+            ReminderQueueConfig(
+                mode = QueueMode.RANDOM,
+                cadence = QueueCadence.INTERVAL,
+                activeDays =
+                    setOf(
+                        DayOfWeek.MONDAY,
+                        DayOfWeek.TUESDAY,
+                        DayOfWeek.WEDNESDAY,
+                        DayOfWeek.THURSDAY,
+                        DayOfWeek.FRIDAY,
+                    ),
+                windowStartMinute = 9 * 60,
+                windowEndMinute = 17 * 60,
+                intervalMinutes = 30,
+            ),
+            ReminderQueueConfig(
+                mode = QueueMode.WEIGHTED,
+                cadence = QueueCadence.CONTINUOUS,
+                activeDays = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY),
+                intervalMinutes = 45,
+                defaultDropChance = 25,
+            ),
+        )
+}
+
+@AzkarCompactPreview
+@Composable
+internal fun ReminderScheduleCardCompactPreview() {
+    Column(modifier = Modifier.width(430.dp)) {
+        ReminderScheduleCard(
+            config =
+                ReminderQueueConfig(
+                    cadence = QueueCadence.INTERVAL,
+                    activeDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+                    windowStartMinute = 9 * 60,
+                    windowEndMinute = 17 * 60,
+                ),
+            schedule = rememberPreviewReminderScheduleEditor(),
+        )
+    }
+}
+
+@AzkarArabicPreview
+@Composable
+internal fun ReminderScheduleCardArabicPreview() {
+    Column(modifier = Modifier.width(520.dp)) {
+        ReminderScheduleCard(
+            config = ReminderQueueConfig(cadence = QueueCadence.INTERVAL, windowStartMinute = 5 * 60),
+            schedule = rememberPreviewReminderScheduleEditor(),
+        )
+    }
 }

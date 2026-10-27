@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -18,7 +19,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -148,39 +151,47 @@ private fun AzkarSelectMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
 ) {
-    val colors = AzkarTheme.colors
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
     ) {
-        items.forEach { item ->
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        text = item.label,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(13.dp),
-                    )
-                },
-                colors =
-                    MenuDefaults.itemColors(
-                        textColor = colors.textPrimary,
-                        leadingIconColor = colors.textSecondary,
-                    ),
-                onClick = {
-                    onDismiss()
-                    item.onClick()
-                },
-            )
-        }
+        AzkarSelectMenuItems(items = items, onDismiss = onDismiss)
+    }
+}
+
+@Composable
+private fun AzkarSelectMenuItems(
+    items: List<AzkarMenuItem>,
+    onDismiss: () -> Unit,
+) {
+    val colors = AzkarTheme.colors
+    items.forEach { item ->
+        DropdownMenuItem(
+            text = {
+                Text(
+                    text = item.label,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = item.icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(13.dp),
+                )
+            },
+            colors =
+                MenuDefaults.itemColors(
+                    textColor = colors.textPrimary,
+                    leadingIconColor = colors.textSecondary,
+                ),
+            onClick = {
+                onDismiss()
+                item.onClick()
+            },
+        )
     }
 }
 
@@ -200,5 +211,30 @@ internal fun AzkarSelectPreview() {
                     AzkarMenuItem(label = "Most used", onClick = {}, icon = Icons.AutoMirrored.Filled.Label),
                 ),
         )
+    }
+}
+
+@AzkarPreview
+@Composable
+internal fun AzkarSelectExpandedPreview() {
+    Column(modifier = Modifier.width(240.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        AzkarSelectTrigger(label = "Most used", icon = Icons.AutoMirrored.Outlined.Sort, onClick = {})
+        Surface(
+            shape = MaterialTheme.shapes.extraSmall,
+            color = AzkarTheme.colors.cardBackground,
+            tonalElevation = 3.dp,
+            shadowElevation = 3.dp,
+        ) {
+            Column(modifier = Modifier.width(220.dp)) {
+                AzkarSelectMenuItems(
+                    items =
+                        listOf(
+                            AzkarMenuItem(label = "Name A-Z", onClick = {}, icon = Icons.AutoMirrored.Filled.Label),
+                            AzkarMenuItem(label = "Most used", onClick = {}, icon = Icons.Filled.Check),
+                        ),
+                    onDismiss = {},
+                )
+            }
+        }
     }
 }

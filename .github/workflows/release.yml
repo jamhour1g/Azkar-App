@@ -196,7 +196,7 @@ jobs:
         if: env.ACT != 'true'
         with:
           name: website-screenshots
-          path: site/images/screen-*.png
+          path: site/images/screen-*.webp
           if-no-files-found: error
           retention-days: 3
 

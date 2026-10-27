@@ -38,15 +38,19 @@ internal class PreviewCollectionsGateway(
     private val collections: List<RemembranceCollection>,
     private val remembrances: List<Remembrance>,
     private val recitedCounts: Map<Long, Int> = emptyMap(),
+    private val progressByCollection: Map<Long, List<RecitationProgress>> = emptyMap(),
+    private val failSnapshot: Boolean = false,
     private val refreshedAt: Instant = previewFixtureInstant(),
 ) : CollectionsGateway {
-    override suspend fun fetchSnapshot(): CollectionsSnapshot =
-        CollectionsSnapshot(
+    override suspend fun fetchSnapshot(): CollectionsSnapshot {
+        check(!failSnapshot) { "Preview collection read failed" }
+        return CollectionsSnapshot(
             collections = collections,
             remembrances = remembrances,
             recitedCounts = recitedCounts,
             refreshedAt = refreshedAt,
         )
+    }
 
     override suspend fun setFavorite(
         id: Long,
@@ -124,7 +128,8 @@ internal class PreviewCollectionsGateway(
 
     override suspend fun touchCollectionOpened(id: Long) = Unit
 
-    override suspend fun fetchProgress(collectionId: Long): List<RecitationProgress> = emptyList()
+    override suspend fun fetchProgress(collectionId: Long): List<RecitationProgress> =
+        progressByCollection[collectionId].orEmpty()
 
     override suspend fun recordRecitation(
         collectionId: Long,

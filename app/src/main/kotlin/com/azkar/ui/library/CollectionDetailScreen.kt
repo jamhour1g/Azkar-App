@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
+import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.Remembrance
 import com.azkar.domain.model.RemembranceCollection
 import com.azkar.generated.resources.Res
@@ -58,6 +59,7 @@ import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.preview.PREVIEW_COLLECTION_ID
+import com.azkar.ui.preview.previewFixtureInstant
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewCatalogue
 import com.azkar.ui.shell.NotificationPriority
@@ -282,10 +284,48 @@ internal fun CollectionDetailContent(
 @Composable
 internal fun CollectionDetailContentPreview() {
     val catalogue = rememberPreviewCatalogue()
-    val reminders = previewReminders()
+    CollectionDetailScreenPreviewContent(catalogue, PREVIEW_COLLECTION_ID)
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionDetailEmptyCollectionPreview() {
+    val catalogue = rememberPreviewCatalogue(includeEmptyCollection = true)
+    CollectionDetailScreenPreviewContent(catalogue, collectionId = 13L)
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionDetailMissingCollectionPreview() {
+    val catalogue = rememberPreviewCatalogue(emptyLibrary = true)
+    CollectionDetailScreenPreviewContent(catalogue, PREVIEW_COLLECTION_ID)
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionDetailPartialProgressPreview() {
+    val catalogue =
+        rememberPreviewCatalogue(
+            progressByCollection =
+                mapOf(
+                    PREVIEW_COLLECTION_ID to
+                        listOf(
+                            RecitationProgress(101L, 1, previewFixtureInstant()),
+                            RecitationProgress(102L, 1, previewFixtureInstant()),
+                        ),
+                ),
+        )
+    CollectionDetailScreenPreviewContent(catalogue, PREVIEW_COLLECTION_ID)
+}
+
+@Composable
+private fun CollectionDetailScreenPreviewContent(
+    catalogue: CollectionsCatalogue,
+    collectionId: Long,
+) {
     CollectionDetailContent(
         collections = catalogue,
-        detail = CollectionDetailState(catalogue, PREVIEW_COLLECTION_ID, reminders),
+        detail = CollectionDetailState(catalogue, collectionId, previewReminders(collectionId)),
         navigation =
             DetailNavigation(
                 onBack = {},
