@@ -14,16 +14,9 @@ class AzkarDesktopPreviewTester :
     DefaultDesktopComposePreviewTester(
         capturer =
             DefaultDesktopComposePreviewTester.Capturer { parameter ->
-                val originalUserName = System.getProperty("user.name")
-                try {
-                    System.setProperty("user.name", "Azkar")
-                    setContent(parameter.content)
-                    advanceMainClockFor(parameter)
-                    onNodeWithTag(AZKAR_PREVIEW_CAPTURE_TAG, useUnmergedTree = true)
-                        .captureRoboImage(parameter.filePath, parameter.roborazziOptions.withLosslessWebp())
-                } finally {
-                    originalUserName?.let { System.setProperty("user.name", it) }
-                        ?: System.clearProperty("user.name")
-                }
+                setContent(parameter.content)
+                advanceMainClockFor(parameter)
+                onNodeWithTag(AZKAR_PREVIEW_CAPTURE_TAG, useUnmergedTree = true)
+                    .captureRoboImage(parameter.filePath, parameter.roborazziOptions.withLosslessWebp())
             },
     )

@@ -26,10 +26,8 @@ import java.util.Locale
 val CollectionSessionInteractionScreenshotSuite by testSuite("Compose Desktop interaction screenshots") {
     test("advance to the next remembrance") {
         val originalLocale = Locale.getDefault()
-        val originalName = System.getProperty("user.name")
         try {
             Locale.ENGLISH.activateLocale()
-            System.setProperty("user.name", "Azkar")
             runDesktopComposeUiTest(width = 1440, height = 900) {
                 setContent {
                     ScreenshotFrame(dark = false) { SessionInteractionShot() }
@@ -59,7 +57,6 @@ val CollectionSessionInteractionScreenshotSuite by testSuite("Compose Desktop in
             }
         } finally {
             originalLocale.activateLocale()
-            originalName?.let { System.setProperty("user.name", it) } ?: System.clearProperty("user.name")
         }
     }
 }

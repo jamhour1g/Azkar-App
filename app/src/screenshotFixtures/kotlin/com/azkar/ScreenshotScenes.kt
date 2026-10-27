@@ -65,6 +65,7 @@ internal fun HomeShot(onReady: () -> Unit = {}) {
                 navigation = HomeNavigation({}, {}, {}),
             ),
         dateText = "Friday, 20 February",
+        name = "Azkar",
         hadith = previewHadithState(),
     )
 }

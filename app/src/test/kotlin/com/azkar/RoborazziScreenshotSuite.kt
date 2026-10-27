@@ -313,10 +313,8 @@ private fun capture(
     content: @Composable () -> Unit,
 ) {
     val originalLocale = Locale.getDefault()
-    val originalName = System.getProperty("user.name")
     try {
         Locale.ENGLISH.activateLocale()
-        System.setProperty("user.name", "Azkar")
         runDesktopComposeUiTest(width = 1440, height = 900) {
             setContent {
                 ScreenshotFrame(dark, density, content)
@@ -335,7 +333,6 @@ private fun capture(
         }
     } finally {
         originalLocale.activateLocale()
-        originalName?.let { System.setProperty("user.name", it) } ?: System.clearProperty("user.name")
     }
 }
 

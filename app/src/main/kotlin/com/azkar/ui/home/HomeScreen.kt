@@ -39,6 +39,7 @@ import com.azkar.ui.preview.previewRailCards
 import com.azkar.ui.preview.previewRemembrance
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewSettingsStore
+import com.azkar.ui.shell.userDisplayName
 import com.azkar.ui.theme.AzkarArabicPreview
 import com.azkar.ui.theme.AzkarCompactPreview
 import com.azkar.ui.theme.AzkarDarkPreview
@@ -190,6 +191,7 @@ fun HomeScreen(
         inputs = inputs,
         dateText = dateText,
         hadith = hadith,
+        name = userDisplayName(),
         modifier = modifier,
     )
 }
@@ -280,6 +282,7 @@ internal fun HomeContent(
     inputs: HomeInputs,
     dateText: String,
     hadith: HadithState,
+    name: String,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -301,7 +304,7 @@ internal fun HomeContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.section),
         ) {
-            HomeHero(dateText = dateText, modifier = Modifier.fillMaxWidth())
+            HomeHero(dateText = dateText, name = name, modifier = Modifier.fillMaxWidth())
             HomeDashboard(inputs = inputs, hadith = hadith)
         }
     }
@@ -402,6 +405,7 @@ private fun HomeContentPreviewContent(
             ),
         dateText = "Friday, 20 February",
         hadith = if (hadithFallback) placeholderHadith() else previewHadithState(),
+        name = "Azkar",
     )
 }
 
