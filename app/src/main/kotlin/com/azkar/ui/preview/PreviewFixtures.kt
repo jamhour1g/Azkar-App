@@ -89,11 +89,12 @@ const val PREVIEW_COLLECTION_ID: Long = 11L
  * The five entries are in the order `pick` prefers them, so a caller that does not narrow gets the
  * four it should see.
  */
-fun previewRailCards(): List<HomeCollection> =
-    listOf(
+fun previewRailCards(locale: Locale = ENGLISH): List<HomeCollection> {
+    val arabic = locale.language == ARABIC.language
+    return listOf(
         HomeCollection(
             id = 1L,
-            name = "Morning Azkar",
+            name = if (arabic) "أذكار الصباح" else "Morning Azkar",
             description = null,
             iconKey = "sunrise",
             memberCount = 52,
@@ -103,7 +104,7 @@ fun previewRailCards(): List<HomeCollection> =
         ),
         HomeCollection(
             id = 2L,
-            name = "Evening Azkar",
+            name = if (arabic) "أذكار المساء" else "Evening Azkar",
             description = null,
             iconKey = "sunset",
             memberCount = 54,
@@ -113,7 +114,7 @@ fun previewRailCards(): List<HomeCollection> =
         ),
         HomeCollection(
             id = 3L,
-            name = "After Prayer",
+            name = if (arabic) "أذكار بعد الصلاة" else "After Prayer",
             description = null,
             iconKey = "mosque",
             memberCount = 61,
@@ -123,7 +124,7 @@ fun previewRailCards(): List<HomeCollection> =
         ),
         HomeCollection(
             id = 4L,
-            name = "For the car",
+            name = if (arabic) "أذكار السفر" else "For the car",
             description = null,
             iconKey = "compass",
             memberCount = 12,
@@ -133,7 +134,7 @@ fun previewRailCards(): List<HomeCollection> =
         ),
         HomeCollection(
             id = 5L,
-            name = "Nothing in here yet",
+            name = if (arabic) "لا أذكار هنا بعد" else "Nothing in here yet",
             description = null,
             iconKey = "khatim",
             memberCount = 0,
@@ -142,6 +143,7 @@ fun previewRailCards(): List<HomeCollection> =
             lastRecitedAt = null,
         ),
     )
+}
 
 /** The ids in [previewRailCards] that should render with the due badge. */
 fun previewDueCollectionIds(): Set<Long> = setOf(2L, 4L)
@@ -188,19 +190,56 @@ fun previewReminders(collectionId: Long = PREVIEW_COLLECTION_ID): CollectionRemi
 // ---------------------------------------------------------------------------
 
 /** The five prayer rows, with Dhuhr marked as the next one so the countdown has something to name. */
-fun previewPrayerRows(): List<PrayerRowState> =
-    listOf(
-        PrayerRowState(PrayerKey.FAJR, "Fajr", "05:12", "05:12", isNext = false, notificationsEnabled = true),
-        PrayerRowState(PrayerKey.DHUHR, "Dhuhr", "13:04", "01:12 PM", isNext = true, notificationsEnabled = true),
-        PrayerRowState(PrayerKey.ASR, "Asr", "16:31", "04:31 PM", isNext = false, notificationsEnabled = false),
-        PrayerRowState(PrayerKey.MAGHRIB, "Maghrib", "19:44", "07:44 PM", isNext = false, notificationsEnabled = true),
-        PrayerRowState(PrayerKey.ISHA, "Isha", "21:03", "09:03 PM", isNext = false, notificationsEnabled = true),
+fun previewPrayerRows(locale: Locale = ENGLISH): List<PrayerRowState> {
+    val arabic = locale.language == ARABIC.language
+    return listOf(
+        PrayerRowState(
+            PrayerKey.FAJR,
+            if (arabic) "الفجر" else "Fajr",
+            "05:12",
+            "05:12",
+            isNext = false,
+            notificationsEnabled = true,
+        ),
+        PrayerRowState(
+            PrayerKey.DHUHR,
+            if (arabic) "الظهر" else "Dhuhr",
+            "13:04",
+            "01:12 PM",
+            isNext = true,
+            notificationsEnabled = true,
+        ),
+        PrayerRowState(
+            PrayerKey.ASR,
+            if (arabic) "العصر" else "Asr",
+            "16:31",
+            "04:31 PM",
+            isNext = false,
+            notificationsEnabled = false,
+        ),
+        PrayerRowState(
+            PrayerKey.MAGHRIB,
+            if (arabic) "المغرب" else "Maghrib",
+            "19:44",
+            "07:44 PM",
+            isNext = false,
+            notificationsEnabled = true,
+        ),
+        PrayerRowState(
+            PrayerKey.ISHA,
+            if (arabic) "العشاء" else "Isha",
+            "21:03",
+            "09:03 PM",
+            isNext = false,
+            notificationsEnabled = true,
+        ),
     )
+}
 
 /** A countdown for [previewPrayerRows], naming the same next prayer the table marks. */
-fun previewCountdown(): CountdownState =
+fun previewCountdown(locale: Locale = ENGLISH): CountdownState =
     CountdownState(
-        text = "Dhuhr in 1h 12m",
+        text = if (locale.language == ARABIC.language) "الظهر بعد ساعة و١٢ دقيقة" else "Dhuhr in 1h 12m",
         remaining = Duration.ofMinutes(72),
     )
 

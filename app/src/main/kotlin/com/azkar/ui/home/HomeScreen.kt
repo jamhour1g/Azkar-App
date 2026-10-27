@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.azkar.domain.model.Remembrance
 import com.azkar.generated.resources.*
+import com.azkar.i18n.ARABIC
 import com.azkar.i18n.RemembranceI18n
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.home.FavoritesState
@@ -32,6 +33,7 @@ import com.azkar.ui.home.NotificationSettingsState
 import com.azkar.ui.home.PrayerTimesState
 import com.azkar.ui.library.CollectionReminderState
 import com.azkar.ui.notifications.NotificationPreferencesRepository
+import com.azkar.ui.notifications.PrayerLocationSettings
 import com.azkar.ui.preview.previewCountdown
 import com.azkar.ui.preview.previewHadithState
 import com.azkar.ui.preview.previewPrayerRows
@@ -397,20 +399,31 @@ private fun HomeContentPreviewContent(
                 prayerTimes =
                     PrayerTimesState(
                         uiLocale,
-                        initialSnapshot = PrayerTimesSnapshot(previewPrayerRows(), previewCountdown()),
+                        location =
+                            PrayerLocationSettings(
+                                city =
+                                    if (uiLocale.language ==
+                                        ARABIC.language
+                                    ) {
+                                        "رام الله، فلسطين"
+                                    } else {
+                                        "Ramallah, Palestine"
+                                    },
+                            ),
+                        initialSnapshot = PrayerTimesSnapshot(previewPrayerRows(uiLocale), previewCountdown(uiLocale)),
                     ),
                 favorites = favoriteState,
                 notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
                 rail =
-                    remember(emptyDashboard, collections) {
+                    remember(uiLocale, emptyDashboard, collections) {
                         HomeRailState().apply {
-                            replace(if (emptyDashboard || !collections) emptyList() else previewRailCards())
+                            replace(if (emptyDashboard || !collections) emptyList() else previewRailCards(uiLocale))
                         }
                     },
                 reminders = previewReminders(),
                 navigation = HomeNavigation(onOpenLibrary = {}, onOpenRemembrance = {}, onOpenCollection = {}),
             ),
-        dateText = "Friday, 20 February",
+        dateText = if (uiLocale.language == ARABIC.language) "الجمعة، ٢٠ فبراير" else "Friday, 20 February",
         hadith = if (hadithFallback) placeholderHadith() else previewHadithState(),
         name = "Azkar",
     )
