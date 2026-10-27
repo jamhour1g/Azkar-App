@@ -4,6 +4,7 @@ const themeToggle = document.getElementById("theme-toggle");
 const themeIcon = document.getElementById("theme-icon");
 const themeMeta = document.querySelector('meta[name="theme-color"]');
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+const desktopHero = window.matchMedia("(min-width: 1100px)");
 
 function activeTheme() {
   if (document.documentElement.dataset.theme !== "system")
@@ -32,11 +33,14 @@ function updateScreenshotImages(dark = activeTheme() === "dark") {
     .querySelectorAll("img[data-light-src][data-dark-src]")
     .forEach((image) => {
       if (image.closest(".screenshot-card")?.hidden) return;
+      if (image.closest(".hero-preview") && !desktopHero.matches) return;
 
       const source = dark ? image.dataset.darkSrc : image.dataset.lightSrc;
       if (image.getAttribute("src") !== source) image.src = source;
     });
 }
+
+desktopHero.addEventListener("change", () => updateScreenshotImages());
 
 themeToggle.addEventListener("click", () => {
   document.documentElement.dataset.theme =
