@@ -145,6 +145,7 @@ dependencies {
     testImplementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.test)
     testImplementation(libs.io.github.takahirom.roborazzi.compose.desktop)
     testImplementation(libs.io.github.takahirom.roborazzi.compose.desktop.preview.scanner.support)
+    testImplementation(libs.io.github.darkxanter.webp.imageio)
     testImplementation(libs.io.github.sergio.sastre.composable.preview.scanner.android)
     testImplementation(libs.junit.junit)
 
@@ -165,9 +166,6 @@ val previewScannerEnabled =
 if (previewScannerEnabled) {
     dependencies {
         testRuntimeOnly(libs.org.junit.vintage.junit.vintage.engine)
-    }
-    tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
-        filter.includeTestsMatching("com.github.takahirom.roborazzi.RoborazziDesktopPreviewParameterizedTests")
     }
 }
 

@@ -2,6 +2,7 @@ package com.azkar.ui.preview
 
 import androidx.compose.ui.test.onNodeWithTag
 import com.azkar.ui.theme.AZKAR_PREVIEW_CAPTURE_TAG
+import com.azkar.withLosslessWebp
 import com.github.takahirom.roborazzi.DefaultDesktopComposePreviewTester
 import com.github.takahirom.roborazzi.DesktopComposePreviewTester
 import com.github.takahirom.roborazzi.advanceMainClockFor
@@ -16,6 +17,6 @@ class AzkarDesktopPreviewTester :
                 setContent(parameter.content)
                 advanceMainClockFor(parameter)
                 onNodeWithTag(AZKAR_PREVIEW_CAPTURE_TAG, useUnmergedTree = true)
-                    .captureRoboImage(parameter.filePath, parameter.roborazziOptions)
+                    .captureRoboImage(parameter.filePath, parameter.roborazziOptions.withLosslessWebp())
             },
     )
