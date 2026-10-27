@@ -47,6 +47,7 @@ import com.azkar.ui.theme.AzkarHomeScreenPreview
 import com.azkar.ui.theme.AzkarMediumPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.AzkarWindowSize
 import com.azkar.ui.theme.LocalUiLocale
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -313,6 +314,12 @@ internal fun HomeContent(
 @AzkarHomeScreenPreview
 @Composable
 internal fun HomeContentPreview() {
+    HomeContentPreviewContent()
+}
+
+@AzkarVariantsPreview
+@Composable
+internal fun HomeContentVariantsPreview() {
     HomeContentPreviewContent()
 }
 
