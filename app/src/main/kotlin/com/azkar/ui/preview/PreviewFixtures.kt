@@ -361,7 +361,13 @@ fun previewCollectionTile(
  */
 fun previewCollectionTiles(): List<CollectionTile> =
     listOf(
-        previewCollectionTile(id = 1L, name = "Morning Azkar", iconKey = "sunrise", isPinned = true),
+        previewCollectionTile(
+            id = 1L,
+            name = "Morning Azkar",
+            iconKey = "sunrise",
+            isPinned = true,
+            isFavorite = true,
+        ).copy(inReminders = true),
         previewCollectionTile(
             id = 2L,
             name = "Evening Azkar",

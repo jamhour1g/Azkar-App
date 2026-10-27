@@ -201,6 +201,7 @@ internal fun AzkarToggleSwitchPreview() {
         AzkarToggleSwitch(checked = true, onCheckedChange = {})
         AzkarToggleSwitch(checked = false, onCheckedChange = {})
         AzkarToggleSwitch(checked = false, onCheckedChange = {}, enabled = false)
+        AzkarToggleSwitch(checked = true, onCheckedChange = {}, enabled = false)
     }
 }
 
@@ -286,6 +287,12 @@ internal fun AzkarOutlinedFieldPreview() {
                     onClick = {},
                 )
             },
+        )
+        AzkarOutlinedField(
+            value = "Read only",
+            onValueChange = {},
+            placeholder = "Disabled field",
+            enabled = false,
         )
     }
 }

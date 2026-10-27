@@ -27,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -247,8 +249,24 @@ private val DIAL_MAX_HEIGHT = 380.dp
 
 @AzkarPreview
 @Composable
-internal fun AzkarTimePickerPreview() {
-    AzkarTimePicker(minuteOfDay = 8 * 60 + 30, onMinuteChange = {})
+internal fun AzkarTimePickerPreview(
+    @PreviewParameter(TimePickerPreviewStateProvider::class) state: TimePickerPreviewState,
+) {
+    AzkarTimePicker(minuteOfDay = state.minuteOfDay, onMinuteChange = {}, enabled = state.enabled)
+}
+
+internal data class TimePickerPreviewState(
+    val minuteOfDay: Int,
+    val enabled: Boolean = true,
+)
+
+internal class TimePickerPreviewStateProvider : PreviewParameterProvider<TimePickerPreviewState> {
+    override val values =
+        sequenceOf(
+            TimePickerPreviewState(minuteOfDay = 8 * 60 + 30),
+            TimePickerPreviewState(minuteOfDay = 23 * 60 + 45),
+            TimePickerPreviewState(minuteOfDay = 8 * 60 + 30, enabled = false),
+        )
 }
 
 @AzkarPreview
@@ -265,11 +283,30 @@ internal fun AzkarTimePickerDialogPreview() {
 @AzkarPreview
 @Composable
 internal fun AzkarDayPickerPreview() {
-    Box(Modifier.width(420.dp)) {
+    Column(
+        modifier = Modifier.width(420.dp),
+        verticalArrangement = Arrangement.spacedBy(AzkarSpacing.md),
+    ) {
+        AzkarDayPicker(
+            activeDays = emptySet(),
+            onDayChange = { _, _ -> },
+            dayLabel = { day -> day.name.take(3) },
+        )
         AzkarDayPicker(
             activeDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
             onDayChange = { _, _ -> },
             dayLabel = { day -> day.name.take(3) },
+        )
+        AzkarDayPicker(
+            activeDays = DayOfWeek.entries.toSet(),
+            onDayChange = { _, _ -> },
+            dayLabel = { day -> day.name.take(3) },
+        )
+        AzkarDayPicker(
+            activeDays = DayOfWeek.entries.toSet(),
+            onDayChange = { _, _ -> },
+            dayLabel = { day -> day.name.take(3) },
+            enabled = false,
         )
     }
 }

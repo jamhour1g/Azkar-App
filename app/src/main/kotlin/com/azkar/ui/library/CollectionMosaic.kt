@@ -163,7 +163,7 @@ internal fun CollectionMosaicPreview() {
         )
         CollectionMosaic(
             iconKey = "compass",
-            memberSnippets = previewMosaicSnippets(),
+            memberSnippets = previewMosaicSnippets().take(1),
             modifier = Modifier.size(220.dp),
             cornerRadius = 24.dp,
         )
