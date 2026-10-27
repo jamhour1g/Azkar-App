@@ -317,6 +317,24 @@ internal fun HomeContentEmptyDashboardPreview() {
     HomeContentPreviewContent(emptyDashboard = true)
 }
 
+@AzkarPreview
+@Composable
+internal fun HomeContentCollectionsWithoutFavoritesPreview() {
+    HomeContentPreviewContent(includeFavorites = false)
+}
+
+@AzkarPreview
+@Composable
+internal fun HomeContentFavoritesWithoutCollectionsPreview() {
+    HomeContentPreviewContent(collections = false)
+}
+
+@AzkarPreview
+@Composable
+internal fun HomeContentHadithFallbackPreview() {
+    HomeContentPreviewContent(hadithFallback = true)
+}
+
 @AzkarDarkPreview
 @Composable
 internal fun HomeContentDarkPreview() {
@@ -342,29 +360,42 @@ internal fun HomeContentMediumPreview() {
 }
 
 @Composable
-private fun HomeContentPreviewContent(emptyDashboard: Boolean = false) {
+private fun HomeContentPreviewContent(
+    emptyDashboard: Boolean = false,
+    collections: Boolean = true,
+    includeFavorites: Boolean = true,
+    hadithFallback: Boolean = false,
+) {
     val uiLocale = LocalUiLocale.current
-    val favorites =
-        remember(uiLocale, emptyDashboard) {
+    val favoriteState =
+        remember(uiLocale, emptyDashboard, includeFavorites) {
             FavoritesState(uiLocale).apply {
-                if (!emptyDashboard) loadFavorites(listOf(previewRemembrance(id = 80L, favorite = true)))
+                if (!emptyDashboard &&
+                    includeFavorites
+                ) {
+                    loadFavorites(listOf(previewRemembrance(id = 80L, favorite = true)))
+                } else {
+                    applyFallback()
+                }
             }
         }
     HomeContent(
         inputs =
             HomeInputs(
                 prayerTimes = PrayerTimesState(uiLocale),
-                favorites = favorites,
+                favorites = favoriteState,
                 notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
                 rail =
-                    remember(emptyDashboard) {
-                        HomeRailState().apply { replace(if (emptyDashboard) emptyList() else previewRailCards()) }
+                    remember(emptyDashboard, collections) {
+                        HomeRailState().apply {
+                            replace(if (emptyDashboard || !collections) emptyList() else previewRailCards())
+                        }
                     },
                 reminders = previewReminders(),
                 navigation = HomeNavigation(onOpenLibrary = {}, onOpenRemembrance = {}, onOpenCollection = {}),
             ),
         dateText = "Friday, 20 February",
-        hadith = previewHadithState(),
+        hadith = if (hadithFallback) placeholderHadith() else previewHadithState(),
     )
 }
 

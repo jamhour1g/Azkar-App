@@ -203,6 +203,16 @@ internal fun CollectionSessionContentPreview() {
 
 @AzkarPreview
 @Composable
+internal fun CollectionSessionInProgressPreview() {
+    CollectionSessionPreview(
+        collectionId = PREVIEW_COLLECTION_ID,
+        progressByCollection =
+            mapOf(PREVIEW_COLLECTION_ID to previewCompletedCollectionProgress().take(2)),
+    )
+}
+
+@AzkarPreview
+@Composable
 internal fun CollectionSessionMissingCollectionPreview() {
     CollectionSessionPreview(collectionId = -1L)
 }

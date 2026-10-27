@@ -34,6 +34,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -81,27 +82,38 @@ import com.azkar.generated.resources.settingsUpdateVersionHint
 import com.azkar.generated.resources.settingsUpdateVersionTitle
 import com.azkar.generated.resources.settingsUpdatesBody
 import com.azkar.generated.resources.settingsUpdatesTitle
+import com.azkar.i18n.ARABIC
+import com.azkar.i18n.ENGLISH
 import com.azkar.ui.components.SelectRow
 import com.azkar.ui.library.setPlainText
 import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.NotificationSettingsState
+import com.azkar.ui.notifications.PrayerCalculationMethod
 import com.azkar.ui.notifications.PrayerLocationSettings
+import com.azkar.ui.notifications.QueueCadence
+import com.azkar.ui.notifications.QueueMode
 import com.azkar.ui.notifications.ReminderQueueConfig
 import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationPresentationSettings
 import com.azkar.ui.preview.previewAzkarAppState
+import com.azkar.ui.preview.rememberPreviewSettingsStore
+import com.azkar.ui.theme.AzkarArabicPreview
+import com.azkar.ui.theme.AzkarCompactPreview
 import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.updates.UpdateChannel
 import com.azkar.updates.UpdateManager
 import com.azkar.updates.UpdateStatus
+import io.ktor.client.HttpClient
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import java.time.DayOfWeek
+import java.util.Locale
 
 // `ui/shell/SettingsScreen.kt` — the screen the gear opens: a rail that names every block on this page
 // under the family it belongs to, and one long scroll holding them all in the same order.
@@ -146,18 +158,44 @@ fun SettingsScreen(
 ) {
     val notificationState = rememberNotificationSettingsState()
     val notificationValues = rememberNotificationSettingsValues()
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    var selectedSection by remember { mutableStateOf(initialGroup.sections.first()) }
-    val selectedGroup = selectedSection.group
-    val activeSection = activeSettingsSection(listState, selectedSection)
-    val colors = AzkarTheme.colors
     val windowInfo = LocalWindowInfo.current
     LaunchedEffect(notificationState, windowInfo) {
         snapshotFlow { windowInfo.isWindowFocused }.collect { focused ->
             if (focused) notificationState.notifications.refreshStartOnLogin()
         }
     }
+
+    SettingsScreenContent(
+        inputs =
+            SettingsScreenInputs(
+                state = state,
+                onClose = onClose,
+                initialGroup = initialGroup,
+                notificationState = notificationState,
+                notificationValues = notificationValues,
+                updateManager = koinInject(),
+            ),
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun SettingsScreenContent(
+    inputs: SettingsScreenInputs,
+    modifier: Modifier,
+) {
+    val state = inputs.state
+    val onClose = inputs.onClose
+    val initialGroup = inputs.initialGroup
+    val notificationState = inputs.notificationState
+    val notificationValues = inputs.notificationValues
+    val updateManager = inputs.updateManager
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var selectedSection by remember { mutableStateOf(initialGroup.sections.first()) }
+    val selectedGroup = selectedSection.group
+    val activeSection = activeSettingsSection(listState, selectedSection)
+    val colors = AzkarTheme.colors
 
     Row(
         modifier = modifier.fillMaxSize().background(colors.background),
@@ -197,10 +235,19 @@ fun SettingsScreen(
             item(key = "header") {
                 SettingsPageHeader(onClose = onClose, modifier = Modifier.fillMaxWidth())
             }
-            settingsSections(state, notificationState, notificationValues, selectedGroup)
+            settingsSections(state, notificationState, notificationValues, selectedGroup, updateManager)
         }
     }
 }
+
+private data class SettingsScreenInputs(
+    val state: AzkarAppState,
+    val onClose: () -> Unit,
+    val initialGroup: SettingsGroup,
+    val notificationState: NotificationSettingsState,
+    val notificationValues: NotificationSettingsValues,
+    val updateManager: UpdateManager,
+)
 
 /** Keeps the scroll declaration's body about the shell, with each settings block in its own item. */
 private fun LazyListScope.settingsSections(
@@ -208,6 +255,7 @@ private fun LazyListScope.settingsSections(
     notificationState: NotificationSettingsState,
     notificationValues: NotificationSettingsValues,
     selectedGroup: SettingsGroup,
+    updateManager: UpdateManager,
 ) {
     selectedGroup.sections.forEach { section ->
         item(key = section.name) {
@@ -219,7 +267,7 @@ private fun LazyListScope.settingsSections(
                             startOnLogin = notificationState.notifications.startOnLogin,
                             settings = notificationState,
                         )
-                    SettingsSection.UPDATES -> UpdateSettingsSection()
+                    SettingsSection.UPDATES -> UpdateSettingsSection(updateManager)
                     SettingsSection.THEME -> SettingsThemeSection(state = state)
                     SettingsSection.TEXT -> SettingsTypographySection(state = state)
                     SettingsSection.REMINDER_CARD ->
@@ -250,8 +298,7 @@ private fun LazyListScope.settingsSections(
 }
 
 @Composable
-private fun UpdateSettingsSection() {
-    val manager = koinInject<UpdateManager>()
+private fun UpdateSettingsSection(manager: UpdateManager) {
     val channel by manager.channel.collectAsState()
     val status by manager.status.collectAsState()
     val scope = rememberCoroutineScope()
@@ -762,15 +809,73 @@ private fun rememberNotificationSettingsValues(): NotificationSettingsValues {
 @AzkarPreview
 @Composable
 internal fun SettingsScreenPreview() {
-    // Assembled from the parts rather than by calling [SettingsScreen], because that composable
-    // reaches Koin for the notification holder and a preview has no container to resolve it against.
-    Column(
-        modifier = Modifier.width(760.dp).padding(40.dp),
-        verticalArrangement = Arrangement.spacedBy(SECTION_GAP),
-    ) {
-        SettingsPageHeader(onClose = {})
-        SettingsLanguageSection(state = previewAzkarAppState())
-        SettingsThemeSection(state = previewAzkarAppState())
-        SettingsTypographySection(state = previewAzkarAppState())
+    SettingsScreenPreviewContent(SettingsGroup.GENERAL)
+}
+
+@AzkarArabicPreview
+@Composable
+internal fun SettingsScreenArabicPreview() {
+    SettingsScreenPreviewContent(SettingsGroup.REMINDERS, locale = ARABIC)
+}
+
+@AzkarCompactPreview
+@Composable
+internal fun SettingsScreenNarrowPreview() {
+    SettingsScreenPreviewContent(SettingsGroup.PRAYER)
+}
+
+@Composable
+private fun SettingsScreenPreviewContent(
+    group: SettingsGroup,
+    locale: Locale = ENGLISH,
+) {
+    val scope = rememberCoroutineScope()
+    val store = rememberPreviewSettingsStore()
+    val preferences = remember(store) { NotificationPreferencesRepository(store) }
+    val httpClient = remember { HttpClient() }
+    DisposableEffect(httpClient) {
+        onDispose { httpClient.close() }
     }
+    val updateManager = remember(store, scope, httpClient) { UpdateManager(store, httpClient, scope) }
+    LaunchedEffect(preferences, scope) {
+        preferences.updateQueue {
+            it.copy(
+                enabled = true,
+                mode = QueueMode.MANUAL,
+                cadence = QueueCadence.INTERVAL,
+                collectionIds = listOf(1L, 2L),
+                activeDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+                intervalMinutes = 30,
+                windowStartMinute = 9 * 60,
+                windowEndMinute = 21 * 60,
+            )
+        }
+        preferences.savePrayerLocation(
+            PrayerLocationSettings(
+                latitude = 31.95,
+                longitude = 35.91,
+                city = "Amman, Jordan",
+                zoneId = "Asia/Amman",
+                method = PrayerCalculationMethod.MUSLIM_WORLD_LEAGUE,
+                autoDetect = false,
+            ),
+        )
+        preferences.observe(scope)
+    }
+    val notificationState = remember(scope, preferences) { NotificationSettingsState(scope, preferences) }
+    val queue by preferences.queue.collectAsState()
+    val prayerLocation by preferences.prayerLocation.collectAsState()
+    val presentation by preferences.presentation.collectAsState()
+    SettingsScreenContent(
+        inputs =
+            SettingsScreenInputs(
+                state = previewAzkarAppState(locale = locale),
+                onClose = {},
+                initialGroup = group,
+                notificationState = notificationState,
+                notificationValues = NotificationSettingsValues(queue, prayerLocation, presentation),
+                updateManager = updateManager,
+            ),
+        modifier = Modifier.fillMaxSize(),
+    )
 }

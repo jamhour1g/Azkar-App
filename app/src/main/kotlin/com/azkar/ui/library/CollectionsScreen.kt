@@ -63,6 +63,7 @@ import com.azkar.ui.theme.AzkarCompactPreview
 import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.CardSize
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.pluralStringResource
@@ -215,6 +216,51 @@ internal fun CollectionsScreenLoadFailurePreview() {
     val catalogue = rememberPreviewCatalogue(failSnapshot = true)
     CollectionsScreenContent(
         state = CollectionsState(rememberCoroutineScope(), catalogue),
+        onOpenCollection = {},
+        onOpenRemembrance = {},
+        onManageTags = {},
+        showToast = { _, _, _ -> },
+    )
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionsScreenEmptyLibraryPreview() {
+    CollectionsScreenStatePreview(emptyLibrary = true)
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionsScreenNoCollectionMatchesPreview() {
+    CollectionsScreenStatePreview(collectionQuery = "No collection matches this search")
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionsScreenRemembranceSearchResultsPreview() {
+    CollectionsScreenStatePreview(remembranceQuery = "forgiveness")
+}
+
+@Composable
+private fun CollectionsScreenStatePreview(
+    emptyLibrary: Boolean = false,
+    collectionQuery: String = "",
+    remembranceQuery: String = "",
+) {
+    val catalogue = rememberPreviewCatalogue(emptyLibrary = emptyLibrary)
+    val scope = rememberCoroutineScope()
+    val state =
+        remember(catalogue, scope, remembranceQuery) {
+            CollectionsState(scope, catalogue, initialRemembranceQuery = remembranceQuery)
+        }
+    LaunchedEffect(state) {
+        state.loadLabels()
+        state.loadData()
+        while (state.loading) delay(10)
+        state.collectionQuery = collectionQuery
+    }
+    CollectionsScreenContent(
+        state = state,
         onOpenCollection = {},
         onOpenRemembrance = {},
         onManageTags = {},
