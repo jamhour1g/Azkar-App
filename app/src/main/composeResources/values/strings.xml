@@ -12,6 +12,12 @@
     <string name="trayMenuResume">Resume reminders</string>
     <string name="trayMenuQuit">Quit</string>
     <string name="trayNextPrayerCountdown">%1$s in %2$s</string>
+    <string name="previewPrayerLocation">Ramallah, Palestine</string>
+    <string name="previewMorningCollection">Morning Azkar</string>
+    <string name="previewEveningCollection">Evening Azkar</string>
+    <string name="previewAfterPrayerCollection">After prayer</string>
+    <string name="previewTravelCollection">Travel Azkar</string>
+    <string name="previewEmptyCollection">Nothing here yet</string>
     <!-- Main Content -->
     <string name="greetingTitle">Assalamu Alaikum</string>
     <string name="greetingDate">14 Dhu al-Hijjah 1445 AH | 20 June 2024</string>

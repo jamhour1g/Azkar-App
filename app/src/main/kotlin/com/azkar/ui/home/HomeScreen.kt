@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.azkar.domain.model.Remembrance
 import com.azkar.generated.resources.*
-import com.azkar.i18n.ARABIC
 import com.azkar.i18n.RemembranceI18n
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.home.FavoritesState
@@ -381,6 +380,24 @@ private fun HomeContentPreviewContent(
     hadithFallback: Boolean = false,
 ) {
     val uiLocale = LocalUiLocale.current
+    val localizedPreviewRailCards =
+        if (emptyDashboard || !collections) {
+            emptyList()
+        } else {
+            previewRailCards().map { card ->
+                card.copy(
+                    name =
+                        when (card.id) {
+                            1L -> stringResource(Res.string.previewMorningCollection)
+                            2L -> stringResource(Res.string.previewEveningCollection)
+                            3L -> stringResource(Res.string.previewAfterPrayerCollection)
+                            4L -> stringResource(Res.string.previewTravelCollection)
+                            5L -> stringResource(Res.string.previewEmptyCollection)
+                            else -> card.name
+                        },
+                )
+            }
+        }
     val favoriteState =
         remember(uiLocale, emptyDashboard, includeFavorites) {
             FavoritesState(uiLocale).apply {
@@ -401,29 +418,37 @@ private fun HomeContentPreviewContent(
                         uiLocale,
                         location =
                             PrayerLocationSettings(
-                                city =
-                                    if (uiLocale.language ==
-                                        ARABIC.language
-                                    ) {
-                                        "رام الله، فلسطين"
-                                    } else {
-                                        "Ramallah, Palestine"
-                                    },
+                                city = stringResource(Res.string.previewPrayerLocation),
                             ),
-                        initialSnapshot = PrayerTimesSnapshot(previewPrayerRows(uiLocale), previewCountdown(uiLocale)),
+                        initialSnapshot =
+                            PrayerTimesSnapshot(
+                                rows =
+                                    previewPrayerRows().map { row ->
+                                        row.copy(name = stringResource(row.key.nameResource))
+                                    },
+                                countdown =
+                                    previewCountdown().copy(
+                                        text =
+                                            stringResource(
+                                                Res.string.trayNextPrayerCountdown,
+                                                stringResource(Res.string.dhuhr),
+                                                "01:12",
+                                            ),
+                                    ),
+                            ),
                     ),
                 favorites = favoriteState,
                 notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
                 rail =
                     remember(uiLocale, emptyDashboard, collections) {
                         HomeRailState().apply {
-                            replace(if (emptyDashboard || !collections) emptyList() else previewRailCards(uiLocale))
+                            replace(localizedPreviewRailCards)
                         }
                     },
                 reminders = previewReminders(),
                 navigation = HomeNavigation(onOpenLibrary = {}, onOpenRemembrance = {}, onOpenCollection = {}),
             ),
-        dateText = if (uiLocale.language == ARABIC.language) "الجمعة، ٢٠ فبراير" else "Friday, 20 February",
+        dateText = formatGreetingDate(LocalDate.of(2026, 2, 20), uiLocale),
         hadith = if (hadithFallback) placeholderHadith() else previewHadithState(),
         name = "Azkar",
     )

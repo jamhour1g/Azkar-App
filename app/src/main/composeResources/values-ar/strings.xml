@@ -12,6 +12,12 @@
     <string name="trayMenuResume">استئناف التذكيرات</string>
     <string name="trayMenuQuit">خروج</string>
     <string name="trayNextPrayerCountdown">%1$s في %2$s</string>
+    <string name="previewPrayerLocation">رام الله، فلسطين</string>
+    <string name="previewMorningCollection">أذكار الصباح</string>
+    <string name="previewEveningCollection">أذكار المساء</string>
+    <string name="previewAfterPrayerCollection">أذكار بعد الصلاة</string>
+    <string name="previewTravelCollection">أذكار السفر</string>
+    <string name="previewEmptyCollection">لا أذكار هنا بعد</string>
     <!-- Main Content -->
     <string name="greetingTitle">السلام عليكم</string>
     <string name="greetingDate">14 ذو الحجة 1445 هـ</string>

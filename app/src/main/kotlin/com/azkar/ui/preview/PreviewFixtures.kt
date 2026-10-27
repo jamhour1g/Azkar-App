@@ -190,12 +190,11 @@ fun previewReminders(collectionId: Long = PREVIEW_COLLECTION_ID): CollectionRemi
 // ---------------------------------------------------------------------------
 
 /** The five prayer rows, with Dhuhr marked as the next one so the countdown has something to name. */
-fun previewPrayerRows(locale: Locale = ENGLISH): List<PrayerRowState> {
-    val arabic = locale.language == ARABIC.language
-    return listOf(
+fun previewPrayerRows(): List<PrayerRowState> =
+    listOf(
         PrayerRowState(
             PrayerKey.FAJR,
-            if (arabic) "الفجر" else "Fajr",
+            "Fajr",
             "05:12",
             "05:12",
             isNext = false,
@@ -203,7 +202,7 @@ fun previewPrayerRows(locale: Locale = ENGLISH): List<PrayerRowState> {
         ),
         PrayerRowState(
             PrayerKey.DHUHR,
-            if (arabic) "الظهر" else "Dhuhr",
+            "Dhuhr",
             "13:04",
             "01:12 PM",
             isNext = true,
@@ -211,7 +210,7 @@ fun previewPrayerRows(locale: Locale = ENGLISH): List<PrayerRowState> {
         ),
         PrayerRowState(
             PrayerKey.ASR,
-            if (arabic) "العصر" else "Asr",
+            "Asr",
             "16:31",
             "04:31 PM",
             isNext = false,
@@ -219,7 +218,7 @@ fun previewPrayerRows(locale: Locale = ENGLISH): List<PrayerRowState> {
         ),
         PrayerRowState(
             PrayerKey.MAGHRIB,
-            if (arabic) "المغرب" else "Maghrib",
+            "Maghrib",
             "19:44",
             "07:44 PM",
             isNext = false,
@@ -227,19 +226,18 @@ fun previewPrayerRows(locale: Locale = ENGLISH): List<PrayerRowState> {
         ),
         PrayerRowState(
             PrayerKey.ISHA,
-            if (arabic) "العشاء" else "Isha",
+            "Isha",
             "21:03",
             "09:03 PM",
             isNext = false,
             notificationsEnabled = true,
         ),
     )
-}
 
 /** A countdown for [previewPrayerRows], naming the same next prayer the table marks. */
-fun previewCountdown(locale: Locale = ENGLISH): CountdownState =
+fun previewCountdown(): CountdownState =
     CountdownState(
-        text = if (locale.language == ARABIC.language) "الظهر بعد ساعة و١٢ دقيقة" else "Dhuhr in 1h 12m",
+        text = "Dhuhr in 1h 12m",
         remaining = Duration.ofMinutes(72),
     )
 
