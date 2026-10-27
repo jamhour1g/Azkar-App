@@ -25,7 +25,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -40,7 +39,7 @@ import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.notifications.DesktopPlatform
 import com.azkar.ui.theme.AzkarPreview
-import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarDarkPreview
 import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
 import dev.nucleusframework.composenativetray.tray.api.NativeTray
 import dev.nucleusframework.composenativetray.utils.IconRenderProperties
@@ -290,6 +289,7 @@ private fun PrayerTrayNativeRegistration(
 }
 
 @AzkarPreview
+@AzkarDarkPreview
 @Composable
 internal fun ReminderTrayActionIconsPreview() {
     Surface(shadowElevation = 4.dp) {
@@ -301,14 +301,14 @@ internal fun ReminderTrayActionIconsPreview() {
                 Icon(
                     imageVector = AzkarIcons.Clock,
                     contentDescription = null,
-                    tint = Color.Unspecified,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(16.dp),
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "Asr in 5m",
                     modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -327,13 +327,13 @@ internal fun ReminderTrayActionIconsPreview() {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = Color.Unspecified,
+                        tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = label,
-                        color = AzkarTheme.colors.textPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
