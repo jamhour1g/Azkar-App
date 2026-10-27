@@ -59,6 +59,7 @@ import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.preview.rememberPreviewCatalogue
 import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ShowToast
+import com.azkar.ui.theme.AzkarCompactPreview
 import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.CardSize
@@ -194,6 +195,33 @@ internal fun CollectionsScreenContentPreview() {
     )
 }
 
+@AzkarCompactPreview
+@Composable
+internal fun CollectionsScreenCompactPreview() {
+    val catalogue = rememberPreviewCatalogue()
+    CollectionsScreenContent(
+        state = CollectionsState(rememberCoroutineScope(), catalogue),
+        onOpenCollection = {},
+        onOpenRemembrance = {},
+        onManageTags = {},
+        showToast = { _, _, _ -> },
+        modifier = Modifier.width(420.dp),
+    )
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionsScreenLoadFailurePreview() {
+    val catalogue = rememberPreviewCatalogue(failSnapshot = true)
+    CollectionsScreenContent(
+        state = CollectionsState(rememberCoroutineScope(), catalogue),
+        onOpenCollection = {},
+        onOpenRemembrance = {},
+        onManageTags = {},
+        showToast = { _, _, _ -> },
+    )
+}
+
 /**
  * Everything that has to happen while the hub is on screen: read the strings, read the shelf, and
  * shut the state holder down on the way out.
@@ -262,7 +290,7 @@ internal fun ShelfBody(
             state.loading && state.allCollections.isEmpty() ->
                 CollectionsLoadingState(modifier = Modifier.height(STATE_BOX_HEIGHT))
 
-            state.isEmpty ->
+            state.allCollections.isEmpty() && state.collectionQuery.isBlank() && !state.isSearchingRemembrances ->
                 CollectionsEmptyState(
                     title = EmptyShelfTitle,
                     hint = EmptyShelfHint,
@@ -302,8 +330,36 @@ internal fun ShelfBody(
 @AzkarPreview
 @Composable
 internal fun ShelfBodyPreview() {
+    ShelfBodyPreviewContent()
+}
+
+@AzkarPreview
+@Composable
+internal fun ShelfBodyEmptyPreview() {
+    ShelfBodyPreviewContent(emptyLibrary = true)
+}
+
+@AzkarPreview
+@Composable
+internal fun ShelfBodyNoMatchesPreview() {
+    ShelfBodyPreviewContent(collectionQuery = "No collection matches this search")
+}
+
+@Composable
+private fun ShelfBodyPreviewContent(
+    emptyLibrary: Boolean = false,
+    collectionQuery: String = "",
+) {
+    val catalogue = rememberPreviewCatalogue(emptyLibrary = emptyLibrary)
+    val scope = rememberCoroutineScope()
+    val state = remember(catalogue, scope) { CollectionsState(scope, catalogue) }
+    LaunchedEffect(state) {
+        catalogue.loadLabels()
+        catalogue.loadData()
+        state.collectionQuery = collectionQuery
+    }
     ShelfBody(
-        state = CollectionsState(rememberCoroutineScope(), rememberPreviewCatalogue()),
+        state = state,
         callbacks =
             ShelfCallbacks(
                 onCreate = {},

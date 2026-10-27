@@ -34,6 +34,7 @@ import com.azkar.ui.library.CollectionReminderState
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.preview.previewHadithState
 import com.azkar.ui.preview.previewRailCards
+import com.azkar.ui.preview.previewRemembrance
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewSettingsStore
 import com.azkar.ui.theme.AzkarArabicPreview
@@ -310,6 +311,12 @@ internal fun HomeContentPreview() {
     HomeContentPreviewContent()
 }
 
+@AzkarPreview
+@Composable
+internal fun HomeContentEmptyDashboardPreview() {
+    HomeContentPreviewContent(emptyDashboard = true)
+}
+
 @AzkarDarkPreview
 @Composable
 internal fun HomeContentDarkPreview() {
@@ -335,15 +342,24 @@ internal fun HomeContentMediumPreview() {
 }
 
 @Composable
-private fun HomeContentPreviewContent() {
+private fun HomeContentPreviewContent(emptyDashboard: Boolean = false) {
     val uiLocale = LocalUiLocale.current
+    val favorites =
+        remember(uiLocale, emptyDashboard) {
+            FavoritesState(uiLocale).apply {
+                if (!emptyDashboard) loadFavorites(listOf(previewRemembrance(id = 80L, favorite = true)))
+            }
+        }
     HomeContent(
         inputs =
             HomeInputs(
                 prayerTimes = PrayerTimesState(uiLocale),
-                favorites = FavoritesState(uiLocale),
+                favorites = favorites,
                 notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
-                rail = remember { HomeRailState().apply { replace(previewRailCards()) } },
+                rail =
+                    remember(emptyDashboard) {
+                        HomeRailState().apply { replace(if (emptyDashboard) emptyList() else previewRailCards()) }
+                    },
                 reminders = previewReminders(),
                 navigation = HomeNavigation(onOpenLibrary = {}, onOpenRemembrance = {}, onOpenCollection = {}),
             ),

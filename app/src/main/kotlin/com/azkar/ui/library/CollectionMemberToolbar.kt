@@ -591,6 +591,25 @@ internal fun CollectionMemberToolbarPreview() {
                     ),
             )
         }
+        CollectionMemberToolbar(
+            stats =
+                previewCollectionStats(
+                    totalMembers = 0,
+                    completedMembers = 0,
+                    totalRepeats = 0,
+                    remainingRepeats = 0,
+                ),
+            sort = CollectionMemberSort.TITLE,
+            view = CollectionMemberView.GRID,
+            gates = ToolbarGates(canStart = false, canResetProgress = false),
+            actions =
+                MemberToolbarActions(
+                    onStart = {},
+                    onRequestReset = {},
+                    onSortSelected = {},
+                    onViewSelected = {},
+                ),
+        )
     }
 }
 

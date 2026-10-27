@@ -300,7 +300,11 @@ internal fun CollectionDetailHeroPreview() {
             actions = previewCollectionHeroActions(),
         )
         CollectionDetailHero(
-            collection = previewCollection(),
+            collection =
+                previewCollection(
+                    name = "A deliberately long collection name for truncation review",
+                    description = null,
+                ),
             memberCount = 54,
             stats = previewCollectionStatsVariants()[1],
             inReminders = false,

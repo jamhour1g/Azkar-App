@@ -303,7 +303,7 @@ internal fun CollectionSessionHeroPreview() {
                 ),
         )
         CollectionSessionHero(
-            collection = previewCollection(),
+            collection = previewCollection(isFavorite = true),
             publisher = "Sahih al-Bukhari",
             stats = previewCollectionStatsVariants()[1],
             inReminders = false,
