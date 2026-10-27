@@ -38,8 +38,8 @@ import com.azkar.generated.resources.trayMenuResume
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.notifications.DesktopPlatform
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarDarkPreview
+import com.azkar.ui.theme.AzkarPreview
 import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
 import dev.nucleusframework.composenativetray.tray.api.NativeTray
 import dev.nucleusframework.composenativetray.utils.IconRenderProperties
