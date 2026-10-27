@@ -1,7 +1,20 @@
 package com.azkar.ui.shell
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -10,8 +23,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.nextPrayerLabel
 import com.azkar.generated.resources.title
@@ -19,8 +36,11 @@ import com.azkar.generated.resources.trayMenuOpen
 import com.azkar.generated.resources.trayMenuPause
 import com.azkar.generated.resources.trayMenuQuit
 import com.azkar.generated.resources.trayMenuResume
+import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.notifications.DesktopPlatform
+import com.azkar.ui.theme.AzkarPreview
+import com.azkar.ui.theme.AzkarTheme
 import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
 import dev.nucleusframework.composenativetray.tray.api.NativeTray
 import dev.nucleusframework.composenativetray.utils.IconRenderProperties
@@ -157,21 +177,80 @@ private fun PrayerTrayNativeHost(
     val pauseLabel =
         stringResource(if (remindersPaused) Res.string.trayMenuResume else Res.string.trayMenuPause)
     val quitLabel = stringResource(Res.string.trayMenuQuit)
+    val menuIconRenderProperties = trayMenuIconRenderProperties()
     val tray = remember { NativeTray() }
-    val currentPrimaryAction by rememberUpdatedState(primaryAction)
     val currentMenuActions by rememberUpdatedState(menuActions)
-    var hasSubmittedTray by remember(tray) { mutableStateOf(false) }
     val menuKey = "$menuPrayerLine|$openLabel|$pauseLabel|$quitLabel"
+    val menu =
+        PrayerTrayMenuContent(
+            countdown = TrayMenuEntry(menuPrayerLine, AzkarIcons.Clock, {}, isEnabled = false),
+            openApp = TrayMenuEntry(openLabel, AzkarIcons.Home, { currentMenuActions.openApp() }),
+            reminders =
+                TrayMenuEntry(
+                    pauseLabel,
+                    if (remindersPaused) AzkarIcons.Bell else AzkarIcons.BellOff,
+                    { currentMenuActions.toggleReminders() },
+                ),
+            quit = TrayMenuEntry(quitLabel, ActionIcons.dismiss, { currentMenuActions.quit() }),
+            iconRenderProperties = menuIconRenderProperties,
+        )
     val currentMenu by rememberUpdatedState<TrayMenuBuilder.() -> Unit>({
-        Item(label = menuPrayerLine, isEnabled = false, onClick = {})
-        Divider()
-        Item(label = openLabel, onClick = { currentMenuActions.openApp() })
-        Item(label = pauseLabel, onClick = { currentMenuActions.toggleReminders() })
-        Divider()
-        Item(label = quitLabel, onClick = { currentMenuActions.quit() })
+        addPrayerTrayMenu(menu)
     })
+    PrayerTrayNativeRegistration(tray, primaryAction, tooltip, menuKey, currentMenu)
+}
+
+private data class TrayMenuEntry(
+    val label: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+    val isEnabled: Boolean = true,
+)
+
+private data class PrayerTrayMenuContent(
+    val countdown: TrayMenuEntry,
+    val openApp: TrayMenuEntry,
+    val reminders: TrayMenuEntry,
+    val quit: TrayMenuEntry,
+    val iconRenderProperties: IconRenderProperties,
+)
+
+private fun TrayMenuBuilder.addPrayerTrayMenu(menu: PrayerTrayMenuContent) {
+    addPrayerTrayMenuEntry(menu.countdown, menu.iconRenderProperties)
+    Divider()
+    addPrayerTrayMenuEntry(menu.openApp, menu.iconRenderProperties)
+    addPrayerTrayMenuEntry(menu.reminders, menu.iconRenderProperties)
+    Divider()
+    addPrayerTrayMenuEntry(menu.quit, menu.iconRenderProperties)
+}
+
+private fun TrayMenuBuilder.addPrayerTrayMenuEntry(
+    entry: TrayMenuEntry,
+    iconRenderProperties: IconRenderProperties,
+) {
+    Item(
+        entry.label,
+        entry.icon,
+        null,
+        iconRenderProperties,
+        isEnabled = entry.isEnabled,
+        onClick = entry.onClick,
+    )
+}
+
+@Composable
+private fun PrayerTrayNativeRegistration(
+    tray: NativeTray,
+    primaryAction: () -> Unit,
+    tooltip: String,
+    menuKey: String,
+    menuContent: TrayMenuBuilder.() -> Unit,
+) {
+    val currentPrimaryAction by rememberUpdatedState(primaryAction)
+    val currentMenu by rememberUpdatedState(menuContent)
+    var hasSubmittedTray by remember(tray) { mutableStateOf(false) }
+    // Keep the colored vector instead of the monochrome ImageVector tray overload.
     val iconContent: @Composable () -> Unit = {
-        // Keep the colored vector instead of the monochrome ImageVector tray overload.
         Image(
             imageVector = AzkarIcons.Brand,
             contentDescription = null,
@@ -181,7 +260,7 @@ private fun PrayerTrayNativeHost(
     val iconRenderProperties = trayIconRenderProperties(DesktopPlatform.current)
     LaunchedEffect(tray, tooltip, menuKey) {
         if (hasSubmittedTray) {
-            logger.debug { "Updating prayer tray text: tooltip='$tooltip', menu='$menuPrayerLine'" }
+            logger.debug { "Updating prayer tray menu" }
         } else {
             logger.info { "Registering prayer tray icon" }
         }
@@ -210,10 +289,75 @@ private fun PrayerTrayNativeHost(
     }
 }
 
+@AzkarPreview
+@Composable
+internal fun ReminderTrayActionIconsPreview() {
+    Surface(shadowElevation = 4.dp) {
+        Column(modifier = Modifier.width(280.dp).padding(vertical = 4.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = AzkarIcons.Clock,
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Asr in 5m",
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 8.dp))
+            listOf(
+                AzkarIcons.Home to stringResource(Res.string.trayMenuOpen),
+                AzkarIcons.Bell to stringResource(Res.string.trayMenuResume),
+                AzkarIcons.BellOff to stringResource(Res.string.trayMenuPause),
+                ActionIcons.dismiss to stringResource(Res.string.trayMenuQuit),
+            ).forEachIndexed { index, (icon, label) ->
+                if (index == 3) HorizontalDivider(modifier = Modifier.padding(horizontal = 8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = label,
+                        color = AzkarTheme.colors.textPrimary,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        }
+    }
+}
+
 /** One tooltip tick per second, read off the wall clock the moment it lands. */
 private const val COUNTDOWN_TICK_MS = 1_000L
 private const val TRAY_ICON_RENDER_SIZE = 192
 private const val TRAY_ICON_RENDER_DENSITY = 2f
+
+private fun trayMenuIconRenderProperties() =
+    IconRenderProperties(
+        sceneWidth = TRAY_MENU_ICON_SIZE,
+        sceneHeight = TRAY_MENU_ICON_SIZE,
+        sceneDensity = Density(1f),
+        targetWidth = TRAY_MENU_ICON_SIZE,
+        targetHeight = TRAY_MENU_ICON_SIZE,
+        jvmOwnsDownscaling = false,
+    )
+
+private const val TRAY_MENU_ICON_SIZE = 16
 
 /**
  * Whether hiding the window would still leave the user a way back into the app.
