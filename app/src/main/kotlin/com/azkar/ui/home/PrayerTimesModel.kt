@@ -223,11 +223,12 @@ data class PrayerTimesSnapshot(
 class PrayerTimesState(
     uiLocale: Locale,
     val location: PrayerLocationSettings = PrayerLocationSettings(),
+    initialSnapshot: PrayerTimesSnapshot = EMPTY_SNAPSHOT,
 ) {
     private val model = PrayerTimesModel(uiLocale, location)
     private var loaded: Boolean = false
 
-    var snapshot: PrayerTimesSnapshot by mutableStateOf(EMPTY_SNAPSHOT)
+    var snapshot: PrayerTimesSnapshot by mutableStateOf(initialSnapshot)
         private set
 
     var notificationFlags: Map<PrayerKey, Boolean> by mutableStateOf(emptyMap())

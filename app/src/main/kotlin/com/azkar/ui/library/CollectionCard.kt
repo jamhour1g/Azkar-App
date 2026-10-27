@@ -140,7 +140,7 @@ fun CollectionCard(
 @Composable
 internal fun CollectionCardPreview() {
     Column(
-        modifier = Modifier.width(1100.dp),
+        modifier = Modifier.width(1008.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

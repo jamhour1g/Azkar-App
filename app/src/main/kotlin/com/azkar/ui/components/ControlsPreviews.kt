@@ -201,6 +201,7 @@ internal fun AzkarToggleSwitchPreview() {
         AzkarToggleSwitch(checked = true, onCheckedChange = {})
         AzkarToggleSwitch(checked = false, onCheckedChange = {})
         AzkarToggleSwitch(checked = false, onCheckedChange = {}, enabled = false)
+        AzkarToggleSwitch(checked = true, onCheckedChange = {}, enabled = false)
     }
 }
 
@@ -226,6 +227,8 @@ internal fun AzkarFilterChipPreview() {
         AzkarFilterChip(text = "All", selected = true, onClick = {})
         AzkarFilterChip(text = "Official", selected = false, onClick = {})
         AzkarFilterChip(text = "Yours", selected = false, onClick = {})
+        AzkarFilterChip(text = "Selected, disabled", selected = true, onClick = {}, enabled = false)
+        AzkarFilterChip(text = "Disabled", selected = false, onClick = {}, enabled = false)
     }
 }
 
@@ -273,6 +276,7 @@ internal fun AzkarOutlinedFieldPreview() {
             onValueChange = {},
             placeholder = "Name",
             active = true,
+            supportingText = "Use the name readers will recognize.",
         )
         AzkarOutlinedField(
             value = "Every morning after Fajr",
@@ -287,6 +291,12 @@ internal fun AzkarOutlinedFieldPreview() {
                 )
             },
         )
+        AzkarOutlinedField(
+            value = "Read only",
+            onValueChange = {},
+            placeholder = "Disabled field",
+            enabled = false,
+        )
     }
 }
 
@@ -299,6 +309,7 @@ internal fun AzkarTabStripPreview() {
     ) {
         AzkarTabStrip(tabs = listOf("All", "Official", "Yours"), selectedIndex = 0, onSelect = {})
         AzkarTabStrip(tabs = listOf("All", "Official", "Yours"), selectedIndex = 2, onSelect = {})
+        AzkarTabStrip(tabs = emptyList(), selectedIndex = -1, onSelect = {})
     }
 }
 

@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.unit.dp
+import com.azkar.domain.model.RecitationProgress
 import com.azkar.domain.model.Remembrance
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionDetailEmptyHint
@@ -49,6 +50,7 @@ import com.azkar.ui.components.PrimaryButton
 import com.azkar.ui.components.SecondaryButton
 import com.azkar.ui.library.CollectionSessionState
 import com.azkar.ui.preview.PREVIEW_COLLECTION_ID
+import com.azkar.ui.preview.previewCompletedCollectionProgress
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewCatalogue
 import com.azkar.ui.shell.NotificationPriority
@@ -196,9 +198,60 @@ internal fun CollectionSessionContent(
 @AzkarPreview
 @Composable
 internal fun CollectionSessionContentPreview() {
-    val catalogue = rememberPreviewCatalogue()
+    CollectionSessionPreview(collectionId = PREVIEW_COLLECTION_ID)
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionSessionInProgressPreview() {
+    CollectionSessionPreview(
+        collectionId = PREVIEW_COLLECTION_ID,
+        progressByCollection =
+            mapOf(PREVIEW_COLLECTION_ID to previewCompletedCollectionProgress().take(2)),
+    )
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionSessionMissingCollectionPreview() {
+    CollectionSessionPreview(collectionId = -1L)
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionSessionEmptyCollectionPreview() {
+    CollectionSessionPreview(collectionId = 13L, includeEmptyCollection = true)
+}
+
+@AzkarPreview
+@Composable
+internal fun CollectionSessionFinishedPreview() {
+    CollectionSessionPreview(
+        collectionId = PREVIEW_COLLECTION_ID,
+        progressByCollection = mapOf(PREVIEW_COLLECTION_ID to previewCompletedCollectionProgress()),
+    )
+}
+
+@Composable
+private fun CollectionSessionPreview(
+    collectionId: Long,
+    includeEmptyCollection: Boolean = false,
+    progressByCollection: Map<Long, List<RecitationProgress>> = emptyMap(),
+) {
+    val catalogue =
+        rememberPreviewCatalogue(
+            includeEmptyCollection = includeEmptyCollection,
+            progressByCollection = progressByCollection,
+        )
+    val reminders = remember { previewReminders() }
+    val session = rememberCollectionSessionState(catalogue, collectionId, reminders)
+    LaunchedEffect(session) {
+        catalogue.loadLabels()
+        catalogue.loadData()
+        session.loadProgress()
+    }
     CollectionSessionContent(
-        session = CollectionSessionState(catalogue, PREVIEW_COLLECTION_ID, previewReminders()),
+        session = session,
         onBack = {},
         onOpenRemembrance = {},
         showToast = { _, _, _ -> },

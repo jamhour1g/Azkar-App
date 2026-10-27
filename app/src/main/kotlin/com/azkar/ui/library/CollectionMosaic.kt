@@ -153,7 +153,7 @@ fun CollectionMosaic(
 @Composable
 internal fun CollectionMosaicPreview() {
     Row(
-        modifier = Modifier.width(1100.dp),
+        modifier = Modifier.width(692.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         CollectionMosaic(
@@ -163,7 +163,7 @@ internal fun CollectionMosaicPreview() {
         )
         CollectionMosaic(
             iconKey = "compass",
-            memberSnippets = previewMosaicSnippets(),
+            memberSnippets = previewMosaicSnippets().take(1),
             modifier = Modifier.size(220.dp),
             cornerRadius = 24.dp,
         )

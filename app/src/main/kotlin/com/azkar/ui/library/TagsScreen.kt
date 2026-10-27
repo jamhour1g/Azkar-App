@@ -32,6 +32,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.domain.model.TagSummary
+import com.azkar.domain.model.TagUsage
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionsToastTitle
 import com.azkar.generated.resources.tagsActionDelete
@@ -81,6 +83,8 @@ import com.azkar.ui.components.AzkarOverflowMenu
 import com.azkar.ui.components.IconActionButton
 import com.azkar.ui.components.SecondaryButton
 import com.azkar.ui.library.data.CollectionPresenter
+import com.azkar.ui.library.data.TagGateway
+import com.azkar.ui.library.data.TagSaveResult
 import com.azkar.ui.shell.ShowToast
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
@@ -91,6 +95,7 @@ import org.jetbrains.compose.resources.stringResource
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * `ui/library/TagsScreen.kt` — the tag vocabulary, and the only place a tag can be renamed or retired.
@@ -831,6 +836,116 @@ private fun TagEmptyState(
 }
 
 // ---- previews ------------------------------------------------------------------------------------
+
+@Preview(name = "Tags · populated")
+@Composable
+private fun TagsScreenPreview() {
+    TagsFullScreenPreview(scope = TagScope.ALL)
+}
+
+@Preview(name = "Tags · deleted")
+@Composable
+private fun TagsDeletedScreenPreview() {
+    TagsFullScreenPreview(scope = TagScope.DELETED)
+}
+
+@Preview(name = "Tags · empty")
+@Composable
+private fun TagsEmptyScreenPreview() {
+    TagsFullScreenPreview(empty = true)
+}
+
+@Preview(name = "Tags · search no match")
+@Composable
+private fun TagsSearchMissScreenPreview() {
+    TagsFullScreenPreview(query = "no matching tag")
+}
+
+@Composable
+private fun TagsFullScreenPreview(
+    scope: TagScope = TagScope.ALL,
+    empty: Boolean = false,
+    query: String = "",
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val tags = if (empty) emptyList() else PREVIEW_TAGS
+    val deleted = if (empty) emptyList() else PREVIEW_DELETED_TAGS
+    val state =
+        remember(coroutineScope, scope, empty, query) {
+            TagsState(
+                scope = coroutineScope,
+                gateway = PreviewTagGateway(tags, deleted),
+                onTagsChanged = {},
+            ).apply {
+                selectScope(scope)
+                onQueryChanged(query)
+            }
+        }
+
+    AzkarThemePreview(width = 1320.dp, height = 1120.dp) {
+        TagsScreen(
+            state = state,
+            onBack = {},
+            showToast = { _, _, _ -> },
+            onOpenCollection = {},
+            onOpenRemembrance = {},
+        )
+    }
+}
+
+/** A read-only gateway for screen previews; its write methods keep the preview self-contained. */
+private class PreviewTagGateway(
+    private val tags: List<TagSummary>,
+    private val deleted: List<TagSummary>,
+) : TagGateway {
+    override suspend fun fetchSummaries(): List<TagSummary> = tags
+
+    override suspend fun fetchDeleted(): List<TagSummary> = deleted
+
+    override suspend fun create(
+        name: String,
+        translations: Map<Locale, String>,
+        nameLocale: Locale,
+    ): TagSaveResult = TagSaveResult.Saved
+
+    override suspend fun rename(
+        id: Long,
+        newName: String,
+        translations: Map<Locale, String>?,
+        nameLocale: Locale?,
+    ): TagSaveResult = TagSaveResult.Saved
+
+    override suspend fun softDelete(id: Long) = Unit
+
+    override suspend fun restore(id: Long) = Unit
+
+    override suspend fun usage(id: Long): TagUsage? = null
+}
+
+private val PREVIEW_TAGS =
+    listOf(
+        previewTagSummary("daily", collections = 4, remembrances = 12, added = true),
+        previewTagSummary("evening", collections = 3, remembrances = 9),
+        previewTagSummary("family", collections = 0, remembrances = 3),
+        previewTagSummary("gratitude", collections = 2, remembrances = 0),
+        previewTagSummary("health", collections = 0, remembrances = 0, added = true),
+        previewTagSummary("morning", collections = 5, remembrances = 52),
+        previewTagSummary("patience", collections = 1, remembrances = 6),
+        previewTagSummary("prayer", collections = 7, remembrances = 18),
+        previewTagSummary("protection", collections = 2, remembrances = 11),
+        previewTagSummary("quran", collections = 1, remembrances = 7),
+        previewTagSummary("sleep", collections = 0, remembrances = 4),
+        previewTagSummary("travel", collections = 2, remembrances = 3, added = true),
+        previewTagSummary("worship", collections = 6, remembrances = 23),
+        previewTagSummary("zakat", collections = 1, remembrances = 2),
+    )
+
+private val PREVIEW_DELETED_TAGS =
+    listOf(
+        previewTagSummary("old travel", collections = 1, remembrances = 3, deleted = true),
+        previewTagSummary("ramadan", collections = 2, remembrances = 8, deleted = true),
+        previewTagSummary("study", collections = 0, remembrances = 2, deleted = true),
+    )
 
 @Preview
 @Composable

@@ -73,6 +73,7 @@ import com.azkar.ui.library.model.TranslationEntry
 import com.azkar.ui.library.model.missingLanguages
 import com.azkar.ui.library.model.survivingRename
 import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
@@ -750,6 +751,30 @@ private fun TagNameDialogPreview() {
             note = stringResource(Res.string.tagsDialogRenameNote),
             onSubmit = { _, _ -> TagSaveResult.Saved },
             onDismiss = {},
+        )
+    }
+}
+
+@AzkarPreview
+@Composable
+internal fun TagNameRequiredPreview() {
+    Column(modifier = Modifier.width(420.dp)) {
+        TagNameField(
+            name = "",
+            problem = stringResource(Res.string.tagsDialogNameRequired),
+            onNameChanged = {},
+        )
+    }
+}
+
+@AzkarPreview
+@Composable
+internal fun TagNameTakenLongValuePreview() {
+    Column(modifier = Modifier.width(420.dp)) {
+        TagNameField(
+            name = "A deliberately long tag name for truncation review",
+            problem = stringResource(Res.string.tagsDialogNameTaken),
+            onNameChanged = {},
         )
     }
 }

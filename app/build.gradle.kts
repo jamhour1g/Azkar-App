@@ -145,6 +145,7 @@ dependencies {
     testImplementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.test)
     testImplementation(libs.io.github.takahirom.roborazzi.compose.desktop)
     testImplementation(libs.io.github.takahirom.roborazzi.compose.desktop.preview.scanner.support)
+    testImplementation(libs.io.github.darkxanter.webp.imageio)
     testImplementation(libs.io.github.sergio.sastre.composable.preview.scanner.android)
     testImplementation(libs.junit.junit)
 
@@ -160,29 +161,28 @@ dependencies {
 }
 
 val previewScannerEnabled =
-    providers.gradleProperty("azkar.previewScanner").map(String::toBoolean).getOrElse(false)
+    providers.gradleProperty("azkar.previewScanner").map(String::toBoolean).getOrElse(true)
 
 if (previewScannerEnabled) {
     dependencies {
         testRuntimeOnly(libs.org.junit.vintage.junit.vintage.engine)
     }
-    tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
-        filter.includeTestsMatching("com.github.takahirom.roborazzi.RoborazziDesktopPreviewParameterizedTests")
-    }
 }
 
 roborazzi {
     if (previewScannerEnabled) {
-        outputDir.set(layout.buildDirectory.dir("roborazzi-preview-scanner"))
+        outputDir.set(layout.projectDirectory.dir("src/test/roborazzi/previews"))
     } else {
         outputDir.set(layout.projectDirectory.dir("src/test/roborazzi"))
     }
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     generateComposePreviewDesktopTests {
-        // Opt in with -Pazkar.previewScanner=true; scanner output is kept outside reviewed goldens.
+        // Keep scanner captures beside the versioned references so the default CI verify checks them.
         enable = previewScannerEnabled
         packages = listOf("com.azkar.ui")
         includePrivatePreviews = true
+        testerQualifiedClassName = "com.azkar.ui.preview.AzkarDesktopPreviewTester"
+        useScanOptionParametersInTester = true
         annotationFilter =
             com.github.takahirom.roborazzi.AnnotationFilter.Exclude(
                 "com.azkar.ui.preview.RoborazziDesktopPreviewExclude",
@@ -247,6 +247,7 @@ kotlin {
 
 dependencies {
     add(gallery.implementationConfigurationName, libs.io.github.takahirom.roborazzi.compose.desktop)
+    add(gallery.implementationConfigurationName, libs.io.github.darkxanter.webp.imageio)
     add(gallery.implementationConfigurationName, libs.org.jetbrains.compose.ui.test)
 }
 

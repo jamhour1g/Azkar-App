@@ -31,6 +31,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -49,6 +52,7 @@ import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.stringResource
+import java.time.Duration
 
 /** The disc an individual prayer's glyph sits in. */
 private val PRAYER_DISC_SIZE = 38.dp
@@ -168,26 +172,51 @@ fun PrayerTimesCard(
 
 @AzkarPreview
 @Composable
-internal fun PrayerTimesCardPreview() {
-    Column(
-        modifier = Modifier.width(520.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+internal fun PrayerTimesCardPreview(
+    @PreviewParameter(PrayerTimesCardStateProvider::class) state: PrayerTimesCardPreviewState,
+) {
+    Column(modifier = Modifier.width(state.width)) {
         PrayerTimesCard(
-            rows = previewPrayerRows(),
-            countdown = previewCountdown(),
-            notificationsEnabled = true,
-            onGlobalToggle = {},
-            onNotificationToggled = { _, _ -> },
-        )
-        PrayerTimesCard(
-            rows = previewPrayerRows(),
-            countdown = previewCountdown(),
-            notificationsEnabled = false,
+            rows = state.rows,
+            countdown = state.countdown,
+            notificationsEnabled = state.notificationsEnabled,
             onGlobalToggle = {},
             onNotificationToggled = { _, _ -> },
         )
     }
+}
+
+internal data class PrayerTimesCardPreviewState(
+    val width: Dp,
+    val rows: List<PrayerRowState>,
+    val countdown: CountdownState,
+    val notificationsEnabled: Boolean,
+)
+
+internal class PrayerTimesCardStateProvider : PreviewParameterProvider<PrayerTimesCardPreviewState> {
+    private val rows = previewPrayerRows()
+    override val values =
+        sequenceOf(
+            PrayerTimesCardPreviewState(520.dp, rows, previewCountdown(), notificationsEnabled = true),
+            PrayerTimesCardPreviewState(
+                520.dp,
+                rows.map { it.copy(notificationsEnabled = false) },
+                previewCountdown(),
+                notificationsEnabled = false,
+            ),
+            PrayerTimesCardPreviewState(
+                640.dp,
+                rows.map { it.copy(isNext = it.key == PrayerKey.FAJR) },
+                CountdownState(text = "Fajr in 8h 00m", remaining = Duration.ofHours(8)),
+                notificationsEnabled = true,
+            ),
+            PrayerTimesCardPreviewState(
+                520.dp,
+                emptyList(),
+                CountdownState(text = "", remaining = Duration.ZERO),
+                notificationsEnabled = true,
+            ),
+        )
 }
 
 /**

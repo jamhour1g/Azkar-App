@@ -4,6 +4,7 @@ const themeToggle = document.getElementById("theme-toggle");
 const themeIcon = document.getElementById("theme-icon");
 const themeMeta = document.querySelector('meta[name="theme-color"]');
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+const desktopHero = window.matchMedia("(min-width: 1100px)");
 
 function activeTheme() {
   if (document.documentElement.dataset.theme !== "system")
@@ -24,12 +25,22 @@ function updateThemeControl() {
 
   themeMeta.content = dark ? "#0B1220" : "#F8FAFC";
 
+  updateScreenshotImages(dark);
+}
+
+function updateScreenshotImages(dark = activeTheme() === "dark") {
   document
     .querySelectorAll("img[data-light-src][data-dark-src]")
     .forEach((image) => {
-      image.src = dark ? image.dataset.darkSrc : image.dataset.lightSrc;
+      if (image.closest(".screenshot-card")?.hidden) return;
+      if (image.closest(".hero-preview") && !desktopHero.matches) return;
+
+      const source = dark ? image.dataset.darkSrc : image.dataset.lightSrc;
+      if (image.getAttribute("src") !== source) image.src = source;
     });
 }
+
+desktopHero.addEventListener("change", () => updateScreenshotImages());
 
 themeToggle.addEventListener("click", () => {
   document.documentElement.dataset.theme =
@@ -65,8 +76,13 @@ document
       screenshotWarning.hidden = false;
     };
 
-    if (image.complete && image.naturalWidth === 0)
+    if (
+      image.hasAttribute("src") &&
+      image.complete &&
+      image.naturalWidth === 0
+    ) {
       warnAboutMissingScreenshot();
+    }
 
     image.addEventListener("error", warnAboutMissingScreenshot, {
       once: true,
@@ -81,6 +97,8 @@ function showScreen(index, moveFocus = false) {
     tab.tabIndex = selected ? 0 : -1;
     screenPanels[tabIndex].hidden = !selected;
   });
+
+  updateScreenshotImages();
 
   if (moveFocus) screenTabs[selectedIndex].focus();
 }

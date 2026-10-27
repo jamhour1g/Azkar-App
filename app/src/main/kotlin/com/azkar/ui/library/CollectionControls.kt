@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -274,7 +275,7 @@ internal fun CollectionsLoadingState(modifier: Modifier = Modifier) {
 @AzkarPreview
 @Composable
 internal fun CollectionsLoadingStatePreview() {
-    CollectionsLoadingState(modifier = Modifier.width(420.dp))
+    CollectionsLoadingState(modifier = Modifier.width(420.dp).height(220.dp))
 }
 
 /**
@@ -333,10 +334,12 @@ internal fun CollectionsEmptyStatePreview() {
         CollectionsEmptyState(
             title = "No collections yet",
             hint = "Start from a built-in set, or make one of your own.",
+            modifier = Modifier.height(220.dp),
         )
         CollectionsEmptyState(
             title = "Nothing matches that search",
             hint = "Try a different word, or widen the filters.",
+            modifier = Modifier.height(220.dp),
             action = {
                 CollectionsInfoLine(text = "3 of 12 collections")
             },

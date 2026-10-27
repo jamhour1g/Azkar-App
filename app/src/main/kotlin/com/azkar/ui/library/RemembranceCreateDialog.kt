@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -85,6 +86,7 @@ import com.azkar.ui.library.model.RemembranceTranslationEntry
 import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.library.model.missingRemembranceLanguages
 import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
+import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.isRtlLayout
@@ -485,6 +487,67 @@ private fun RemembranceCreateDialogPreview() {
             availableTags = listOf("morning", "sleep", "travel").map(TagOption::of),
             onDismiss = {},
             onConfirm = {},
+        )
+    }
+}
+
+@AzkarPreview
+@Composable
+internal fun RemembranceCreateTextRequiredPreview() {
+    val draft = remember { RemembranceCreateDraft(textLocale = Locale.forLanguageTag("ar")).apply { submit() } }
+    Column(modifier = Modifier.width(560.dp).padding(24.dp)) {
+        RemembranceTextStep(draft)
+    }
+}
+
+@AzkarPreview
+@Composable
+internal fun RemembranceCreateLongTextPreview() {
+    val draft =
+        remember {
+            RemembranceCreateDraft(textLocale = Locale.forLanguageTag("ar")).apply {
+                updateText(
+                    "اللَّهُمَّ إِنِّي أَسْأَلُكَ الْعَافِيَةَ فِي الدُّنْيَا وَالْآخِرَةِ، " +
+                        "وَأَسْأَلُكَ الْعَفْوَ وَالْعَافِيَةَ فِي دِينِي وَدُنْيَايَ",
+                )
+            }
+        }
+    Column(modifier = Modifier.width(560.dp).padding(24.dp)) {
+        RemembranceTextStep(draft)
+    }
+}
+
+@AzkarPreview
+@Composable
+internal fun RemembranceCreateTranslationsPreview() {
+    val draft =
+        remember {
+            RemembranceCreateDraft(textLocale = Locale.forLanguageTag("ar")).apply {
+                updateText("اللَّهُمَّ إِنِّي أَسْأَلُكَ الْعَافِيَةَ")
+                addTranslation(Locale.ENGLISH)
+                updateTranslationText(Locale.ENGLISH, "O Allah, I ask You for wellbeing.")
+                updateExplanation(Locale.ENGLISH, "A supplication for safety in body and faith.")
+            }
+        }
+    Column(modifier = Modifier.width(560.dp).padding(24.dp)) {
+        RemembranceTranslationsStep(draft)
+    }
+}
+
+@AzkarPreview
+@Composable
+internal fun RemembranceCreateTagsPreview() {
+    val draft =
+        remember {
+            RemembranceCreateDraft(textLocale = Locale.forLanguageTag("ar")).apply {
+                updateText("اللَّهُمَّ إِنِّي أَسْأَلُكَ الْعَافِيَةَ")
+                toggleTag("morning")
+            }
+        }
+    Column(modifier = Modifier.width(560.dp).padding(24.dp)) {
+        TagPickerPanel(
+            draft = draft,
+            availableTags = listOf("morning", "sleep", "travel").map(TagOption::of),
         )
     }
 }

@@ -16,6 +16,8 @@ import com.azkar.ui.library.CollectionSessionScreen
 import com.azkar.ui.library.rememberCollectionSessionState
 import com.azkar.ui.preview.PREVIEW_COLLECTION_ID
 import com.azkar.ui.preview.previewReminders
+import com.azkar.withLosslessWebp
+import com.github.takahirom.roborazzi.RoborazziOptions
 import de.infix.testBalloon.framework.core.testSuite
 import io.github.takahirom.roborazzi.captureRoboImage
 import java.util.Locale
@@ -37,7 +39,10 @@ val CollectionSessionInteractionScreenshotSuite by testSuite("Compose Desktop in
                 }
                 onAllNodesWithText(FIRST_REMEMBRANCE, substring = true).onFirst().assertIsDisplayed()
                 waitForIdle()
-                onRoot().captureRoboImage("src/test/roborazzi/interactions/session-next-before.png")
+                onRoot().captureRoboImage(
+                    "src/test/roborazzi/interactions/session-next-before.webp",
+                    RoborazziOptions().withLosslessWebp(),
+                )
 
                 onNodeWithText("Next").performClick()
 
@@ -47,7 +52,10 @@ val CollectionSessionInteractionScreenshotSuite by testSuite("Compose Desktop in
                 onAllNodesWithText(SECOND_REMEMBRANCE, substring = true).onFirst().assertIsDisplayed()
                 onAllNodesWithText(FIRST_REMEMBRANCE, substring = true).assertCountEquals(0)
                 waitForIdle()
-                onRoot().captureRoboImage("src/test/roborazzi/interactions/session-next-after.png")
+                onRoot().captureRoboImage(
+                    "src/test/roborazzi/interactions/session-next-after.webp",
+                    RoborazziOptions().withLosslessWebp(),
+                )
             }
         } finally {
             originalLocale.activateLocale()
