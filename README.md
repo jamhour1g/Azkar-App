@@ -1,11 +1,13 @@
-# Azkar
-
-A desktop companion for daily adhkar and prayer times. Read, keep your place, and receive
-reminders from the passages you choose—on Windows, macOS, and Linux.
-
-**[Download Azkar](https://jamhour1g.github.io/Azkar-App/download.html)** ·
-[Browse releases](https://github.com/jamhour1g/Azkar-App/releases) ·
-[Report an issue](https://github.com/jamhour1g/Azkar-App/issues)
+<div align="center">
+  <img src="site/images/azkar.png" alt="Azkar app icon" width="88">
+  <h1>Azkar</h1>
+  <p>A desktop companion for daily adhkar and prayer times. Read, keep your place, and receive reminders from the passages you choose—on Windows, macOS, and Linux.</p>
+  <p>
+    <a href="https://jamhour1g.github.io/Azkar-App/download.html">Download</a> ·
+    <a href="https://github.com/jamhour1g/Azkar-App/releases">Releases</a> ·
+    <a href="https://github.com/jamhour1g/Azkar-App/issues">Report an issue</a>
+  </p>
+</div>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://jamhour1g.github.io/Azkar-App/images/screen-home-dark.webp">
@@ -13,7 +15,15 @@ reminders from the passages you choose—on Windows, macOS, and Linux.
   <img src="https://jamhour1g.github.io/Azkar-App/images/screen-home-light.webp" alt="Azkar Home with a daily remembrance, today's prayer times, and a countdown to the next prayer" width="1440" height="900">
 </picture>
 
-## Make room for remembrance in your day
+## Start with Azkar
+
+Install the desktop app from the **[download page](https://jamhour1g.github.io/Azkar-App/download.html)**,
+or browse [GitHub releases](https://github.com/jamhour1g/Azkar-App/releases).
+
+For Linux repositories, update channels, and installation guidance, see the download page. For
+release channels and packaging details, see the [release guide](docs/releasing.md).
+
+## Made for a steady daily practice
 
 - **Find the adhkar you need.** Explore the bundled collections, browse topics, or search for a passage.
 - **Understand what you read.** Read Arabic alongside translations, with explanations and source references where available.
@@ -67,28 +77,22 @@ reminders from the passages you choose—on Windows, macOS, and Linux.
 Screenshots follow your light or dark appearance. The
 [download page](https://jamhour1g.github.io/Azkar-App/download.html#showcase-title) has the full gallery.
 
-## Install
-
-Choose an installer on the **[download page](https://jamhour1g.github.io/Azkar-App/download.html)**,
-or browse [GitHub releases](https://github.com/jamhour1g/Azkar-App/releases).
-
-| Platform | Available formats |
-| --- | --- |
-| Windows | `.exe` installer |
-| macOS | `.dmg` for Apple silicon or Intel |
-| Linux | `.deb`, `.rpm`, or AppImage |
-
-For Linux package repositories, update channels, and installation guidance, see the download page.
-For release channels and packaging details, see the [release guide](docs/releasing.md).
-
 ## Contribute
 
 Bug reports and focused improvements are welcome. Include your operating system, app version, and
 steps to reproduce. For UI changes, update the Roborazzi light and dark baselines; their image diffs
 are included in the pull request. CI comparison artifacts are available when verification fails.
 
-Start with the [development guide](docs/development.md) for setup, local checks, screenshots, and
-the project layout. Read [CI documentation](docs/ci.md) before opening a pull request.
+To run from source, install JDK 25, clone the repository, and start the desktop app:
+
+```bash
+git clone https://github.com/jamhour1g/Azkar-App.git
+cd Azkar-App
+./gradlew :app:run
+```
+
+The [development guide](docs/development.md) covers local checks, screenshots, and project layout.
+Read [CI documentation](docs/ci.md) before opening a pull request.
 
 ## Project documentation
 
@@ -100,8 +104,6 @@ the project layout. Read [CI documentation](docs/ci.md) before opening a pull re
 - [Notification overlay behavior](docs/notification-overlay.md)
 - [Bundled seed data notice](data/src/main/resources/db/seed/SEED_DATA_NOTICE.md)
 
-## License
-
-The application is licensed under the [MIT License](LICENSE). The bundled remembrance library has
-separate attribution and licensing; see the
-[seed data notice](data/src/main/resources/db/seed/SEED_DATA_NOTICE.md).
+> [!NOTE]
+> The bundled remembrance library has separate attribution and licensing. See the
+> [seed data notice](data/src/main/resources/db/seed/SEED_DATA_NOTICE.md).
