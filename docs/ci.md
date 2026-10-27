@@ -29,6 +29,23 @@ manually select their own same-repository PR branch; its branch and commit must 
 the PR exactly. Contributor approvals must always use the trusted default branch.
 Use `-f validate_installers=true` for a full four-runner rehearsal of a dev PR.
 
+For an owner-reviewed documentation-only PR targeting `dev`, the owner can set
+`skip_checks=true` to avoid the Gradle and installer jobs:
+
+```bash
+gh workflow run ci.yml --ref dev \
+  -f pr_number=123 \
+  -f reviewed_sha=<full-reviewed-SHA> \
+  -f skip_checks=true
+```
+
+The trusted authorization job confirms the PR is still open at that exact head and targets `dev`,
+then permits the skip only when every changed path is `README.md`, a Markdown file under
+`docs/`, or the bundled seed-data notice. It reports the required `Azkar CI / Linux`
+status on the reviewed commit without starting build jobs. Production PRs and PRs that
+change code or other files cannot use this option. A new commit needs a fresh owner review
+and dispatch.
+
 The `pull_request_target` trigger uses trusted base-branch workflow definitions. Its
 owner-only authorization job never checks out PR code. It resolves the live PR through
 the API and marks the reviewed head pending. Separate build jobs check out GitHub's
