@@ -19,6 +19,10 @@ on:
         description: 'Also build and validate all eight installers (always required for production PRs)'
         type: boolean
         default: false
+      skip_checks:
+        description: 'Skip build jobs for an owner-reviewed documentation-only PR targeting dev'
+        type: boolean
+        default: false
 
 concurrency:
   group: ci-pr-${{ github.event.pull_request.number || inputs.pr_number }}
@@ -42,6 +46,7 @@ jobs:
       base_sha: ${{ steps.pr.outputs.base_sha }}
       base_branch: ${{ steps.pr.outputs.base_branch }}
       installers: ${{ steps.pr.outputs.installers }}
+      skip_checks: ${{ steps.pr.outputs.skip_checks }}
     steps:
       - name: Resolve and authorize the PR
         id: pr
@@ -53,6 +58,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           DISPATCH_REF: ${{ github.ref }}
           FULL_INSTALLERS: ${{ inputs.validate_installers }}
+          SKIP_CHECKS: ${{ inputs.skip_checks }}
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
           REVIEWED_SHA: ${{ github.event.pull_request.head.sha || inputs.reviewed_sha }}
         run: |
@@ -80,8 +86,24 @@ jobs:
           [[ "$base" == dev || "$base" == production ]]
           installers=false
           if [[ "$base" == production || "$FULL_INSTALLERS" == true ]]; then installers=true; fi
+          skip_checks=false
+          if [[ "$EVENT" == workflow_dispatch && "$SKIP_CHECKS" == true ]]; then
+            test "$DISPATCH_REF" = "refs/heads/$default_branch"
+            test "$base" = dev
+            test "$installers" = false
+            files="$(gh api --paginate "repos/$REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[].filename')"
+            [[ -n "$files" ]]
+            while IFS= read -r file; do
+              case "$file" in
+                README.md|docs/*.md|data/src/main/resources/db/seed/SEED_DATA_NOTICE.md) ;;
+                *) echo "Cannot skip CI for non-documentation file: $file" >&2; exit 1 ;;
+              esac
+            done <<< "$files"
+            skip_checks=true
+          fi
           {
             echo "installers=$installers"
+            echo "skip_checks=$skip_checks"
             echo "pr_number=$PR_NUMBER"
             echo "head_sha=$REVIEWED_SHA"
             echo "base_sha=$(jq -r .base.sha <<< "$pr")"
@@ -90,14 +112,17 @@ jobs:
           contexts=('Azkar CI / Linux')
           if [[ "$installers" == true ]]; then contexts+=('Azkar CI / Installers'); fi
           for context in "${contexts[@]}"; do
+            description='Reviewed revision queued for CI'
+            if [[ "$skip_checks" == true ]]; then description='Owner-approved documentation-only skip queued'; fi
             gh api --method POST "repos/$REPOSITORY/statuses/$REVIEWED_SHA" \
-              -f state=pending -f "context=$context" -f description='Reviewed revision queued for CI' \
+              -f state=pending -f "context=$context" -f "description=$description" \
               -f "target_url=$GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           done
 
   build-linux:
     name: Build (ubuntu-24.04)
     needs: select
+    if: needs.select.outputs.skip_checks != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
 
@@ -218,7 +243,7 @@ jobs:
   build-cross-platform:
     name: Build installers (Windows/macOS)
     needs: select
-    if: needs.select.outputs.installers == 'true'
+    if: needs.select.outputs.installers == 'true' && needs.select.outputs.skip_checks != 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
@@ -293,7 +318,7 @@ jobs:
   validate-installers:
     name: Validate all eight promotion installers
     needs: [select, build-linux, build-cross-platform]
-    if: needs.select.outputs.installers == 'true'
+    if: needs.select.outputs.installers == 'true' && needs.select.outputs.skip_checks != 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -337,21 +362,25 @@ jobs:
           PR_NUMBER: ${{ needs.select.outputs.pr_number }}
           REVIEWED_SHA: ${{ needs.select.outputs.head_sha }}
           INSTALLERS_REQUIRED: ${{ needs.select.outputs.installers }}
+          SKIP_CHECKS: ${{ needs.select.outputs.skip_checks }}
           LINUX_RESULT: ${{ needs.build-linux.result }}
           CROSS_RESULT: ${{ needs.build-cross-platform.result }}
           INSTALLERS_RESULT: ${{ needs.validate-installers.result }}
         run: |
-          current="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER" --jq .head.sha)"
+          current_pr="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")"
+          current_head="$(jq -r .head.sha <<< "$current_pr")"
           post_status() {
             gh api --method POST "repos/$REPOSITORY/statuses/$REVIEWED_SHA" \
               -f "state=$1" -f "context=$2" -f "description=$3" \
               -f "target_url=$GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           }
           state=failure
-          if [[ "$LINUX_RESULT" == success && "$current" == "$REVIEWED_SHA" ]]; then state=success; fi
-          post_status "$state" 'Azkar CI / Linux' "Linux: $LINUX_RESULT; reviewed revision checked"
+          description="Linux: $LINUX_RESULT; reviewed revision checked"
+          if [[ "$SKIP_CHECKS" == true ]]; then description='Owner-approved documentation-only CI skip'; fi
+          if [[ "$current_head" == "$REVIEWED_SHA" && ( "$LINUX_RESULT" == success || "$SKIP_CHECKS" == true ) ]]; then state=success; fi
+          post_status "$state" 'Azkar CI / Linux' "$description"
           if [[ "$INSTALLERS_REQUIRED" == true ]]; then
             state=failure
-            if [[ "$LINUX_RESULT" == success && "$CROSS_RESULT" == success && "$INSTALLERS_RESULT" == success && "$current" == "$REVIEWED_SHA" ]]; then state=success; fi
+            if [[ "$LINUX_RESULT" == success && "$CROSS_RESULT" == success && "$INSTALLERS_RESULT" == success && "$current_head" == "$REVIEWED_SHA" ]]; then state=success; fi
             post_status "$state" 'Azkar CI / Installers' "Native builds: $CROSS_RESULT; asset validation: $INSTALLERS_RESULT"
           fi
