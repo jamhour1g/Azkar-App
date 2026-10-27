@@ -89,12 +89,14 @@ const val PREVIEW_COLLECTION_ID: Long = 11L
  * The five entries are in the order `pick` prefers them, so a caller that does not narrow gets the
  * four it should see.
  */
-fun previewRailCards(locale: Locale = ENGLISH): List<HomeCollection> {
-    val arabic = locale.language == ARABIC.language
-    return listOf(
+fun previewRailCards(
+    names: List<String> =
+        listOf("Morning Azkar", "Evening Azkar", "After Prayer", "For the car", "Nothing in here yet"),
+): List<HomeCollection> =
+    listOf(
         HomeCollection(
             id = 1L,
-            name = if (arabic) "أذكار الصباح" else "Morning Azkar",
+            name = names[0],
             description = null,
             iconKey = "sunrise",
             memberCount = 52,
@@ -104,7 +106,7 @@ fun previewRailCards(locale: Locale = ENGLISH): List<HomeCollection> {
         ),
         HomeCollection(
             id = 2L,
-            name = if (arabic) "أذكار المساء" else "Evening Azkar",
+            name = names[1],
             description = null,
             iconKey = "sunset",
             memberCount = 54,
@@ -114,7 +116,7 @@ fun previewRailCards(locale: Locale = ENGLISH): List<HomeCollection> {
         ),
         HomeCollection(
             id = 3L,
-            name = if (arabic) "أذكار بعد الصلاة" else "After Prayer",
+            name = names[2],
             description = null,
             iconKey = "mosque",
             memberCount = 61,
@@ -124,7 +126,7 @@ fun previewRailCards(locale: Locale = ENGLISH): List<HomeCollection> {
         ),
         HomeCollection(
             id = 4L,
-            name = if (arabic) "أذكار السفر" else "For the car",
+            name = names[3],
             description = null,
             iconKey = "compass",
             memberCount = 12,
@@ -134,7 +136,7 @@ fun previewRailCards(locale: Locale = ENGLISH): List<HomeCollection> {
         ),
         HomeCollection(
             id = 5L,
-            name = if (arabic) "لا أذكار هنا بعد" else "Nothing in here yet",
+            name = names[4],
             description = null,
             iconKey = "khatim",
             memberCount = 0,
@@ -143,7 +145,6 @@ fun previewRailCards(locale: Locale = ENGLISH): List<HomeCollection> {
             lastRecitedAt = null,
         ),
     )
-}
 
 /** The ids in [previewRailCards] that should render with the due badge. */
 fun previewDueCollectionIds(): Set<Long> = setOf(2L, 4L)

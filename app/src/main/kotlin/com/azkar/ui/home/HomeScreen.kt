@@ -384,19 +384,16 @@ private fun HomeContentPreviewContent(
         if (emptyDashboard || !collections) {
             emptyList()
         } else {
-            previewRailCards().map { card ->
-                card.copy(
-                    name =
-                        when (card.id) {
-                            1L -> stringResource(Res.string.previewMorningCollection)
-                            2L -> stringResource(Res.string.previewEveningCollection)
-                            3L -> stringResource(Res.string.previewAfterPrayerCollection)
-                            4L -> stringResource(Res.string.previewTravelCollection)
-                            5L -> stringResource(Res.string.previewEmptyCollection)
-                            else -> card.name
-                        },
-                )
-            }
+            previewRailCards(
+                names =
+                    listOf(
+                        stringResource(Res.string.previewMorningCollection),
+                        stringResource(Res.string.previewEveningCollection),
+                        stringResource(Res.string.previewAfterPrayerCollection),
+                        stringResource(Res.string.previewTravelCollection),
+                        stringResource(Res.string.previewEmptyCollection),
+                    ),
+            )
         }
     val favoriteState =
         remember(uiLocale, emptyDashboard, includeFavorites) {
