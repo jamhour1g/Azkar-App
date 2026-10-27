@@ -17,6 +17,13 @@ import java.util.Locale
 @Retention(AnnotationRetention.BINARY)
 annotation class AzkarPreview
 
+/** Tall desktop canvas for full-screen previews that need to show content below the first fold. */
+@Preview(name = "Full screen", widthDp = 1440, heightDp = 1500)
+@PreviewWrapper(AzkarHomeScreenPreviewWrapperProvider::class)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
+@Retention(AnnotationRetention.BINARY)
+annotation class AzkarHomeScreenPreview
+
 /** Wide content preview for layouts whose fixture is wider than the scanner's default surface. */
 @Preview(name = "Wide", widthDp = 1064, heightDp = 220)
 @PreviewWrapper(AzkarPreviewWrapperProvider::class)
@@ -72,6 +79,12 @@ class AzkarMediumPreviewWrapperProvider : PreviewWrapperProvider {
     @Composable
     override fun Wrap(content: @Composable () -> Unit) =
         AzkarPreviewSurface(width = 1100.dp, height = 800.dp, content = content)
+}
+
+class AzkarHomeScreenPreviewWrapperProvider : PreviewWrapperProvider {
+    @Composable
+    override fun Wrap(content: @Composable () -> Unit) =
+        AzkarPreviewSurface(width = 1440.dp, height = 1500.dp, content = content)
 }
 
 @Composable

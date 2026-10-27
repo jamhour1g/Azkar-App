@@ -32,7 +32,9 @@ import com.azkar.ui.home.NotificationSettingsState
 import com.azkar.ui.home.PrayerTimesState
 import com.azkar.ui.library.CollectionReminderState
 import com.azkar.ui.notifications.NotificationPreferencesRepository
+import com.azkar.ui.preview.previewCountdown
 import com.azkar.ui.preview.previewHadithState
+import com.azkar.ui.preview.previewPrayerRows
 import com.azkar.ui.preview.previewRailCards
 import com.azkar.ui.preview.previewRemembrance
 import com.azkar.ui.preview.previewReminders
@@ -40,8 +42,8 @@ import com.azkar.ui.preview.rememberPreviewSettingsStore
 import com.azkar.ui.theme.AzkarArabicPreview
 import com.azkar.ui.theme.AzkarCompactPreview
 import com.azkar.ui.theme.AzkarDarkPreview
+import com.azkar.ui.theme.AzkarHomeScreenPreview
 import com.azkar.ui.theme.AzkarMediumPreview
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarWindowSize
@@ -305,31 +307,31 @@ internal fun HomeContent(
     }
 }
 
-@AzkarPreview
+@AzkarHomeScreenPreview
 @Composable
 internal fun HomeContentPreview() {
     HomeContentPreviewContent()
 }
 
-@AzkarPreview
+@AzkarHomeScreenPreview
 @Composable
 internal fun HomeContentEmptyDashboardPreview() {
     HomeContentPreviewContent(emptyDashboard = true)
 }
 
-@AzkarPreview
+@AzkarHomeScreenPreview
 @Composable
 internal fun HomeContentCollectionsWithoutFavoritesPreview() {
     HomeContentPreviewContent(includeFavorites = false)
 }
 
-@AzkarPreview
+@AzkarHomeScreenPreview
 @Composable
 internal fun HomeContentFavoritesWithoutCollectionsPreview() {
     HomeContentPreviewContent(collections = false)
 }
 
-@AzkarPreview
+@AzkarHomeScreenPreview
 @Composable
 internal fun HomeContentHadithFallbackPreview() {
     HomeContentPreviewContent(hadithFallback = true)
@@ -382,7 +384,11 @@ private fun HomeContentPreviewContent(
     HomeContent(
         inputs =
             HomeInputs(
-                prayerTimes = PrayerTimesState(uiLocale),
+                prayerTimes =
+                    PrayerTimesState(
+                        uiLocale,
+                        initialSnapshot = PrayerTimesSnapshot(previewPrayerRows(), previewCountdown()),
+                    ),
                 favorites = favoriteState,
                 notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
                 rail =
