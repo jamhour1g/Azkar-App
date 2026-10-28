@@ -1,1 +1,0 @@
-release/check_release_validation.main.kts
