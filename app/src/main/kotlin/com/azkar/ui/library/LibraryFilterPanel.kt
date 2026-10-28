@@ -1,9 +1,11 @@
 package com.azkar.ui.library
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.FlowRowScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -23,8 +25,8 @@ import com.azkar.ui.components.AzkarCard
 import com.azkar.ui.components.AzkarFilterChip
 import com.azkar.ui.library.model.CollectionScope
 import com.azkar.ui.library.model.CollectionSort
+import com.azkar.ui.theme.AzkarComponentShowcasePreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.stringResource
 
@@ -98,24 +100,31 @@ internal fun LibraryFilterPanel(
     }
 }
 
-@AzkarVariantsPreview
+@AzkarComponentShowcasePreview
 @Composable
 internal fun LibraryFilterPanelPreview() {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        LibraryFilterPanel(
-            scope = CollectionScope.ALL,
-            onScopeSelected = {},
-            sort = CollectionSort.RECENTLY_UPDATED,
-            onSortSelected = {},
-            modifier = Modifier.width(320.dp),
-        )
-        LibraryFilterPanel(
-            scope = CollectionScope.PINNED,
-            onScopeSelected = {},
-            sort = CollectionSort.NAME,
-            onSortSelected = {},
-            modifier = Modifier.width(320.dp),
-        )
+    BoxWithConstraints {
+        val panels: @Composable () -> Unit = {
+            LibraryFilterPanel(
+                scope = CollectionScope.ALL,
+                onScopeSelected = {},
+                sort = CollectionSort.RECENTLY_UPDATED,
+                onSortSelected = {},
+                modifier = Modifier.width(320.dp),
+            )
+            LibraryFilterPanel(
+                scope = CollectionScope.PINNED,
+                onScopeSelected = {},
+                sort = CollectionSort.NAME,
+                onSortSelected = {},
+                modifier = Modifier.width(320.dp),
+            )
+        }
+        if (maxWidth >= 700.dp) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) { panels() }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) { panels() }
+        }
     }
 }
 

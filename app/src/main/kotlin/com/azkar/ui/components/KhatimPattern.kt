@@ -14,8 +14,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.azkar.ui.theme.AzkarControlVariantsPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarVariantsPreview
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -65,7 +65,7 @@ internal fun KhatimPattern(
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun KhatimPatternPreview() {
     Row(

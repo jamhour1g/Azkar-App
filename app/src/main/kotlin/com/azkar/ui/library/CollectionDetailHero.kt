@@ -68,6 +68,7 @@ import com.azkar.ui.preview.previewCollectionHeroActions
 import com.azkar.ui.preview.previewCollectionStats
 import com.azkar.ui.preview.previewCollectionStatsVariants
 import com.azkar.ui.theme.AzkarComponentVariantsPreview
+import com.azkar.ui.theme.AzkarControlVariantsPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.AzkarWindowSize
@@ -376,14 +377,14 @@ internal fun HeroFacts(
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun HeroFactsPreview() {
     HeroFacts(
         collection = previewCollection(),
         memberCount = 54,
         stats = previewCollectionStats(),
-        modifier = Modifier.width(900.dp),
+        modifier = Modifier.fillMaxWidth(),
     )
 }
 
@@ -811,7 +812,7 @@ internal fun HeroPill(
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun HeroPillPreview() {
     val labels = heroActionLabels(isPinned = true, inReminders = true)

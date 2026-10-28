@@ -388,7 +388,7 @@ internal fun CollectionsInfoLine(
     )
 }
 
-@AzkarVariantsPreview
+@AzkarComponentVariantsPreview
 @Composable
 internal fun CollectionsInfoLinePreview() {
     CollectionsInfoLine(text = stringResource(Res.string.libraryReminderStripCount, 12, 96))

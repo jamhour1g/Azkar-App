@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,8 +54,8 @@ import com.azkar.ui.components.pressableClick
 import com.azkar.ui.components.rememberContextMenuState
 import com.azkar.ui.library.model.CollectionTile
 import com.azkar.ui.preview.previewCollectionTiles
+import com.azkar.ui.theme.AzkarComponentShowcasePreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -138,14 +139,17 @@ fun CollectionCard(
     }
 }
 
-@AzkarVariantsPreview
+@AzkarComponentShowcasePreview
 @Composable
 internal fun CollectionCardPreview() {
     Column(
-        modifier = Modifier.width(1008.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             previewCollectionTiles().forEach { tile ->
                 CollectionCard(
                     tile = tile,

@@ -29,8 +29,8 @@ import com.azkar.ui.components.CompletionTrack
 import com.azkar.ui.components.mirrorHorizontalGradient
 import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.preview.previewCollectionStatsVariants
+import com.azkar.ui.theme.AzkarControlVariantsPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
 
@@ -151,11 +151,11 @@ private data class StripCaptions(
     val remaining: String?,
 )
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun CollectionSessionProgressStripPreview() {
     Column(
-        modifier = Modifier.width(1200.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         previewCollectionStatsVariants().forEach { stats ->

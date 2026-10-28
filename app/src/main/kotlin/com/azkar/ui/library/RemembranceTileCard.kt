@@ -3,6 +3,7 @@ package com.azkar.ui.library
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -53,8 +54,8 @@ import com.azkar.ui.components.rememberContextMenuState
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.preview.previewRemembranceTile
 import com.azkar.ui.preview.previewRemembranceTileActions
+import com.azkar.ui.theme.AzkarComponentShowcasePreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -219,13 +220,10 @@ private fun ColumnScope.TileBody(
     }
 }
 
-@AzkarVariantsPreview
+@AzkarComponentShowcasePreview
 @Composable
 internal fun RemembranceTileCardPreview() {
-    Row(
-        modifier = Modifier.width(656.dp).height(MEMBER_TILE_HEIGHT),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
+    val cards: @Composable () -> Unit = {
         previewRemembranceTile().let { tile ->
             RemembranceTileCard(
                 tile = tile,
@@ -239,6 +237,16 @@ internal fun RemembranceTileCardPreview() {
                 selected = true,
                 modifier = Modifier.width(320.dp),
             )
+        }
+    }
+    BoxWithConstraints {
+        if (maxWidth >= 700.dp) {
+            Row(
+                modifier = Modifier.fillMaxWidth().height(MEMBER_TILE_HEIGHT),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) { cards() }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) { cards() }
         }
     }
 }
@@ -552,11 +560,11 @@ private fun RowText(
     }
 }
 
-@AzkarVariantsPreview
+@AzkarComponentShowcasePreview
 @Composable
 internal fun RemembranceTileRowPreview() {
     Column(
-        modifier = Modifier.width(640.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         previewRemembranceTile().let { tile ->

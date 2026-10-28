@@ -19,13 +19,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.*
+import com.azkar.ui.theme.AzkarControlVariantsPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.CardSize
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarCardPreview() {
     Column(
@@ -47,7 +47,7 @@ internal fun AzkarCardPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarSurfaceCardPreview() {
     Column(
@@ -77,7 +77,7 @@ internal fun AzkarSurfaceCardPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun PrimaryButtonPreview() {
     Column(
@@ -104,7 +104,7 @@ internal fun PrimaryButtonPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun SecondaryButtonPreview() {
     Column(
@@ -127,7 +127,7 @@ internal fun SecondaryButtonPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun NavButtonPreview() {
     Row(
@@ -155,7 +155,7 @@ internal fun NavButtonPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun IconActionButtonPreview() {
     Row(
@@ -182,7 +182,7 @@ internal fun IconActionButtonPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun CircleIconButtonPreview() {
     Row(
@@ -209,7 +209,7 @@ internal fun CircleIconButtonPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun TooltipIconButtonPreview() {
     Row(
@@ -235,7 +235,7 @@ internal fun TooltipIconButtonPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarToggleSwitchPreview() {
     Row(
@@ -249,7 +249,7 @@ internal fun AzkarToggleSwitchPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun PillTogglePreview() {
     Row(
@@ -266,7 +266,7 @@ internal fun PillTogglePreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarFilterChipPreview() {
     Row(
@@ -291,7 +291,7 @@ internal fun AzkarFilterChipPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarOverflowMenuPreview() {
     Row(
@@ -329,7 +329,7 @@ internal fun AzkarOverflowMenuPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarOutlinedFieldPreview() {
     Column(
@@ -371,7 +371,7 @@ internal fun AzkarOutlinedFieldPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarTabStripPreview() {
     Column(
@@ -390,7 +390,7 @@ internal fun AzkarTabStripPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun BorderedStateBoxPreview() {
     BorderedStateBox(modifier = Modifier.width(340.dp)) {
@@ -403,7 +403,7 @@ internal fun BorderedStateBoxPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun IconTintPreview() {
     Row(
@@ -422,7 +422,7 @@ internal fun IconTintPreview() {
     }
 }
 
-@AzkarVariantsPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarDialogSurfacePreview() {
     AzkarDialogSurface(modifier = Modifier.width(340.dp)) {
