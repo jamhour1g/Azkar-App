@@ -7,8 +7,8 @@ finding the main parts of the project. For branch protections and contributor CI
 ## Requirements and first run
 
 Azkar is a Kotlin desktop application built with
-[Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/). Install **JDK 25** and
-clone the repository:
+[Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/). Install **JDK 25**
+(Zulu is used in CI) and clone the repository:
 
 ```bash
 git clone https://github.com/jamhour1g/Azkar-App.git
@@ -17,8 +17,12 @@ cd Azkar-App
 ```
 
 On Windows, use `.\gradlew.bat :app:run` in PowerShell. The Gradle wrapper downloads Gradle and
-dependencies on the first run. CI uses Zulu JDK 25. Release shrinking requires the JDK's `jmods`
-directory; the Gradle checks report an error if it is missing.
+dependencies on the first run. Gradle 9.8 also supports running on JDK 27; when JDK 25 is not
+installed, Gradle can download a matching Java 25 compilation toolchain via Foojay. This requires
+network access and an available JDK for your platform. Alternatively, install JDK 25 and select it
+with `JAVA_HOME` (and as the Gradle JVM in your IDE). Release shrinking uses the Gradle JVM's
+`jmods` directory, so use Zulu JDK 25 for release builds; the Gradle checks report an error if
+`jmods` is missing.
 
 ## Local checks
 
