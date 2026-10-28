@@ -38,7 +38,7 @@ Final packages, update metadata and `SHA256SUMS` are staged under `build/install
 
 Linux CI packages DEB, RPM and AppImage; Windows CI packages NSIS; macOS CI packages DMG and ZIP on both supported architectures. Windows installer/uninstaller and macOS DMG icons are configured separately from the app icons. An AppImage embeds its icon, but file-manager thumbnails still depend on desktop support.
 
-The release merger requires all eight platform/format artifacts and checks their exact versioned filenames, channel, manifest coverage, sizes and SHA-512 hashes. Duplicate filenames, missing architectures, unsafe URLs and unexpected files fail validation before output is written. Windows NSIS filenames include the Nucleus `-nsis` suffix, for example `azkar-0.1.2-windows-x64-nsis.exe`. Native EXE metadata may contain the numeric base version; macOS bundle versions offset the major by one (app 0.1.2 → bundle 1.1.2) because jpackage requires a positive major. App UI/JVM version and artifact names keep the original version; final update manifests always carry the full release version. Run its fixture tests with `./scripts/merge_nucleus_release.main.kts self-test` (requires `kotlinc`).
+The release merger requires all eight platform/format artifacts and checks their exact versioned filenames, channel, manifest coverage, sizes and SHA-512 hashes. Duplicate filenames, missing architectures, unsafe URLs and unexpected files fail validation before output is written. Windows NSIS filenames include the Nucleus `-nsis` suffix, for example `azkar-0.1.2-windows-x64-nsis.exe`. Native EXE metadata may contain the numeric base version; macOS bundle versions offset the major by one (app 0.1.2 → bundle 1.1.2) because jpackage requires a positive major. App UI/JVM version and artifact names keep the original version; final update manifests always carry the full release version. Run its fixture tests with `./scripts/release/merge_nucleus_release.main.kts self-test` (requires `kotlinc`).
 
 Linux staging also checks the actual DEB/RPM internal versions and architectures. Both use `~beta.N` internally so Dev sorts below the next Stable version. The RPM task receives the full SemVer through Nucleus's public task API because its DSL validator rejects prereleases before electron-builder can convert them. Packaging regenerates each format's working directory because Nucleus 2.5.18 otherwise reuses an existing `package.json` and fallback manifest across versions.
 
@@ -46,10 +46,10 @@ Local `act` runs never upload GitHub artifacts or publish releases. In a disposa
 
 ```bash
 printf '%s\n' '{"ref":"refs/heads/dev","repository":{"default_branch":"dev"}}' > /tmp/azkar-act-event.json
-act push -W .github/workflows/release.yml -e /tmp/azkar-act-event.json -j package --matrix id:linux-x64 --bind
+act workflow_dispatch -W .github/workflows/release.yml -e /tmp/azkar-act-event.json -j package --matrix id:linux-x64 --bind
 ```
 
-Local preparation uses `0.0.0-beta.0` without GitHub credentials. Outputs stay in that checkout's `build/installers/`; the publish job explicitly rejects `ACT=true`. Container-created files may have container-user ownership, so prefer the direct Gradle task in your working checkout. Linux containers cannot validate native Windows/macOS installers.
+Local preparation uses `0.0.0-beta.1` without GitHub credentials. Outputs stay in that checkout's `build/installers/`; the publish job explicitly rejects `ACT=true`. Container-created files may have container-user ownership, so prefer the direct Gradle task in your working checkout. Linux containers cannot validate native Windows/macOS installers.
 
 Nucleus 2.5.18 was selected as a released, pinned baseline. It has Compose Gradle integration through reflection and an internal Compose JDK-probe dependency. The Linux DEB package was built successfully against this checkout's Kotlin 2.4.20, Compose 1.12.1 and Zulu JDK 25. Re-run package and installed-update checks when upgrading Compose or Nucleus. Review any future Compose bytecode patch before enabling it; the released 2.5.18 packaging path does not enable the later default text patch.
 
@@ -64,11 +64,44 @@ git push origin v0.1.2
 
 The workflow verifies the tag is on `production`, checks the recorded [installed-release evidence](release-validation.md), runs source checks and packaged-runtime smoke tests, and builds on Linux, Windows, macOS Intel and Apple Silicon runners. It validates the complete artifact set, prepares a draft release, builds and verifies a fresh signed repository site, explicitly deploys it through Pages Actions, checks every live file against the build checksums, then exposes the release. Already published assets cannot be overwritten by a rerun. The release tag and Gradle package version must match. This is ordered publication across two services, not an atomic transaction: if final release publication fails after deployment, the Linux repositories may already contain the new version. Rerun failed jobs for the same run while its artifacts remain available; inspect the draft and deployed version markers first. Do not overwrite a published version. After artifact expiry, rerun the full Dev workflow (which selects a new version), or rebuild an unpublished Stable tag only after checking its existing draft. A failed build/signature check leaves the previously deployed site untouched.
 
+## Maintaining the release workflow
+
+`.github/workflows/release.yml` defines triggers, job dependencies, permissions, and step-scoped
+credentials. Release logic lives under `scripts/release/`:
+
+- `metadata.main.kts`: validated API records, Dev batch eligibility, version numbering, and Stable source ancestry.
+- `github-release.sh`: release notes, draft creation/resumption, and final publication.
+- `repository-site.sh`: signing-key checks, package collection, site creation, and deployed-file verification.
+- `release-rules.main.kts`: pure Kotlin rules shared by metadata and tests. The same selectors drive batching,
+  notes, and package collection. Stable versions are ordered numerically, not by API response order.
+- `github-client.main.kts`: Ktor HTTP client with typed `@Serializable` response models, pagination,
+  timeouts, and explicit authentication. Redirects are rejected instead of forwarding credentials.
+- `kotlin.sh`: loads the serialization plugin bundled with the selected compiler for metadata
+  commands and HTTP tests; their shebangs use this launcher automatically from the repository root.
+
+Run commands from the repository root. `./scripts/tests/test_release_workflow.main.kts` tests the scripts
+directly using temporary files and mocked external commands, without publishing. The workflow
+also runs `./scripts/tests/test_github_client.main.kts` with Ktor's MockEngine; no GitHub HTTP calls
+are made by either suite. The workflow linter also runs ShellCheck over the shell entry points.
+Changes remain covered by the installed-release
+evidence check because it tracks the entire `scripts/` directory.
+See the [scripts index](../scripts/README.md) for the folder layout, Kotlin tools, and local checks.
+
 ## Dev releases
 
-Every successful push to `dev` runs checks before packaging. The workflow selects the next patch after the latest Stable version and adds a unique Beta suffix based on the workflow run and attempt, for example `0.1.2-beta.84.1`. This suffix is what Nucleus's released GitHub provider uses to select the Dev feed. Dev packages use the same application identity and data directory as Stable.
+PR checks run for each approved PR. Dev publication collects merged PRs into batches: the Release workflow checks `dev` at minutes 8 and 38 of each hour (UTC), and publishes only when there are new commits and at least six hours have passed since the last successful Dev release. Scheduled workflows use the default branch, which must remain `dev`. An unchanged, older, or diverged source revision skips packaging and publication without consuming a version number. The decision is checked after entering the shared release queue, so queued schedules do not publish duplicate batches.
 
-The workflow automatically publishes a versioned GitHub prerelease after deploying and verifying the signed Dev apt and RPM repositories. The active repository replaces its previous Dev packages; GitHub prereleases retain their unique versioned assets. Dev release notes describe changes since the previous successful Dev prerelease. Reruns receive a new version. Stable tags remain explicit and are accepted only from `production`.
+To publish accumulated changes sooner, manually dispatch from `dev`:
+
+```bash
+gh workflow run release.yml --ref dev
+```
+
+Manual dispatch bypasses the six-hour wait but still requires new commits. Stable tag releases bypass Dev batching. Dev and Stable publication remain serialized because both deploy the same signed repository site.
+
+The workflow selects the next patch after the latest Stable version and adds a sequential Beta suffix, for example `0.1.2-beta.24`. Numbering starts at `beta.1` for each new patch. Published releases, drafts, and existing tags reserve their numbers; legacy `beta.23.1` reserves number 23, so the next version is `beta.24`. There is no workflow-attempt suffix. This suffix is what Nucleus's released GitHub provider uses to select the Dev feed. Dev packages use the same application identity and data directory as Stable.
+
+The workflow automatically publishes a versioned GitHub prerelease after deploying and verifying the signed Dev apt and RPM repositories. Dev releases carry GitHub's **Pre-release** label, including resumed drafts. The active repository replaces its previous Dev packages; GitHub prereleases retain their unique versioned assets. Dev release notes collect changes since the most recently published Dev prerelease, including every PR merged during the batch interval. A quiet interval can still contain only one PR. Full reruns of an unpublished batch select a new version if a draft or tag already reserves the previous one; rerun failed jobs to resume that existing draft. Stable tags remain explicit `vMAJOR.MINOR.PATCH` versions without Beta or attempt suffixes and are accepted only from `production`.
 
 ## Signed Linux repositories
 
