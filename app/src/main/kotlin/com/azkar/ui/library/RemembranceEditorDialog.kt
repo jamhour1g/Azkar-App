@@ -72,7 +72,7 @@ internal fun RemembranceEditorDialog(
     }
 }
 
-/** The production editor pane without its native window host, for previews and screenshot captures. */
+/** The production editor pane without its native window host, for previews and screenshot tests. */
 @Composable
 internal fun RemembranceEditorContent(
     remembrance: Remembrance,

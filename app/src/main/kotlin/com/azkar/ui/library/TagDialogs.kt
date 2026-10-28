@@ -72,6 +72,7 @@ import com.azkar.ui.library.data.TagSaveResult
 import com.azkar.ui.library.model.TranslationEntry
 import com.azkar.ui.library.model.missingLanguages
 import com.azkar.ui.library.model.survivingRename
+import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.AzkarVariantsPreview
@@ -725,6 +726,7 @@ private fun DialogFooter(
 // ---- previews ------------------------------------------------------------------------------------
 
 @Preview
+@RoborazziDesktopPreviewExclude
 @Composable
 private fun TagDeleteDialogPreview() {
     AzkarThemePreview(width = 520.dp) {
@@ -737,6 +739,7 @@ private fun TagDeleteDialogPreview() {
 }
 
 @Preview
+@RoborazziDesktopPreviewExclude
 @Composable
 private fun TagNameDialogPreview() {
     AzkarThemePreview(width = 520.dp) {

@@ -38,6 +38,7 @@ import com.azkar.generated.resources.reminderManagerTimePickerClock
 import com.azkar.generated.resources.reminderManagerTimePickerConfirm
 import com.azkar.generated.resources.reminderManagerTimePickerTitle
 import com.azkar.generated.resources.reminderManagerTimePickerToggleDisplay
+import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarComponentVariantsPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
@@ -271,6 +272,7 @@ internal class TimePickerPreviewStateProvider : PreviewParameterProvider<TimePic
 }
 
 @AzkarVariantsPreview
+@RoborazziDesktopPreviewExclude
 @Composable
 internal fun AzkarTimePickerDialogPreview() {
     AzkarTimePickerDialog(

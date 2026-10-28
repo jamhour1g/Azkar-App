@@ -26,8 +26,7 @@ with `JAVA_HOME` (and as the Gradle JVM in your IDE). Release shrinking uses the
 
 ## Local checks
 
-Run the test suites and a CI-style build before submitting changes. App screenshot cases capture
-images for review and do not compare them with stored references:
+Run the test suites and a CI-style build before submitting changes:
 
 ```bash
 ./gradlew test
@@ -59,16 +58,34 @@ regression references and reports. This command does not read or change regressi
 The release workflow uploads these freshly rendered images and publishes them to the site; the
 README uses the same hosted files.
 
-## App screenshot captures
+## Screenshot regression tests
 
-App screenshot captures do not compare images with stored references. Capture the named app scenes
-and interaction states with:
+Record or verify the references for the named UI tests:
 
 ```bash
-./gradlew :app:test
+./gradlew :app:recordRoborazziJvm
+./gradlew :app:verifyRoborazziJvm
 ```
 
-Images are written under `app/build/app-screenshots/`; CI uploads them as an artifact.
+References live under `app/src/test/roborazzi/`, grouped by UI area (`home/`, `library/`,
+`settings/`, `notifications/`, `components/`, and `dialogs/`); comparison reports are under
+`app/build/reports/roborazzi/`. PR CI verifies these references independently of gallery generation.
+The reference PNGs are checked into Git so CI has a stable expected image and each UI change includes
+its visual diff in review. Only generated `site/images/screen-*.png` gallery images are ignored.
+Review the image diffs before accepting new references with the record task.
+
+An experimental Compose Desktop preview scan is available separately:
+
+```bash
+./gradlew :app:recordRoborazziJvm -Pazkar.previewScanner=true
+./gradlew :app:verifyRoborazziJvm -Pazkar.previewScanner=true
+```
+
+It scans `com.azkar.ui`, runs only the generated JUnit 4 preview tests, and writes output under
+`app/build/roborazzi-preview-scanner/`; it does not touch the reviewed regression baselines. Private
+previews are included. Preview functions marked `@RoborazziDesktopPreviewExclude` launch native
+desktop windows, which create a second semantics root; keep those previews for the IDE and capture
+their content panes directly when they need Roborazzi coverage.
 
 Standard previews use `@AzkarPreview` to combine `@Preview` with the fixed English, light Azkar theme
 and opaque app background. Use `@AzkarDarkPreview`, `@AzkarArabicPreview`, `@AzkarCompactPreview`, or
@@ -76,15 +93,26 @@ and opaque app background. Use `@AzkarDarkPreview`, `@AzkarArabicPreview`, `@Azk
 Kotlin cannot forward custom annotation arguments into `@Preview`; one-off dimensions and settings
 can still use direct `@Preview` plus `AzkarThemePreview(width = ..., height = ...)`.
 
-`AppScreenshotCaptureSuite` owns the named app captures and readiness assertions. Gallery generation
-and app captures share the scene composables and frame in `app/src/screenshotFixtures/`. Add a capture
-by passing the intended composable and state in the suite; add a published image in `Gallery.kt`.
-Shared fixtures use a fixed home date and prayer time and in-memory library data. Settings captures
-use temporary preferences and a mock HTTP client with suspend cleanup.
+For an AI-readable tree of visible text, controls, and element bounds, enable Roborazzi's UI tree
+dump during verification:
+
+```bash
+./gradlew :app:verifyRoborazziJvm -Proborazzi.dumpUiTree=true
+```
+
+Roborazzi writes the JSON sidecars and annotated images under `app/build/outputs/roborazzi/`; these
+generated inspection files are not regression references. PR CI generates these trees and uploads
+them with comparison images and reports when verification fails.
+
+`RoborazziScreenshotSuite` owns test cases, readiness assertions, and comparisons. Gallery generation
+and regression tests share only the scene composables and frame in `app/src/screenshotFixtures/`.
+Add a regression case by passing the intended composable and state in a test; add a published image
+in `Gallery.kt`. Shared fixtures use a fixed home date and prayer time and in-memory library data.
+Settings tests use temporary preferences and a mock HTTP client with suspend cleanup.
 For desktop modal UI, keep the native `Dialog` host as a thin wrapper and extract its pane into a
-content composable. App captures render that production pane directly: this shows its layout, theme,
-and supplied state without creating a native window. It does not show platform modality, placement,
-or dimming.
+content composable. Screenshot tests render that production pane directly: this covers its layout,
+theme, and supplied state without creating a native window. It does not verify platform modality,
+placement, or dimming.
 
 ## Project layout
 

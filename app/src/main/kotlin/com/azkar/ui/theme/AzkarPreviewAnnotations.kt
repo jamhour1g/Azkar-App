@@ -98,7 +98,7 @@ class AzkarVariantsPreviewWrapperProvider : PreviewWrapperProvider {
 @Retention(AnnotationRetention.BINARY)
 annotation class AzkarHomeScreenPreview
 
-/** Wide content preview for layouts that need extra horizontal room. */
+/** Wide content preview for layouts whose fixture is wider than the scanner's default surface. */
 @Preview(name = "Wide", widthDp = 1064, heightDp = 220)
 @PreviewWrapper(AzkarPreviewWrapperProvider::class)
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
