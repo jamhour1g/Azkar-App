@@ -31,7 +31,7 @@ After testing, update [release-validation.properties](release-validation.propert
 - Set each platform result to `passed` only after its checklist succeeds.
 
 Commit the record separately after the candidate source commit. Stable validation runs
-`./scripts/check_release_validation.main.kts`; it rejects missing platform results,
+`./scripts/release/check_release_validation.main.kts`; it rejects missing platform results,
 unknown commits, and distribution-source changes after the tested commit. Ordinary UI
 changes do not invalidate the record. New distribution source files should be added to
 that script's `distributionPaths` list when they live outside its existing directories.

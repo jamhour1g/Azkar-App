@@ -34,10 +34,7 @@ spotless {
     kotlin {
         target(
             "config/testing/**/*.kt",
-            "scripts/merge_nucleus_release.main.kts",
-            "scripts/publish_linux_repositories.main.kts",
-            "scripts/check_release_validation.main.kts",
-            "scripts/test_ci_authorization.main.kts",
+            "scripts/**/*.main.kts",
             "build-logic/build.gradle.kts",
             "build-logic/settings.gradle.kts",
             "build-logic/src/main/kotlin/*.gradle.kts",
