@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -238,7 +238,7 @@ private fun updateActionIcon(
     is UpdateStatus.Available ->
         if (isRepositoryManaged) Icons.Filled.ContentCopy else Icons.Filled.FileDownload
     is UpdateStatus.ReadyToInstall -> Icons.Filled.RestartAlt
-    else -> Icons.Filled.Refresh
+    else -> Icons.Filled.Sync
 }
 
 @Composable
