@@ -66,8 +66,8 @@ import com.azkar.ui.shell.HeaderCallbacks
 import com.azkar.ui.shell.SettingsGroup
 import com.azkar.ui.shell.SettingsScreen
 import com.azkar.ui.shell.ThemePreference
-import com.azkar.ui.shell.UpdateAvailablePreview
-import com.azkar.ui.shell.UpdateIdlePreview
+import com.azkar.ui.shell.UpdateAvailableActionPreview
+import com.azkar.ui.shell.UpdateIdleActionPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.updates.UpdateManager
@@ -100,16 +100,16 @@ val RoborazziScreenshotSuite by testSuite("Compose Desktop screenshots") {
             }
         }
         test("update available $theme") {
-            capture("settings/settings-update-available-$theme", dark, width = 720, height = 210) {
+            capture("settings/settings-update-available-$theme", dark, width = 720, height = 144) {
                 Column(Modifier.width(720.dp).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    UpdateAvailablePreview()
+                    UpdateAvailableActionPreview()
                 }
             }
         }
         test("update idle $theme") {
-            capture("settings/settings-update-idle-$theme", dark, width = 720, height = 210) {
+            capture("settings/settings-update-idle-$theme", dark, width = 720, height = 144) {
                 Column(Modifier.width(720.dp).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    UpdateIdlePreview()
+                    UpdateIdleActionPreview()
                 }
             }
         }

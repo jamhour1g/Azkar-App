@@ -304,6 +304,13 @@ internal fun UpdateIdlePreview() = UpdateStatePreview(UpdateStatus.Idle)
 internal fun UpdateAvailablePreview() =
     UpdateStatePreview(UpdateStatus.Available(updatePreviewInfo(), "", isDowngrade = false))
 
+@Composable
+internal fun UpdateIdleActionPreview() = UpdateVersionActionPreview(UpdateStatus.Idle)
+
+@Composable
+internal fun UpdateAvailableActionPreview() =
+    UpdateVersionActionPreview(UpdateStatus.Available(updatePreviewInfo(), "", isDowngrade = false))
+
 @AzkarComponentVariantsPreview
 @Composable
 internal fun UpdateDownloadingStatePreview() = UpdateStatePreview(UpdateStatus.Downloading("0.2.0", 63.0))
@@ -335,4 +342,11 @@ private fun UpdateStatePreview(status: UpdateStatus) {
         onSelectChannel = {},
         onAction = {},
     )
+}
+
+@Composable
+private fun UpdateVersionActionPreview(status: UpdateStatus) {
+    SettingsGroupCard(contentPadding = 0.dp) {
+        UpdateVersionRow("0.1.0", false, status, onAction = {})
+    }
 }
