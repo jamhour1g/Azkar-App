@@ -27,9 +27,11 @@ val mockGh =
         set -euo pipefail
         case "${'$'}*" in
           *statuses/*) printf '%s\n' "${'$'}*" >> "${'$'}MOCK_LOG" ;;
+          *pulls/*/files*) printf '%s\n' "${'$'}MOCK_FILES" ;;
           *pulls/*)
-            if [[ "${'$'}*" == *'--jq .head.sha'* ]]; then printf '%s\n' "${'$'}MOCK_HEAD";
-            else cat "${'$'}MOCK_PR"; fi ;;
+            jq --arg head "${'$'}MOCK_HEAD" --arg base "${'$'}MOCK_BASE" --arg branch "${'$'}MOCK_BRANCH" \
+              --arg state "${'$'}MOCK_STATE" --argjson count "${'$'}MOCK_CHANGED_FILES" \
+              '.head.sha = ${'$'}head | .base.sha = ${'$'}base | .base.ref = ${'$'}branch | .state = ${'$'}state | .changed_files = ${'$'}count' "${'$'}MOCK_PR" ;;
           *) echo dev ;;
         esac
         """.trimIndent(),
@@ -45,7 +47,7 @@ fun runShell(
     val fixture = root.resolve("pr.json")
     Files.writeString(
         fixture,
-        """{"state":"open","user":{"login":"$author"},"head":{"sha":"$head","ref":"feature","repo":{"full_name":"$owner/Azkar-App"}},"base":{"ref":"$target","sha":"$base","repo":{"full_name":"$owner/Azkar-App"}}}""",
+        """{"state":"open","changed_files":1,"user":{"login":"$author"},"head":{"sha":"$head","ref":"feature","repo":{"full_name":"$owner/Azkar-App"}},"base":{"ref":"$target","sha":"$base","repo":{"full_name":"$owner/Azkar-App"}}}""",
     )
     val log = root.resolve("statuses")
     Files.writeString(log, "")
@@ -56,6 +58,11 @@ fun runShell(
             "MOCK_PR" to fixture.toString(),
             "MOCK_LOG" to log.toString(),
             "MOCK_HEAD" to head,
+            "MOCK_BASE" to base,
+            "MOCK_BRANCH" to target,
+            "MOCK_FILES" to """[[{"filename":"README.md"}]]""",
+            "MOCK_STATE" to "open",
+            "MOCK_CHANGED_FILES" to "1",
             "REPOSITORY" to "$owner/Azkar-App",
             "OWNER" to owner,
             "ACTOR" to owner,
@@ -64,8 +71,12 @@ fun runShell(
             "FULL_INSTALLERS" to "false",
             "PR_NUMBER" to "123",
             "REVIEWED_SHA" to head,
+            "BASE_SHA" to base,
+            "BASE_BRANCH" to target,
+            "SKIP_CHECKS" to "false",
             "GITHUB_SHA" to head,
             "GITHUB_OUTPUT" to root.resolve("outputs").toString(),
+            "GITHUB_STEP_SUMMARY" to root.resolve("summary").toString(),
             "GITHUB_SERVER_URL" to "https://github.com",
             "GITHUB_RUN_ID" to "1",
         ) + environment,
@@ -98,9 +109,28 @@ try {
     rejects(mapOf("ACTOR" to "contributor"))
     rejects(mapOf("REVIEWED_SHA" to "c".repeat(40)))
     rejects(mapOf("PR_NUMBER" to "123/../../statuses"))
+    rejects(mapOf("MOCK_STATE" to "closed"))
     rejects(mapOf("DISPATCH_REF" to "refs/heads/feature"))
     accepts(mapOf("DISPATCH_REF" to "refs/heads/feature"), author = owner)
     accepts(mapOf("FULL_INSTALLERS" to "true"))
+    accepts(mapOf("SKIP_CHECKS" to "true"))
+    accepts(
+        mapOf(
+            "SKIP_CHECKS" to "true",
+            "MOCK_FILES" to """[[{"filename":"docs/new.md","previous_filename":"docs/old.md"}]]""",
+        ),
+    )
+    rejects(mapOf("SKIP_CHECKS" to "true", "MOCK_FILES" to """[[{"filename":"app/build.gradle.kts"}]]"""))
+    rejects(mapOf("SKIP_CHECKS" to "true", "MOCK_CHANGED_FILES" to "2"))
+    rejects(mapOf("SKIP_CHECKS" to "true", "MOCK_CHANGED_FILES" to "3001"))
+    rejects(
+        mapOf(
+            "SKIP_CHECKS" to "true",
+            "MOCK_FILES" to """[[{"filename":"docs/old-code.md","previous_filename":"app/src/main.kt"}]]""",
+        ),
+    )
+    rejects(mapOf("SKIP_CHECKS" to "true", "FULL_INSTALLERS" to "true"))
+    check(runShell("Resolve and authorize the PR", mapOf("SKIP_CHECKS" to "true"), target = "production").first != 0)
     accepts(target = "production")
     check(runShell("Resolve and authorize the PR", emptyMap(), target = "other").first != 0)
     val success =
@@ -110,21 +140,38 @@ try {
             "CROSS_RESULT" to "success",
             "INSTALLERS_RESULT" to "success",
         )
-    check(runShell("Publish required commit statuses", success).second.count { it == '\n' } >= 2)
-    check("state=failure" !in runShell("Publish required commit statuses", success).second)
+
+    fun report(environment: Map<String, String>): String {
+        val (exit, output) = runShell("Publish required commit statuses", environment)
+        check(exit == 0) { output }
+        return output
+    }
+    check(report(success).count { it == '\n' } >= 2)
+    check("state=failure" !in report(success))
+    check(
+        "state=failure" !in
+            report(
+                success +
+                    mapOf("SKIP_CHECKS" to "true", "LINUX_RESULT" to "skipped", "INSTALLERS_REQUIRED" to "false"),
+            ),
+    )
     check(
         "state=success" !in
-            runShell("Publish required commit statuses", success + ("MOCK_HEAD" to "c".repeat(40))).second,
+            report(success + ("MOCK_HEAD" to "c".repeat(40))),
     )
+    check("state=success" !in report(success + ("MOCK_BASE" to "c".repeat(40))))
+    check("state=success" !in report(success + ("MOCK_BRANCH" to "production")))
+    check("state=success" !in report(success + ("MOCK_STATE" to "closed")))
     check(
         "state=failure" in
-            runShell("Publish required commit statuses", success + ("INSTALLERS_RESULT" to "failure")).second,
+            report(success + ("INSTALLERS_RESULT" to "failure")),
     )
     check(
-        "state=failure" in runShell("Publish required commit statuses", success + ("CROSS_RESULT" to "skipped")).second,
+        "state=failure" in report(success + ("CROSS_RESULT" to "skipped")),
     )
+    check("state=failure" in report(success + ("LINUX_RESULT" to "cancelled")))
     println(
-        "CI authorization fixtures passed: owner/contributor approval, stale SHA, branch selection, installer failures",
+        "CI authorization fixtures passed: approval, documentation skips, renames, stale head/base, installer failures",
     )
 } finally {
     Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) }

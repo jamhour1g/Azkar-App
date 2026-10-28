@@ -2,13 +2,18 @@ name: Release
 
 on:
   push:
-    branches: [dev]
     tags: ['v*']
+  schedule:
+    - cron: '8,38 * * * *'
   workflow_dispatch:
     inputs: {}
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
 
 concurrency:
   group: release-publishing
@@ -18,9 +23,11 @@ concurrency:
 jobs:
   prepare:
     name: Choose release version and channel
-    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev') }}
+    if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || ((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/dev') }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     outputs:
+      publish: ${{ steps.batch.outputs.publish }}
       app_version: ${{ steps.version.outputs.app_version }}
       release_tag: ${{ steps.version.outputs.release_tag }}
       channel: ${{ steps.version.outputs.channel }}
@@ -29,60 +36,52 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+          persist-credentials: false
+      - name: Set up JDK 25 for release metadata
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          java-version: '25'
+          distribution: zulu
+      - name: Set up Kotlin compiler for release metadata
+        uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
+        with:
+          version: '2.4.20'
+      - name: Select Dev release batch
+        id: batch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+        run: ./scripts/release/metadata.main.kts select-batch
+
+      - name: Check GitHub workflows
+        if: steps.batch.outputs.publish == 'true'
+        run: ./scripts/ci/check_workflows.sh
       - name: Resolve version
         id: version
+        if: steps.batch.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          if [[ "${ACT:-false}" == true ]]; then
-            version=0.0.0-beta.0
-            tag="v$version"
-            channel=dev
-            prerelease=true
-          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            version="${GITHUB_REF_NAME#v}"
-            [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Stable tags must be vMAJOR.MINOR.PATCH.'; exit 1; }
-            tag="$GITHUB_REF_NAME"
-            channel=stable
-            prerelease=false
-          else
-            stable_tag="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
-              | jq -r '[.[][] | select(.draft == false and .prerelease == false) | .tag_name][0] // empty')"
-            base="${stable_tag#v}"
-            if [[ -z "$stable_tag" ]]; then base=0.1.1; fi
-            [[ "$base" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Latest stable release has an invalid version.'; exit 1; }
-            IFS=. read -r major minor patch <<< "$base"
-            next_patch=$((10#$patch + 1))
-            version="${major}.${minor}.${next_patch}-beta.${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
-            tag="v$version"
-            channel=dev
-            prerelease=true
-          fi
-          {
-            echo "app_version=$version"
-            echo "release_tag=$tag"
-            echo "channel=$channel"
-            echo "prerelease=$prerelease"
-          } >> "$GITHUB_OUTPUT"
+        run: ./scripts/release/metadata.main.kts resolve-version
+
+      - name: Require stable tag to be on production
+        if: steps.version.outputs.channel == 'stable'
+        run: ./scripts/release/metadata.main.kts verify-stable-source
+
+      - name: Require installed-release evidence for Stable
+        if: steps.version.outputs.channel == 'stable'
+        run: ./scripts/release/check_release_validation.main.kts
 
   validate:
     name: Validate source and release shrinking
     needs: prepare
+    if: needs.prepare.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
-      - name: Require stable tag to be on production
-        if: needs.prepare.outputs.channel == 'stable'
-        run: |
-          git fetch origin production
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/production || {
-            echo "Refusing a stable release: $GITHUB_SHA is not on production."
-            exit 1
-          }
+          persist-credentials: false
       - name: Set up JDK 25
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
@@ -106,17 +105,27 @@ jobs:
           version: '2.4.20'
       - name: Test release validation scripts
         run: |
-          ./scripts/merge_nucleus_release.main.kts self-test
-          ./scripts/publish_linux_repositories.main.kts self-test
-          ./scripts/check_release_validation.main.kts self-test
-      - name: Require installed-release evidence for Stable
-        if: needs.prepare.outputs.channel == 'stable'
-        run: ./scripts/check_release_validation.main.kts
+          ./scripts/release/merge_nucleus_release.main.kts self-test
+          ./scripts/release/publish_linux_repositories.main.kts self-test
+          ./scripts/release/check_release_validation.main.kts self-test
+          ./scripts/tests/test_release_workflow.main.kts
+          ./scripts/tests/test_github_client.main.kts
+      - name: Upload validation diagnostics
+        if: failure() && env.ACT != 'true'
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: release-validation-reports
+          path: |
+            **/build/reports/tests/
+            **/build/reports/detekt/
+            app/build/compose/logs/
+          retention-days: 7
 
 
   package:
     name: Package (${{ matrix.id }})
     needs: prepare
+    if: needs.prepare.outputs.publish == 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     strategy:
@@ -133,6 +142,8 @@ jobs:
             runner: macos-15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - name: Set up JDK 25
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
@@ -145,12 +156,11 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y rpm libgl1
       - name: Build packages for this host
-        shell: bash
         env:
           APP_VERSION: ${{ needs.prepare.outputs.app_version }}
           CI: true
         run: |
-          if [[ "${ACT:-false}" == true ]]; then APP_VERSION="${APP_VERSION:-0.0.0-beta.0}"; fi
+          if [[ "${ACT:-false}" == true ]]; then APP_VERSION="${APP_VERSION:-0.0.0-beta.1}"; fi
           test -n "$APP_VERSION"
           ./gradlew :app:packageCurrentOS -PappVersion="$APP_VERSION" --console=plain
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
@@ -175,11 +185,14 @@ jobs:
 
   screenshots:
     name: Capture website and README screenshots
-    if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev') }}
+    needs: prepare
+    if: needs.prepare.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - name: Set up JDK 25
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
@@ -209,7 +222,6 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Refuse publication from local act runs
-        shell: bash
         run: |
           if [[ "${ACT:-false}" == true ]]; then
             echo 'Local act runs only build installers; publication is disabled.'
@@ -218,6 +230,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Set up JDK 25
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
@@ -239,29 +252,15 @@ jobs:
       - name: Prepare release assets and merge architecture manifests
         env:
           APP_VERSION: ${{ needs.prepare.outputs.app_version }}
-        run: ./scripts/merge_nucleus_release.main.kts release-input release-assets "$APP_VERSION"
+        run: ./scripts/release/merge_nucleus_release.main.kts release-input release-assets "$APP_VERSION"
       - name: Install repository tooling
         run: sudo apt-get update && sudo apt-get install -y apt-utils createrepo-c gnupg libgl1
       - name: Import and verify Linux repository signing key
         env:
           REPO_PRIVATE_KEY: ${{ secrets.LINUX_REPO_SIGNING_KEY }}
           REPO_PASSPHRASE: ${{ secrets.LINUX_REPO_SIGNING_PASSPHRASE }}
-        shell: bash
-        run: |
-          test -n "$REPO_PRIVATE_KEY" || { echo 'Set LINUX_REPO_SIGNING_KEY before publishing.'; exit 1; }
-          export GNUPGHOME="$RUNNER_TEMP/azkar-repo-gnupg"
-          mkdir -m 700 "$GNUPGHOME"
-          printf '%s\n' "$REPO_PRIVATE_KEY" | gpg --batch --import
-          key_id="$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')"
-          test -n "$key_id"
-          expected_key="$(gpg --batch --with-colons --show-keys assets/keys/azkar-repository.asc | awk -F: '$1 == "fpr" { print $10; exit }')"
-          test "$key_id" = "$expected_key"
-          echo "$key_id" > "$RUNNER_TEMP/azkar-repo-key-id"
-          gpg --batch --armor --export "$key_id" > "$RUNNER_TEMP/azkar-repo.asc"
-          printf 'signing check\n' > "$RUNNER_TEMP/azkar-signing-check"
-          printf '%s\n' "$REPO_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
-            --local-user "$key_id" --detach-sign --output "$RUNNER_TEMP/azkar-signing-check.sig" \
-            "$RUNNER_TEMP/azkar-signing-check"
+        run: ./scripts/release/repository-site.sh import-key
+
       - name: Prepare draft release and release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -269,65 +268,19 @@ jobs:
           APP_VERSION: ${{ needs.prepare.outputs.app_version }}
           RELEASE_CHANNEL: ${{ needs.prepare.outputs.channel }}
           PRE_RELEASE: ${{ needs.prepare.outputs.prerelease }}
-        shell: bash
-        run: |
-          notes_file="$RUNNER_TEMP/release-notes.md"
-          if [[ "$RELEASE_CHANNEL" == stable ]]; then
-            gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
-              -f "tag_name=$RELEASE_TAG" -f "target_commitish=$GITHUB_SHA" --jq .body > "$notes_file"
-          else
-            previous="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
-              | jq -r '[.[][] | select(.draft == false and .prerelease == true and (.tag_name | contains("-beta."))) | .tag_name][0] // empty')"
-            note_args=()
-            if [[ -n "$previous" ]]; then note_args+=(-f "previous_tag_name=$previous"); fi
-            gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
-              -f "tag_name=$RELEASE_TAG" -f "target_commitish=$GITHUB_SHA" "${note_args[@]}" --jq .body > "$notes_file"
-          fi
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" == true || {
-              echo 'Refusing to replace an already published release. Use a new version.'
-              exit 1
-            }
-            gh release upload "$RELEASE_TAG" release-assets/* --clobber
-            gh release edit "$RELEASE_TAG" --title "Azkar $APP_VERSION" --notes-file "$notes_file"
-          else
-            release_args=()
-            if [[ "$PRE_RELEASE" == true ]]; then release_args+=(--prerelease); fi
-            gh release create "$RELEASE_TAG" release-assets/* --draft --title "Azkar $APP_VERSION" \
-              --notes-file "$notes_file" --target "$GITHUB_SHA" "${release_args[@]}"
-          fi
+        run: ./scripts/release/github-release.sh prepare-draft
+
       - name: Collect rolling repository packages
         env:
           GH_TOKEN: ${{ github.token }}
           CHANNEL: ${{ needs.prepare.outputs.channel }}
-          REPOSITORY: ${{ github.repository }}
-        shell: bash
-        run: |
-          mkdir -p "repository-input/$CHANNEL"
-          cp release-assets/*.deb release-assets/*.rpm release-assets/SHA256SUMS "repository-input/$CHANNEL/"
-          other=stable
-          if [[ "$CHANNEL" == stable ]]; then other=dev; fi
-          releases="$(gh api --paginate --slurp "repos/$REPOSITORY/releases?per_page=100")"
-          if [[ "$other" == stable ]]; then
-            tag="$(jq -r '[.[][] | select(.draft == false and .prerelease == false and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$")))][0].tag_name // empty' <<< "$releases")"
-          else
-            tag="$(jq -r '[.[][] | select(.draft == false and .prerelease == true and (.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+-beta\\.[0-9]+(\\.[0-9]+)*$")))][0].tag_name // empty' <<< "$releases")"
-          fi
-          if [[ -n "$tag" ]]; then
-            mkdir -p "repository-input/$other"
-            gh release download "$tag" --dir "repository-input/$other" \
-              --pattern '*-linux-x64.deb' --pattern '*-linux-x64.rpm' --pattern SHA256SUMS
-          fi
+        run: ./scripts/release/repository-site.sh collect-packages
+
       - name: Build and sign rolling APT and RPM repositories
         env:
           REPO_PASSPHRASE: ${{ secrets.LINUX_REPO_SIGNING_PASSPHRASE }}
-        shell: bash
-        run: |
-          export GNUPGHOME="$RUNNER_TEMP/azkar-repo-gnupg"
-          key_id="$(cat "$RUNNER_TEMP/azkar-repo-key-id")"
-          ./scripts/publish_linux_repositories.main.kts \
-            repository-input repository-site "$RUNNER_TEMP/azkar-repo.asc" "$key_id"
-          (cd repository-site && find . -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/site-SHA256SUMS"
+        run: ./scripts/release/repository-site.sh build
+
       - name: Upload expected deployed-file checksums
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
@@ -344,6 +297,7 @@ jobs:
     name: Deploy signed Linux repositories
     needs: publish
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     permissions:
       pages: write
       id-token: write
@@ -365,6 +319,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/release
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: repository-site-checksums
@@ -374,29 +332,12 @@ jobs:
           PAGE_URL: ${{ needs.deploy.outputs.page_url }}
           CHANNEL: ${{ needs.prepare.outputs.channel }}
           APP_VERSION: ${{ needs.prepare.outputs.app_version }}
-        shell: bash
-        run: |
-          site_url="${PAGE_URL%/}"
-          for attempt in {1..12}; do
-            current="$(curl --fail --silent --show-error "$site_url/$CHANNEL-version.txt" || true)"
-            if [[ "$current" == "$APP_VERSION" ]]; then break; fi
-            if [[ "$attempt" == 12 ]]; then echo 'Deployed repository version did not become available'; exit 1; fi
-            sleep 5
-          done
-          mkdir verified
-          while IFS= read -r entry; do
-            file="${entry:66}"
-            [[ "$file" == ./* && "$file" != *..* ]]
-            mkdir -p "verified/$(dirname "$file")"
-            curl --fail --location --silent --show-error --retry 5 --retry-all-errors \
-              --output "verified/$file" "$site_url/${file#./}"
-          done < expected/site-SHA256SUMS
-          (cd verified && sha256sum --check ../expected/site-SHA256SUMS)
+        run: ./scripts/release/repository-site.sh verify
+
       - name: Publish validated release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
           PRE_RELEASE: ${{ needs.prepare.outputs.prerelease }}
-        run: |
-          gh release edit "$RELEASE_TAG" --draft=false --prerelease="$PRE_RELEASE" --latest="$([[ "$PRE_RELEASE" == false ]] && echo true || echo false)"
+        run: ./scripts/release/github-release.sh publish
