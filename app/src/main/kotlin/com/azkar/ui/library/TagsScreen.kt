@@ -841,25 +841,25 @@ private fun TagEmptyState(
 
 @AzkarVariantsPreview
 @Composable
-private fun TagsScreenPreview() {
+internal fun TagsScreenPreview() {
     TagsFullScreenPreview(scope = TagScope.ALL)
 }
 
 @AzkarVariantsPreview
 @Composable
-private fun TagsDeletedScreenPreview() {
+internal fun TagsDeletedScreenPreview() {
     TagsFullScreenPreview(scope = TagScope.DELETED)
 }
 
 @AzkarVariantsPreview
 @Composable
-private fun TagsEmptyScreenPreview() {
+internal fun TagsEmptyScreenPreview() {
     TagsFullScreenPreview(empty = true)
 }
 
 @AzkarVariantsPreview
 @Composable
-private fun TagsSearchMissScreenPreview() {
+internal fun TagsSearchMissScreenPreview() {
     TagsFullScreenPreview(query = stringResource(Res.string.tagsEmptyTitle))
 }
 
@@ -922,6 +922,17 @@ private class PreviewTagGateway(
     override suspend fun usage(id: Long): TagUsage? = null
 }
 
+// The seeded labels keep their stored identity while previews display the same bilingual names as the library.
+private val DELETED_AT = Instant.parse("2024-01-01T00:00:00Z")
+private val ADDED_AT = Instant.parse("2026-10-01T09:00:00Z")
+private val previewTagTranslations =
+    mapOf(
+        "morning" to mapOf(ENGLISH to "Morning Azkar", ARABIC to "أذكار الصباح"),
+        "evening" to mapOf(ENGLISH to "Evening Azkar", ARABIC to "أذكار المساء"),
+        "prayer" to mapOf(ENGLISH to "Prayer", ARABIC to "الصلاة"),
+        "travel" to mapOf(ENGLISH to "Travel Azkar", ARABIC to "أذكار السفر"),
+    )
+
 private val PREVIEW_TAGS =
     listOf(
         previewTagSummary("daily", collections = 4, remembrances = 12, added = true),
@@ -950,7 +961,7 @@ private val PREVIEW_DELETED_TAGS =
 @AzkarVariantsPreview
 @AzkarWidePreview
 @Composable
-private fun TagRowsPreview() {
+internal fun TagRowsPreview() {
     Column(
         modifier = Modifier.padding(AzkarSpacing.screenPaddingHorizontal),
         verticalArrangement = Arrangement.spacedBy(SMALL_GAP),
@@ -988,7 +999,7 @@ private fun TagRowsPreview() {
 @AzkarVariantsPreview
 @AzkarWidePreview
 @Composable
-private fun TagsFooterPreview() {
+internal fun TagsFooterPreview() {
     Row(
         modifier = Modifier.padding(AzkarSpacing.screenPaddingHorizontal),
         verticalAlignment = Alignment.CenterVertically,
@@ -1022,7 +1033,7 @@ private fun TagsFooterPreview() {
 
 @AzkarVariantsPreview
 @Composable
-private fun TagEmptyStatePreview() {
+internal fun TagEmptyStatePreview() {
     TagEmptyState(
         title = stringResource(Res.string.tagsEmptyTitle),
         hint = stringResource(Res.string.tagsEmptyHint),
@@ -1049,18 +1060,6 @@ internal fun previewTagSummary(
         translations = previewTagTranslations[name].orEmpty(),
         nameLocale = ENGLISH,
     )
-
-// The seeded labels keep their stored identity while previews display the same bilingual names as the library.
-private val previewTagTranslations =
-    mapOf(
-        "morning" to mapOf(ENGLISH to "Morning Azkar", ARABIC to "أذكار الصباح"),
-        "evening" to mapOf(ENGLISH to "Evening Azkar", ARABIC to "أذكار المساء"),
-        "prayer" to mapOf(ENGLISH to "Prayer", ARABIC to "الصلاة"),
-        "travel" to mapOf(ENGLISH to "Travel Azkar", ARABIC to "أذكار السفر"),
-    )
-
-private val DELETED_AT = Instant.parse("2024-01-01T00:00:00Z")
-private val ADDED_AT = Instant.parse("2026-10-01T09:00:00Z")
 
 /**
  * The date pattern, rebuilt only when the shell's language changes.

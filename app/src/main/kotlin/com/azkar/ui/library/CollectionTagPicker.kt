@@ -379,7 +379,7 @@ private fun Modifier.dashedOutline(
 
 @AzkarVariantsPreview
 @Composable
-private fun TagPickerPanelPreview() {
+internal fun TagPickerPanelPreview() {
     val draft = CollectionEditorDraft.create()
     draft.toggleTag("morning")
     draft.toggleTag("evening")

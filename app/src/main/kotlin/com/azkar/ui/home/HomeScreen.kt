@@ -405,28 +405,7 @@ private fun HomeContentPreviewContent(
                             PrayerLocationSettings(
                                 city = stringResource(Res.string.previewPrayerLocation),
                             ),
-                        initialSnapshot =
-                            PrayerTimesSnapshot(
-                                rows =
-                                    previewPrayerRows().map { row ->
-                                        row.copy(
-                                            name = stringResource(row.key.nameResource),
-                                            value =
-                                                AzkarClock.timeFormatter(uiLocale).format(
-                                                    LocalTime.parse(row.timeLabel),
-                                                ),
-                                        )
-                                    },
-                                countdown =
-                                    previewCountdown().copy(
-                                        text =
-                                            stringResource(
-                                                Res.string.trayNextPrayerCountdown,
-                                                stringResource(Res.string.dhuhr),
-                                                "01:12",
-                                            ),
-                                    ),
-                            ),
+                        initialSnapshot = localizedPreviewPrayerSnapshot(uiLocale),
                     ),
                 favorites = favoriteState,
                 notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
@@ -444,6 +423,27 @@ private fun HomeContentPreviewContent(
         name = "Azkar",
     )
 }
+
+@Composable
+private fun localizedPreviewPrayerSnapshot(uiLocale: Locale): PrayerTimesSnapshot =
+    PrayerTimesSnapshot(
+        rows =
+            previewPrayerRows().map { row ->
+                row.copy(
+                    name = stringResource(row.key.nameResource),
+                    value = AzkarClock.timeFormatter(uiLocale).format(LocalTime.parse(row.timeLabel)),
+                )
+            },
+        countdown =
+            previewCountdown().copy(
+                text =
+                    stringResource(
+                        Res.string.trayNextPrayerCountdown,
+                        stringResource(Res.string.dhuhr),
+                        "01:12",
+                    ),
+            ),
+    )
 
 /**
  * The `.dashboard-content` grid: today's azkar and the prayer table, with the favourite in the rail.

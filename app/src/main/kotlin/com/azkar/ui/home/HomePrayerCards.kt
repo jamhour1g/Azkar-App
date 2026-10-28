@@ -178,7 +178,7 @@ internal fun PrayerTimesCardPreview(
 ) {
     val nextPrayer = state.rows.firstOrNull { it.isNext }
     val remaining = state.countdown.remaining
-    val remainingText = "%02d:%02d".format(remaining.toHours(), remaining.toMinutesPart())
+    val remainingText = "%02d:%02d".format(AzkarTheme.locale, remaining.toHours(), remaining.toMinutesPart())
     Column(modifier = Modifier.width(state.width)) {
         PrayerTimesCard(
             rows = state.rows.map { row -> row.copy(name = stringResource(row.key.nameResource)) },

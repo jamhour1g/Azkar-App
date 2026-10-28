@@ -348,7 +348,7 @@ private val HERO_FACT_GAP = 12.dp
 @AzkarVariantsPreview
 @AzkarWidePreview
 @Composable
-private fun TagsHeroPreview() {
+internal fun TagsHeroPreview() {
     TagsHero(
         stats = TagStats(total = 8, usedInCollections = 6, taggedRemembrances = 270),
         onBack = {},
