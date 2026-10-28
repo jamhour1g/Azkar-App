@@ -39,11 +39,13 @@ import com.azkar.generated.resources.reminderManagerTimePickerConfirm
 import com.azkar.generated.resources.reminderManagerTimePickerTitle
 import com.azkar.generated.resources.reminderManagerTimePickerToggleDisplay
 import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
-import com.azkar.ui.theme.AzkarPreview
+import com.azkar.ui.theme.AzkarComponentVariantsPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.stringResource
 import java.time.DayOfWeek
+import java.time.format.TextStyle
 
 /**
  * The days a schedule runs on, as seven toggles.
@@ -247,7 +249,7 @@ private const val MINUTES_IN_HOUR = 60
 private const val HOURS_IN_DAY = 24
 private val DIAL_MAX_HEIGHT = 380.dp
 
-@AzkarPreview
+@AzkarComponentVariantsPreview
 @Composable
 internal fun AzkarTimePickerPreview(
     @PreviewParameter(TimePickerPreviewStateProvider::class) state: TimePickerPreviewState,
@@ -269,7 +271,7 @@ internal class TimePickerPreviewStateProvider : PreviewParameterProvider<TimePic
         )
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @RoborazziDesktopPreviewExclude
 @Composable
 internal fun AzkarTimePickerDialogPreview() {
@@ -280,7 +282,7 @@ internal fun AzkarTimePickerDialogPreview() {
     )
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun AzkarDayPickerPreview() {
     Column(
@@ -290,22 +292,22 @@ internal fun AzkarDayPickerPreview() {
         AzkarDayPicker(
             activeDays = emptySet(),
             onDayChange = { _, _ -> },
-            dayLabel = { day -> day.name.take(3) },
+            dayLabel = { day -> day.getDisplayName(TextStyle.SHORT, AzkarTheme.locale) },
         )
         AzkarDayPicker(
             activeDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
             onDayChange = { _, _ -> },
-            dayLabel = { day -> day.name.take(3) },
+            dayLabel = { day -> day.getDisplayName(TextStyle.SHORT, AzkarTheme.locale) },
         )
         AzkarDayPicker(
             activeDays = DayOfWeek.entries.toSet(),
             onDayChange = { _, _ -> },
-            dayLabel = { day -> day.name.take(3) },
+            dayLabel = { day -> day.getDisplayName(TextStyle.SHORT, AzkarTheme.locale) },
         )
         AzkarDayPicker(
             activeDays = DayOfWeek.entries.toSet(),
             onDayChange = { _, _ -> },
-            dayLabel = { day -> day.name.take(3) },
+            dayLabel = { day -> day.getDisplayName(TextStyle.SHORT, AzkarTheme.locale) },
             enabled = false,
         )
     }

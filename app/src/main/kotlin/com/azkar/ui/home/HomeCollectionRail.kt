@@ -40,10 +40,10 @@ import com.azkar.ui.components.pressableClick
 import com.azkar.ui.library.data.HomeCollection
 import com.azkar.ui.library.data.HomeCollections
 import com.azkar.ui.preview.previewDueCollectionIds
-import com.azkar.ui.preview.previewRailCards
-import com.azkar.ui.theme.AzkarPreview
+import com.azkar.ui.preview.previewRailCardsLocalized
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
 
@@ -118,7 +118,7 @@ fun HomeCollectionRail(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeCollectionRailPreview() {
     Column(
@@ -126,7 +126,7 @@ internal fun HomeCollectionRailPreview() {
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         HomeCollectionRail(
-            cards = previewRailCards(),
+            cards = previewRailCardsLocalized(),
             reminderIds = previewDueCollectionIds(),
             onOpen = {},
         )

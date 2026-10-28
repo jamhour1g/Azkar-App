@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.greetingDate
 import com.azkar.generated.resources.greetingTitle
 import com.azkar.generated.resources.hero_day
 import com.azkar.generated.resources.hero_night
@@ -31,8 +32,8 @@ import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarSurfaceCard
 import com.azkar.ui.components.mirrorHorizontalGradient
 import com.azkar.ui.shell.userDisplayName
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -94,10 +95,10 @@ fun HomeHero(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeHeroPreview() {
-    HomeHero(dateText = "Friday, 20 February", name = "Azkar")
+    HomeHero(dateText = stringResource(Res.string.greetingDate), name = "Azkar")
 }
 
 /**

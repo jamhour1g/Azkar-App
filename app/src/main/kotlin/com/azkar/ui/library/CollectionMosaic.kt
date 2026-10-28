@@ -35,8 +35,8 @@ import androidx.compose.ui.unit.sp
 import com.azkar.domain.model.CollectionKind
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.preview.previewMosaicSnippets
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 
 /**
  * Resolves a collection's stored `icon_key` to a glyph.
@@ -149,7 +149,7 @@ fun CollectionMosaic(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionMosaicPreview() {
     Row(

@@ -40,7 +40,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -58,7 +57,8 @@ import com.azkar.ui.components.KhatimPattern
 import com.azkar.ui.components.mirrorHorizontalGradient
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
+import com.azkar.ui.theme.AzkarVariantsPreview
+import com.azkar.ui.theme.AzkarWidePreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.pluralStringResource
@@ -345,15 +345,14 @@ private val HERO_FACT_GAP = 12.dp
  * passes or a setter that exists only to be called here. The band, the toolbar and the rows are where
  * the layout decisions are, so those are what a preview can usefully show.
  */
-@Preview
+@AzkarVariantsPreview
+@AzkarWidePreview
 @Composable
 private fun TagsHeroPreview() {
-    AzkarThemePreview(width = 1040.dp) {
-        TagsHero(
-            stats = TagStats(total = 8, usedInCollections = 6, taggedRemembrances = 270),
-            onBack = {},
-            onCreate = {},
-            modifier = Modifier.padding(AzkarSpacing.screenPaddingHorizontal),
-        )
-    }
+    TagsHero(
+        stats = TagStats(total = 8, usedInCollections = 6, taggedRemembrances = 270),
+        onBack = {},
+        onCreate = {},
+        modifier = Modifier.padding(AzkarSpacing.screenPaddingHorizontal),
+    )
 }

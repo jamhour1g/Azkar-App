@@ -54,8 +54,9 @@ import com.azkar.ui.components.SecondaryButton
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.preview.previewRemembranceTile
-import com.azkar.ui.theme.AzkarPreview
+import com.azkar.ui.theme.AzkarComponentVariantsPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -165,7 +166,7 @@ internal fun PickerHeading() {
     )
 }
 
-@AzkarPreview
+@AzkarComponentVariantsPreview
 @Composable
 internal fun PickerHeadingPreview() {
     PickerHeading()
@@ -256,7 +257,7 @@ internal fun PickerRow(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun PickerRowPreview() {
     Column(
@@ -374,15 +375,25 @@ internal fun DetailDialogActions(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun DetailDialogActionsPreview() {
     Column(
         modifier = Modifier.width(420.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        DetailDialogActions(confirmLabel = "Add", confirmEnabled = true, onDismiss = {}, onConfirm = {})
-        DetailDialogActions(confirmLabel = "Add", confirmEnabled = false, onDismiss = {}, onConfirm = {})
+        DetailDialogActions(
+            confirmLabel = stringResource(Res.string.collectionDetailAdd),
+            confirmEnabled = true,
+            onDismiss = {},
+            onConfirm = {},
+        )
+        DetailDialogActions(
+            confirmLabel = stringResource(Res.string.collectionDetailAdd),
+            confirmEnabled = false,
+            onDismiss = {},
+            onConfirm = {},
+        )
     }
 }
 

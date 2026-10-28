@@ -21,8 +21,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.azkar.ui.theme.AzkarMotion
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 
 /**
  * A completion rule that grows to [completion] instead of jumping to it.
@@ -90,7 +90,7 @@ fun CompletionTrack(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CompletionTrackPreview() {
     Column(

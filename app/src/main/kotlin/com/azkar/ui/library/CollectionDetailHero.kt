@@ -45,12 +45,14 @@ import com.azkar.generated.resources.collectionDetailDurationFormat
 import com.azkar.generated.resources.collectionsActionAddMembers
 import com.azkar.generated.resources.collectionsActionInReminders
 import com.azkar.generated.resources.collectionsActionPin
+import com.azkar.generated.resources.collectionsActionStart
 import com.azkar.generated.resources.collectionsActionUnpin
 import com.azkar.generated.resources.collectionsMemberCount
 import com.azkar.generated.resources.hero_day
 import com.azkar.generated.resources.hero_night
 import com.azkar.generated.resources.libraryActionMore
 import com.azkar.generated.resources.remembranceCreateActionOpen
+import com.azkar.generated.resources.trayMenuResume
 import com.azkar.i18n.usesArabicTypeface
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarIcons
@@ -65,8 +67,9 @@ import com.azkar.ui.preview.previewCollection
 import com.azkar.ui.preview.previewCollectionHeroActions
 import com.azkar.ui.preview.previewCollectionStats
 import com.azkar.ui.preview.previewCollectionStatsVariants
-import com.azkar.ui.theme.AzkarPreview
+import com.azkar.ui.theme.AzkarComponentVariantsPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.AzkarWindowSize
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.painterResource
@@ -278,7 +281,7 @@ private fun HeroCopy(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionDetailHeroPreview() {
     Column(
@@ -373,7 +376,7 @@ internal fun HeroFacts(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HeroFactsPreview() {
     HeroFacts(
@@ -465,10 +468,10 @@ internal fun HeroFactDivider(modifier: Modifier = Modifier) {
     )
 }
 
-@AzkarPreview
+@AzkarComponentVariantsPreview
 @Composable
 internal fun HeroFactDividerPreview() {
-    HeroFactDivider(modifier = Modifier.width(400.dp))
+    HeroFactDivider()
 }
 
 /**
@@ -731,15 +734,23 @@ internal fun HeroIconAction(
     }
 }
 
-@AzkarPreview
+@AzkarComponentVariantsPreview
 @Composable
 internal fun HeroIconActionPreview() {
     Row(
-        modifier = Modifier.width(340.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        HeroIconAction(icon = ActionIcons.pin(on = false), contentDescription = "Pin", onClick = {})
-        HeroIconAction(icon = ActionIcons.pin(on = true), contentDescription = "Unpin", onClick = {}, filled = true)
+        HeroIconAction(
+            icon = ActionIcons.pin(on = false),
+            contentDescription = stringResource(Res.string.collectionsActionPin),
+            onClick = {},
+        )
+        HeroIconAction(
+            icon = ActionIcons.pin(on = true),
+            contentDescription = stringResource(Res.string.collectionsActionUnpin),
+            onClick = {},
+            filled = true,
+        )
     }
 }
 
@@ -800,16 +811,17 @@ internal fun HeroPill(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HeroPillPreview() {
+    val labels = heroActionLabels(isPinned = true, inReminders = true)
     Row(
         modifier = Modifier.width(420.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        HeroPill(icon = AzkarIcons.Bell, label = "Daily, 06:30", onClick = {}, selected = true)
-        HeroPill(icon = AzkarIcons.BellOff, label = "Paused", onClick = {})
-        HeroPill(icon = ActionIcons.read, label = "Start session", onClick = {})
+        HeroPill(icon = AzkarIcons.Bell, label = labels.reminder, onClick = {}, selected = true)
+        HeroPill(icon = AzkarIcons.BellOff, label = stringResource(Res.string.trayMenuResume), onClick = {})
+        HeroPill(icon = ActionIcons.read, label = stringResource(Res.string.collectionsActionStart), onClick = {})
     }
 }
 

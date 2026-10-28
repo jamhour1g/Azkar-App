@@ -40,11 +40,11 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.azkar.domain.model.impl.TagImpl
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionsActionAddTag
 import com.azkar.generated.resources.collectionsDialogTagsClearAll
@@ -58,6 +58,8 @@ import com.azkar.generated.resources.collectionsDialogTagsNewPlaceholder
 import com.azkar.generated.resources.collectionsDialogTagsNone
 import com.azkar.generated.resources.collectionsDialogTagsSearchPlaceholder
 import com.azkar.generated.resources.collectionsSelectionCount
+import com.azkar.i18n.ARABIC
+import com.azkar.i18n.ENGLISH
 import com.azkar.i18n.textDirectionOf
 import com.azkar.ui.components.AzkarFilterChip
 import com.azkar.ui.components.AzkarOutlinedField
@@ -66,9 +68,9 @@ import com.azkar.ui.components.IconActionButton
 import com.azkar.ui.components.PrimaryButton
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.library.model.TagOption
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
+import com.azkar.ui.theme.AzkarVariantsPreview
+import com.azkar.ui.theme.LocalUiLocale
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -375,32 +377,30 @@ private fun Modifier.dashedOutline(
         )
     }
 
-@Preview
+@AzkarVariantsPreview
 @Composable
 private fun TagPickerPanelPreview() {
-    AzkarThemePreview(width = 560.dp, height = 520.dp) {
-        val draft = CollectionEditorDraft.create()
-        draft.toggleTag("morning")
-        draft.toggleTag("sleep")
-        TagPickerPanel(
-            draft = draft,
-            availableTags = listOf("morning", "sleep", "travel", "after prayer", "commute").map(TagOption::of),
-            modifier = Modifier.width(520.dp),
-        )
-    }
-}
-
-@AzkarPreview
-@Composable
-internal fun TagPickerPanelUnselectedPreview() {
+    val draft = CollectionEditorDraft.create()
+    draft.toggleTag("morning")
+    draft.toggleTag("evening")
     TagPickerPanel(
-        draft = CollectionEditorDraft.create(),
-        availableTags = listOf("morning", "sleep", "travel", "after prayer", "commute").map(TagOption::of),
+        draft = draft,
+        availableTags = previewTagOptions(),
         modifier = Modifier.width(520.dp),
     )
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
+@Composable
+internal fun TagPickerPanelUnselectedPreview() {
+    TagPickerPanel(
+        draft = CollectionEditorDraft.create(),
+        availableTags = previewTagOptions(),
+        modifier = Modifier.width(520.dp),
+    )
+}
+
+@AzkarVariantsPreview
 @Composable
 internal fun TagPickerPanelEmptyPreview() {
     TagPickerPanel(
@@ -409,6 +409,36 @@ internal fun TagPickerPanelEmptyPreview() {
         modifier = Modifier.width(520.dp),
     )
 }
+
+@Composable
+private fun previewTagOptions(): List<TagOption> {
+    val locale = LocalUiLocale.current
+    return previewTags.map { TagOption.of(it, locale) }
+}
+
+private val previewTags =
+    listOf(
+        TagImpl(
+            name = "morning",
+            translations = mapOf(ENGLISH to "Morning Azkar", ARABIC to "أذكار الصباح"),
+        ),
+        TagImpl(
+            name = "evening",
+            translations = mapOf(ENGLISH to "Evening Azkar", ARABIC to "أذكار المساء"),
+        ),
+        TagImpl(
+            name = "prayer",
+            translations = mapOf(ENGLISH to "Prayer", ARABIC to "الصلاة"),
+        ),
+        TagImpl(
+            name = "travel",
+            translations = mapOf(ENGLISH to "Travel Azkar", ARABIC to "أذكار السفر"),
+        ),
+        TagImpl(
+            name = "food & drink",
+            translations = mapOf(ENGLISH to "Food & Drink", ARABIC to "الطعام والشراب"),
+        ),
+    )
 
 // ---- plumbing -------------------------------------------------------------------------------------
 

@@ -38,9 +38,9 @@ import com.azkar.generated.resources.settingsNavGroup
 import com.azkar.generated.resources.settingsNavStorageNote
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.pressableClick
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.stringResource
 
 // `ui/shell/SettingsNavRail.kt` — the left-hand column: what is on the page and where the reader is
@@ -382,7 +382,7 @@ private fun RailRow(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun SettingsNavRailPreview() {
     SettingsNavRail(

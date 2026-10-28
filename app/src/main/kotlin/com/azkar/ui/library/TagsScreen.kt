@@ -42,7 +42,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.domain.model.TagSummary
@@ -76,6 +75,8 @@ import com.azkar.generated.resources.tagsSearchEmptyTitle
 import com.azkar.generated.resources.tagsUnusedLabel
 import com.azkar.generated.resources.tagsUsageCollections
 import com.azkar.generated.resources.tagsUsageRemembrances
+import com.azkar.i18n.ARABIC
+import com.azkar.i18n.ENGLISH
 import com.azkar.ui.components.AzkarCard
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarMenuItem
@@ -88,7 +89,8 @@ import com.azkar.ui.library.data.TagSaveResult
 import com.azkar.ui.shell.ShowToast
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
+import com.azkar.ui.theme.AzkarVariantsPreview
+import com.azkar.ui.theme.AzkarWidePreview
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -837,28 +839,28 @@ private fun TagEmptyState(
 
 // ---- previews ------------------------------------------------------------------------------------
 
-@Preview(name = "Tags · populated")
+@AzkarVariantsPreview
 @Composable
 private fun TagsScreenPreview() {
     TagsFullScreenPreview(scope = TagScope.ALL)
 }
 
-@Preview(name = "Tags · deleted")
+@AzkarVariantsPreview
 @Composable
 private fun TagsDeletedScreenPreview() {
     TagsFullScreenPreview(scope = TagScope.DELETED)
 }
 
-@Preview(name = "Tags · empty")
+@AzkarVariantsPreview
 @Composable
 private fun TagsEmptyScreenPreview() {
     TagsFullScreenPreview(empty = true)
 }
 
-@Preview(name = "Tags · search no match")
+@AzkarVariantsPreview
 @Composable
 private fun TagsSearchMissScreenPreview() {
-    TagsFullScreenPreview(query = "no matching tag")
+    TagsFullScreenPreview(query = stringResource(Res.string.tagsEmptyTitle))
 }
 
 @Composable
@@ -882,15 +884,13 @@ private fun TagsFullScreenPreview(
             }
         }
 
-    AzkarThemePreview(width = 1320.dp, height = 1120.dp) {
-        TagsScreen(
-            state = state,
-            onBack = {},
-            showToast = { _, _, _ -> },
-            onOpenCollection = {},
-            onOpenRemembrance = {},
-        )
-    }
+    TagsScreen(
+        state = state,
+        onBack = {},
+        showToast = { _, _, _ -> },
+        onOpenCollection = {},
+        onOpenRemembrance = {},
+    )
 }
 
 /** A read-only gateway for screen previews; its write methods keep the preview self-contained. */
@@ -947,91 +947,87 @@ private val PREVIEW_DELETED_TAGS =
         previewTagSummary("study", collections = 0, remembrances = 2, deleted = true),
     )
 
-@Preview
+@AzkarVariantsPreview
+@AzkarWidePreview
 @Composable
 private fun TagRowsPreview() {
-    AzkarThemePreview(width = 1040.dp, height = 320.dp) {
-        Column(
-            modifier = Modifier.padding(AzkarSpacing.screenPaddingHorizontal),
-            verticalArrangement = Arrangement.spacedBy(SMALL_GAP),
-        ) {
-            TagRow(
-                tag = previewTagSummary("morning", collections = 1, remembrances = 52, added = true),
-                onRename = {},
-                onDelete = {},
-                onUsage = {},
-            )
-            TagRow(
-                tag = previewTagSummary("evening", collections = 3, remembrances = 9, added = true),
-                onRename = {},
-                onDelete = {},
-                onUsage = {},
-            )
-            TagRow(
-                tag =
-                    previewTagSummary(
-                        "a name long enough to have to be cut off rather than wrapped",
-                        collections = 0,
-                        remembrances = 0,
-                    ),
-                onRename = {},
-                onDelete = {},
-                onUsage = {},
-            )
-            DeletedTagRow(
-                tag = previewTagSummary("travel", collections = 1, remembrances = 3, deleted = true),
-                onRestore = {},
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun TagsFooterPreview() {
-    AzkarThemePreview(width = 1040.dp) {
-        Row(
-            modifier = Modifier.padding(AzkarSpacing.screenPaddingHorizontal),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = pluralStringResource(Res.plurals.tagsFooterShowing, 8, 8),
-                color = AzkarTheme.colors.textSecondary,
-                fontSize = FOOTER_SP,
-            )
-            PageArrow(
-                icon = AzkarIcons.ChevronStart,
-                description = stringResource(Res.string.tagsPagePrevious),
-                enabled = false,
-                onClick = {},
-            )
-            Text(
-                text = stringResource(Res.string.tagsPageLabel, 1, 3),
-                color = AzkarTheme.colors.textSecondary,
-                fontSize = FOOTER_SP,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.widthIn(min = PAGE_LABEL_WIDTH),
-            )
-            PageArrow(
-                icon = AzkarIcons.ChevronRight,
-                description = stringResource(Res.string.tagsPageNext),
-                enabled = true,
-                onClick = {},
-            )
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun TagEmptyStatePreview() {
-    AzkarThemePreview(width = 620.dp) {
-        TagEmptyState(
-            title = stringResource(Res.string.tagsEmptyTitle),
-            hint = stringResource(Res.string.tagsEmptyHint),
-            modifier = Modifier.padding(AzkarSpacing.screenPaddingHorizontal),
+    Column(
+        modifier = Modifier.padding(AzkarSpacing.screenPaddingHorizontal),
+        verticalArrangement = Arrangement.spacedBy(SMALL_GAP),
+    ) {
+        TagRow(
+            tag = previewTagSummary("morning", collections = 1, remembrances = 52, added = true),
+            onRename = {},
+            onDelete = {},
+            onUsage = {},
+        )
+        TagRow(
+            tag = previewTagSummary("evening", collections = 3, remembrances = 9, added = true),
+            onRename = {},
+            onDelete = {},
+            onUsage = {},
+        )
+        TagRow(
+            tag =
+                previewTagSummary(
+                    "a name long enough to have to be cut off rather than wrapped",
+                    collections = 0,
+                    remembrances = 0,
+                ),
+            onRename = {},
+            onDelete = {},
+            onUsage = {},
+        )
+        DeletedTagRow(
+            tag = previewTagSummary("travel", collections = 1, remembrances = 3, deleted = true),
+            onRestore = {},
         )
     }
+}
+
+@AzkarVariantsPreview
+@AzkarWidePreview
+@Composable
+private fun TagsFooterPreview() {
+    Row(
+        modifier = Modifier.padding(AzkarSpacing.screenPaddingHorizontal),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = pluralStringResource(Res.plurals.tagsFooterShowing, 8, 8),
+            color = AzkarTheme.colors.textSecondary,
+            fontSize = FOOTER_SP,
+        )
+        PageArrow(
+            icon = AzkarIcons.ChevronStart,
+            description = stringResource(Res.string.tagsPagePrevious),
+            enabled = false,
+            onClick = {},
+        )
+        Text(
+            text = stringResource(Res.string.tagsPageLabel, 1, 3),
+            color = AzkarTheme.colors.textSecondary,
+            fontSize = FOOTER_SP,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.widthIn(min = PAGE_LABEL_WIDTH),
+        )
+        PageArrow(
+            icon = AzkarIcons.ChevronRight,
+            description = stringResource(Res.string.tagsPageNext),
+            enabled = true,
+            onClick = {},
+        )
+    }
+}
+
+@AzkarVariantsPreview
+@Composable
+private fun TagEmptyStatePreview() {
+    TagEmptyState(
+        title = stringResource(Res.string.tagsEmptyTitle),
+        hint = stringResource(Res.string.tagsEmptyHint),
+        modifier = Modifier.padding(AzkarSpacing.screenPaddingHorizontal),
+    )
 }
 
 /** One tag for the previews and nothing more — the counts and the date are the only fields that vary. */
@@ -1050,6 +1046,17 @@ internal fun previewTagSummary(
         collectionCount = collections,
         remembranceCount = remembrances,
         deletedAt = if (deleted) DELETED_AT else null,
+        translations = previewTagTranslations[name].orEmpty(),
+        nameLocale = ENGLISH,
+    )
+
+// The seeded labels keep their stored identity while previews display the same bilingual names as the library.
+private val previewTagTranslations =
+    mapOf(
+        "morning" to mapOf(ENGLISH to "Morning Azkar", ARABIC to "أذكار الصباح"),
+        "evening" to mapOf(ENGLISH to "Evening Azkar", ARABIC to "أذكار المساء"),
+        "prayer" to mapOf(ENGLISH to "Prayer", ARABIC to "الصلاة"),
+        "travel" to mapOf(ENGLISH to "Travel Azkar", ARABIC to "أذكار السفر"),
     )
 
 private val DELETED_AT = Instant.parse("2024-01-01T00:00:00Z")

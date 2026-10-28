@@ -56,8 +56,8 @@ import com.azkar.ui.preview.rememberPreviewCatalogue
 import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ShowToast
 import com.azkar.ui.shell.stepTransition
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
@@ -195,13 +195,13 @@ internal fun CollectionSessionContent(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionSessionContentPreview() {
     CollectionSessionPreview(collectionId = PREVIEW_COLLECTION_ID)
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionSessionInProgressPreview() {
     CollectionSessionPreview(
@@ -211,19 +211,19 @@ internal fun CollectionSessionInProgressPreview() {
     )
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionSessionMissingCollectionPreview() {
     CollectionSessionPreview(collectionId = -1L)
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionSessionEmptyCollectionPreview() {
     CollectionSessionPreview(collectionId = 13L, includeEmptyCollection = true)
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionSessionFinishedPreview() {
     CollectionSessionPreview(

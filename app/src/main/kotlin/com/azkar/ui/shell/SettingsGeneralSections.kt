@@ -30,9 +30,9 @@ import com.azkar.ui.notifications.NotificationSettingsState
 import com.azkar.ui.notifications.StartupNotice
 import com.azkar.ui.preview.previewAzkarAppState
 import com.azkar.ui.preview.rememberPreviewNotificationSettingsState
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.stringResource
 
 // `ui/shell/SettingsGeneralSections.kt` — the two blocks under General: the language the app speaks in,
@@ -177,7 +177,7 @@ internal fun StartupNoticeText(
     )
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun SettingsGeneralSectionsPreview() {
     Column(
@@ -192,7 +192,7 @@ internal fun SettingsGeneralSectionsPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun SettingsStartupNoticesPreview() {
     Column(

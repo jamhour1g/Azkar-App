@@ -31,8 +31,8 @@ import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.AzkarSurfaceCard
 import com.azkar.ui.components.mirrorHorizontalGradient
 import com.azkar.ui.components.pressableClick
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
 
@@ -94,7 +94,7 @@ fun TodaysAzkarCard(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun TodaysAzkarCardPreview() {
     Column(

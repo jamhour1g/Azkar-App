@@ -42,14 +42,15 @@ import com.azkar.generated.resources.prayerNotification
 import com.azkar.generated.resources.prayerNotificationsShort
 import com.azkar.generated.resources.prayerTimesLocation
 import com.azkar.generated.resources.todayPrayerTimes
+import com.azkar.generated.resources.trayNextPrayerCountdown
 import com.azkar.ui.components.AzkarCard
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.pressFeedback
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.preview.previewCountdown
 import com.azkar.ui.preview.previewPrayerRows
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.stringResource
 import java.time.Duration
@@ -170,15 +171,30 @@ fun PrayerTimesCard(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun PrayerTimesCardPreview(
     @PreviewParameter(PrayerTimesCardStateProvider::class) state: PrayerTimesCardPreviewState,
 ) {
+    val nextPrayer = state.rows.firstOrNull { it.isNext }
+    val remaining = state.countdown.remaining
+    val remainingText = "%02d:%02d".format(remaining.toHours(), remaining.toMinutesPart())
     Column(modifier = Modifier.width(state.width)) {
         PrayerTimesCard(
-            rows = state.rows,
-            countdown = state.countdown,
+            rows = state.rows.map { row -> row.copy(name = stringResource(row.key.nameResource)) },
+            countdown =
+                state.countdown.copy(
+                    text =
+                        if (nextPrayer == null || remaining == Duration.ZERO) {
+                            ""
+                        } else {
+                            stringResource(
+                                Res.string.trayNextPrayerCountdown,
+                                stringResource(nextPrayer.key.nameResource),
+                                remainingText,
+                            )
+                        },
+                ),
             notificationsEnabled = state.notificationsEnabled,
             onGlobalToggle = {},
             onNotificationToggled = { _, _ -> },

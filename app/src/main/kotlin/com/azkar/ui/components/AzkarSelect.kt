@@ -36,9 +36,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.componentsPreviewMostUsed
+import com.azkar.generated.resources.componentsPreviewNameAZ
+import com.azkar.ui.theme.AzkarComponentVariantsPreview
 import com.azkar.ui.theme.AzkarExpressive
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
+import org.jetbrains.compose.resources.stringResource
 
 private val TRIGGER_HEIGHT = 40.dp
 private val TRIGGER_TEXT_SP = 13.sp
@@ -195,7 +200,7 @@ private fun AzkarSelectMenuItems(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun AzkarSelectPreview() {
     Row(
@@ -203,22 +208,34 @@ internal fun AzkarSelectPreview() {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         AzkarSelect(
-            label = "Name A-Z",
+            label = stringResource(Res.string.componentsPreviewNameAZ),
             icon = Icons.AutoMirrored.Outlined.Sort,
             items =
                 listOf(
-                    AzkarMenuItem(label = "Name A-Z", onClick = {}, icon = Icons.Filled.Check),
-                    AzkarMenuItem(label = "Most used", onClick = {}, icon = Icons.AutoMirrored.Filled.Label),
+                    AzkarMenuItem(
+                        label = stringResource(Res.string.componentsPreviewNameAZ),
+                        onClick = {},
+                        icon = Icons.Filled.Check,
+                    ),
+                    AzkarMenuItem(
+                        label = stringResource(Res.string.componentsPreviewMostUsed),
+                        onClick = {},
+                        icon = Icons.AutoMirrored.Filled.Label,
+                    ),
                 ),
         )
     }
 }
 
-@AzkarPreview
+@AzkarComponentVariantsPreview
 @Composable
 internal fun AzkarSelectExpandedPreview() {
     Column(modifier = Modifier.width(240.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        AzkarSelectTrigger(label = "Most used", icon = Icons.AutoMirrored.Outlined.Sort, onClick = {})
+        AzkarSelectTrigger(
+            label = stringResource(Res.string.componentsPreviewMostUsed),
+            icon = Icons.AutoMirrored.Outlined.Sort,
+            onClick = {},
+        )
         Surface(
             shape = MaterialTheme.shapes.extraSmall,
             color = AzkarTheme.colors.cardBackground,
@@ -229,8 +246,16 @@ internal fun AzkarSelectExpandedPreview() {
                 AzkarSelectMenuItems(
                     items =
                         listOf(
-                            AzkarMenuItem(label = "Name A-Z", onClick = {}, icon = Icons.AutoMirrored.Filled.Label),
-                            AzkarMenuItem(label = "Most used", onClick = {}, icon = Icons.Filled.Check),
+                            AzkarMenuItem(
+                                label = stringResource(Res.string.componentsPreviewNameAZ),
+                                onClick = {},
+                                icon = Icons.AutoMirrored.Filled.Label,
+                            ),
+                            AzkarMenuItem(
+                                label = stringResource(Res.string.componentsPreviewMostUsed),
+                                onClick = {},
+                                icon = Icons.Filled.Check,
+                            ),
                         ),
                     onDismiss = {},
                 )

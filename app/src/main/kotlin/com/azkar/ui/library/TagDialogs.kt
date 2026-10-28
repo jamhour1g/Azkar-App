@@ -73,9 +73,9 @@ import com.azkar.ui.library.model.TranslationEntry
 import com.azkar.ui.library.model.missingLanguages
 import com.azkar.ui.library.model.survivingRename
 import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -755,7 +755,7 @@ private fun TagNameDialogPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun TagNameRequiredPreview() {
     Column(modifier = Modifier.width(420.dp)) {
@@ -767,7 +767,7 @@ internal fun TagNameRequiredPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun TagNameTakenLongValuePreview() {
     Column(modifier = Modifier.width(420.dp)) {

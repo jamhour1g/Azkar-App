@@ -18,6 +18,24 @@
     <string name="previewAfterPrayerCollection">أذكار بعد الصلاة</string>
     <string name="previewTravelCollection">أذكار السفر</string>
     <string name="previewEmptyCollection">لا أذكار هنا بعد</string>
+    <string name="componentsPreviewCardHint">يتغير الحشو والظل بحسب حجم البطاقة.</string>
+    <string name="componentsPreviewPaintedCard">بطاقة ملوّنة</string>
+    <string name="componentsPreviewSurfaceHint">تدرّج لوني بدلًا من لون ثابت.</string>
+    <string name="componentsPreviewWithIcon">مع أيقونة</string>
+    <string name="componentsPreviewChangeCover">تغيير الغلاف</string>
+    <string name="componentsPreviewSelectedDisabled">محدد، غير مفعّل</string>
+    <string name="componentsPreviewDisabledField">حقل غير مفعّل</string>
+    <string name="componentsPreviewNameValue">الاسم</string>
+    <string name="componentsPreviewNameHint">استخدم اسمًا يعرفه القراء.</string>
+    <string name="componentsPreviewMorningDescription">كل صباح بعد الفجر</string>
+    <string name="componentsPreviewReadOnly">للقراءة فقط</string>
+    <string name="componentsPreviewEmptyStateHint">تستخدم الحالات الفارغة والتحميل هذا الإطار.</string>
+    <string name="componentsPreviewEmptyStateTitle">لا شيء هنا بعد</string>
+    <string name="componentsPreviewRemoveReminder">إزالة التذكير؟</string>
+    <string name="componentsPreviewDialogHint">تستخدم مربعات الحوار هذا الإطار وحشوه.</string>
+    <string name="componentsPreviewNameAZ">الاسم أ–ي</string>
+    <string name="componentsPreviewMostUsed">الأكثر استخدامًا</string>
+    <string name="componentsPreviewSampleName">الرحمن</string>
     <!-- Main Content -->
     <string name="greetingTitle">السلام عليكم</string>
     <string name="greetingDate">14 ذو الحجة 1445 هـ</string>

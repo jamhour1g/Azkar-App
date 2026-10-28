@@ -74,9 +74,9 @@ import com.azkar.ui.notifications.PrayerCalculationMethod
 import com.azkar.ui.notifications.PrayerLocationSettings
 import com.azkar.ui.notifications.PrayerPlace
 import com.azkar.ui.preview.rememberPreviewNotificationSettingsState
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.stringResource
 
 // `ui/shell/SettingsPrayerSections.kt` — the two blocks under Prayer: the place, and the convention that
@@ -472,7 +472,7 @@ private fun locationNoticeMessage(notice: LocationNotice?): String? =
         is LocationNotice.PlaceSelected -> stringResource(Res.string.settingsPrayerPlaceSelected, notice.city)
     }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun SettingsPrayerSectionsPreview() {
     Column(
@@ -490,7 +490,7 @@ internal fun SettingsPrayerSectionsPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun SettingsPrayerLocationErrorsPreview() {
     Column(

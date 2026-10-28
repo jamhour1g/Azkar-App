@@ -45,15 +45,20 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionsActionNew
 import com.azkar.generated.resources.collectionsEmptyHint
 import com.azkar.generated.resources.collectionsEmptyTitle
+import com.azkar.generated.resources.collectionsNoMatchesHint
+import com.azkar.generated.resources.collectionsNoMatchesTitle
 import com.azkar.generated.resources.libraryLoading
+import com.azkar.generated.resources.libraryReminderStripCount
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarOutlinedField
 import com.azkar.ui.components.BorderedStateBox
 import com.azkar.ui.components.TooltipIconButton
-import com.azkar.ui.theme.AzkarPreview
+import com.azkar.ui.theme.AzkarComponentVariantsPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.stringResource
 
 /** How long the open/close chevron takes to flip, long enough to read as a rotation. */
@@ -236,11 +241,11 @@ internal fun CollectionStateStar(
     }
 }
 
-@AzkarPreview
+@AzkarComponentVariantsPreview
 @Composable
 internal fun CollectionStateStarPreview() {
     Row(
-        modifier = Modifier.width(340.dp),
+        modifier = Modifier.width(64.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         CollectionStateStar(loading = true)
@@ -272,7 +277,7 @@ internal fun CollectionsLoadingState(modifier: Modifier = Modifier) {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionsLoadingStatePreview() {
     CollectionsLoadingState(modifier = Modifier.width(420.dp).height(220.dp))
@@ -324,7 +329,7 @@ internal fun CollectionsEmptyState(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionsEmptyStatePreview() {
     Column(
@@ -332,16 +337,16 @@ internal fun CollectionsEmptyStatePreview() {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         CollectionsEmptyState(
-            title = "No collections yet",
-            hint = "Start from a built-in set, or make one of your own.",
+            title = stringResource(Res.string.collectionsEmptyTitle),
+            hint = stringResource(Res.string.collectionsEmptyHint),
             modifier = Modifier.height(220.dp),
         )
         CollectionsEmptyState(
-            title = "Nothing matches that search",
-            hint = "Try a different word, or widen the filters.",
+            title = stringResource(Res.string.collectionsNoMatchesTitle),
+            hint = stringResource(Res.string.collectionsNoMatchesHint),
             modifier = Modifier.height(220.dp),
             action = {
-                CollectionsInfoLine(text = "3 of 12 collections")
+                CollectionsInfoLine(text = stringResource(Res.string.libraryReminderStripCount, 12, 96))
             },
         )
     }
@@ -383,10 +388,10 @@ internal fun CollectionsInfoLine(
     )
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionsInfoLinePreview() {
-    CollectionsInfoLine(text = "12 collections · 96 remembrances")
+    CollectionsInfoLine(text = stringResource(Res.string.libraryReminderStripCount, 12, 96))
 }
 
 /**
@@ -420,12 +425,12 @@ internal fun EmptyStateAction(
     )
 }
 
-@AzkarPreview
+@AzkarComponentVariantsPreview
 @Composable
 internal fun EmptyStateActionPreview() {
     EmptyStateAction(
         icon = ActionIcons.addMembers,
-        description = "Create a collection",
+        description = stringResource(Res.string.collectionsActionNew),
         onClick = {},
     )
 }

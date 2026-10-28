@@ -23,8 +23,8 @@ import com.azkar.ui.components.AzkarCard
 import com.azkar.ui.components.AzkarFilterChip
 import com.azkar.ui.library.model.CollectionScope
 import com.azkar.ui.library.model.CollectionSort
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.stringResource
 
@@ -98,7 +98,7 @@ internal fun LibraryFilterPanel(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun LibraryFilterPanelPreview() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {

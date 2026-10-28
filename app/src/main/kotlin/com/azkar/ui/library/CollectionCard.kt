@@ -34,9 +34,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionsActionEdit
 import com.azkar.generated.resources.collectionsActionOpen
 import com.azkar.generated.resources.collectionsMemberCount
 import com.azkar.generated.resources.collectionsProgressFormat
+import com.azkar.generated.resources.componentsPreviewMorningDescription
 import com.azkar.generated.resources.libraryActionMore
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarCard
@@ -51,8 +53,8 @@ import com.azkar.ui.components.pressableClick
 import com.azkar.ui.components.rememberContextMenuState
 import com.azkar.ui.library.model.CollectionTile
 import com.azkar.ui.preview.previewCollectionTiles
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
@@ -136,7 +138,7 @@ fun CollectionCard(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionCardPreview() {
     Column(
@@ -147,10 +149,14 @@ internal fun CollectionCardPreview() {
             previewCollectionTiles().forEach { tile ->
                 CollectionCard(
                     tile = tile,
-                    preview = "The most beloved of deeds to Allah are the most consistent.",
+                    preview = stringResource(Res.string.componentsPreviewMorningDescription),
                     items =
                         listOf(
-                            AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),
+                            AzkarMenuItem(
+                                label = stringResource(Res.string.collectionsActionEdit),
+                                onClick = {},
+                                icon = ActionIcons.edit,
+                            ),
                         ),
                     onOpen = {},
                     covers = null,

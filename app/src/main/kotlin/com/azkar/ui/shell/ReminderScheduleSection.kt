@@ -47,11 +47,9 @@ import com.azkar.ui.notifications.cadenceLabel
 import com.azkar.ui.notifications.intervalLabel
 import com.azkar.ui.notifications.queueModeLabel
 import com.azkar.ui.preview.rememberPreviewReminderScheduleEditor
-import com.azkar.ui.theme.AzkarArabicPreview
-import com.azkar.ui.theme.AzkarCompactPreview
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.stringResource
 import java.time.DayOfWeek
 
@@ -278,7 +276,7 @@ private fun LabelledTimePicker(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun ReminderScheduleCardPreview(
     @PreviewParameter(ReminderScheduleConfigProvider::class) config: ReminderQueueConfig,
@@ -319,7 +317,7 @@ internal class ReminderScheduleConfigProvider : PreviewParameterProvider<Reminde
         )
 }
 
-@AzkarCompactPreview
+@AzkarVariantsPreview
 @Composable
 internal fun ReminderScheduleCardCompactPreview() {
     Column(modifier = Modifier.width(430.dp)) {
@@ -336,7 +334,7 @@ internal fun ReminderScheduleCardCompactPreview() {
     }
 }
 
-@AzkarArabicPreview
+@AzkarVariantsPreview
 @Composable
 internal fun ReminderScheduleCardArabicPreview() {
     Column(modifier = Modifier.width(520.dp)) {

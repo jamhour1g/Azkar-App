@@ -53,8 +53,8 @@ import com.azkar.ui.components.rememberContextMenuState
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.preview.previewRemembranceTile
 import com.azkar.ui.preview.previewRemembranceTileActions
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -219,7 +219,7 @@ private fun ColumnScope.TileBody(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun RemembranceTileCardPreview() {
     Row(
@@ -552,7 +552,7 @@ private fun RowText(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun RemembranceTileRowPreview() {
     Column(

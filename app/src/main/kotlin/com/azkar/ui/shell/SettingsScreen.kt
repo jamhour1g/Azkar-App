@@ -82,8 +82,6 @@ import com.azkar.generated.resources.settingsUpdateVersionHint
 import com.azkar.generated.resources.settingsUpdateVersionTitle
 import com.azkar.generated.resources.settingsUpdatesBody
 import com.azkar.generated.resources.settingsUpdatesTitle
-import com.azkar.i18n.ARABIC
-import com.azkar.i18n.ENGLISH
 import com.azkar.ui.components.SelectRow
 import com.azkar.ui.library.setPlainText
 import com.azkar.ui.notifications.GeocodingClient
@@ -99,11 +97,10 @@ import com.azkar.ui.notifications.StartupRegistration
 import com.azkar.ui.notifications.presentation.NotificationPresentationSettings
 import com.azkar.ui.preview.previewAzkarAppState
 import com.azkar.ui.preview.rememberPreviewSettingsStore
-import com.azkar.ui.theme.AzkarArabicPreview
-import com.azkar.ui.theme.AzkarCompactPreview
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
+import com.azkar.ui.theme.LocalUiLocale
 import com.azkar.updates.UpdateChannel
 import com.azkar.updates.UpdateManager
 import com.azkar.updates.UpdateStatus
@@ -113,7 +110,6 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import java.time.DayOfWeek
-import java.util.Locale
 
 // `ui/shell/SettingsScreen.kt` — the screen the gear opens: a rail that names every block on this page
 // under the family it belongs to, and one long scroll holding them all in the same order.
@@ -806,29 +802,27 @@ private fun rememberNotificationSettingsValues(): NotificationSettingsValues {
     return NotificationSettingsValues(queue, prayerLocation, presentation)
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun SettingsScreenPreview() {
     SettingsScreenPreviewContent(SettingsGroup.GENERAL)
 }
 
-@AzkarArabicPreview
+@AzkarVariantsPreview
 @Composable
-internal fun SettingsScreenArabicPreview() {
-    SettingsScreenPreviewContent(SettingsGroup.REMINDERS, locale = ARABIC)
+internal fun SettingsScreenRemindersPreview() {
+    SettingsScreenPreviewContent(SettingsGroup.REMINDERS)
 }
 
-@AzkarCompactPreview
+@AzkarVariantsPreview
 @Composable
-internal fun SettingsScreenNarrowPreview() {
+internal fun SettingsScreenPrayerPreview() {
     SettingsScreenPreviewContent(SettingsGroup.PRAYER)
 }
 
 @Composable
-private fun SettingsScreenPreviewContent(
-    group: SettingsGroup,
-    locale: Locale = ENGLISH,
-) {
+private fun SettingsScreenPreviewContent(group: SettingsGroup) {
+    val locale = LocalUiLocale.current
     val scope = rememberCoroutineScope()
     val store = rememberPreviewSettingsStore()
     val preferences = remember(store) { NotificationPreferencesRepository(store) }

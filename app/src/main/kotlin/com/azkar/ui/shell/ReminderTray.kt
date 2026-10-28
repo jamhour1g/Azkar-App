@@ -26,23 +26,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.asr
 import com.azkar.generated.resources.nextPrayerLabel
 import com.azkar.generated.resources.title
 import com.azkar.generated.resources.trayMenuOpen
 import com.azkar.generated.resources.trayMenuPause
 import com.azkar.generated.resources.trayMenuQuit
 import com.azkar.generated.resources.trayMenuResume
-import com.azkar.i18n.ENGLISH
+import com.azkar.generated.resources.trayNextPrayerCountdown
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.notifications.DesktopPlatform
-import com.azkar.ui.theme.AzkarPreview
-import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
 import dev.nucleusframework.composenativetray.tray.api.NativeTray
 import dev.nucleusframework.composenativetray.utils.IconRenderProperties
@@ -291,14 +289,10 @@ private fun PrayerTrayNativeRegistration(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
-internal fun ReminderTrayActionIconsPreview(
-    @PreviewParameter(ReminderTrayThemeProvider::class) darkTheme: Boolean,
-) {
-    AzkarTheme(darkTheme = darkTheme, uiLocale = ENGLISH) {
-        ReminderTrayActionIconsContent()
-    }
+internal fun ReminderTrayActionIconsPreview() {
+    ReminderTrayActionIconsContent()
 }
 
 @Composable
@@ -317,7 +311,12 @@ private fun ReminderTrayActionIconsContent() {
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "Asr in 5m",
+                    text =
+                        stringResource(
+                            Res.string.trayNextPrayerCountdown,
+                            stringResource(Res.string.asr),
+                            "00:05",
+                        ),
                     modifier = Modifier.weight(1f),
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
@@ -351,10 +350,6 @@ private fun ReminderTrayActionIconsContent() {
             }
         }
     }
-}
-
-internal class ReminderTrayThemeProvider : PreviewParameterProvider<Boolean> {
-    override val values = sequenceOf(false, true)
 }
 
 /** One tooltip tick per second, read off the wall clock the moment it lands. */

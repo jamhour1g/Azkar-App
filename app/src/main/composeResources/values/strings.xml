@@ -18,6 +18,24 @@
     <string name="previewAfterPrayerCollection">After prayer</string>
     <string name="previewTravelCollection">Travel Azkar</string>
     <string name="previewEmptyCollection">Nothing here yet</string>
+    <string name="componentsPreviewCardHint">Padding and elevation follow the card size.</string>
+    <string name="componentsPreviewPaintedCard">Painted card</string>
+    <string name="componentsPreviewSurfaceHint">A wash instead of a flat fill.</string>
+    <string name="componentsPreviewWithIcon">With icon</string>
+    <string name="componentsPreviewChangeCover">Change cover</string>
+    <string name="componentsPreviewSelectedDisabled">Selected, disabled</string>
+    <string name="componentsPreviewDisabledField">Disabled field</string>
+    <string name="componentsPreviewNameValue">Name</string>
+    <string name="componentsPreviewNameHint">Use the name readers will recognize.</string>
+    <string name="componentsPreviewMorningDescription">Every morning after Fajr</string>
+    <string name="componentsPreviewReadOnly">Read only</string>
+    <string name="componentsPreviewEmptyStateHint">Empty and loading panes use this shared frame.</string>
+    <string name="componentsPreviewEmptyStateTitle">Nothing here yet</string>
+    <string name="componentsPreviewRemoveReminder">Remove reminder?</string>
+    <string name="componentsPreviewDialogHint">Dialogs share this pane and its padding.</string>
+    <string name="componentsPreviewNameAZ">Name A–Z</string>
+    <string name="componentsPreviewMostUsed">Most used</string>
+    <string name="componentsPreviewSampleName">Ar-Rahman</string>
     <!-- Main Content -->
     <string name="greetingTitle">Assalamu Alaikum</string>
     <string name="greetingDate">14 Dhu al-Hijjah 1445 AH | 20 June 2024</string>

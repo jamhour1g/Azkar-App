@@ -26,6 +26,7 @@ import com.azkar.domain.model.Remembrance
 import com.azkar.generated.resources.*
 import com.azkar.i18n.RemembranceI18n
 import com.azkar.settings.SettingsStore
+import com.azkar.ui.components.AzkarClock
 import com.azkar.ui.home.FavoritesState
 import com.azkar.ui.home.HadithState
 import com.azkar.ui.home.NotificationSettingsState
@@ -56,6 +57,7 @@ import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.chrono.HijrahChronology
 import java.time.chrono.HijrahDate
 import java.time.format.DateTimeFormatter
@@ -313,6 +315,7 @@ internal fun HomeContent(
 }
 
 @AzkarHomeScreenPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeContentPreview() {
     HomeContentPreviewContent()
@@ -320,29 +323,23 @@ internal fun HomeContentPreview() {
 
 @AzkarVariantsPreview
 @Composable
-internal fun HomeContentVariantsPreview() {
-    HomeContentPreviewContent()
-}
-
-@AzkarHomeScreenPreview
-@Composable
 internal fun HomeContentEmptyDashboardPreview() {
     HomeContentPreviewContent(emptyDashboard = true)
 }
 
-@AzkarHomeScreenPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeContentCollectionsWithoutFavoritesPreview() {
     HomeContentPreviewContent(includeFavorites = false)
 }
 
-@AzkarHomeScreenPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeContentFavoritesWithoutCollectionsPreview() {
     HomeContentPreviewContent(collections = false)
 }
 
-@AzkarHomeScreenPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeContentHadithFallbackPreview() {
     HomeContentPreviewContent(hadithFallback = true)
@@ -412,7 +409,13 @@ private fun HomeContentPreviewContent(
                             PrayerTimesSnapshot(
                                 rows =
                                     previewPrayerRows().map { row ->
-                                        row.copy(name = stringResource(row.key.nameResource))
+                                        row.copy(
+                                            name = stringResource(row.key.nameResource),
+                                            value =
+                                                AzkarClock.timeFormatter(uiLocale).format(
+                                                    LocalTime.parse(row.timeLabel),
+                                                ),
+                                        )
                                     },
                                 countdown =
                                     previewCountdown().copy(
