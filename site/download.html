@@ -12,7 +12,10 @@
     <title>Download Azkar for Windows, macOS, and Linux</title>
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Azkar" />
-    <meta property="og:title" content="Azkar — Make room for remembrance in your day" />
+    <meta
+      property="og:title"
+      content="Azkar — Make room for remembrance in your day"
+    />
     <meta
       property="og:description"
       content="Daily adhkar, prayer times, and gentle reminders for Windows, macOS, and Linux."
@@ -29,7 +32,10 @@
       content="Azkar desktop app for daily adhkar, prayer times, and gentle reminders."
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Azkar — Make room for remembrance in your day" />
+    <meta
+      name="twitter:title"
+      content="Azkar — Make room for remembrance in your day"
+    />
     <meta
       name="twitter:description"
       content="Daily adhkar, prayer times, and gentle reminders for Windows, macOS, and Linux."
@@ -156,7 +162,9 @@
                     <circle cx="12" cy="12" r="9" />
                     <path d="M12 11v5m0-8h.01" />
                   </svg>
-                  <span class="release-status-message" id="release-status-message"
+                  <span
+                    class="release-status-message"
+                    id="release-status-message"
                     >Checking for a stable release…</span
                   >
                   <a
@@ -244,7 +252,9 @@
                           /></svg
                         ><span class="installer-copy"
                           ><span class="download-label">Windows releases</span
-                          ><span class="installer-hint">.exe · 64-bit</span></span
+                          ><span class="installer-hint"
+                            >.exe · 64-bit</span
+                          ></span
                         >
                       </a>
                     </div>
@@ -274,7 +284,9 @@
                         <path d="M2 20h20l-2-4H4l-2 4Z" /></svg
                       >macOS
                     </h3>
-                    <p class="platform-detail">Choose the chip used by your Mac.</p>
+                    <p class="platform-detail">
+                      Choose the chip used by your Mac.
+                    </p>
                     <div class="platform-actions">
                       <a
                         class="platform-link is-release-link is-primary"
@@ -296,7 +308,8 @@
                             d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"
                           /></svg
                         ><span class="installer-copy"
-                          ><span class="download-label">Apple silicon releases</span
+                          ><span class="download-label"
+                            >Apple silicon releases</span
                           ><span class="installer-hint"
                             >.dmg · M-series Macs</span
                           ></span
@@ -485,13 +498,21 @@
                             </button>
                           </div>
                           <div class="code-wrap" data-repository-panel="apt">
-                            <pre id="apt-commands"><code>curl -fsSL https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc | gpg --dearmor | sudo tee /usr/share/keyrings/azkar-repo.gpg &gt;/dev/null
+                            <pre
+                              id="apt-commands"
+                            ><code>curl -fsSL https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc | gpg --dearmor | sudo tee /usr/share/keyrings/azkar-repo.gpg &gt;/dev/null
 echo 'deb [signed-by=/usr/share/keyrings/azkar-repo.gpg] https://jamhour1g.github.io/Azkar-App/apt stable main' | sudo tee /etc/apt/sources.list.d/azkar.list
 sudo apt update
 sudo apt install azkar</code></pre>
                           </div>
-                          <div class="code-wrap" data-repository-panel="dnf" hidden>
-                            <pre id="dnf-commands"><code>sudo rpm --import https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc
+                          <div
+                            class="code-wrap"
+                            data-repository-panel="dnf"
+                            hidden
+                          >
+                            <pre
+                              id="dnf-commands"
+                            ><code>sudo rpm --import https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc
 sudo tee /etc/yum.repos.d/azkar.repo &gt;/dev/null &lt;&lt;'EOF'
 [azkar-stable]
 name=Azkar Stable
@@ -509,7 +530,6 @@ sudo dnf install azkar</code></pre>
                     </details>
                   </article>
                 </div>
-
               </div>
             </div>
             <figure class="hero-preview">
@@ -525,7 +545,6 @@ sudo dnf install azkar</code></pre>
               />
             </figure>
           </div>
-
         </div>
       </section>
 

@@ -206,7 +206,9 @@ screenTabs.forEach((tab, index) => {
   });
 });
 
-showScreen(screenTabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true"));
+showScreen(
+  screenTabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true"),
+);
 
 // Platform installer tabs
 const platformTabs = Array.from(document.querySelectorAll(".platform-tab"));
@@ -247,9 +249,14 @@ const visitorPlatform = [
   .filter(Boolean)
   .join(" ")
   .toLowerCase();
-const isLinuxHost = /linux/.test(visitorPlatform) && !/android/.test(visitorPlatform);
+const isLinuxHost =
+  /linux/.test(visitorPlatform) && !/android/.test(visitorPlatform);
 showPlatform(
-  /win/.test(visitorPlatform) ? 0 : /mac|iphone|ipad/.test(visitorPlatform) ? 1 : 2,
+  /win/.test(visitorPlatform)
+    ? 0
+    : /mac|iphone|ipad/.test(visitorPlatform)
+      ? 1
+      : 2,
 );
 document.getElementById("linux-repositories").hidden = !isLinuxHost;
 
