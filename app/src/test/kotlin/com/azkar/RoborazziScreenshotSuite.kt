@@ -100,14 +100,14 @@ val RoborazziScreenshotSuite by testSuite("Compose Desktop screenshots") {
             }
         }
         test("update available $theme") {
-            capture("settings/settings-update-available-$theme", dark) {
+            capture("settings/settings-update-available-$theme", dark, width = 720, height = 210) {
                 Column(Modifier.width(720.dp).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     UpdateAvailablePreview()
                 }
             }
         }
         test("update idle $theme") {
-            capture("settings/settings-update-idle-$theme", dark) {
+            capture("settings/settings-update-idle-$theme", dark, width = 720, height = 210) {
                 Column(Modifier.width(720.dp).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     UpdateIdlePreview()
                 }
@@ -296,12 +296,14 @@ private fun capture(
     dark: Boolean,
     density: Float = 1f,
     readyText: String? = null,
+    width: Int = 1440,
+    height: Int = 900,
     content: @Composable () -> Unit,
 ) {
     val originalLocale = Locale.getDefault()
     try {
         Locale.ENGLISH.activateLocale()
-        runDesktopComposeUiTest(width = 1440, height = 900) {
+        runDesktopComposeUiTest(width = width, height = height) {
             setContent {
                 ScreenshotFrame(dark, density, content)
             }
