@@ -36,7 +36,7 @@ import com.azkar.ui.notifications.PrayerLocationSettings
 import com.azkar.ui.preview.previewCountdown
 import com.azkar.ui.preview.previewHadithState
 import com.azkar.ui.preview.previewPrayerRows
-import com.azkar.ui.preview.previewRailCards
+import com.azkar.ui.preview.previewRailCardsLocalized
 import com.azkar.ui.preview.previewRemembrance
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewSettingsStore
@@ -384,16 +384,7 @@ private fun HomeContentPreviewContent(
         if (emptyDashboard || !collections) {
             emptyList()
         } else {
-            previewRailCards(
-                names =
-                    listOf(
-                        stringResource(Res.string.previewMorningCollection),
-                        stringResource(Res.string.previewEveningCollection),
-                        stringResource(Res.string.previewAfterPrayerCollection),
-                        stringResource(Res.string.previewTravelCollection),
-                        stringResource(Res.string.previewEmptyCollection),
-                    ),
-            )
+            previewRailCardsLocalized()
         }
     val favoriteState =
         remember(uiLocale, emptyDashboard, includeFavorites) {

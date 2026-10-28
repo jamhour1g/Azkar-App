@@ -29,6 +29,12 @@ import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.domain.model.impl.RemembranceImpl
+import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.previewAfterPrayerCollection
+import com.azkar.generated.resources.previewEmptyCollection
+import com.azkar.generated.resources.previewEveningCollection
+import com.azkar.generated.resources.previewMorningCollection
+import com.azkar.generated.resources.previewTravelCollection
 import com.azkar.i18n.ARABIC
 import com.azkar.i18n.ENGLISH
 import com.azkar.settings.SettingsStore
@@ -60,6 +66,7 @@ import com.azkar.ui.notifications.ReminderQueueProgress
 import com.azkar.ui.shell.AzkarAppState
 import com.azkar.ui.shell.ThemePreference
 import com.azkar.ui.theme.AppTypography
+import org.jetbrains.compose.resources.stringResource
 import java.nio.file.Files
 import java.time.Duration
 import java.time.Instant
@@ -144,6 +151,20 @@ fun previewRailCards(
             pinnedAt = Instant.parse("2026-02-22T09:00:00Z"),
             lastRecitedAt = null,
         ),
+    )
+
+/** The same rail fixture with names resolved from the active Compose resource locale. */
+@Composable
+fun previewRailCardsLocalized(): List<HomeCollection> =
+    previewRailCards(
+        names =
+            listOf(
+                stringResource(Res.string.previewMorningCollection),
+                stringResource(Res.string.previewEveningCollection),
+                stringResource(Res.string.previewAfterPrayerCollection),
+                stringResource(Res.string.previewTravelCollection),
+                stringResource(Res.string.previewEmptyCollection),
+            ),
     )
 
 /** The ids in [previewRailCards] that should render with the due badge. */
