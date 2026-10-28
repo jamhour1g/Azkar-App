@@ -63,7 +63,7 @@ fun AzkarThemePreview(
     }
 }
 
-/** Applies the deterministic app theme to Android Studio and Roborazzi generated previews. */
+/** Applies the deterministic app theme to IDE previews and app screenshot captures. */
 class AzkarPreviewWrapperProvider : PreviewWrapperProvider {
     @Composable
     override fun Wrap(content: @Composable () -> Unit) {

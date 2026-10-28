@@ -47,7 +47,6 @@ import com.azkar.generated.resources.tagsUsageTitle
 import com.azkar.ui.components.AzkarDialogSurface
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.pressableClick
-import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import org.jetbrains.compose.resources.pluralStringResource
@@ -401,7 +400,6 @@ private fun RemembranceUsageRow(
  * with a cap on its height, which is exactly the kind of thing a preview earns its place on.
  */
 @Preview
-@RoborazziDesktopPreviewExclude
 @Composable
 private fun TagUsagePanelPreview() {
     AzkarThemePreview(width = 620.dp, height = 640.dp) {

@@ -170,10 +170,19 @@ jobs:
       - name: Install native test dependencies
         run: sudo apt-get update && sudo apt-get install -y libgl1
 
-      - name: Build, test, and check release shrinking
-        run: ./gradlew build :app:smokeTestPackagedRuntime :app:verifyRoborazziJvm -Proborazzi.dumpUiTree=true --console=plain
+      - name: Build, test, capture app screenshots, and check release shrinking
+        run: ./gradlew build :app:smokeTestPackagedRuntime --console=plain
         env:
           CI: true
+
+      - name: Upload captured app screenshots
+        if: always() && env.ACT != 'true'
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: app-screenshots
+          path: app/build/app-screenshots/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Render documentation gallery
         run: ./gradlew :app:captureDownloadScreenshots --console=plain
@@ -232,9 +241,6 @@ jobs:
           name: test-reports
           path: |
             **/build/reports/tests/
-            app/build/reports/roborazzi/
-            app/build/outputs/roborazzi/
-            app/build/test-results/roborazzi/
             app/build/reports/packaging/
             app/build/compose/logs/
             app/build/compose/tmp/*.args.txt

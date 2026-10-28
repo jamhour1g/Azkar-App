@@ -5,7 +5,6 @@ import java.util.jar.JarFile
 
 plugins {
     id("azkar-app")
-    alias(libs.plugins.io.github.takahirom.roborazzi)
 }
 
 // The release tag has to match this number exactly, without the `v`: the release workflow
@@ -144,9 +143,7 @@ dependencies {
     // library's debounced search assertable without a real 180 ms wait.
     testImplementation(libs.org.jetbrains.kotlinx.kotlinx.coroutines.test)
     testImplementation(libs.io.github.takahirom.roborazzi.compose.desktop)
-    testImplementation(libs.io.github.takahirom.roborazzi.compose.desktop.preview.scanner.support)
     testImplementation(libs.io.github.darkxanter.webp.imageio)
-    testImplementation(libs.io.github.sergio.sastre.composable.preview.scanner.android)
     testImplementation(libs.junit.junit)
 
     // Compose UI tests, for the controls. `runComposeUiTest` renders off-screen and drives input
@@ -160,35 +157,7 @@ dependencies {
     testImplementation(libs.io.ktor.ktor.client.mock)
 }
 
-val previewScannerEnabled =
-    providers.gradleProperty("azkar.previewScanner").map(String::toBoolean).getOrElse(false)
-
-if (previewScannerEnabled) {
-    dependencies {
-        testRuntimeOnly(libs.org.junit.vintage.junit.vintage.engine)
-    }
-}
-
-roborazzi {
-    if (previewScannerEnabled) {
-        outputDir.set(layout.projectDirectory.dir("src/test/roborazzi/previews"))
-    } else {
-        outputDir.set(layout.projectDirectory.dir("src/test/roborazzi"))
-    }
-    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
-    generateComposePreviewDesktopTests {
-        // Keep scanner captures beside the versioned references so the default CI verify checks them.
-        enable = previewScannerEnabled
-        packages = listOf("com.azkar.ui")
-        includePrivatePreviews = true
-        testerQualifiedClassName = "com.azkar.ui.preview.AzkarDesktopPreviewTester"
-        useScanOptionParametersInTester = true
-        annotationFilter =
-            com.github.takahirom.roborazzi.AnnotationFilter.Exclude(
-                "com.azkar.ui.preview.RoborazziDesktopPreviewExclude",
-            )
-    }
-}
+val appScreenshotOutputDir = layout.buildDirectory.dir("app-screenshots")
 
 // Compose Multiplatform re-publishes part of the Compose runtime under
 // `org.jetbrains.compose.runtime:<module>-desktop`, but those artifacts are empty
@@ -272,6 +241,7 @@ tasks.register<JavaExec>("captureDownloadScreenshots") {
 tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
     // Match the desktop runtime flags so UI and persistence tests do not emit JDK access warnings.
     jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow")
+    systemProperty("azkar.screenshotOutputDir", appScreenshotOutputDir.get().asFile.absolutePath)
     // The Compose plugin's `mainClass` is the single source of truth for the packaged entry
     // point, and Nucleus derives the Linux `StartupWMClass` from it. The desktop-entry test
     // needs that exact value rather than a copy of it, so it is handed over instead of

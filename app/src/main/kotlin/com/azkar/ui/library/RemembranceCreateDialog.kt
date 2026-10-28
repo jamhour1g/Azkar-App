@@ -85,7 +85,6 @@ import com.azkar.ui.i18n.hadithGradeLabel
 import com.azkar.ui.library.model.RemembranceTranslationEntry
 import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.library.model.missingRemembranceLanguages
-import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.AzkarVariantsPreview
@@ -478,7 +477,6 @@ private data class RemembranceCreateNavigation(
 )
 
 @Preview
-@RoborazziDesktopPreviewExclude
 @Composable
 private fun RemembranceCreateDialogPreview() {
     AzkarThemePreview(width = 640.dp, height = 680.dp) {

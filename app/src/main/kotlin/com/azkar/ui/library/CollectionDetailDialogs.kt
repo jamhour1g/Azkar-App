@@ -86,7 +86,7 @@ internal fun AddRemembrancesDialog(detail: CollectionDetailState) {
     }
 }
 
-/** The production dialog pane without its native window host, so previews and screenshot tests can compose it. */
+/** The production dialog pane without its native window host, for previews and screenshot captures. */
 @Composable
 internal fun AddRemembrancesContent(detail: CollectionDetailState) {
     val picker = detail.addPicker
