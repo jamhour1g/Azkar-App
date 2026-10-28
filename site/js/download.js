@@ -65,10 +65,25 @@ updateThemeControl();
 // Screenshot gallery
 
 const screenTabs = Array.from(document.querySelectorAll(".screen-tab"));
+const screenTabList = document.querySelector(".screen-tabs");
 const screenPanels = screenTabs.map((tab) =>
   document.getElementById(tab.getAttribute("aria-controls")),
 );
 const screenshotWarning = document.getElementById("screenshot-warning");
+const screenRotationDuration = 6500;
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+let screenRotationTimer;
+let screenRotationPaused = false;
+let screenProgressFrame;
+
+screenTabs.forEach((tab) => {
+  const progress = document.createElement("span");
+  progress.className = "screen-tab-progress";
+  progress.setAttribute("aria-hidden", "true");
+  progress.innerHTML = '<span class="screen-tab-progress-fill"></span>';
+  tab.append(progress);
+});
+
 document
   .querySelectorAll("img[data-light-src][data-dark-src]")
   .forEach((image) => {
@@ -89,6 +104,48 @@ document
     });
   });
 
+function restartScreenProgress(index) {
+  window.cancelAnimationFrame(screenProgressFrame);
+  screenProgressFrame = undefined;
+  screenTabs.forEach((tab) => tab.classList.remove("is-counting"));
+  if (reduceMotion.matches || screenRotationPaused || document.hidden) return;
+  screenProgressFrame = window.requestAnimationFrame(() => {
+    screenTabs[index].classList.add("is-counting");
+    screenProgressFrame = undefined;
+  });
+}
+
+function scheduleScreenRotation() {
+  window.clearTimeout(screenRotationTimer);
+  if (reduceMotion.matches || screenRotationPaused || document.hidden) return;
+  screenRotationTimer = window.setTimeout(() => {
+    const activeIndex = screenTabs.findIndex(
+      (tab) => tab.getAttribute("aria-selected") === "true",
+    );
+    showScreen(activeIndex + 1);
+  }, screenRotationDuration);
+}
+
+function setScreenRotationPaused(paused) {
+  if (screenRotationPaused === paused) return;
+  screenRotationPaused = paused;
+  window.clearTimeout(screenRotationTimer);
+  screenTabList.classList.toggle("is-paused", paused);
+  if (!paused) {
+    const activeIndex = screenTabs.findIndex(
+      (tab) => tab.getAttribute("aria-selected") === "true",
+    );
+    restartScreenProgress(activeIndex);
+    scheduleScreenRotation();
+  }
+}
+
+function syncScreenRotationPause() {
+  setScreenRotationPaused(
+    screenTabs.some((tab) => tab.matches(":focus-visible")),
+  );
+}
+
 function showScreen(index, moveFocus = false) {
   const selectedIndex = (index + screenTabs.length) % screenTabs.length;
   screenTabs.forEach((tab, tabIndex) => {
@@ -99,9 +156,41 @@ function showScreen(index, moveFocus = false) {
   });
 
   updateScreenshotImages();
+  restartScreenProgress(selectedIndex);
+  scheduleScreenRotation();
 
   if (moveFocus) screenTabs[selectedIndex].focus();
 }
+
+screenTabList.addEventListener("focusin", syncScreenRotationPause);
+screenTabList.addEventListener("focusout", (event) => {
+  if (!screenTabList.contains(event.relatedTarget)) syncScreenRotationPause();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    window.clearTimeout(screenRotationTimer);
+    screenTabList.classList.add("is-paused");
+  } else {
+    screenTabList.classList.toggle("is-paused", screenRotationPaused);
+    const activeIndex = screenTabs.findIndex(
+      (tab) => tab.getAttribute("aria-selected") === "true",
+    );
+    restartScreenProgress(activeIndex);
+    scheduleScreenRotation();
+  }
+});
+reduceMotion.addEventListener("change", () => {
+  if (reduceMotion.matches) {
+    window.clearTimeout(screenRotationTimer);
+    screenTabs.forEach((tab) => tab.classList.remove("is-counting"));
+  } else {
+    const activeIndex = screenTabs.findIndex(
+      (tab) => tab.getAttribute("aria-selected") === "true",
+    );
+    restartScreenProgress(activeIndex);
+    scheduleScreenRotation();
+  }
+});
 
 screenTabs.forEach((tab, index) => {
   tab.addEventListener("click", () => showScreen(index));
@@ -116,6 +205,60 @@ screenTabs.forEach((tab, index) => {
     showScreen(nextIndex, true);
   });
 });
+
+showScreen(
+  screenTabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true"),
+);
+
+// Platform installer tabs
+const platformTabs = Array.from(document.querySelectorAll(".platform-tab"));
+const platformPanels = platformTabs.map((tab) =>
+  document.getElementById(tab.getAttribute("aria-controls")),
+);
+
+function showPlatform(index, moveFocus = false) {
+  const selectedIndex = (index + platformTabs.length) % platformTabs.length;
+  platformTabs.forEach((tab, tabIndex) => {
+    const selected = tabIndex === selectedIndex;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    platformPanels[tabIndex].hidden = !selected;
+  });
+  if (moveFocus) platformTabs[selectedIndex].focus();
+}
+
+platformTabs.forEach((tab, index) => {
+  tab.addEventListener("click", () => showPlatform(index));
+  tab.addEventListener("keydown", (event) => {
+    let nextIndex;
+    if (event.key === "ArrowRight") nextIndex = index + 1;
+    else if (event.key === "ArrowLeft") nextIndex = index - 1;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = platformTabs.length - 1;
+    else return;
+    event.preventDefault();
+    showPlatform(nextIndex, true);
+  });
+});
+
+const visitorPlatform = [
+  navigator.userAgentData?.platform,
+  navigator.platform,
+  navigator.userAgent,
+]
+  .filter(Boolean)
+  .join(" ")
+  .toLowerCase();
+const isLinuxHost =
+  /linux/.test(visitorPlatform) && !/android/.test(visitorPlatform);
+showPlatform(
+  /win/.test(visitorPlatform)
+    ? 0
+    : /mac|iphone|ipad/.test(visitorPlatform)
+      ? 1
+      : 2,
+);
+document.getElementById("linux-repositories").hidden = !isLinuxHost;
 
 // Feature category tabs
 
@@ -239,21 +382,21 @@ async function connectStableDownloads() {
         document.getElementById("deb-download"),
         assets,
         "-linux-x64.deb",
-        "Download DEB",
+        "DEB",
         `Download DEB package, version ${version}`,
       ),
       pointToAsset(
         document.getElementById("rpm-download"),
         assets,
         "-linux-x64.rpm",
-        "Download RPM",
+        "RPM",
         `Download RPM package, version ${version}`,
       ),
       pointToAsset(
         document.getElementById("appimage-download"),
         assets,
         "-linux-x64.AppImage",
-        "Download AppImage",
+        "AppImage",
         `Download AppImage, version ${version}`,
       ),
     ];
@@ -282,6 +425,23 @@ async function connectStableDownloads() {
 
 connectStableDownloads();
 
+// Linux repository command switcher
+const repositoryTabs = Array.from(document.querySelectorAll(".repository-tab"));
+const repositoryCopy = document.getElementById("repository-copy");
+repositoryTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    repositoryCopy.dataset.copy = `${tab.dataset.repository}-commands`;
+    repositoryCopy.textContent = "Copy";
+    repositoryTabs.forEach((candidate) => {
+      const selected = candidate === tab;
+      candidate.setAttribute("aria-pressed", String(selected));
+      document.querySelector(
+        `[data-repository-panel="${candidate.dataset.repository}"]`,
+      ).hidden = !selected;
+    });
+  });
+});
+
 // Copyable Linux repository commands
 
 document.querySelectorAll("[data-copy]").forEach((button) => {
@@ -294,7 +454,7 @@ document.querySelectorAll("[data-copy]").forEach((button) => {
       await navigator.clipboard.writeText(code);
       button.textContent = "Copied";
       window.setTimeout(() => {
-        button.textContent = "Copy commands";
+        button.textContent = "Copy";
       }, 1800);
     } catch {
       const selection = window.getSelection();
@@ -304,7 +464,7 @@ document.querySelectorAll("[data-copy]").forEach((button) => {
       );
       selection.removeAllRanges();
       selection.addRange(range);
-      button.textContent = "Selected; copy manually";
+      button.textContent = "Copy manually";
     }
   });
 });
