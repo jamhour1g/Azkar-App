@@ -1,14 +1,7 @@
 package com.azkar.ui.shell
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,18 +13,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SystemUpdateAlt
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -46,44 +32,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.Clipboard
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.settingsSubtitle
 import com.azkar.generated.resources.settingsTitle
-import com.azkar.generated.resources.settingsUpdateAvailable
-import com.azkar.generated.resources.settingsUpdateChecking
-import com.azkar.generated.resources.settingsUpdateCopyCommands
-import com.azkar.generated.resources.settingsUpdateDev
-import com.azkar.generated.resources.settingsUpdateDowngradeWarning
-import com.azkar.generated.resources.settingsUpdateDownload
-import com.azkar.generated.resources.settingsUpdateDownloading
-import com.azkar.generated.resources.settingsUpdateIdle
-import com.azkar.generated.resources.settingsUpdateInstall
-import com.azkar.generated.resources.settingsUpdateInstalling
-import com.azkar.generated.resources.settingsUpdateManaged
-import com.azkar.generated.resources.settingsUpdateNoReleaseNotes
-import com.azkar.generated.resources.settingsUpdateReleaseNotes
-import com.azkar.generated.resources.settingsUpdateStable
-import com.azkar.generated.resources.settingsUpdateStatusAvailable
-import com.azkar.generated.resources.settingsUpdateStatusChecking
-import com.azkar.generated.resources.settingsUpdateStatusFailed
-import com.azkar.generated.resources.settingsUpdateStatusReady
-import com.azkar.generated.resources.settingsUpdateStatusUpToDate
-import com.azkar.generated.resources.settingsUpdateTrackHint
-import com.azkar.generated.resources.settingsUpdateTrackTitle
-import com.azkar.generated.resources.settingsUpdateVersionHint
-import com.azkar.generated.resources.settingsUpdateVersionTitle
-import com.azkar.generated.resources.settingsUpdatesBody
-import com.azkar.generated.resources.settingsUpdatesTitle
-import com.azkar.ui.components.SelectRow
-import com.azkar.ui.library.setPlainText
 import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationPreferencesRepository
@@ -101,9 +56,7 @@ import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.LocalUiLocale
-import com.azkar.updates.UpdateChannel
 import com.azkar.updates.UpdateManager
-import com.azkar.updates.UpdateStatus
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -291,362 +244,6 @@ private fun LazyListScope.settingsSections(
             }
         }
     }
-}
-
-@Composable
-private fun UpdateSettingsSection(manager: UpdateManager) {
-    val channel by manager.channel.collectAsState()
-    val status by manager.status.collectAsState()
-    val scope = rememberCoroutineScope()
-    val clipboard = LocalClipboard.current
-    SettingsSectionBlock(
-        title = stringResource(Res.string.settingsUpdatesTitle),
-        subtitle = stringResource(Res.string.settingsUpdatesBody),
-        content = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                UpdateSettingsCard(
-                    manager = manager,
-                    channel = channel,
-                    status = status,
-                    onSelectChannel = { scope.launch { manager.selectChannel(it) } },
-                    onCheck = { scope.launch { manager.checkManually() } },
-                )
-                if (manager.isRepositoryManaged && (status == UpdateStatus.Idle || status == UpdateStatus.Current)) {
-                    RepositoryUpdateActions(manager, channel, clipboard, scope)
-                }
-                if (status !is UpdateStatus.Idle && status !is UpdateStatus.Current) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        UpdateStatusContent(manager, channel, status, clipboard, scope)
-                    }
-                }
-            }
-        },
-    )
-}
-
-@Composable
-private fun UpdateSettingsCard(
-    manager: UpdateManager,
-    channel: UpdateChannel,
-    status: UpdateStatus,
-    onSelectChannel: (UpdateChannel) -> Unit,
-    onCheck: () -> Unit,
-) {
-    SettingsGroupCard(contentPadding = 0.dp) {
-        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            stringResource(Res.string.settingsUpdateVersionTitle),
-                            color = AzkarTheme.colors.textPrimary,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Text(manager.currentVersion, color = AzkarTheme.colors.textSecondary, fontSize = 14.sp)
-                    }
-                    Text(
-                        stringResource(Res.string.settingsUpdateVersionHint),
-                        color = AzkarTheme.colors.textSecondary,
-                        fontSize = 12.sp,
-                    )
-                }
-                UpdateStatusBadge(status, onCheck)
-            }
-            SettingsRowDivider()
-            SelectRow(
-                label = stringResource(Res.string.settingsUpdateTrackTitle),
-                selected = channel,
-                options = listOf(UpdateChannel.STABLE, UpdateChannel.DEV),
-                optionLabel = {
-                    stringResource(
-                        if (it ==
-                            UpdateChannel.STABLE
-                        ) {
-                            Res.string.settingsUpdateStable
-                        } else {
-                            Res.string.settingsUpdateDev
-                        },
-                    )
-                },
-                onSelect = onSelectChannel,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                hint = stringResource(Res.string.settingsUpdateTrackHint),
-                fieldWidth = 150.dp,
-            )
-        }
-    }
-}
-
-@Composable
-private fun RepositoryUpdateActions(
-    manager: UpdateManager,
-    channel: UpdateChannel,
-    clipboard: Clipboard,
-    scope: kotlinx.coroutines.CoroutineScope,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            stringResource(Res.string.settingsUpdateManaged),
-            color = AzkarTheme.colors.textSecondary,
-            fontSize = 12.sp,
-        )
-        Button(onClick = {
-            scope.launch { clipboard.setPlainText(manager.packageManagerCommands(channel, null, false)) }
-        }) {
-            Text(stringResource(Res.string.settingsUpdateCopyCommands))
-        }
-    }
-}
-
-@Composable
-private fun UpdateStatusBadge(
-    status: UpdateStatus,
-    onClick: () -> Unit,
-) {
-    val colors = AzkarTheme.colors
-    val label = updateStatusLabel(status)
-    val inProgress =
-        status is UpdateStatus.Checking || status is UpdateStatus.Downloading || status is UpdateStatus.Installing
-    val shape = RoundedCornerShape(12.dp)
-    val badgeBackground =
-        animateColorAsState(
-            if (inProgress) colors.highlight else colors.cardBackground,
-            label = "update-status-background",
-        )
-    val badgeBorder =
-        animateColorAsState(if (inProgress) colors.primary else colors.border, label = "update-status-border")
-    Row(
-        modifier =
-            Modifier
-                .clip(
-                    shape,
-                ).background(badgeBackground.value, shape)
-                .border(1.dp, badgeBorder.value, shape)
-                .clickable(
-                    enabled =
-                        status == UpdateStatus.Idle || status == UpdateStatus.Current || status is UpdateStatus.Failed,
-                    role = Role.Button,
-                    onClick = onClick,
-                ).padding(horizontal = 14.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AnimatedVisibility(
-            visible = inProgress,
-            enter = fadeIn() + scaleIn(),
-            exit = fadeOut() + scaleOut(),
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                color = colors.primary,
-                strokeWidth = 2.dp,
-            )
-        }
-        if (status is UpdateStatus.Available || status is UpdateStatus.ReadyToInstall) {
-            Icon(
-                imageVector = Icons.Filled.SystemUpdateAlt,
-                contentDescription = null,
-                tint = colors.primary,
-                modifier = Modifier.size(16.dp),
-            )
-        }
-        Text(
-            text = label,
-            color = colors.textPrimary,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
-@Composable
-private fun updateStatusLabel(status: UpdateStatus): String =
-    when (status) {
-        UpdateStatus.Idle, UpdateStatus.Current -> stringResource(Res.string.settingsUpdateStatusUpToDate)
-        UpdateStatus.Checking -> stringResource(Res.string.settingsUpdateStatusChecking)
-        is UpdateStatus.Available -> stringResource(Res.string.settingsUpdateStatusAvailable)
-        is UpdateStatus.Downloading ->
-            stringResource(
-                Res.string.settingsUpdateDownloading,
-                status.version,
-                status.percent.toInt(),
-            )
-        is UpdateStatus.ReadyToInstall -> stringResource(Res.string.settingsUpdateStatusReady)
-        UpdateStatus.Installing -> stringResource(Res.string.settingsUpdateInstalling)
-        is UpdateStatus.Failed -> stringResource(Res.string.settingsUpdateStatusFailed)
-    }
-
-@Composable
-private fun UpdateStatusContent(
-    manager: UpdateManager,
-    channel: UpdateChannel,
-    status: UpdateStatus,
-    clipboard: Clipboard,
-    scope: kotlinx.coroutines.CoroutineScope,
-) {
-    val colors = AzkarTheme.colors
-    when (status) {
-        UpdateStatus.Idle -> Text(stringResource(Res.string.settingsUpdateIdle), color = colors.textSecondary)
-        UpdateStatus.Checking -> Text(stringResource(Res.string.settingsUpdateChecking), color = colors.textPrimary)
-        UpdateStatus.Current -> Unit
-        is UpdateStatus.Failed -> Unit
-        is UpdateStatus.Available -> AvailableUpdateContent(manager, channel, status, clipboard, scope)
-        is UpdateStatus.Downloading ->
-            Text(
-                stringResource(Res.string.settingsUpdateDownloading, status.version, status.percent.toInt()),
-                color = colors.textPrimary,
-            )
-        is UpdateStatus.ReadyToInstall -> ReadyToInstallContent(manager, status, scope)
-        UpdateStatus.Installing -> Text(stringResource(Res.string.settingsUpdateInstalling), color = colors.textPrimary)
-    }
-}
-
-@Composable
-private fun AvailableUpdateContent(
-    manager: UpdateManager,
-    channel: UpdateChannel,
-    update: UpdateStatus.Available,
-    clipboard: Clipboard,
-    scope: kotlinx.coroutines.CoroutineScope,
-) {
-    UpdateAvailablePanel(
-        state =
-            UpdateAvailablePanelState(
-                version = update.info.version,
-                releaseDate = update.info.releaseDate,
-                releaseNotes = update.releaseNotes,
-                isDowngrade = update.isDowngrade,
-                isRepositoryManaged = manager.isRepositoryManaged,
-                actionLabel =
-                    stringResource(
-                        if (manager.isRepositoryManaged) {
-                            Res.string.settingsUpdateCopyCommands
-                        } else {
-                            Res.string.settingsUpdateDownload
-                        },
-                    ),
-            ),
-        onAction = {
-            scope.launch {
-                if (manager.isRepositoryManaged) {
-                    clipboard.setPlainText(
-                        manager.packageManagerCommands(channel, update.info.version, update.isDowngrade),
-                    )
-                } else {
-                    manager.download(update.info)
-                }
-            }
-        },
-    )
-}
-
-internal data class UpdateAvailablePanelState(
-    val version: String,
-    val releaseDate: String,
-    val releaseNotes: String,
-    val isDowngrade: Boolean,
-    val isRepositoryManaged: Boolean,
-    val actionLabel: String,
-)
-
-@Composable
-internal fun UpdateAvailablePanel(
-    state: UpdateAvailablePanelState,
-    onAction: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (state.isRepositoryManaged) {
-            Text(
-                stringResource(Res.string.settingsUpdateManaged),
-                color = AzkarTheme.colors.textSecondary,
-                fontSize = 12.sp,
-            )
-        }
-        UpdateDetailsCard(state.version, state.releaseDate, state.releaseNotes)
-        if (state.isDowngrade) DowngradeWarning()
-        Button(onClick = onAction) { Text(state.actionLabel) }
-    }
-}
-
-@Composable
-private fun ReadyToInstallContent(
-    manager: UpdateManager,
-    update: UpdateStatus.ReadyToInstall,
-    scope: kotlinx.coroutines.CoroutineScope,
-) {
-    UpdateDetailsCard(update.info.version, update.info.releaseDate, update.releaseNotes)
-    if (update.isDowngrade) DowngradeWarning()
-    Button(onClick = { scope.launch { manager.installAndRestart(update.file) } }) {
-        Text(stringResource(Res.string.settingsUpdateInstall))
-    }
-}
-
-@Composable
-internal fun UpdateDetailsCard(
-    version: String,
-    releaseDate: String,
-    releaseNotes: String,
-) {
-    val colors = AzkarTheme.colors
-    SettingsGroupCard {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                stringResource(Res.string.settingsUpdateAvailable, version, releaseDate),
-                color = colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                stringResource(Res.string.settingsUpdateReleaseNotes),
-                color = colors.textPrimary,
-                fontWeight = FontWeight.SemiBold,
-            )
-            ReleaseNotes(releaseNotes.ifBlank { stringResource(Res.string.settingsUpdateNoReleaseNotes) })
-        }
-    }
-}
-
-@Composable
-private fun ReleaseNotes(markdown: String) {
-    val colors = AzkarTheme.colors
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        markdown
-            .lineSequence()
-            .filterNot { it.trim().startsWith("<!--") }
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .forEach { line ->
-                val heading = line.startsWith('#')
-                val content =
-                    line
-                        .replace(Regex("^#{1,6}\\s*"), "")
-                        .replace(Regex("^[-*+]\\s+"), "•  ")
-                        .replace(Regex("\\[([^]]+)]\\(([^)]+)\\)"), "\$1")
-                        .replace(Regex("<!--.*?-->"), "")
-                        .replace("**", "")
-                        .replace("__", "")
-                        .replace("`", "")
-                if (content.isNotBlank()) {
-                    Text(
-                        content,
-                        color = if (heading) colors.textPrimary else colors.textSecondary,
-                        fontSize = if (heading) 14.sp else 13.sp,
-                        fontWeight = if (heading) FontWeight.SemiBold else FontWeight.Normal,
-                    )
-                }
-            }
-    }
-}
-
-@Composable
-private fun DowngradeWarning() {
-    Text(
-        stringResource(Res.string.settingsUpdateDowngradeWarning),
-        color = AzkarTheme.colors.dialogValidation,
-    )
 }
 
 /**

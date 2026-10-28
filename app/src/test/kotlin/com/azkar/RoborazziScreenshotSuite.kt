@@ -24,8 +24,6 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.unit.dp
 import com.azkar.domain.model.TagSummary
-import com.azkar.generated.resources.Res
-import com.azkar.generated.resources.settingsUpdateCopyCommands
 import com.azkar.i18n.activateLocale
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.components.ActionIcons
@@ -68,8 +66,7 @@ import com.azkar.ui.shell.HeaderCallbacks
 import com.azkar.ui.shell.SettingsGroup
 import com.azkar.ui.shell.SettingsScreen
 import com.azkar.ui.shell.ThemePreference
-import com.azkar.ui.shell.UpdateAvailablePanel
-import com.azkar.ui.shell.UpdateAvailablePanelState
+import com.azkar.ui.shell.UpdateAvailablePreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.updates.UpdateManager
@@ -104,26 +101,7 @@ val RoborazziScreenshotSuite by testSuite("Compose Desktop screenshots") {
         test("update available $theme") {
             capture("settings/settings-update-available-$theme", dark) {
                 Column(Modifier.width(720.dp).padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    UpdateAvailablePanel(
-                        state =
-                            UpdateAvailablePanelState(
-                                version = "0.1.2-beta.15.1",
-                                releaseDate = "2026-10-26",
-                                releaseNotes = """<!-- Release notes generated from .github/release.yml -->
-## What's Changed
-### Improvements
-* Rebuild download page and seed library data by @maintainer
-
-**Full Changelog**: https://github.com/jamhour1g/Azkar-App/compare/v0.1.2-beta.14.1...v0.1.2-beta.15.1""",
-                                isDowngrade = false,
-                                isRepositoryManaged = true,
-                                actionLabel =
-                                    org.jetbrains.compose.resources.stringResource(
-                                        Res.string.settingsUpdateCopyCommands,
-                                    ),
-                            ),
-                        onAction = {},
-                    )
+                    UpdateAvailablePreview()
                 }
             }
         }
