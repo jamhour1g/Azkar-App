@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,9 +35,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionsActionEdit
 import com.azkar.generated.resources.collectionsActionOpen
 import com.azkar.generated.resources.collectionsMemberCount
 import com.azkar.generated.resources.collectionsProgressFormat
+import com.azkar.generated.resources.componentsPreviewMorningDescription
 import com.azkar.generated.resources.libraryActionMore
 import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarCard
@@ -51,7 +54,7 @@ import com.azkar.ui.components.pressableClick
 import com.azkar.ui.components.rememberContextMenuState
 import com.azkar.ui.library.model.CollectionTile
 import com.azkar.ui.preview.previewCollectionTiles
-import com.azkar.ui.theme.AzkarPreview
+import com.azkar.ui.theme.AzkarComponentShowcasePreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.CardSize
 import org.jetbrains.compose.resources.pluralStringResource
@@ -136,21 +139,28 @@ fun CollectionCard(
     }
 }
 
-@AzkarPreview
+@AzkarComponentShowcasePreview
 @Composable
 internal fun CollectionCardPreview() {
     Column(
-        modifier = Modifier.width(1008.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
             previewCollectionTiles().forEach { tile ->
                 CollectionCard(
                     tile = tile,
-                    preview = "The most beloved of deeds to Allah are the most consistent.",
+                    preview = stringResource(Res.string.componentsPreviewMorningDescription),
                     items =
                         listOf(
-                            AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),
+                            AzkarMenuItem(
+                                label = stringResource(Res.string.collectionsActionEdit),
+                                onClick = {},
+                                icon = ActionIcons.edit,
+                            ),
                         ),
                     onOpen = {},
                     covers = null,

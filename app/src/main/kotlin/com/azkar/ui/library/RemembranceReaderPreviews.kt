@@ -12,24 +12,18 @@ import com.azkar.i18n.ARABIC
 import com.azkar.i18n.ENGLISH
 import com.azkar.ui.preview.PreviewCollectionsGateway
 import com.azkar.ui.preview.previewFixtureInstant
-import com.azkar.ui.theme.AzkarArabicPreview
-import com.azkar.ui.theme.AzkarPreview
+import com.azkar.ui.theme.AzkarVariantsPreview
+import com.azkar.ui.theme.LocalUiLocale
 import java.nio.file.Files
 import java.util.Locale
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun RemembranceReaderTaggedFavoritePreview() {
-    ReaderPreview(remembrance = readerPreviewRemembrance(), uiLocale = ENGLISH)
+    ReaderPreview(remembrance = readerPreviewRemembrance(), uiLocale = LocalUiLocale.current)
 }
 
-@AzkarArabicPreview
-@Composable
-internal fun RemembranceReaderArabicPreview() {
-    ReaderPreview(remembrance = readerPreviewRemembrance(), uiLocale = ARABIC)
-}
-
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun RemembranceReaderMissingPreview() {
     val catalogue =

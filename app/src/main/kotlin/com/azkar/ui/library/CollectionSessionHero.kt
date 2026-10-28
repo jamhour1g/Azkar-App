@@ -53,8 +53,8 @@ import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.preview.previewCollection
 import com.azkar.ui.preview.previewCollectionStats
 import com.azkar.ui.preview.previewCollectionStatsVariants
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -278,7 +278,7 @@ private fun SessionControls(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionSessionHeroPreview() {
     Column(

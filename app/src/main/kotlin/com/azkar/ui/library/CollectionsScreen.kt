@@ -59,9 +59,8 @@ import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.preview.rememberPreviewCatalogue
 import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ShowToast
-import com.azkar.ui.theme.AzkarCompactPreview
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.CardSize
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -183,7 +182,7 @@ internal fun CollectionsScreenContent(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionsScreenContentPreview() {
     val catalogue = rememberPreviewCatalogue()
@@ -196,7 +195,7 @@ internal fun CollectionsScreenContentPreview() {
     )
 }
 
-@AzkarCompactPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionsScreenCompactPreview() {
     val catalogue = rememberPreviewCatalogue()
@@ -210,7 +209,7 @@ internal fun CollectionsScreenCompactPreview() {
     )
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionsScreenLoadFailurePreview() {
     val catalogue = rememberPreviewCatalogue(failSnapshot = true)
@@ -223,19 +222,19 @@ internal fun CollectionsScreenLoadFailurePreview() {
     )
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionsScreenEmptyLibraryPreview() {
     CollectionsScreenStatePreview(emptyLibrary = true)
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionsScreenNoCollectionMatchesPreview() {
-    CollectionsScreenStatePreview(collectionQuery = "No collection matches this search")
+    CollectionsScreenStatePreview(collectionQuery = stringResource(Res.string.collectionsNoMatchesTitle))
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionsScreenRemembranceSearchResultsPreview() {
     CollectionsScreenStatePreview(remembranceQuery = "forgiveness")
@@ -373,22 +372,22 @@ internal fun ShelfBody(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun ShelfBodyPreview() {
     ShelfBodyPreviewContent()
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun ShelfBodyEmptyPreview() {
     ShelfBodyPreviewContent(emptyLibrary = true)
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun ShelfBodyNoMatchesPreview() {
-    ShelfBodyPreviewContent(collectionQuery = "No collection matches this search")
+    ShelfBodyPreviewContent(collectionQuery = stringResource(Res.string.collectionsNoMatchesTitle))
 }
 
 @Composable

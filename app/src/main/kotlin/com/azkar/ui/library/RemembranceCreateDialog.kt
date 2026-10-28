@@ -86,9 +86,9 @@ import com.azkar.ui.library.model.RemembranceTranslationEntry
 import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.library.model.missingRemembranceLanguages
 import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
 import java.util.Locale
@@ -491,7 +491,7 @@ private fun RemembranceCreateDialogPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun RemembranceCreateTextRequiredPreview() {
     val draft = remember { RemembranceCreateDraft(textLocale = Locale.forLanguageTag("ar")).apply { submit() } }
@@ -500,7 +500,7 @@ internal fun RemembranceCreateTextRequiredPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun RemembranceCreateLongTextPreview() {
     val draft =
@@ -517,7 +517,7 @@ internal fun RemembranceCreateLongTextPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun RemembranceCreateTranslationsPreview() {
     val draft =
@@ -534,7 +534,7 @@ internal fun RemembranceCreateTranslationsPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun RemembranceCreateTagsPreview() {
     val draft =

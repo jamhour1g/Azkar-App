@@ -20,8 +20,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.azkar.ui.theme.AzkarControlVariantsPreview
 import com.azkar.ui.theme.AzkarMotion
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 
 /**
@@ -90,7 +90,7 @@ fun CompletionTrack(
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun CompletionTrackPreview() {
     Column(

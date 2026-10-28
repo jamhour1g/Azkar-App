@@ -43,8 +43,8 @@ import com.azkar.ui.components.TooltipIconButton
 import com.azkar.ui.components.mirrorHorizontalGradient
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.preview.previewFavoriteState
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
 
@@ -186,7 +186,7 @@ fun FavoritesCard(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun FavoritesCardPreview(
     @PreviewParameter(FavoriteCardStateProvider::class) state: FavoriteState,

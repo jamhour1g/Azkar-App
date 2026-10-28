@@ -76,9 +76,9 @@ import com.azkar.ui.notifications.presentation.NotificationPresentationSettings
 import com.azkar.ui.preview.previewAzkarAppState
 import com.azkar.ui.preview.rememberPreviewNotificationSettingsState
 import com.azkar.ui.theme.AppTypography
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.SystemFontCatalogue
 import com.azkar.ui.theme.azkarTypography
 import org.jetbrains.compose.resources.stringResource
@@ -731,7 +731,7 @@ private val FONT_MENU_GAP = 4.dp
 /** The empty family name represents the bundled Inter/Amiri choice and must be a stable LazyColumn key. */
 private const val AZKAR_FONT_OPTION_KEY = "__azkar_bundled_font__"
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun SettingsAppearanceSectionsPreview() {
     Column(

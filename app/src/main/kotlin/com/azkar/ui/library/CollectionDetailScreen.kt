@@ -64,8 +64,8 @@ import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewCatalogue
 import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ShowToast
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -280,28 +280,28 @@ internal fun CollectionDetailContent(
     )
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionDetailContentPreview() {
     val catalogue = rememberPreviewCatalogue()
     CollectionDetailScreenPreviewContent(catalogue, PREVIEW_COLLECTION_ID)
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionDetailEmptyCollectionPreview() {
     val catalogue = rememberPreviewCatalogue(includeEmptyCollection = true)
     CollectionDetailScreenPreviewContent(catalogue, collectionId = 13L)
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionDetailMissingCollectionPreview() {
     val catalogue = rememberPreviewCatalogue(emptyLibrary = true)
     CollectionDetailScreenPreviewContent(catalogue, PREVIEW_COLLECTION_ID)
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionDetailPartialProgressPreview() {
     val catalogue =

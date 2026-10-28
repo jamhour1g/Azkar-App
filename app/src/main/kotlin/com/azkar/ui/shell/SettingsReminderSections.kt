@@ -13,8 +13,8 @@ import com.azkar.generated.resources.settingsNotificationsScheduleTitle
 import com.azkar.ui.notifications.NotificationSettingsState
 import com.azkar.ui.notifications.ReminderQueueConfig
 import com.azkar.ui.preview.rememberPreviewNotificationSettingsState
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarSpacing
+import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.stringResource
 
 // `ui/shell/SettingsReminderSections.kt` — the two blocks under Reminders: when a reminder is due, and
@@ -55,7 +55,7 @@ internal fun SettingsReminderScheduleSection(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun SettingsReminderSectionsPreview() {
     Column(

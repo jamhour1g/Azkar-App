@@ -44,6 +44,7 @@ import androidx.compose.ui.window.PopupPositionProvider
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionsActionNew
 import com.azkar.generated.resources.collectionsSearchCollections
+import com.azkar.generated.resources.componentsPreviewSampleName
 import com.azkar.generated.resources.hero_day
 import com.azkar.generated.resources.hero_night
 import com.azkar.generated.resources.libraryFiltersLabel
@@ -57,8 +58,8 @@ import com.azkar.ui.library.model.CollectionScope
 import com.azkar.ui.library.model.CollectionSort
 import com.azkar.ui.preview.previewLibraryHeroControls
 import com.azkar.ui.theme.AzkarColors
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -115,7 +116,7 @@ fun LibraryHero(
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun LibraryHeroPreview() {
     Column(
@@ -123,7 +124,10 @@ internal fun LibraryHeroPreview() {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         LibraryHero(controls = previewLibraryHeroControls(), compact = false)
-        LibraryHero(controls = previewLibraryHeroControls(query = "Ar-Rahman"), compact = true)
+        LibraryHero(
+            controls = previewLibraryHeroControls(query = stringResource(Res.string.componentsPreviewSampleName)),
+            compact = true,
+        )
     }
 }
 

@@ -1,6 +1,11 @@
 package com.azkar.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewWrapper
 import androidx.compose.ui.tooling.preview.PreviewWrapperProvider
@@ -16,6 +21,75 @@ import java.util.Locale
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
 @Retention(AnnotationRetention.BINARY)
 annotation class AzkarPreview
+
+/** Light and dark, English and Arabic, in portrait and landscape windows. */
+@Preview(name = "Light EN portrait", locale = "en", widthDp = 720, heightDp = 1100, uiMode = 0x10)
+@Preview(name = "Light EN landscape", locale = "en", widthDp = 1100, heightDp = 720, uiMode = 0x10)
+@Preview(name = "Light AR portrait", locale = "ar", widthDp = 720, heightDp = 1100, uiMode = 0x10)
+@Preview(name = "Light AR landscape", locale = "ar", widthDp = 1100, heightDp = 720, uiMode = 0x10)
+@Preview(name = "Dark EN portrait", locale = "en", widthDp = 720, heightDp = 1100, uiMode = 0x20)
+@Preview(name = "Dark EN landscape", locale = "en", widthDp = 1100, heightDp = 720, uiMode = 0x20)
+@Preview(name = "Dark AR portrait", locale = "ar", widthDp = 720, heightDp = 1100, uiMode = 0x20)
+@Preview(name = "Dark AR landscape", locale = "ar", widthDp = 1100, heightDp = 720, uiMode = 0x20)
+@PreviewWrapper(AzkarVariantsPreviewWrapperProvider::class)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
+@Retention(AnnotationRetention.BINARY)
+annotation class AzkarVariantsPreview
+
+/** The same variants on smaller canvases for individual components. */
+@Preview(name = "Light EN portrait", locale = "en", widthDp = 240, heightDp = 360, uiMode = 0x10)
+@Preview(name = "Light EN landscape", locale = "en", widthDp = 360, heightDp = 240, uiMode = 0x10)
+@Preview(name = "Light AR portrait", locale = "ar", widthDp = 240, heightDp = 360, uiMode = 0x10)
+@Preview(name = "Light AR landscape", locale = "ar", widthDp = 360, heightDp = 240, uiMode = 0x10)
+@Preview(name = "Dark EN portrait", locale = "en", widthDp = 240, heightDp = 360, uiMode = 0x20)
+@Preview(name = "Dark EN landscape", locale = "en", widthDp = 360, heightDp = 240, uiMode = 0x20)
+@Preview(name = "Dark AR portrait", locale = "ar", widthDp = 240, heightDp = 360, uiMode = 0x20)
+@Preview(name = "Dark AR landscape", locale = "ar", widthDp = 360, heightDp = 240, uiMode = 0x20)
+@PreviewWrapper(AzkarVariantsPreviewWrapperProvider::class)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
+@Retention(AnnotationRetention.BINARY)
+annotation class AzkarComponentVariantsPreview
+
+/** A close-fitting canvas for small, grouped controls. */
+@Preview(name = "Light EN control portrait", locale = "en", widthDp = 480, heightDp = 560, uiMode = 0x10)
+@Preview(name = "Light EN control landscape", locale = "en", widthDp = 640, heightDp = 480, uiMode = 0x10)
+@Preview(name = "Light AR control portrait", locale = "ar", widthDp = 480, heightDp = 560, uiMode = 0x10)
+@Preview(name = "Light AR control landscape", locale = "ar", widthDp = 640, heightDp = 480, uiMode = 0x10)
+@Preview(name = "Dark EN control portrait", locale = "en", widthDp = 480, heightDp = 560, uiMode = 0x20)
+@Preview(name = "Dark EN control landscape", locale = "en", widthDp = 640, heightDp = 480, uiMode = 0x20)
+@Preview(name = "Dark AR control portrait", locale = "ar", widthDp = 480, heightDp = 560, uiMode = 0x20)
+@Preview(name = "Dark AR control landscape", locale = "ar", widthDp = 640, heightDp = 480, uiMode = 0x20)
+@PreviewWrapper(AzkarVariantsPreviewWrapperProvider::class)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
+@Retention(AnnotationRetention.BINARY)
+annotation class AzkarControlVariantsPreview
+
+/** A compact canvas for grouped component states that need more room than a single control. */
+@Preview(name = "Light EN component portrait", locale = "en", widthDp = 520, heightDp = 760, uiMode = 0x10)
+@Preview(name = "Light EN component landscape", locale = "en", widthDp = 760, heightDp = 520, uiMode = 0x10)
+@Preview(name = "Light AR component portrait", locale = "ar", widthDp = 520, heightDp = 760, uiMode = 0x10)
+@Preview(name = "Light AR component landscape", locale = "ar", widthDp = 760, heightDp = 520, uiMode = 0x10)
+@Preview(name = "Dark EN component portrait", locale = "en", widthDp = 520, heightDp = 760, uiMode = 0x20)
+@Preview(name = "Dark EN component landscape", locale = "en", widthDp = 760, heightDp = 520, uiMode = 0x20)
+@Preview(name = "Dark AR component portrait", locale = "ar", widthDp = 520, heightDp = 760, uiMode = 0x20)
+@Preview(name = "Dark AR component landscape", locale = "ar", widthDp = 760, heightDp = 520, uiMode = 0x20)
+@PreviewWrapper(AzkarVariantsPreviewWrapperProvider::class)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.ANNOTATION_CLASS)
+@Retention(AnnotationRetention.BINARY)
+annotation class AzkarComponentShowcasePreview
+
+class AzkarVariantsPreviewWrapperProvider : PreviewWrapperProvider {
+    @Composable
+    override fun Wrap(content: @Composable () -> Unit) {
+        val darkTheme = isSystemInDarkTheme()
+        val locale = Locale.getDefault()
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            AzkarPreviewSurface(darkTheme, locale, maxWidth, maxHeight) {
+                Box(Modifier.fillMaxSize()) { content() }
+            }
+        }
+    }
+}
 
 /** Tall desktop canvas for full-screen previews that need to show content below the first fold. */
 @Preview(name = "Full screen", widthDp = 1440, heightDp = 1500)

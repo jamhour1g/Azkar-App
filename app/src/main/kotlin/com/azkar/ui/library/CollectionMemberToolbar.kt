@@ -60,7 +60,7 @@ import com.azkar.ui.library.model.CollectionMemberSort
 import com.azkar.ui.library.model.CollectionMemberView
 import com.azkar.ui.preview.previewCollectionStats
 import com.azkar.ui.preview.previewCollectionStatsVariants
-import com.azkar.ui.theme.AzkarPreview
+import com.azkar.ui.theme.AzkarComponentShowcasePreview
 import com.azkar.ui.theme.AzkarTheme
 import org.jetbrains.compose.resources.stringResource
 
@@ -556,11 +556,11 @@ internal data class ToolbarGates(
     val canResetProgress: Boolean,
 )
 
-@AzkarPreview
+@AzkarComponentShowcasePreview
 @Composable
 internal fun CollectionMemberToolbarPreview() {
     Column(
-        modifier = Modifier.width(1200.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         CollectionMemberToolbar(

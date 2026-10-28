@@ -26,16 +26,18 @@ import com.azkar.domain.model.Remembrance
 import com.azkar.generated.resources.*
 import com.azkar.i18n.RemembranceI18n
 import com.azkar.settings.SettingsStore
+import com.azkar.ui.components.AzkarClock
 import com.azkar.ui.home.FavoritesState
 import com.azkar.ui.home.HadithState
 import com.azkar.ui.home.NotificationSettingsState
 import com.azkar.ui.home.PrayerTimesState
 import com.azkar.ui.library.CollectionReminderState
 import com.azkar.ui.notifications.NotificationPreferencesRepository
+import com.azkar.ui.notifications.PrayerLocationSettings
 import com.azkar.ui.preview.previewCountdown
 import com.azkar.ui.preview.previewHadithState
 import com.azkar.ui.preview.previewPrayerRows
-import com.azkar.ui.preview.previewRailCards
+import com.azkar.ui.preview.previewRailCardsLocalized
 import com.azkar.ui.preview.previewRemembrance
 import com.azkar.ui.preview.previewReminders
 import com.azkar.ui.preview.rememberPreviewSettingsStore
@@ -47,6 +49,7 @@ import com.azkar.ui.theme.AzkarHomeScreenPreview
 import com.azkar.ui.theme.AzkarMediumPreview
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.AzkarWindowSize
 import com.azkar.ui.theme.LocalUiLocale
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -54,6 +57,7 @@ import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.chrono.HijrahChronology
 import java.time.chrono.HijrahDate
 import java.time.format.DateTimeFormatter
@@ -311,30 +315,31 @@ internal fun HomeContent(
 }
 
 @AzkarHomeScreenPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeContentPreview() {
     HomeContentPreviewContent()
 }
 
-@AzkarHomeScreenPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeContentEmptyDashboardPreview() {
     HomeContentPreviewContent(emptyDashboard = true)
 }
 
-@AzkarHomeScreenPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeContentCollectionsWithoutFavoritesPreview() {
     HomeContentPreviewContent(includeFavorites = false)
 }
 
-@AzkarHomeScreenPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeContentFavoritesWithoutCollectionsPreview() {
     HomeContentPreviewContent(collections = false)
 }
 
-@AzkarHomeScreenPreview
+@AzkarVariantsPreview
 @Composable
 internal fun HomeContentHadithFallbackPreview() {
     HomeContentPreviewContent(hadithFallback = true)
@@ -372,6 +377,12 @@ private fun HomeContentPreviewContent(
     hadithFallback: Boolean = false,
 ) {
     val uiLocale = LocalUiLocale.current
+    val localizedPreviewRailCards =
+        if (emptyDashboard || !collections) {
+            emptyList()
+        } else {
+            previewRailCardsLocalized()
+        }
     val favoriteState =
         remember(uiLocale, emptyDashboard, includeFavorites) {
             FavoritesState(uiLocale).apply {
@@ -390,24 +401,49 @@ private fun HomeContentPreviewContent(
                 prayerTimes =
                     PrayerTimesState(
                         uiLocale,
-                        initialSnapshot = PrayerTimesSnapshot(previewPrayerRows(), previewCountdown()),
+                        location =
+                            PrayerLocationSettings(
+                                city = stringResource(Res.string.previewPrayerLocation),
+                            ),
+                        initialSnapshot = localizedPreviewPrayerSnapshot(uiLocale),
                     ),
                 favorites = favoriteState,
                 notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
                 rail =
-                    remember(emptyDashboard, collections) {
+                    remember(uiLocale, emptyDashboard, collections) {
                         HomeRailState().apply {
-                            replace(if (emptyDashboard || !collections) emptyList() else previewRailCards())
+                            replace(localizedPreviewRailCards)
                         }
                     },
                 reminders = previewReminders(),
                 navigation = HomeNavigation(onOpenLibrary = {}, onOpenRemembrance = {}, onOpenCollection = {}),
             ),
-        dateText = "Friday, 20 February",
+        dateText = formatGreetingDate(LocalDate.of(2026, 2, 20), uiLocale),
         hadith = if (hadithFallback) placeholderHadith() else previewHadithState(),
         name = "Azkar",
     )
 }
+
+@Composable
+private fun localizedPreviewPrayerSnapshot(uiLocale: Locale): PrayerTimesSnapshot =
+    PrayerTimesSnapshot(
+        rows =
+            previewPrayerRows().map { row ->
+                row.copy(
+                    name = stringResource(row.key.nameResource),
+                    value = AzkarClock.timeFormatter(uiLocale).format(LocalTime.parse(row.timeLabel)),
+                )
+            },
+        countdown =
+            previewCountdown().copy(
+                text =
+                    stringResource(
+                        Res.string.trayNextPrayerCountdown,
+                        stringResource(Res.string.dhuhr),
+                        "01:12",
+                    ),
+            ),
+    )
 
 /**
  * The `.dashboard-content` grid: today's azkar and the prayer table, with the favourite in the rail.

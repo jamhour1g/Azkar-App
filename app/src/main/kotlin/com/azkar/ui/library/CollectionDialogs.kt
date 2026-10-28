@@ -106,9 +106,9 @@ import com.azkar.ui.library.model.missingLanguages
 import com.azkar.ui.library.model.survivingRename
 import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarColors
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarThemePreview
+import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
@@ -1548,7 +1548,7 @@ private fun CollectionEditorDetailsPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionEditorNameRequiredPreview() {
     val draft = remember { CollectionEditorDraft.create().apply { submit() } }
@@ -1557,7 +1557,7 @@ internal fun CollectionEditorNameRequiredPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionEditorLongTextPreview() {
     val draft =
@@ -1576,7 +1576,7 @@ internal fun CollectionEditorLongTextPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarVariantsPreview
 @Composable
 internal fun CollectionEditorSelectedCoverPreview() {
     val draft = remember { CollectionEditorDraft.create().apply { updateCoverImage("missing-preview-cover.jpg") } }

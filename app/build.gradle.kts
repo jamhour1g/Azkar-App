@@ -161,7 +161,7 @@ dependencies {
 }
 
 val previewScannerEnabled =
-    providers.gradleProperty("azkar.previewScanner").map(String::toBoolean).getOrElse(true)
+    providers.gradleProperty("azkar.previewScanner").map(String::toBoolean).getOrElse(false)
 
 if (previewScannerEnabled) {
     dependencies {

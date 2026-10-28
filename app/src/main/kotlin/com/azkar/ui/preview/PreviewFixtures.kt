@@ -29,6 +29,12 @@ import com.azkar.domain.model.RemembranceCollection
 import com.azkar.domain.model.Tag
 import com.azkar.domain.model.impl.RemembranceCollectionImpl
 import com.azkar.domain.model.impl.RemembranceImpl
+import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.previewAfterPrayerCollection
+import com.azkar.generated.resources.previewEmptyCollection
+import com.azkar.generated.resources.previewEveningCollection
+import com.azkar.generated.resources.previewMorningCollection
+import com.azkar.generated.resources.previewTravelCollection
 import com.azkar.i18n.ARABIC
 import com.azkar.i18n.ENGLISH
 import com.azkar.settings.SettingsStore
@@ -60,6 +66,7 @@ import com.azkar.ui.notifications.ReminderQueueProgress
 import com.azkar.ui.shell.AzkarAppState
 import com.azkar.ui.shell.ThemePreference
 import com.azkar.ui.theme.AppTypography
+import org.jetbrains.compose.resources.stringResource
 import java.nio.file.Files
 import java.time.Duration
 import java.time.Instant
@@ -89,11 +96,14 @@ const val PREVIEW_COLLECTION_ID: Long = 11L
  * The five entries are in the order `pick` prefers them, so a caller that does not narrow gets the
  * four it should see.
  */
-fun previewRailCards(): List<HomeCollection> =
+fun previewRailCards(
+    names: List<String> =
+        listOf("Morning Azkar", "Evening Azkar", "After Prayer", "For the car", "Nothing in here yet"),
+): List<HomeCollection> =
     listOf(
         HomeCollection(
             id = 1L,
-            name = "Morning Azkar",
+            name = names[0],
             description = null,
             iconKey = "sunrise",
             memberCount = 52,
@@ -103,7 +113,7 @@ fun previewRailCards(): List<HomeCollection> =
         ),
         HomeCollection(
             id = 2L,
-            name = "Evening Azkar",
+            name = names[1],
             description = null,
             iconKey = "sunset",
             memberCount = 54,
@@ -113,7 +123,7 @@ fun previewRailCards(): List<HomeCollection> =
         ),
         HomeCollection(
             id = 3L,
-            name = "After Prayer",
+            name = names[2],
             description = null,
             iconKey = "mosque",
             memberCount = 61,
@@ -123,7 +133,7 @@ fun previewRailCards(): List<HomeCollection> =
         ),
         HomeCollection(
             id = 4L,
-            name = "For the car",
+            name = names[3],
             description = null,
             iconKey = "compass",
             memberCount = 12,
@@ -133,7 +143,7 @@ fun previewRailCards(): List<HomeCollection> =
         ),
         HomeCollection(
             id = 5L,
-            name = "Nothing in here yet",
+            name = names[4],
             description = null,
             iconKey = "khatim",
             memberCount = 0,
@@ -141,6 +151,20 @@ fun previewRailCards(): List<HomeCollection> =
             pinnedAt = Instant.parse("2026-02-22T09:00:00Z"),
             lastRecitedAt = null,
         ),
+    )
+
+/** The same rail fixture with names resolved from the active Compose resource locale. */
+@Composable
+fun previewRailCardsLocalized(): List<HomeCollection> =
+    previewRailCards(
+        names =
+            listOf(
+                stringResource(Res.string.previewMorningCollection),
+                stringResource(Res.string.previewEveningCollection),
+                stringResource(Res.string.previewAfterPrayerCollection),
+                stringResource(Res.string.previewTravelCollection),
+                stringResource(Res.string.previewEmptyCollection),
+            ),
     )
 
 /** The ids in [previewRailCards] that should render with the due badge. */
@@ -190,11 +214,46 @@ fun previewReminders(collectionId: Long = PREVIEW_COLLECTION_ID): CollectionRemi
 /** The five prayer rows, with Dhuhr marked as the next one so the countdown has something to name. */
 fun previewPrayerRows(): List<PrayerRowState> =
     listOf(
-        PrayerRowState(PrayerKey.FAJR, "Fajr", "05:12", "05:12", isNext = false, notificationsEnabled = true),
-        PrayerRowState(PrayerKey.DHUHR, "Dhuhr", "13:04", "01:12 PM", isNext = true, notificationsEnabled = true),
-        PrayerRowState(PrayerKey.ASR, "Asr", "16:31", "04:31 PM", isNext = false, notificationsEnabled = false),
-        PrayerRowState(PrayerKey.MAGHRIB, "Maghrib", "19:44", "07:44 PM", isNext = false, notificationsEnabled = true),
-        PrayerRowState(PrayerKey.ISHA, "Isha", "21:03", "09:03 PM", isNext = false, notificationsEnabled = true),
+        PrayerRowState(
+            PrayerKey.FAJR,
+            "Fajr",
+            "05:12",
+            "05:12",
+            isNext = false,
+            notificationsEnabled = true,
+        ),
+        PrayerRowState(
+            PrayerKey.DHUHR,
+            "Dhuhr",
+            "13:04",
+            "01:12 PM",
+            isNext = true,
+            notificationsEnabled = true,
+        ),
+        PrayerRowState(
+            PrayerKey.ASR,
+            "Asr",
+            "16:31",
+            "04:31 PM",
+            isNext = false,
+            notificationsEnabled = false,
+        ),
+        PrayerRowState(
+            PrayerKey.MAGHRIB,
+            "Maghrib",
+            "19:44",
+            "07:44 PM",
+            isNext = false,
+            notificationsEnabled = true,
+        ),
+        PrayerRowState(
+            PrayerKey.ISHA,
+            "Isha",
+            "21:03",
+            "09:03 PM",
+            isNext = false,
+            notificationsEnabled = true,
+        ),
     )
 
 /** A countdown for [previewPrayerRows], naming the same next prayer the table marks. */

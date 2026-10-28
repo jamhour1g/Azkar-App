@@ -18,12 +18,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.azkar.ui.theme.AzkarPreview
+import com.azkar.generated.resources.*
+import com.azkar.ui.theme.AzkarControlVariantsPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.CardSize
 import com.azkar.ui.theme.isRtlLayout
+import org.jetbrains.compose.resources.stringResource
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarCardPreview() {
     Column(
@@ -35,7 +37,7 @@ internal fun AzkarCardPreview() {
                 Column {
                     Text(text = size.name, fontWeight = FontWeight.SemiBold)
                     Text(
-                        text = "Padding and elevation both follow the size.",
+                        text = stringResource(Res.string.componentsPreviewCardHint),
                         color = AzkarTheme.colors.textSecondary,
                         fontSize = 13.sp,
                     )
@@ -45,7 +47,7 @@ internal fun AzkarCardPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarSurfaceCardPreview() {
     Column(
@@ -61,9 +63,12 @@ internal fun AzkarSurfaceCardPreview() {
                 ),
         ) {
             Column {
-                Text(text = "Painted card", color = AzkarTheme.colors.onPrimary)
                 Text(
-                    text = "A wash instead of a flat fill.",
+                    text = stringResource(Res.string.componentsPreviewPaintedCard),
+                    color = AzkarTheme.colors.onPrimary,
+                )
+                Text(
+                    text = stringResource(Res.string.componentsPreviewSurfaceHint),
                     color = AzkarTheme.colors.onPrimary.copy(alpha = 0.8f),
                     fontSize = 13.sp,
                 )
@@ -72,7 +77,7 @@ internal fun AzkarSurfaceCardPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun PrimaryButtonPreview() {
     Column(
@@ -80,14 +85,26 @@ internal fun PrimaryButtonPreview() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PrimaryButton(text = "Start session", onClick = {}, leadingIcon = ActionIcons.read)
-            PrimaryButton(text = "With icon", onClick = {}, leadingIcon = ActionIcons.duplicate)
+            PrimaryButton(
+                text = stringResource(Res.string.homeCollectionActionStart),
+                onClick = {},
+                leadingIcon = ActionIcons.read,
+            )
+            PrimaryButton(
+                text = stringResource(Res.string.componentsPreviewWithIcon),
+                onClick = {},
+                leadingIcon = ActionIcons.duplicate,
+            )
         }
-        PrimaryButton(text = "Disabled", onClick = {}, enabled = false)
+        PrimaryButton(
+            text = stringResource(Res.string.componentsPreviewDisabledField),
+            onClick = {},
+            enabled = false,
+        )
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun SecondaryButtonPreview() {
     Column(
@@ -95,27 +112,50 @@ internal fun SecondaryButtonPreview() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SecondaryButton(text = "Cancel", onClick = {})
-            SecondaryButton(text = "Disabled", onClick = {}, enabled = false)
+            SecondaryButton(text = stringResource(Res.string.collectionsActionCancel), onClick = {})
+            SecondaryButton(
+                text = stringResource(Res.string.componentsPreviewDisabledField),
+                onClick = {},
+                enabled = false,
+            )
         }
-        SecondaryButton(text = "Choose image…", onClick = {}, leadingIcon = Icons.Outlined.Image)
+        SecondaryButton(
+            text = stringResource(Res.string.collectionsActionChooseCover),
+            onClick = {},
+            leadingIcon = Icons.Outlined.Image,
+        )
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun NavButtonPreview() {
     Row(
         modifier = Modifier.width(420.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        NavButton(text = "Home", selected = true, onClick = {}, leadingIcon = AzkarIcons.Home)
-        NavButton(text = "Library", selected = false, onClick = {}, leadingIcon = AzkarIcons.Library)
-        NavButton(text = "Settings", selected = false, onClick = {}, leadingIcon = AzkarIcons.Settings)
+        NavButton(
+            text = stringResource(Res.string.home),
+            selected = true,
+            onClick = {},
+            leadingIcon = AzkarIcons.Home,
+        )
+        NavButton(
+            text = stringResource(Res.string.azkarLibrary),
+            selected = false,
+            onClick = {},
+            leadingIcon = AzkarIcons.Library,
+        )
+        NavButton(
+            text = stringResource(Res.string.settingsNavGroup),
+            selected = false,
+            onClick = {},
+            leadingIcon = AzkarIcons.Settings,
+        )
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun IconActionButtonPreview() {
     Row(
@@ -124,48 +164,52 @@ internal fun IconActionButtonPreview() {
     ) {
         IconActionButton(
             icon = ActionIcons.pin(on = false),
-            contentDescription = "Pin to top",
+            contentDescription = stringResource(Res.string.collectionsActionPin),
             onClick = {},
         )
         IconActionButton(
             icon = ActionIcons.favorite(on = true),
-            contentDescription = "Favourite",
+            contentDescription = stringResource(Res.string.collectionsActionFavorite),
             onClick = {},
             selected = true,
         )
         IconActionButton(
             icon = ActionIcons.delete,
-            contentDescription = "Delete",
+            contentDescription = stringResource(Res.string.collectionsActionDelete),
             onClick = {},
             tint = AzkarTheme.colors.dialogValidation,
         )
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun CircleIconButtonPreview() {
     Row(
         modifier = Modifier.width(340.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        CircleIconButton(icon = ActionIcons.copy, contentDescription = "Duplicate", onClick = {})
+        CircleIconButton(
+            icon = ActionIcons.copy,
+            contentDescription = stringResource(Res.string.collectionsActionDuplicate),
+            onClick = {},
+        )
         CircleIconButton(
             icon = ActionIcons.favorite(on = true),
-            contentDescription = "Favourite",
+            contentDescription = stringResource(Res.string.collectionsActionFavorite),
             onClick = {},
             favorite = true,
         )
         CircleIconButton(
             icon = ActionIcons.delete,
-            contentDescription = "Delete",
+            contentDescription = stringResource(Res.string.collectionsActionDelete),
             onClick = {},
             enabled = false,
         )
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun TooltipIconButtonPreview() {
     Row(
@@ -174,24 +218,24 @@ internal fun TooltipIconButtonPreview() {
     ) {
         TooltipIconButton(
             icon = ActionIcons.addMembers,
-            tooltip = "Add remembrances",
+            tooltip = stringResource(Res.string.collectionsActionAddMembers),
             onClick = {},
         )
         TooltipIconButton(
             icon = ActionIcons.cover,
-            tooltip = "Change cover",
+            tooltip = stringResource(Res.string.componentsPreviewChangeCover),
             onClick = {},
         )
         TooltipIconActionButton(
             icon = AzkarIcons.Settings,
-            tooltip = "Settings",
+            tooltip = stringResource(Res.string.settingsNavGroup),
             onClick = {},
             tint = AzkarTheme.colors.textSecondary,
         )
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarToggleSwitchPreview() {
     Row(
@@ -205,34 +249,49 @@ internal fun AzkarToggleSwitchPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun PillTogglePreview() {
     Row(
         modifier = Modifier.width(420.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        PillToggle(text = "Grid", selected = true, onClick = {}, leadingIcon = AzkarIcons.Library)
-        PillToggle(text = "List", selected = false, onClick = {})
+        PillToggle(
+            text = stringResource(Res.string.collectionMembersViewGrid),
+            selected = true,
+            onClick = {},
+            leadingIcon = AzkarIcons.Library,
+        )
+        PillToggle(text = stringResource(Res.string.collectionMembersViewList), selected = false, onClick = {})
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarFilterChipPreview() {
     Row(
         modifier = Modifier.width(420.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        AzkarFilterChip(text = "All", selected = true, onClick = {})
-        AzkarFilterChip(text = "Official", selected = false, onClick = {})
-        AzkarFilterChip(text = "Yours", selected = false, onClick = {})
-        AzkarFilterChip(text = "Selected, disabled", selected = true, onClick = {}, enabled = false)
-        AzkarFilterChip(text = "Disabled", selected = false, onClick = {}, enabled = false)
+        AzkarFilterChip(text = stringResource(Res.string.collectionsScopeAll), selected = true, onClick = {})
+        AzkarFilterChip(text = stringResource(Res.string.collectionsScopeOfficial), selected = false, onClick = {})
+        AzkarFilterChip(text = stringResource(Res.string.collectionsScopeCustom), selected = false, onClick = {})
+        AzkarFilterChip(
+            text = stringResource(Res.string.componentsPreviewSelectedDisabled),
+            selected = true,
+            onClick = {},
+            enabled = false,
+        )
+        AzkarFilterChip(
+            text = stringResource(Res.string.componentsPreviewDisabledField),
+            selected = false,
+            onClick = {},
+            enabled = false,
+        )
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarOverflowMenuPreview() {
     Row(
@@ -241,24 +300,36 @@ internal fun AzkarOverflowMenuPreview() {
     ) {
         AzkarOverflowMenu(
             icon = Icons.Outlined.MoreVert,
-            contentDescription = "More actions",
+            contentDescription = stringResource(Res.string.libraryActionMore),
             items =
                 listOf(
-                    AzkarMenuItem(label = "Edit", onClick = {}, icon = ActionIcons.edit),
-                    AzkarMenuItem(label = "Duplicate", onClick = {}, icon = ActionIcons.duplicate),
-                    AzkarMenuItem(label = "Delete", onClick = {}, icon = ActionIcons.delete),
+                    AzkarMenuItem(
+                        label = stringResource(Res.string.collectionsActionEdit),
+                        onClick = {},
+                        icon = ActionIcons.edit,
+                    ),
+                    AzkarMenuItem(
+                        label = stringResource(Res.string.collectionsActionDuplicate),
+                        onClick = {},
+                        icon = ActionIcons.duplicate,
+                    ),
+                    AzkarMenuItem(
+                        label = stringResource(Res.string.collectionsActionDelete),
+                        onClick = {},
+                        icon = ActionIcons.delete,
+                    ),
                 ),
         )
         AzkarOverflowMenu(
             icon = Icons.Outlined.MoreVert,
-            contentDescription = "More actions",
+            contentDescription = stringResource(Res.string.libraryActionMore),
             items = emptyList(),
             enabled = false,
         )
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarOutlinedFieldPreview() {
     Column(
@@ -268,65 +339,71 @@ internal fun AzkarOutlinedFieldPreview() {
         AzkarOutlinedField(
             value = "",
             onValueChange = {},
-            placeholder = "Search remembrances",
+            placeholder = stringResource(Res.string.collectionsSearchRemembrances),
             leadingIcon = Icons.Outlined.Search,
         )
         AzkarOutlinedField(
-            value = "Ar-Rahman",
+            value = stringResource(Res.string.componentsPreviewSampleName),
             onValueChange = {},
-            placeholder = "Name",
+            placeholder = stringResource(Res.string.componentsPreviewNameValue),
             active = true,
-            supportingText = "Use the name readers will recognize.",
+            supportingText = stringResource(Res.string.componentsPreviewNameHint),
         )
         AzkarOutlinedField(
-            value = "Every morning after Fajr",
+            value = stringResource(Res.string.componentsPreviewMorningDescription),
             onValueChange = {},
-            placeholder = "Description",
+            placeholder = stringResource(Res.string.collectionsDialogDescriptionLabel),
             singleLine = false,
             trailingContent = {
                 IconActionButton(
                     icon = Icons.Outlined.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(Res.string.collectionsSearchRemembrances),
                     onClick = {},
                 )
             },
         )
         AzkarOutlinedField(
-            value = "Read only",
+            value = stringResource(Res.string.componentsPreviewReadOnly),
             onValueChange = {},
-            placeholder = "Disabled field",
+            placeholder = stringResource(Res.string.componentsPreviewDisabledField),
             enabled = false,
         )
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarTabStripPreview() {
     Column(
         modifier = Modifier.width(420.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        AzkarTabStrip(tabs = listOf("All", "Official", "Yours"), selectedIndex = 0, onSelect = {})
-        AzkarTabStrip(tabs = listOf("All", "Official", "Yours"), selectedIndex = 2, onSelect = {})
+        val tabs =
+            listOf(
+                stringResource(Res.string.collectionsScopeAll),
+                stringResource(Res.string.collectionsScopeOfficial),
+                stringResource(Res.string.collectionsScopeCustom),
+            )
+        AzkarTabStrip(tabs = tabs, selectedIndex = 0, onSelect = {})
+        AzkarTabStrip(tabs = tabs, selectedIndex = 2, onSelect = {})
         AzkarTabStrip(tabs = emptyList(), selectedIndex = -1, onSelect = {})
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun BorderedStateBoxPreview() {
     BorderedStateBox(modifier = Modifier.width(340.dp)) {
-        Text(text = "Nothing here yet", fontWeight = FontWeight.SemiBold)
+        Text(text = stringResource(Res.string.componentsPreviewEmptyStateTitle), fontWeight = FontWeight.SemiBold)
         Text(
-            text = "The empty and loading panes draw their chrome from here.",
+            text = stringResource(Res.string.componentsPreviewEmptyStateHint),
             color = AzkarTheme.colors.textSecondary,
             fontSize = 13.sp,
         )
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun IconTintPreview() {
     Row(
@@ -345,13 +422,13 @@ internal fun IconTintPreview() {
     }
 }
 
-@AzkarPreview
+@AzkarControlVariantsPreview
 @Composable
 internal fun AzkarDialogSurfacePreview() {
     AzkarDialogSurface(modifier = Modifier.width(340.dp)) {
-        Text(text = "Remove reminder?", fontWeight = FontWeight.SemiBold)
+        Text(text = stringResource(Res.string.componentsPreviewRemoveReminder), fontWeight = FontWeight.SemiBold)
         Text(
-            text = "Every dialog in the app draws on this pane, so they share a padding.",
+            text = stringResource(Res.string.componentsPreviewDialogHint),
             color = AzkarTheme.colors.textSecondary,
             fontSize = 13.sp,
         )
