@@ -16,14 +16,18 @@ import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.IOException
@@ -37,6 +41,22 @@ enum class UpdateChannel(
     STABLE("latest"),
     DEV("beta"),
 }
+
+internal data class ChannelReleaseVersion(
+    val version: String,
+    val isPrerelease: Boolean,
+    val isDraft: Boolean = false,
+)
+
+internal fun latestChannelVersion(
+    releases: List<ChannelReleaseVersion>,
+    channel: UpdateChannel,
+): String? =
+    releases
+        .asSequence()
+        .filter { !it.isDraft && it.isPrerelease == (channel == UpdateChannel.DEV) }
+        .maxWithOrNull { left, right -> compareVersions(left.version, right.version) }
+        ?.version
 
 sealed interface UpdateStatus {
     data object Idle : UpdateStatus
@@ -78,12 +98,15 @@ class UpdateManager(
 ) {
     private val preferenceKey = stringPreferencesKey("updates.channel")
     private val initialized = CompletableDeferred<Unit>()
-    private val runningVersion = NucleusApp.version ?: "0.0.0-dev"
+    private val runningVersion = applicationVersion()
+    private val checkMutex = Mutex()
     private val _channel = MutableStateFlow(defaultChannel(runningVersion))
+    private val _latestChannelVersion = MutableStateFlow<String?>(null)
     private val _status = MutableStateFlow<UpdateStatus>(UpdateStatus.Idle)
     private var activeUpdater: NucleusUpdater? = null
 
     val channel: StateFlow<UpdateChannel> = _channel.asStateFlow()
+    val latestChannelVersion: StateFlow<String?> = _latestChannelVersion.asStateFlow()
     val status: StateFlow<UpdateStatus> = _status.asStateFlow()
     val currentVersion: String get() = runningVersion
     val isRepositoryManaged: Boolean
@@ -105,15 +128,20 @@ class UpdateManager(
     suspend fun checkAutomatically() {
         initialized.await()
         logger.debug { "Checking for updates automatically" }
-        checkForUpdates(_channel.value, explicitChannelSwitch = false)
+        val target = _channel.value
+        scope.launch { refreshLatestChannelVersion(target) }
+        checkForUpdates(target, explicitChannelSwitch = false)
     }
 
     suspend fun selectChannel(target: UpdateChannel) {
         initialized.await()
         if (target == _channel.value) return
+        _status.value = UpdateStatus.Checking
         _channel.value = target
+        _latestChannelVersion.value = null
         settings.edit { this[preferenceKey] = target.name }
         logger.info { "Update track changed to ${target.name.lowercase()}" }
+        scope.launch { refreshLatestChannelVersion(target) }
         checkForUpdates(target, explicitChannelSwitch = true)
     }
 
@@ -222,52 +250,93 @@ class UpdateManager(
         target: UpdateChannel,
         explicitChannelSwitch: Boolean,
     ) {
-        scope
-            .async {
-                _status.value = UpdateStatus.Checking
-                logger.debug { "Checking update track ${target.name.lowercase()}" }
-                val updater =
-                    NucleusUpdater {
-                        currentVersion = runningVersion
-                        provider = NucleusGitHubProvider(owner = "jamhour1g", repo = "Azkar-App")
-                        channel = target.providerChannel
-                        allowPrerelease = target == UpdateChannel.DEV
-                        allowDowngrade = explicitChannelSwitch
-                    }
-                activeUpdater = updater
-                val result =
-                    try {
-                        updater.checkForUpdates()
-                    } catch (failure: IOException) {
-                        logger.error(failure) { "Update check failed" }
-                        _status.value = UpdateStatus.Failed(failure.message ?: "Update check failed")
-                        return@async
-                    } catch (failure: IllegalStateException) {
-                        logger.error(failure) { "Update check failed" }
-                        _status.value = UpdateStatus.Failed(failure.message ?: "Update check failed")
-                        return@async
-                    }
-                when (result) {
-                    is UpdateResult.Available -> {
-                        val notes = releaseNotes(result.info.version)
-                        logger.info { "Update ${result.info.version} is available" }
-                        _status.value =
-                            UpdateStatus.Available(
-                                info = result.info,
-                                releaseNotes = notes,
-                                isDowngrade = compareVersions(result.info.version, runningVersion) < 0,
-                            )
-                    }
-                    UpdateResult.NotAvailable -> {
-                        logger.info { "No update is available" }
-                        _status.value = UpdateStatus.Current
-                    }
-                    is UpdateResult.Error -> {
-                        logger.warn(result.exception) { "Update check returned an error" }
-                        _status.value = UpdateStatus.Failed(result.exception.message ?: "Update check failed")
-                    }
+        checkMutex.withLock {
+            _status.value = UpdateStatus.Checking
+            logger.debug { "Checking update track ${target.name.lowercase()} from $runningVersion" }
+            val updater =
+                NucleusUpdater {
+                    currentVersion = runningVersion
+                    provider = NucleusGitHubProvider(owner = "jamhour1g", repo = "Azkar-App")
+                    channel = target.providerChannel
+                    allowPrerelease = target == UpdateChannel.DEV
+                    allowDowngrade = explicitChannelSwitch
                 }
-            }.await()
+            activeUpdater = updater
+            val result =
+                try {
+                    updater.checkForUpdates()
+                } catch (failure: IOException) {
+                    logger.error(failure) { "Update check failed" }
+                    _status.value = UpdateStatus.Failed(failure.message ?: "Update check failed")
+                    return@withLock
+                } catch (failure: IllegalStateException) {
+                    logger.error(failure) { "Update check failed" }
+                    _status.value = UpdateStatus.Failed(failure.message ?: "Update check failed")
+                    return@withLock
+                }
+            when (result) {
+                is UpdateResult.Available -> {
+                    if (_channel.value == target) _latestChannelVersion.value = result.info.version
+                    val notes = releaseNotes(result.info.version)
+                    logger.info { "Update ${result.info.version} is available" }
+                    _status.value =
+                        UpdateStatus.Available(
+                            info = result.info,
+                            releaseNotes = notes,
+                            isDowngrade = compareVersions(result.info.version, runningVersion) < 0,
+                        )
+                }
+                UpdateResult.NotAvailable -> {
+                    logger.info { "No update is available" }
+                    _status.value = UpdateStatus.Current
+                }
+                is UpdateResult.Error -> {
+                    logger.warn(result.exception) { "Update check returned an error" }
+                    _status.value = UpdateStatus.Failed(result.exception.message ?: "Update check failed")
+                }
+            }
+        }
+    }
+
+    private suspend fun refreshLatestChannelVersion(target: UpdateChannel) {
+        try {
+            val response = httpClient.get("https://api.github.com/repos/jamhour1g/Azkar-App/releases?per_page=100")
+            if (response.status.value !in 200..299) {
+                logger.warn {
+                    "Unable to retrieve ${target.name.lowercase()} channel version: HTTP ${response.status.value}"
+                }
+                return
+            }
+            val releases =
+                Json
+                    .parseToJsonElement(response.bodyAsText())
+                    .jsonArray
+                    .mapNotNull { element ->
+                        val release = element.jsonObject
+                        val version =
+                            release["tag_name"]?.jsonPrimitive?.content?.removePrefix("v") ?: return@mapNotNull null
+                        ChannelReleaseVersion(
+                            version = version,
+                            isPrerelease = release["prerelease"]?.jsonPrimitive?.booleanOrNull ?: false,
+                            isDraft = release["draft"]?.jsonPrimitive?.booleanOrNull ?: false,
+                        )
+                    }
+            if (_channel.value == target) _latestChannelVersion.value = latestChannelVersion(releases, target)
+        } catch (failure: CancellationException) {
+            throw failure
+        } catch (failure: IOException) {
+            logger.warn(failure) { "Unable to retrieve ${target.name.lowercase()} channel version" }
+        } catch (failure: SerializationException) {
+            logger.warn(failure) { "GitHub returned malformed JSON for ${target.name.lowercase()} channel versions" }
+        } catch (failure: IllegalArgumentException) {
+            logger.warn(
+                failure,
+            ) { "GitHub returned an unexpected JSON structure for ${target.name.lowercase()} channel versions" }
+        } catch (failure: IllegalStateException) {
+            logger.warn(
+                failure,
+            ) { "GitHub returned an invalid field value for ${target.name.lowercase()} channel versions" }
+        }
     }
 
     private suspend fun releaseNotes(version: String): String =
@@ -288,6 +357,27 @@ class UpdateManager(
     private fun defaultChannel(version: String): UpdateChannel =
         if (version.contains("-")) UpdateChannel.DEV else UpdateChannel.STABLE
 }
+
+private fun applicationVersion(): String {
+    val buildVersion =
+        UpdateManager::class.java.classLoader
+            .getResourceAsStream("nucleus/nucleus-app.properties")
+            ?.use { propertiesStream ->
+                java.util
+                    .Properties()
+                    .apply { load(propertiesStream) }
+                    .getProperty("app.version")
+            }
+    return resolveApplicationVersion(buildVersion, NucleusApp.version)
+}
+
+internal fun resolveApplicationVersion(
+    buildVersion: String?,
+    runtimeVersion: String?,
+): String =
+    runtimeVersion?.takeIf(String::isNotBlank)
+        ?: buildVersion?.takeIf(String::isNotBlank)
+        ?: "0.0.0-dev"
 
 private const val INSTALL_ANIMATION_DELAY_MILLIS = 350L
 private const val CHECK_FEEDBACK_DELAY_MILLIS = 250L

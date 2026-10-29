@@ -104,6 +104,8 @@ fun SettingsScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     initialGroup: SettingsGroup = SettingsGroup.GENERAL,
+    initialSection: SettingsSection? = null,
+    sectionRequest: Int = 0,
 ) {
     val notificationState = rememberNotificationSettingsState()
     val notificationValues = rememberNotificationSettingsValues()
@@ -120,6 +122,8 @@ fun SettingsScreen(
                 state = state,
                 onClose = onClose,
                 initialGroup = initialGroup,
+                initialSection = initialSection,
+                sectionRequest = sectionRequest,
                 notificationState = notificationState,
                 notificationValues = notificationValues,
                 updateManager = koinInject(),
@@ -136,15 +140,21 @@ private fun SettingsScreenContent(
     val state = inputs.state
     val onClose = inputs.onClose
     val initialGroup = inputs.initialGroup
+    val requestedSection = inputs.initialSection
+    val initialSection = requestedSection ?: initialGroup.sections.first()
+    val sectionRequest = inputs.sectionRequest
     val notificationState = inputs.notificationState
     val notificationValues = inputs.notificationValues
     val updateManager = inputs.updateManager
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    var selectedSection by remember { mutableStateOf(initialGroup.sections.first()) }
+    var selectedSection by remember(initialSection, sectionRequest) { mutableStateOf(initialSection) }
     val selectedGroup = selectedSection.group
     val activeSection = activeSettingsSection(listState, selectedSection)
     val colors = AzkarTheme.colors
+    LaunchedEffect(requestedSection, sectionRequest) {
+        requestedSection?.let { listState.scrollToItem(sectionScrollIndexInSection(it)) }
+    }
 
     Row(
         modifier = modifier.fillMaxSize().background(colors.background),
@@ -193,6 +203,8 @@ private data class SettingsScreenInputs(
     val state: AzkarAppState,
     val onClose: () -> Unit,
     val initialGroup: SettingsGroup,
+    val initialSection: SettingsSection?,
+    val sectionRequest: Int,
     val notificationState: NotificationSettingsState,
     val notificationValues: NotificationSettingsValues,
     val updateManager: UpdateManager,
@@ -463,6 +475,8 @@ private fun SettingsScreenPreviewContent(group: SettingsGroup) {
                 state = previewAzkarAppState(locale = locale),
                 onClose = {},
                 initialGroup = group,
+                initialSection = null,
+                sectionRequest = 0,
                 notificationState = notificationState,
                 notificationValues = NotificationSettingsValues(queue, prayerLocation, presentation),
                 updateManager = updateManager,

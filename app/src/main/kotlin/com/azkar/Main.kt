@@ -26,6 +26,12 @@ import com.azkar.data.config.DatabaseManager
 import com.azkar.data.config.dataModule
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.title
+import com.azkar.generated.resources.updateAvailableMessage
+import com.azkar.generated.resources.updateAvailableTitle
+import com.azkar.generated.resources.updateDownloadingMessage
+import com.azkar.generated.resources.updateDownloadingTitle
+import com.azkar.generated.resources.updateReadyMessage
+import com.azkar.generated.resources.updateReadyTitle
 import com.azkar.i18n.LocaleStore
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.notifications.NotificationAction
@@ -40,25 +46,31 @@ import com.azkar.ui.notifications.presentation.OverlayNotificationPresenter
 import com.azkar.ui.notifications.presentation.OverlayTheme
 import com.azkar.ui.shell.AzkarApp
 import com.azkar.ui.shell.AzkarAppState
+import com.azkar.ui.shell.NotificationPriority
 import com.azkar.ui.shell.ReminderTray
 import com.azkar.ui.shell.ThemePreferenceStore
 import com.azkar.ui.shell.TypographyStore
 import com.azkar.ui.shell.rememberAzkarAppState
 import com.azkar.ui.shell.rememberAzkarDarkTheme
 import com.azkar.ui.shell.rememberPrayerTrayCountdown
+import com.azkar.ui.shell.rememberToastController
 import com.azkar.ui.shell.trayAvailable
 import com.azkar.ui.theme.AppTypography
 import com.azkar.ui.theme.DEFAULT_WINDOW_HEIGHT
 import com.azkar.ui.theme.DEFAULT_WINDOW_WIDTH
 import com.azkar.ui.theme.windowSizeFor
 import com.azkar.updates.UpdateManager
+import com.azkar.updates.UpdateToastGate
+import com.azkar.updates.runUpdateCheckSchedule
 import dev.nucleusframework.autolaunch.AutoLaunch
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -85,6 +97,9 @@ private val logger = KotlinLogging.logger {}
  * and confuse what is being observed.
  */
 private const val OVERLAY_PROOF_OF_CONSENT_FLAG = "--overlay-poc"
+
+/** Shows one synthetic update notice so its overlay can be checked without depending on a release. */
+private const val UPDATE_NOTIFICATION_PREVIEW_FLAG = "--update-notification-preview"
 
 /**
  * Compose Multiplatform replacement for `com.azkar.Launcher` + `com.azkar.Home`.
@@ -201,7 +216,9 @@ private fun DesktopApplicationRoot(
     // there. The router runs this half before the navigation half, so a reminder that arrives before
     // the tree has ever composed still brings the window up.
     val showWindow: () -> Unit = { composeScope.launch { windowVisible = true } }
-    SideEffect { actionRouter.setBeforeNavigate { showWindow() } }
+    SideEffect {
+        actionRouter.setBeforeNavigate { showWindow() }
+    }
 
     // One state for the whole application: the main tree and the overlay window are two separate
     // windows, and two state holders would mean two theme preferences and two locales, so the
@@ -222,18 +239,11 @@ private fun DesktopApplicationRoot(
     val overlay = koin.get<OverlayNotificationPresenter>()
     val notificationScope = koin.get<CoroutineScope>(named("notificationScope"))
     val proofOfConcept = OVERLAY_PROOF_OF_CONSENT_FLAG in args
-    NotificationRuntimeLifecycle(runtime, notificationScope, proofOfConcept)
-    val quitAction: () -> Unit = {
-        shutdown(
-            koin = koin,
-            databaseWarmUp = startup.databaseWarmUp,
-            notificationScope = notificationScope,
-            dispatcher = dispatcher,
-            exitApplication = exitApplication,
-        )
-    }
-    UpdateLifecycle(koin.get<UpdateManager>())
-    LaunchedEffect(trayAvailable, proofOfConcept, startedAtLogin) {
+    val updateNotificationPreview = UPDATE_NOTIFICATION_PREVIEW_FLAG in args
+    NotificationRuntimeLifecycle(runtime, notificationScope, proofOfConcept || updateNotificationPreview)
+    val quitAction = rememberQuitAction(koin, startup, notificationScope, dispatcher, exitApplication)
+    UpdateFeature(koin, appState, actionRouter, updateNotificationPreview)
+    LaunchedEffect(trayAvailable, proofOfConcept, updateNotificationPreview, startedAtLogin) {
         // The harness starts hidden whatever the tray says: "a reminder with no window at all" is
         // the state being verified, and a tray icon would be the only other surface on screen.
         windowVisible = if (proofOfConcept) false else !(startedAtLogin && trayAvailable)
@@ -247,7 +257,6 @@ private fun DesktopApplicationRoot(
     if (proofOfConcept) {
         OverlayProofOfConcept(dispatcher)
     }
-
     if (trayAvailable) {
         // Remembered on the last published action, so clicking the icon opens whatever was last
         // announced — and so the tray icon is not re-rendered on every recomposition of anything.
@@ -282,6 +291,38 @@ private fun DesktopApplicationRoot(
 }
 
 @Composable
+private fun rememberQuitAction(
+    koin: org.koin.core.Koin,
+    startup: DesktopStartup,
+    notificationScope: CoroutineScope,
+    dispatcher: NotificationPublisher,
+    exitApplication: () -> Unit,
+): () -> Unit =
+    remember(koin, startup.databaseWarmUp, notificationScope, dispatcher, exitApplication) {
+        {
+            shutdown(
+                koin = koin,
+                databaseWarmUp = startup.databaseWarmUp,
+                notificationScope = notificationScope,
+                dispatcher = dispatcher,
+                exitApplication = exitApplication,
+            )
+        }
+    }
+
+@Composable
+private fun UpdateFeature(
+    koin: org.koin.core.Koin,
+    appState: AzkarAppState,
+    actionRouter: NotificationActionRouter,
+    showPreview: Boolean,
+) {
+    val manager = remember { koin.get<UpdateManager>() }
+    UpdateLifecycle(manager, appState, actionRouter, enabled = !showPreview)
+    if (showPreview) UpdateNotificationPreview(appState, actionRouter)
+}
+
+@Composable
 private fun NotificationRuntimeLifecycle(
     runtime: NotificationRuntime,
     scope: CoroutineScope,
@@ -294,8 +335,56 @@ private fun NotificationRuntimeLifecycle(
 }
 
 @Composable
-private fun UpdateLifecycle(manager: UpdateManager) {
-    LaunchedEffect(manager) { manager.checkAutomatically() }
+private fun UpdateLifecycle(
+    manager: UpdateManager,
+    appState: AzkarAppState,
+    actionRouter: NotificationActionRouter,
+    enabled: Boolean,
+) {
+    val toastController = rememberToastController(appState)
+    LaunchedEffect(manager, toastController, actionRouter, enabled) {
+        val toastGate = UpdateToastGate()
+        launch {
+            manager.status.collect { status ->
+                if (enabled && !manager.isRepositoryManaged) {
+                    val toast =
+                        when (status) {
+                            is com.azkar.updates.UpdateStatus.Available ->
+                                if (toastGate.shouldToast("available:${status.info.version}")) {
+                                    getString(Res.string.updateAvailableTitle) to
+                                        getString(Res.string.updateAvailableMessage, status.info.version)
+                                } else {
+                                    null
+                                }
+                            is com.azkar.updates.UpdateStatus.Downloading ->
+                                if (toastGate.shouldToast("downloading:${status.version}")) {
+                                    getString(Res.string.updateDownloadingTitle) to
+                                        getString(Res.string.updateDownloadingMessage, status.version)
+                                } else {
+                                    null
+                                }
+                            is com.azkar.updates.UpdateStatus.ReadyToInstall ->
+                                if (toastGate.shouldToast("ready:${status.info.version}")) {
+                                    getString(Res.string.updateReadyTitle) to
+                                        getString(Res.string.updateReadyMessage, status.info.version)
+                                } else {
+                                    null
+                                }
+                            else -> null
+                        }
+                    toast?.let { (title, message) ->
+                        toastController.show(
+                            title = title,
+                            message = message,
+                            priority = NotificationPriority.HIGH,
+                            onClick = { actionRouter.dispatch(NotificationAction.Update) },
+                        )
+                    }
+                }
+            }
+        }
+        if (enabled) runUpdateCheckSchedule(manager::checkAutomatically)
+    }
 }
 
 /**
@@ -419,6 +508,22 @@ private fun OverlayProofOfConcept(publisher: NotificationPublisher) {
 
 private const val PROOF_OF_CONSENT_CARDS = 6
 private const val PROOF_OF_CONSENT_INTERVAL_MILLIS = 3_000L
+
+@Composable
+private fun UpdateNotificationPreview(
+    appState: AzkarAppState,
+    actionRouter: NotificationActionRouter,
+) {
+    val toastController = rememberToastController(appState)
+    LaunchedEffect(toastController, actionRouter) {
+        toastController.show(
+            title = getString(Res.string.updateAvailableTitle),
+            message = getString(Res.string.updateAvailableMessage, "0.1.2-beta.999.1"),
+            priority = NotificationPriority.HIGH,
+            onClick = { actionRouter.dispatch(NotificationAction.Update) },
+        )
+    }
+}
 
 @Composable
 private fun MainWindow(

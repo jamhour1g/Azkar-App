@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.settingsUpdateChannelVersion
 import com.azkar.generated.resources.settingsUpdateCheck
 import com.azkar.generated.resources.settingsUpdateChecking
 import com.azkar.generated.resources.settingsUpdateCopyCommands
@@ -61,6 +62,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun UpdateSettingsSection(manager: UpdateManager) {
     val channel by manager.channel.collectAsState()
+    val latestChannelVersion by manager.latestChannelVersion.collectAsState()
     val status by manager.status.collectAsState()
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
@@ -69,7 +71,14 @@ internal fun UpdateSettingsSection(manager: UpdateManager) {
         subtitle = stringResource(Res.string.settingsUpdatesBody),
         content = {
             UpdateSettingsCard(
-                state = UpdateSettingsCardState(manager.currentVersion, manager.isRepositoryManaged, channel, status),
+                state =
+                    UpdateSettingsCardState(
+                        currentVersion = manager.currentVersion,
+                        latestChannelVersion = latestChannelVersion,
+                        isRepositoryManaged = manager.isRepositoryManaged,
+                        channel = channel,
+                        status = status,
+                    ),
                 onSelectChannel = { scope.launch { manager.selectChannel(it) } },
                 onAction = {
                     scope.launch {
@@ -105,7 +114,10 @@ private fun UpdateSettingsCard(
 ) {
     SettingsGroupCard(contentPadding = 0.dp) {
         Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-            UpdateVersionRow(state.currentVersion, state.isRepositoryManaged, state.status, onAction)
+            UpdateVersionRow(
+                state,
+                onAction,
+            )
             SettingsRowDivider()
             UpdateTrackSelector(state.channel, onSelectChannel)
             SettingsRowDivider()
@@ -116,6 +128,7 @@ private fun UpdateSettingsCard(
 
 private data class UpdateSettingsCardState(
     val currentVersion: String,
+    val latestChannelVersion: String?,
     val isRepositoryManaged: Boolean,
     val channel: UpdateChannel,
     val status: UpdateStatus,
@@ -123,9 +136,7 @@ private data class UpdateSettingsCardState(
 
 @Composable
 private fun UpdateVersionRow(
-    currentVersion: String,
-    isRepositoryManaged: Boolean,
-    status: UpdateStatus,
+    state: UpdateSettingsCardState,
     onAction: () -> Unit,
 ) {
     Row(
@@ -140,20 +151,45 @@ private fun UpdateVersionRow(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
-                Text(currentVersion, color = AzkarTheme.colors.textSecondary, fontSize = 14.sp)
+                Text(state.currentVersion, color = AzkarTheme.colors.textSecondary, fontSize = 14.sp)
             }
             Text(
                 stringResource(Res.string.settingsUpdateVersionHint),
                 color = AzkarTheme.colors.textSecondary,
                 fontSize = 12.sp,
             )
-            if (status is UpdateStatus.Failed) {
-                Text(status.message, color = AzkarTheme.colors.dialogValidation, fontSize = 12.sp)
+            (state.latestChannelVersion ?: state.status.channelVersion())?.let { version ->
+                val channelName =
+                    stringResource(
+                        if (state.channel ==
+                            UpdateChannel.DEV
+                        ) {
+                            Res.string.settingsUpdateDev
+                        } else {
+                            Res.string.settingsUpdateStable
+                        },
+                    )
+                Text(
+                    stringResource(Res.string.settingsUpdateChannelVersion, channelName, version),
+                    color = AzkarTheme.colors.textSecondary,
+                    fontSize = 12.sp,
+                )
+            }
+            if (state.status is UpdateStatus.Failed) {
+                Text(state.status.message, color = AzkarTheme.colors.dialogValidation, fontSize = 12.sp)
             }
         }
-        UpdateActionIconButton(status, isRepositoryManaged, onAction)
+        UpdateActionIconButton(state.status, state.isRepositoryManaged, onAction)
     }
 }
+
+private fun UpdateStatus.channelVersion(): String? =
+    when (this) {
+        is UpdateStatus.Available -> info.version
+        is UpdateStatus.Downloading -> version
+        is UpdateStatus.ReadyToInstall -> info.version
+        else -> null
+    }
 
 @Composable
 private fun UpdateActionIconButton(
@@ -338,7 +374,7 @@ internal fun UpdateReadyPreview() =
 @Composable
 private fun UpdateStatePreview(status: UpdateStatus) {
     UpdateSettingsCard(
-        state = UpdateSettingsCardState("0.1.0", false, UpdateChannel.STABLE, status),
+        state = UpdateSettingsCardState("0.1.0", null, false, UpdateChannel.STABLE, status),
         onSelectChannel = {},
         onAction = {},
     )
@@ -347,6 +383,9 @@ private fun UpdateStatePreview(status: UpdateStatus) {
 @Composable
 private fun UpdateVersionActionPreview(status: UpdateStatus) {
     SettingsGroupCard(contentPadding = 0.dp) {
-        UpdateVersionRow("0.1.0", false, status, onAction = {})
+        UpdateVersionRow(
+            UpdateSettingsCardState("0.1.0", status.channelVersion(), false, UpdateChannel.STABLE, status),
+            onAction = {},
+        )
     }
 }

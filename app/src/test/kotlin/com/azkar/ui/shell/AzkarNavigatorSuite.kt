@@ -110,6 +110,20 @@ val AzkarNavigatorSuite by testSuite("Moving between the top-level destinations"
         assertThat(navigator.entries).containsExactly(AzkarDestination.Home, AzkarDestination.Settings)
     }
 
+    test("the update notice opens settings at the update section") {
+        val navigator = AzkarNavigator(NavBackStack(AzkarDestination.Home))
+
+        navigator.showUpdateSettings()
+
+        assertThat(navigator.current).isEqualTo(AzkarDestination.Settings)
+        assertThat(navigator.settingsInitialSection).isEqualTo(SettingsSection.UPDATES)
+        val request = navigator.settingsSectionRequest
+
+        navigator.showUpdateSettings()
+
+        assertThat(navigator.settingsSectionRequest).isEqualTo(request + 1)
+    }
+
     test("a top-level tab collapses settings rather than leaving it underneath") {
         val navigator = AzkarNavigator(NavBackStack(AzkarDestination.Home))
         navigator.showSettings()

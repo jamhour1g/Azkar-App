@@ -635,6 +635,7 @@
     <string name="settingsUpdatesBody">View the installed version and choose an update track.</string>
     <string name="settingsUpdateVersionTitle">Version</string>
     <string name="settingsUpdateVersionHint">Current version of the application.</string>
+    <string name="settingsUpdateChannelVersion">Latest %1$s version: %2$s</string>
     <string name="settingsUpdateTrackTitle">Update track</string>
     <string name="settingsUpdateTrackHint">Use stable releases or dev builds. Switch back anytime.</string>
     <string name="settingsUpdateInstalling">Installing update…</string>
@@ -648,4 +649,10 @@
     <string name="settingsUpdateDowngradeWarning">This installs an older app version. It does not undo database changes made by newer versions.</string>
     <string name="settingsUpdateManaged">Updates are managed by your system package manager (apt or dnf).</string>
     <string name="settingsUpdateCopyCommands">Copy update and channel commands</string>
+    <string name="updateAvailableTitle">Update available</string>
+    <string name="updateAvailableMessage">Version %1$s is ready. Open Settings to review the update.</string>
+    <string name="updateDownloadingTitle">Downloading update</string>
+    <string name="updateDownloadingMessage">Downloading version %1$s.</string>
+    <string name="updateReadyTitle">Update ready to install</string>
+    <string name="updateReadyMessage">Version %1$s is ready. Open Settings to install and restart.</string>
 </resources>

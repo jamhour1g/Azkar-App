@@ -175,6 +175,8 @@ sealed interface NotificationAction {
     data object PrayerTimes : NotificationAction
 
     data object OpenApp : NotificationAction
+
+    data object Update : NotificationAction
 }
 
 /**

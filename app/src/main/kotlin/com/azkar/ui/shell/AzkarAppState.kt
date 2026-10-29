@@ -194,6 +194,7 @@ data class ToastMessage(
     val title: String,
     val message: String,
     val priority: NotificationPriority,
+    val onClick: (() -> Unit)? = null,
 )
 
 private val toastIds = AtomicLong(0L)
@@ -215,8 +216,9 @@ class ToastController(
         title: String,
         message: String,
         priority: NotificationPriority,
+        onClick: (() -> Unit)? = null,
     ) {
-        val toast = ToastMessage(toastIds.incrementAndFetch(), title, message, priority)
+        val toast = ToastMessage(toastIds.incrementAndFetch(), title, message, priority, onClick)
         state.toasts.add(toast)
         scope.launch {
             delay(TOAST_VISIBLE_MILLIS.milliseconds)

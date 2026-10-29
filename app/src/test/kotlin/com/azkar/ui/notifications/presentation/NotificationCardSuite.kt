@@ -85,6 +85,8 @@ private val DEFAULT_CARD_HEIGHT = 200.dp
 
 private const val TITLE = "Fajr"
 private const val MESSAGE = "Say it once, slowly."
+private const val UPDATE_TITLE = "Update available"
+private const val UPDATE_MESSAGE = "Version 1.2.0 is ready. Open Settings to review the update."
 
 /** An Arabic passage, to prove the card renders right-to-left text without being told to. */
 private const val ARABIC_PASSAGE = "أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ"
@@ -203,6 +205,25 @@ private fun plainCard(
 }
 
 @Composable
+private fun updateCard(
+    onOpen: () -> Unit = {},
+    onDismiss: () -> Unit = {},
+) {
+    NotificationCard(
+        item =
+            PresentedNotice(
+                id = 1L,
+                title = UPDATE_TITLE,
+                message = UPDATE_MESSAGE,
+                action = NotificationAction.Update,
+            ),
+        onOpen = onOpen,
+        onDismiss = onDismiss,
+        onPauseChanged = {},
+    )
+}
+
+@Composable
 private fun passageCard(
     passage: String = ARABIC_PASSAGE,
     total: Int = 3,
@@ -266,6 +287,35 @@ private data class FavoriteToggle(
 
 @OptIn(ExperimentalTestApi::class)
 val NotificationCardSuite by testSuite("The overlay notification card") {
+    test("an update notice shows the release version and download choice") {
+        cardTest(content = { updateCard() }) {
+            onNodeWithText(UPDATE_TITLE).assertIsDisplayed()
+            onNodeWithText(UPDATE_MESSAGE).assertIsDisplayed()
+        }
+    }
+
+    test("choosing the update notice invokes its action") {
+        var started = 0
+        cardTest(content = { updateCard(onOpen = { started++ }) }) {
+            onNodeWithText(UPDATE_MESSAGE).performClick()
+        }
+
+        assertThat(started).isEqualTo(1)
+    }
+
+    test("dismissing the update notice does not invoke its action") {
+        var started = 0
+        var dismissed = 0
+        cardTest(content = {
+            updateCard(onOpen = { started++ }, onDismiss = { dismissed++ })
+        }) {
+            onNodeWithContentDescription(ENGLISH_DISMISS_LABEL).performClick()
+        }
+
+        assertThat(dismissed).isEqualTo(1)
+        assertThat(started).isZero()
+    }
+
     test("it shows what was published, in the app's own card") {
         cardTest(content = { plainCard() }) {
             onNodeWithText(TITLE).assertExists()
