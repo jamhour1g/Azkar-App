@@ -30,6 +30,7 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.io.File
 import java.io.IOException
 import java.math.BigInteger
 import java.nio.file.Path
@@ -66,6 +67,8 @@ sealed interface UpdateStatus {
     data object Current : UpdateStatus
 
     data object Installing : UpdateStatus
+
+    data object InstallerOpened : UpdateStatus
 
     data class Available(
         val info: UpdateInfo,
@@ -200,24 +203,13 @@ class UpdateManager(
     suspend fun download(info: UpdateInfo) {
         val (updater, available) =
             activeUpdater
-                ?.takeUnless { isRepositoryManaged }
                 ?.let { updater -> (_status.value as? UpdateStatus.Available)?.let { updater to it } }
                 ?: return
         logger.info { "Downloading update ${info.version}" }
         try {
-            updater.downloadUpdate(info).collect { progress ->
-                progress.file?.let { downloadedFile ->
-                    logger.info { "Update ${info.version} downloaded and is ready to install" }
-                    _status.value =
-                        UpdateStatus.ReadyToInstall(
-                            info = info,
-                            releaseNotes = available.releaseNotes,
-                            file = downloadedFile.toPath(),
-                            isDowngrade = available.isDowngrade,
-                        )
-                } ?: run {
-                    _status.value = UpdateStatus.Downloading(info.version, progress.percent)
-                }
+            val downloadInfo = prepareDownloadInfo(info) ?: return
+            updater.downloadUpdate(downloadInfo).collect { progress ->
+                updateDownloadStatus(progress.file, progress.percent, info, available)
             }
         } catch (failure: CancellationException) {
             throw failure
@@ -227,6 +219,43 @@ class UpdateManager(
         } catch (failure: IllegalStateException) {
             logger.error(failure) { "Unable to download update" }
             _status.value = UpdateStatus.Failed(failure.message ?: "Download failed")
+        }
+    }
+
+    private fun prepareDownloadInfo(info: UpdateInfo): UpdateInfo? =
+        if (!isRepositoryManaged) {
+            info
+        } else {
+            val extension = if (ExecutableRuntime.type() == ExecutableType.DEB) ".deb" else ".rpm"
+            val packageFile = info.files.singleOrNull { it.fileName.endsWith(extension) }
+            packageFile?.let { info.copy(currentFile = it) }
+                ?: run {
+                    _status.value = UpdateStatus.Failed("No matching Linux package is available")
+                    null
+                }
+        }
+
+    private fun updateDownloadStatus(
+        downloadedFile: File?,
+        percent: Double,
+        info: UpdateInfo,
+        available: UpdateStatus.Available,
+    ) {
+        if (downloadedFile == null) {
+            _status.value = UpdateStatus.Downloading(info.version, percent)
+        } else if (isRepositoryManaged) {
+            ProcessBuilder("xdg-open", downloadedFile.absolutePath).start()
+            logger.info { "Update ${info.version} opened in the system package installer" }
+            _status.value = UpdateStatus.InstallerOpened
+        } else {
+            logger.info { "Update ${info.version} downloaded and is ready to install" }
+            _status.value =
+                UpdateStatus.ReadyToInstall(
+                    info = info,
+                    releaseNotes = available.releaseNotes,
+                    file = downloadedFile.toPath(),
+                    isDowngrade = available.isDowngrade,
+                )
         }
     }
 
