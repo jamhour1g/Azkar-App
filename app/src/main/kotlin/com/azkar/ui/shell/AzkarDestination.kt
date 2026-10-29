@@ -2,7 +2,11 @@ package com.azkar.ui.shell
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 
@@ -132,6 +136,11 @@ val AzkarDestination.rootTab: AzkarDestination
 class AzkarNavigator(
     private val backStack: NavBackStack<AzkarDestination>,
 ) {
+    var settingsInitialSection by mutableStateOf<SettingsSection?>(null)
+        private set
+    var settingsSectionRequest by mutableIntStateOf(0)
+        private set
+
     /**
      * What `NavDisplay` renders.
      *
@@ -159,6 +168,17 @@ class AzkarNavigator(
      * stack two settings screens that then need two back presses.
      */
     fun showSettings() {
+        settingsInitialSection = null
+        settingsSectionRequest++
+        if (backStack.last() != AzkarDestination.Settings) {
+            backStack.add(AzkarDestination.Settings)
+        }
+    }
+
+    /** Opens settings directly at the update controls, without starting an update. */
+    fun showUpdateSettings() {
+        settingsInitialSection = SettingsSection.UPDATES
+        settingsSectionRequest++
         if (backStack.last() != AzkarDestination.Settings) {
             backStack.add(AzkarDestination.Settings)
         }

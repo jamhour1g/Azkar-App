@@ -68,7 +68,7 @@ fun AzkarApp(
 ) {
     val darkTheme = rememberAzkarDarkTheme(state.themePreference)
     val toastController = rememberToastController(state)
-    val showToast = toastController::show
+    val showToast: ShowToast = { title, message, priority -> toastController.show(title, message, priority) }
     // Remembered *outside* the locale key below: a `remember` inside it would be discarded every
     // time the language changed, throwing away where the user was.
     val navigator = rememberAzkarNavigator()
@@ -200,6 +200,7 @@ private fun RouteNotificationActions(
                 when (action) {
                     is NotificationAction.Remembrance -> navigator.showRemembrance(action.id)
                     NotificationAction.PrayerTimes, NotificationAction.OpenApp -> navigator.showHome()
+                    NotificationAction.Update -> navigator.showUpdateSettings()
                 }
             }
         }
@@ -408,6 +409,8 @@ private fun EntryProviderScope<AzkarDestination>.readerAndSettingsEntries(
         SettingsScreen(
             state = state,
             onClose = navigator::back,
+            initialSection = navigator.settingsInitialSection,
+            sectionRequest = navigator.settingsSectionRequest,
         )
     }
 }
