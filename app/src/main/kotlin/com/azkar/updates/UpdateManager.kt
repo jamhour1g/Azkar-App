@@ -327,11 +327,15 @@ class UpdateManager(
         } catch (failure: IOException) {
             logger.warn(failure) { "Unable to retrieve ${target.name.lowercase()} channel version" }
         } catch (failure: SerializationException) {
-            logger.warn(failure) { "Unable to parse ${target.name.lowercase()} channel versions" }
+            logger.warn(failure) { "GitHub returned malformed JSON for ${target.name.lowercase()} channel versions" }
         } catch (failure: IllegalArgumentException) {
-            logger.warn(failure) { "Unable to parse ${target.name.lowercase()} channel versions" }
+            logger.warn(
+                failure,
+            ) { "GitHub returned an unexpected JSON structure for ${target.name.lowercase()} channel versions" }
         } catch (failure: IllegalStateException) {
-            logger.warn(failure) { "Unable to parse ${target.name.lowercase()} channel versions" }
+            logger.warn(
+                failure,
+            ) { "GitHub returned an invalid field value for ${target.name.lowercase()} channel versions" }
         }
     }
 
