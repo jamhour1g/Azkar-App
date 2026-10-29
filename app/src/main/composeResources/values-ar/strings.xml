@@ -656,6 +656,7 @@
     <string name="settingsUpdateTrackTitle">قناة التحديث</string>
     <string name="settingsUpdateTrackHint">استخدم الإصدارات المستقرة أو التجريبية. يمكنك التبديل في أي وقت.</string>
     <string name="settingsUpdateInstalling">جارٍ تثبيت التحديث…</string>
+    <string name="settingsUpdateInstallerOpened">أكمل تثبيت التحديث في مدير الحزم، ثم أعد تشغيل أذكار.</string>
     <string name="settingsUpdateStable">مستقر</string>
     <string name="settingsUpdateDev">تجريبي</string>
     <string name="settingsUpdateCheck">التحقق من وجود تحديثات</string>
@@ -664,8 +665,11 @@
     <string name="settingsUpdateDownloading">جارٍ تنزيل %1$s (%2$d٪)</string>
     <string name="settingsUpdateInstall">التثبيت وإعادة التشغيل</string>
     <string name="settingsUpdateDowngradeWarning">سيؤدي هذا إلى تثبيت إصدار أقدم. لن يتراجع عن تغييرات قاعدة البيانات التي أجرتها الإصدارات الأحدث.</string>
-    <string name="settingsUpdateManaged">تُدار التحديثات بواسطة مدير الحزم في النظام (apt أو dnf).</string>
-    <string name="settingsUpdateCopyCommands">نسخ أوامر التحديث وتغيير القناة</string>
+    <string name="settingsUpdateCopyCommands">نسخ أوامر إعداد المستودع</string>
+    <string name="settingsUpdateLinuxInfoTooltip">خيارات تحديث حزمة لينكس</string>
+    <string name="settingsUpdateLinuxInfoTitle">تلقَّ تحديثات أذكار عبر مدير الحزم</string>
+    <string name="settingsUpdateLinuxInfoBody">أضف مستودع أذكار الموقّع مرة واحدة، وستظهر تحديثات أذكار التالية مع تحديثات الحزم الأخرى.</string>
+    <string name="settingsUpdateLinuxInfoLink">تعليمات مستودع لينكس على GitHub</string>
     <string name="updateAvailableTitle">يتوفر تحديث</string>
     <string name="updateAvailableMessage">الإصدار %1$s جاهز. افتح الإعدادات لمراجعة التحديث.</string>
     <string name="updateDownloadingTitle">جارٍ تنزيل التحديث</string>

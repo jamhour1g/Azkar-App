@@ -346,7 +346,7 @@ private fun UpdateLifecycle(
         val toastGate = UpdateToastGate()
         launch {
             manager.status.collect { status ->
-                if (enabled && !manager.isRepositoryManaged) {
+                if (enabled) {
                     val toast =
                         when (status) {
                             is com.azkar.updates.UpdateStatus.Available ->
