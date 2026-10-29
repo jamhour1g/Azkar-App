@@ -196,9 +196,8 @@ The console pattern is:
 
 `%kvp` is load-bearing, not decoration: it is what renders an `atX { payload = … }` map. Logback
 emits nothing at all for `%kvp` when an event has no key-value pairs, so a plain `logger.info { … }`
-is unaffected. The same file contains a commented-out `RollingFileAppender` writing to `logs/azkar.log`
-with 30 days of history; uncomment it together with its `<appender-ref>` when a bug report needs a
-file to attach.
+is unaffected. The shipped configuration also writes to `${user.home}/.azkar/logs/azkar.log`;
+archives are compressed, rotate at 10 MB, retain up to 14 days, and are capped at 100 MB total.
 
 To quieten a noisy third party, add a `<logger name="…" level="…"/>` above `<root>`, as
 `com.zaxxer.hikari` already does.
