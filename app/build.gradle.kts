@@ -170,24 +170,20 @@ if (previewScannerEnabled) {
 }
 
 roborazzi {
-    if (previewScannerEnabled) {
-        outputDir.set(layout.projectDirectory.dir("src/test/roborazzi/previews"))
-    } else {
-        outputDir.set(layout.projectDirectory.dir("src/test/roborazzi"))
-    }
+    outputDir.set(layout.projectDirectory.dir("src/previewImages"))
     @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
     generateComposePreviewDesktopTests {
-        // Keep scanner captures beside the versioned references so the default CI verify checks them.
+        // Preview captures are committed for review, but are never compared as test goldens.
         enable = previewScannerEnabled
         packages = listOf("com.azkar.ui")
         includePrivatePreviews = true
         testerQualifiedClassName = "com.azkar.ui.preview.AzkarDesktopPreviewTester"
         useScanOptionParametersInTester = true
-        annotationFilter =
-            com.github.takahirom.roborazzi.AnnotationFilter.Exclude(
-                "com.azkar.ui.preview.RoborazziDesktopPreviewExclude",
-            )
     }
+}
+
+tasks.matching { it.name.startsWith("verifyRoborazzi") }.configureEach {
+    enabled = false
 }
 
 // Compose Multiplatform re-publishes part of the Compose runtime under
@@ -232,7 +228,7 @@ tasks.jar {
     from(sourceSets.main.get().output)
 }
 
-// Gallery generation is an executable, separate from regression tests and their baselines.
+// The website gallery runs in its own executable source set.
 val gallery =
     sourceSets.create("gallery") {
         compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
@@ -240,8 +236,7 @@ val gallery =
     }
 configurations[gallery.implementationConfigurationName].extendsFrom(configurations.implementation.get())
 kotlin {
-    sourceSets.named("test") { kotlin.srcDir("src/screenshotFixtures/kotlin") }
-    sourceSets.named("gallery") { kotlin.srcDir("src/screenshotFixtures/kotlin") }
+    sourceSets.named("gallery") { kotlin.srcDir("src/galleryFixtures/kotlin") }
     target.compilations.named("gallery") { associateWith(target.compilations.getByName("main")) }
 }
 

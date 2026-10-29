@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -47,9 +46,8 @@ import com.azkar.generated.resources.tagsUsageTitle
 import com.azkar.ui.components.AzkarDialogSurface
 import com.azkar.ui.components.AzkarIcons
 import com.azkar.ui.components.pressableClick
-import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
+import com.azkar.ui.theme.AzkarVariantsPreview
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import java.time.Instant
@@ -400,18 +398,15 @@ private fun RemembranceUsageRow(
  * The empty state is one `Text` and cannot be laid out wrong; this one is a two-column arrangement
  * with a cap on its height, which is exactly the kind of thing a preview earns its place on.
  */
-@Preview
-@RoborazziDesktopPreviewExclude
+@AzkarVariantsPreview
 @Composable
 private fun TagUsagePanelPreview() {
-    AzkarThemePreview(width = 620.dp, height = 640.dp) {
-        TagUsageDialog(
-            usage = previewUsage(),
-            onDismiss = {},
-            onOpenCollection = {},
-            onOpenRemembrance = {},
-        )
-    }
+    TagUsageDialog(
+        usage = previewUsage(),
+        onDismiss = {},
+        onOpenCollection = {},
+        onOpenRemembrance = {},
+    )
 }
 
 /**

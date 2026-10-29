@@ -618,7 +618,6 @@ val NotificationCardSuite by testSuite("The overlay notification card") {
     test("it draws in both themes, and never asks the window for a background") {
         // What a semantic assertion *can* prove about theming is that the card composes cleanly in
         // either theme and lays out — a missing token or an unresolvable colour would throw here —
-        // Screenshot tests cover appearance through `./gradlew :app:recordRoborazziJvm`.
         // The named tests supply the theme and locale. Colour itself is deliberately not asserted
         // through the semantics tree: Compose 1.12's text semantics carry no span styles, so any such
         // assertion would be reading a null.

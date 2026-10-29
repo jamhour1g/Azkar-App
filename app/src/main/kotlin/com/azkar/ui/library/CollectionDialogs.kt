@@ -43,7 +43,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -104,10 +103,8 @@ import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.library.model.TranslationEntry
 import com.azkar.ui.library.model.missingLanguages
 import com.azkar.ui.library.model.survivingRename
-import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarColors
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import kotlinx.coroutines.launch
@@ -1531,21 +1528,18 @@ internal class CollectionEditorNavigation(
  * page is a different layout with a different height — a single preview of the first page is exactly
  * the preview that would have hidden the problem.
  */
-@Preview
-@RoborazziDesktopPreviewExclude
+@AzkarVariantsPreview
 @Composable
 private fun CollectionEditorDetailsPreview() {
-    AzkarThemePreview(width = 640.dp, height = 640.dp) {
-        val draft = CollectionEditorDraft.create()
-        draft.updateName("Morning Azkar")
-        draft.updateDescription("The remembrances said before the sun is up.")
-        CollectionEditorDialog(
-            draft = draft,
-            environment = previewEditorEnvironment(),
-            onDismiss = {},
-            onConfirm = { _, _, _, _, _ -> },
-        )
-    }
+    val draft = CollectionEditorDraft.create()
+    draft.updateName("Morning Azkar")
+    draft.updateDescription("The remembrances said before the sun is up.")
+    CollectionEditorDialog(
+        draft = draft,
+        environment = previewEditorEnvironment(),
+        onDismiss = {},
+        onConfirm = { _, _, _, _, _ -> },
+    )
 }
 
 @AzkarVariantsPreview
@@ -1590,35 +1584,29 @@ internal fun CollectionEditorSelectedCoverPreview() {
     }
 }
 
-@Preview
-@RoborazziDesktopPreviewExclude
+@AzkarVariantsPreview
 @Composable
 private fun CollectionEditorTagsPreview() {
-    AzkarThemePreview(width = 640.dp, height = 640.dp) {
-        val draft = CollectionEditorDraft.create()
-        draft.toggleTag("morning")
-        draft.toggleTag("sleep")
-        CollectionEditorDialog(
-            draft = draft,
-            environment = previewEditorEnvironment(),
-            onDismiss = {},
-            onConfirm = { _, _, _, _, _ -> },
-        )
-    }
+    val draft = CollectionEditorDraft.create()
+    draft.toggleTag("morning")
+    draft.toggleTag("sleep")
+    CollectionEditorDialog(
+        draft = draft,
+        environment = previewEditorEnvironment(),
+        onDismiss = {},
+        onConfirm = { _, _, _, _, _ -> },
+    )
 }
 
-@Preview
-@RoborazziDesktopPreviewExclude
+@AzkarVariantsPreview
 @Composable
 private fun CollectionEditorCoverPreview() {
-    AzkarThemePreview(width = 640.dp, height = 640.dp) {
-        CollectionEditorDialog(
-            draft = CollectionEditorDraft.create(),
-            environment = previewEditorEnvironment(),
-            onDismiss = {},
-            onConfirm = { _, _, _, _, _ -> },
-        )
-    }
+    CollectionEditorDialog(
+        draft = CollectionEditorDraft.create(),
+        environment = previewEditorEnvironment(),
+        onDismiss = {},
+        onConfirm = { _, _, _, _, _ -> },
+    )
 }
 
 /**
@@ -1634,13 +1622,10 @@ private fun previewEditorEnvironment() =
         onPickCover = { null },
     )
 
-@Preview
-@RoborazziDesktopPreviewExclude
+@AzkarVariantsPreview
 @Composable
 private fun ConfirmCollectionDeleteDialogPreview() {
-    AzkarThemePreview(width = 520.dp) {
-        ConfirmCollectionDeleteDialog(name = "Morning Azkar", onDismiss = {}, onConfirm = {})
-    }
+    ConfirmCollectionDeleteDialog(name = "Morning Azkar", onDismiss = {}, onConfirm = {})
 }
 
 // ---- plumbing -------------------------------------------------------------------------------------
