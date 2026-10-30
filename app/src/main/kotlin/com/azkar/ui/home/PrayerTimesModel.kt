@@ -40,6 +40,7 @@ data class PrayerRowState(
     val value: String,
     val isNext: Boolean,
     val notificationsEnabled: Boolean,
+    val soundEnabled: Boolean = false,
 )
 
 /** `.next-prayer-time` text plus the raw remaining duration behind it. */

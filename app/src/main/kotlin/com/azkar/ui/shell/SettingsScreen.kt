@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.settingsSubtitle
 import com.azkar.generated.resources.settingsTitle
+import com.azkar.ui.notifications.AudioPreferences
+import com.azkar.ui.notifications.DesktopAudioPlayer
 import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationPreferencesRepository
@@ -110,6 +112,7 @@ fun SettingsScreen(
 ) {
     val notificationState = rememberNotificationSettingsState()
     val notificationValues = rememberNotificationSettingsValues()
+    val audioPlayer = koinInject<DesktopAudioPlayer>()
     val windowInfo = LocalWindowInfo.current
     LaunchedEffect(notificationState, windowInfo) {
         snapshotFlow { windowInfo.isWindowFocused }.collect { focused ->
@@ -127,6 +130,7 @@ fun SettingsScreen(
                 sectionRequest = sectionRequest,
                 notificationState = notificationState,
                 notificationValues = notificationValues,
+                audioPlayer = audioPlayer,
                 updateManager = koinInject(),
             ),
         modifier = modifier,
@@ -146,6 +150,7 @@ private fun SettingsScreenContent(
     val sectionRequest = inputs.sectionRequest
     val notificationState = inputs.notificationState
     val notificationValues = inputs.notificationValues
+    val audioPlayer = inputs.audioPlayer
     val updateManager = inputs.updateManager
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -195,7 +200,7 @@ private fun SettingsScreenContent(
             item(key = "header") {
                 SettingsPageHeader(onClose = onClose, modifier = Modifier.fillMaxWidth())
             }
-            settingsSections(state, notificationState, notificationValues, selectedGroup, updateManager)
+            settingsSections(state, notificationState, notificationValues, audioPlayer, selectedGroup, updateManager)
         }
     }
 }
@@ -208,6 +213,7 @@ private data class SettingsScreenInputs(
     val sectionRequest: Int,
     val notificationState: NotificationSettingsState,
     val notificationValues: NotificationSettingsValues,
+    val audioPlayer: DesktopAudioPlayer,
     val updateManager: UpdateManager,
 )
 
@@ -216,6 +222,7 @@ private fun LazyListScope.settingsSections(
     state: AzkarAppState,
     notificationState: NotificationSettingsState,
     notificationValues: NotificationSettingsValues,
+    audioPlayer: DesktopAudioPlayer,
     selectedGroup: SettingsGroup,
     updateManager: UpdateManager,
 ) {
@@ -252,6 +259,12 @@ private fun LazyListScope.settingsSections(
                         SettingsPrayerCalculationSection(
                             location = notificationValues.prayerLocation,
                             settings = notificationState,
+                        )
+                    SettingsSection.AUDIO ->
+                        SettingsAudioSection(
+                            audio = notificationValues.audio,
+                            settings = notificationState,
+                            player = audioPlayer,
                         )
                 }
             }
@@ -412,6 +425,7 @@ private data class NotificationSettingsValues(
     val queue: ReminderQueueConfig,
     val prayerLocation: PrayerLocationSettings,
     val presentation: NotificationPresentationSettings,
+    val audio: AudioPreferences,
 )
 
 @Composable
@@ -420,7 +434,8 @@ private fun rememberNotificationSettingsValues(): NotificationSettingsValues {
     val queue by preferences.queue.collectAsState()
     val prayerLocation by preferences.prayerLocation.collectAsState()
     val presentation by preferences.presentation.collectAsState()
-    return NotificationSettingsValues(queue, prayerLocation, presentation)
+    val audio by preferences.audio.collectAsState()
+    return NotificationSettingsValues(queue, prayerLocation, presentation, audio)
 }
 
 @AzkarVariantsPreview
@@ -490,7 +505,14 @@ private fun SettingsScreenPreviewContent(group: SettingsGroup) {
                 initialSection = null,
                 sectionRequest = 0,
                 notificationState = notificationState,
-                notificationValues = NotificationSettingsValues(queue, prayerLocation, presentation),
+                notificationValues =
+                    NotificationSettingsValues(
+                        queue,
+                        prayerLocation,
+                        presentation,
+                        preferences.audio.value,
+                    ),
+                audioPlayer = remember { DesktopAudioPlayer() },
                 updateManager = updateManager,
             ),
         modifier = Modifier.fillMaxSize(),

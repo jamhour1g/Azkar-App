@@ -32,6 +32,7 @@ import com.azkar.ui.home.HadithState
 import com.azkar.ui.home.NotificationSettingsState
 import com.azkar.ui.home.PrayerTimesState
 import com.azkar.ui.library.CollectionReminderState
+import com.azkar.ui.notifications.AudioPreferences
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.PrayerLocationSettings
 import com.azkar.ui.preview.previewCountdown
@@ -54,6 +55,7 @@ import com.azkar.ui.theme.AzkarWindowSize
 import com.azkar.ui.theme.LocalUiLocale
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import java.time.LocalDate
@@ -115,6 +117,8 @@ internal class HomeInputs(
     val rail: HomeRailState,
     val reminders: CollectionReminderState,
     val navigation: HomeNavigation,
+    val audio: AudioPreferences = AudioPreferences(),
+    val onPrayerSoundToggled: (PrayerKey, Boolean) -> Unit = { _, _ -> },
 )
 
 /**
@@ -152,6 +156,7 @@ fun HomeScreen(
     val store = koinInject<SettingsStore>()
     val notificationPreferences = koinInject<NotificationPreferencesRepository>()
     val prayerLocation by notificationPreferences.prayerLocation.collectAsState()
+    val audio by notificationPreferences.audio.collectAsState()
     val prayerTimes = remember(uiLocale, prayerLocation) { PrayerTimesState(uiLocale, prayerLocation) }
     val notificationScope = rememberCoroutineScope()
     // Both of these come from the container: the settings switches observe the stored file, and the
@@ -172,6 +177,10 @@ fun HomeScreen(
             prayerTimes = prayerTimes,
             favorites = favorites,
             notifications = notifications,
+            audio = audio,
+            onPrayerSoundToggled = { key, enabled ->
+                notificationScope.launch { notificationPreferences.setPrayerSoundEnabled(key, enabled) }
+            },
             rail = rail,
             reminders = reminders,
             navigation =
@@ -409,6 +418,14 @@ private fun HomeContentPreviewContent(
                     ),
                 favorites = favoriteState,
                 notifications = NotificationSettingsState(rememberPreviewSettingsStore(), rememberCoroutineScope()),
+                audio =
+                    AudioPreferences(
+                        prayerEnabled = true,
+                        prayerSoundsEnabled =
+                            PrayerKey.entries.associate { key ->
+                                key.id to (key in setOf(PrayerKey.FAJR, PrayerKey.ASR))
+                            },
+                    ),
                 rail =
                     remember(uiLocale, emptyDashboard, collections) {
                         HomeRailState().apply {
@@ -532,12 +549,16 @@ private fun HomeMainColumn(
         )
         val snapshot = inputs.prayerTimes.snapshot
         PrayerTimesCard(
-            rows = snapshot.rows,
+            rows =
+                snapshot.rows.map { row ->
+                    row.copy(soundEnabled = inputs.audio.prayerSoundsEnabled[row.key.id] == true)
+                },
             countdown = snapshot.countdown,
             locationLabel = inputs.prayerTimes.location.city,
             notificationsEnabled = inputs.notifications.globalEnabled,
             onGlobalToggle = inputs.notifications::onGlobalToggleChanged,
             onNotificationToggled = inputs.notifications::onPrayerToggled,
+            onSoundToggled = inputs.onPrayerSoundToggled,
         )
     }
 }

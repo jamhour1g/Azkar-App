@@ -29,6 +29,7 @@ import com.azkar.ui.library.data.DomainCollectionsGateway
 import com.azkar.ui.library.data.DomainTagsGateway
 import com.azkar.ui.library.data.ReminderSources
 import com.azkar.ui.library.data.TagGateway
+import com.azkar.ui.notifications.DesktopAudioPlayer
 import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationActionRouter
@@ -181,6 +182,7 @@ val AppModuleSuite by testSuite("AppModule") {
                     LocationDetector::class,
                     GeocodingClient::class,
                     NotificationPreferencesRepository::class,
+                    DesktopAudioPlayer::class,
                     NotificationActionRouter::class,
                     StartupRegistration::class,
                     NotificationPublisher::class,

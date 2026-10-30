@@ -70,6 +70,15 @@ class NotificationSettingsState(
     /** Writes for the notifications tab's overlay-appearance and startup cards. */
     val notifications = NotificationEditor()
 
+    /** Writes the independent desktop audio preferences. */
+    fun updateAudio(transform: (AudioPreferences) -> AudioPreferences) {
+        scope.launch { preferences.updateAudio(transform) }
+    }
+
+    fun setAllPrayerSoundsEnabled(enabled: Boolean) {
+        scope.launch { preferences.setAllPrayerSoundsEnabled(enabled) }
+    }
+
     /**
      * Writes for the reminder schedule, the card at the top of the notifications tab.
      *

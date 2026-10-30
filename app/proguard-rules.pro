@@ -91,3 +91,14 @@
 
 # Generic signatures + annotations are needed by serialization and DI lookups.
 -keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*,SourceFile,LineNumberTable
+
+# JavaFX selects Glass/Prism/toolkit implementations using constructed class names.
+# Media's native backend also calls these implementation classes through JNI.
+-keep class com.sun.glass.** { *; }
+-keep class com.sun.javafx.tk.** { *; }
+-keep class com.sun.prism.** { *; }
+-keep class com.sun.scenario.** { *; }
+-keep class com.sun.media.** { *; }
+-keepclasseswithmembernames,includedescriptorclasses class javafx.** {
+    native <methods>;
+}

@@ -58,6 +58,10 @@
     <string name="prayerTimesLocation">Prayer times for %1$s</string>
     <string name="prayerTimeRemaining">2h 15m 30s</string>
     <string name="prayerNotification">All Prayer Notifications</string>
+    <string name="prayerNotificationTurnOn">Turn on notifications for %1$s</string>
+    <string name="prayerNotificationTurnOff">Turn off notifications for %1$s</string>
+    <string name="prayerSoundTurnOn">Turn on sound for %1$s</string>
+    <string name="prayerSoundTurnOff">Turn off sound for %1$s</string>
     <string name="prayerNotificationsShort">Notifications</string>
     <string name="fajr">Fajr</string>
     <string name="fajrTime">04:50 AM</string>
@@ -280,6 +284,15 @@
     <string name="settingsGroupAppearance">Appearance</string>
     <string name="settingsGroupReminders">Reminders</string>
     <string name="settingsGroupPrayer">Prayer</string>
+    <string name="settingsAudioTitle">Sounds</string>
+    <string name="settingsAudioHint">Choose local audio files for remembrance reminders and prayer times. Enter a file path, set its volume, and preview it.</string>
+    <string name="settingsAudioNotification">Remembrance reminder sound</string>
+    <string name="settingsAudioNotificationFile">Local audio file path</string>
+    <string name="settingsAudioPrayer">Prayer sounds</string>
+    <string name="settingsAudioPrayerFile">Local audio file path</string>
+    <string name="settingsAudioPreview">Preview sound</string>
+    <string name="settingsAudioChoose">Choose audio file</string>
+    <string name="settingsAudioStop">Stop prayer sound</string>
     <string name="settingsStartupTitle">Startup</string>
     <string name="settingsStartupHint">Whether Azkar opens itself when you sign in.</string>
     <string name="settingsStartupDisabledByUser">Startup was disabled in system settings. Enable it there to allow Azkar to start at login.</string>
@@ -659,4 +672,7 @@
     <string name="updateDownloadingMessage">Downloading version %1$s.</string>
     <string name="updateReadyTitle">Update ready to install</string>
     <string name="updateReadyMessage">Version %1$s is ready. Open Settings to install and restart.</string>
+    <string name="settingsAudioStopPreview">Stop preview</string>
+    <string name="settingsAudioVolume">Volume</string>
+    <string name="settingsAudioFailed">Unable to play this audio file. Check that it exists and uses a supported audio format.</string>
 </resources>

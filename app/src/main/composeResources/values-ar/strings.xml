@@ -58,6 +58,10 @@
     <string name="prayerTimesLocation">مواقيت الصلاة في %1$s</string>
     <string name="prayerTimeRemaining">02:15:30</string>
     <string name="prayerNotification">تنبيهات الصلوات</string>
+    <string name="prayerNotificationTurnOn">تشغيل تنبيهات صلاة %1$s</string>
+    <string name="prayerNotificationTurnOff">إيقاف تنبيهات صلاة %1$s</string>
+    <string name="prayerSoundTurnOn">تشغيل صوت صلاة %1$s</string>
+    <string name="prayerSoundTurnOff">إيقاف صوت صلاة %1$s</string>
     <string name="prayerNotificationsShort">التنبيهات</string>
     <string name="fajr">الفجر</string>
     <string name="fajrTime">04:50 AM</string>
@@ -278,6 +282,15 @@
     <string name="settingsGroupAppearance">المظهر</string>
     <string name="settingsGroupReminders">التذكيرات</string>
     <string name="settingsGroupPrayer">الصلاة</string>
+    <string name="settingsAudioTitle">الأصوات</string>
+    <string name="settingsAudioHint">اختر ملفات صوتية محلية لتذكيرات الأذكار ومواقيت الصلاة. أدخل مسار الملف، واضبط مستوى الصوت، واستمع إليه.</string>
+    <string name="settingsAudioNotification">صوت تذكير الذكر</string>
+    <string name="settingsAudioNotificationFile">مسار الملف الصوتي المحلي</string>
+    <string name="settingsAudioPrayer">أصوات الصلاة</string>
+    <string name="settingsAudioPrayerFile">مسار الملف الصوتي المحلي</string>
+    <string name="settingsAudioPreview">معاينة الصوت</string>
+    <string name="settingsAudioChoose">اختيار ملف صوتي</string>
+    <string name="settingsAudioStop">إيقاف صوت الصلاة</string>
     <string name="settingsStartupTitle">بدء التشغيل</string>
     <string name="settingsStartupHint">هل يفتح أذكار نفسه عند تسجيل دخولك.</string>
     <string name="settingsStartupDisabledByUser">تم تعطيل بدء التشغيل في إعدادات النظام. فعّله من هناك للسماح لأذكار بالعمل عند تسجيل الدخول.</string>
@@ -676,4 +689,7 @@
     <string name="updateDownloadingMessage">جارٍ تنزيل الإصدار %1$s.</string>
     <string name="updateReadyTitle">التحديث جاهز للتثبيت</string>
     <string name="updateReadyMessage">الإصدار %1$s جاهز. افتح الإعدادات للتثبيت وإعادة التشغيل.</string>
+    <string name="settingsAudioStopPreview">إيقاف المعاينة</string>
+    <string name="settingsAudioVolume">مستوى الصوت</string>
+    <string name="settingsAudioFailed">تعذر تشغيل الملف الصوتي. تأكد من وجوده وأن صيغته مدعومة.</string>
 </resources>

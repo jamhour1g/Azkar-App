@@ -66,7 +66,9 @@ import dev.nucleusframework.autolaunch.AutoLaunch
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -297,18 +299,23 @@ private fun rememberQuitAction(
     notificationScope: CoroutineScope,
     dispatcher: NotificationPublisher,
     exitApplication: () -> Unit,
-): () -> Unit =
-    remember(koin, startup.databaseWarmUp, notificationScope, dispatcher, exitApplication) {
+): () -> Unit {
+    val shutdownScope = rememberCoroutineScope()
+    return remember(koin, startup.databaseWarmUp, notificationScope, dispatcher, exitApplication, shutdownScope) {
         {
-            shutdown(
-                koin = koin,
-                databaseWarmUp = startup.databaseWarmUp,
-                notificationScope = notificationScope,
-                dispatcher = dispatcher,
-                exitApplication = exitApplication,
-            )
+            shutdownScope.launch {
+                shutdown(
+                    koin = koin,
+                    databaseWarmUp = startup.databaseWarmUp,
+                    notificationScope = notificationScope,
+                    dispatcher = dispatcher,
+                    exitApplication = exitApplication,
+                )
+            }
+            Unit
         }
     }
+}
 
 @Composable
 private fun UpdateFeature(
@@ -396,17 +403,18 @@ private fun UpdateLifecycle(
  * menu item that threw on the way out would leave the window gone and the process alive, which is
  * the one state with no way back into it.
  */
-private fun shutdown(
+private suspend fun shutdown(
     koin: org.koin.core.Koin,
     databaseWarmUp: DatabaseWarmUp,
     notificationScope: CoroutineScope,
     dispatcher: NotificationPublisher,
     exitApplication: () -> Unit,
 ) {
-    notificationScope.cancel()
-    koin.get<CoroutineScope>(named("updateScope")).cancel()
+    notificationScope.coroutineContext[Job]?.cancelChildren()
     runCatching { dispatcher.dispose() }
         .onFailure { failure -> logger.warn(failure) { "Unable to dispose the notification publisher" } }
+    notificationScope.cancel()
+    koin.get<CoroutineScope>(named("updateScope")).cancel()
     databaseWarmUp.close()
     runCatching { koin.get<HttpClient>().close() }
         .onFailure { failure -> logger.warn(failure) { "Unable to close the HTTP client" } }

@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,15 +41,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.nextPrayerIn
-import com.azkar.generated.resources.prayerNotification
+import com.azkar.generated.resources.prayerNotificationTurnOff
+import com.azkar.generated.resources.prayerNotificationTurnOn
 import com.azkar.generated.resources.prayerNotificationsShort
+import com.azkar.generated.resources.prayerSoundTurnOff
+import com.azkar.generated.resources.prayerSoundTurnOn
 import com.azkar.generated.resources.prayerTimesLocation
 import com.azkar.generated.resources.todayPrayerTimes
 import com.azkar.generated.resources.trayNextPrayerCountdown
 import com.azkar.ui.components.AzkarCard
 import com.azkar.ui.components.AzkarIcons
+import com.azkar.ui.components.TooltipIconButton
 import com.azkar.ui.components.pressFeedback
-import com.azkar.ui.components.pressableClick
 import com.azkar.ui.preview.previewCountdown
 import com.azkar.ui.preview.previewPrayerRows
 import com.azkar.ui.theme.AzkarTheme
@@ -128,6 +134,7 @@ fun PrayerTimesCard(
     notificationsEnabled: Boolean,
     onGlobalToggle: (Boolean) -> Unit,
     onNotificationToggled: (PrayerKey, Boolean) -> Unit,
+    onSoundToggled: (PrayerKey, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val colors = AzkarTheme.colors
@@ -164,7 +171,11 @@ fun PrayerTimesCard(
                 verticalArrangement = Arrangement.spacedBy(ROW_GAP),
             ) {
                 rows.forEach { row ->
-                    PrayerTableRow(row = row, onNotificationToggled = onNotificationToggled)
+                    PrayerTableRow(
+                        row = row,
+                        onNotificationToggled = onNotificationToggled,
+                        onSoundToggled = onSoundToggled,
+                    )
                 }
             }
         }
@@ -198,6 +209,7 @@ internal fun PrayerTimesCardPreview(
             notificationsEnabled = state.notificationsEnabled,
             onGlobalToggle = {},
             onNotificationToggled = { _, _ -> },
+            onSoundToggled = { _, _ -> },
         )
     }
 }
@@ -210,7 +222,10 @@ internal data class PrayerTimesCardPreviewState(
 )
 
 internal class PrayerTimesCardStateProvider : PreviewParameterProvider<PrayerTimesCardPreviewState> {
-    private val rows = previewPrayerRows()
+    private val rows =
+        previewPrayerRows().map { row ->
+            row.copy(soundEnabled = row.key == PrayerKey.FAJR || row.key == PrayerKey.ASR)
+        }
     override val values =
         sequenceOf(
             PrayerTimesCardPreviewState(520.dp, rows, previewCountdown(), notificationsEnabled = true),
@@ -479,10 +494,14 @@ private fun CountdownPill(
 private fun PrayerTableRow(
     row: PrayerRowState,
     onNotificationToggled: (PrayerKey, Boolean) -> Unit,
+    onSoundToggled: (PrayerKey, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = AzkarTheme.colors
     val accent = prayerAccent(row.key)
+    val notificationTooltip =
+        if (row.notificationsEnabled) Res.string.prayerNotificationTurnOff else Res.string.prayerNotificationTurnOn
+    val soundTooltip = if (row.soundEnabled) Res.string.prayerSoundTurnOff else Res.string.prayerSoundTurnOn
 
     Row(
         modifier =
@@ -511,17 +530,21 @@ private fun PrayerTableRow(
             fontWeight = FontWeight.Bold,
             maxLines = 1,
         )
-        Icon(
-            imageVector = if (row.notificationsEnabled) AzkarIcons.Bell else AzkarIcons.BellOff,
-            contentDescription = stringResource(Res.string.prayerNotification),
+        TooltipIconButton(
+            icon = if (row.notificationsEnabled) AzkarIcons.Bell else AzkarIcons.BellOff,
+            tooltip = stringResource(notificationTooltip, row.name),
+            onClick = { onNotificationToggled(row.key, !row.notificationsEnabled) },
+            buttonSize = 28.dp,
+            iconSize = 16.dp,
             tint = if (row.notificationsEnabled) colors.primaryStrong else colors.textSecondary,
-            modifier =
-                Modifier
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .pressableClick {
-                        onNotificationToggled(row.key, !row.notificationsEnabled)
-                    },
+        )
+        TooltipIconButton(
+            icon = if (row.soundEnabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
+            tooltip = stringResource(soundTooltip, row.name),
+            onClick = { onSoundToggled(row.key, !row.soundEnabled) },
+            buttonSize = 28.dp,
+            iconSize = 16.dp,
+            tint = if (row.soundEnabled) colors.primaryStrong else colors.textSecondary,
         )
     }
 }

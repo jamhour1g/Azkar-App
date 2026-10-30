@@ -1,7 +1,15 @@
 package com.azkar.ui.notifications.presentation
 
+import com.azkar.ui.notifications.AudioPreferences
+import com.azkar.ui.notifications.DesktopAudioPlayer
 import com.azkar.ui.notifications.NotificationAction
+import com.azkar.ui.notifications.NotificationContent
 import com.azkar.ui.notifications.NotificationNotice
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * The one thing the scheduler is allowed to ask for.
@@ -24,8 +32,8 @@ interface NotificationPublisher {
     /** Hands [notice] to the overlay. Safe to call from any thread. */
     fun publish(notice: NotificationNotice)
 
-    /** Releases the overlay. Called once, from the app's Quit path. */
-    fun dispose()
+    /** Releases audio and overlay resources. Called once, from the app's Quit path. */
+    suspend fun dispose()
 }
 
 /**
@@ -41,6 +49,9 @@ interface NotificationPublisher {
  */
 class NotificationDispatcher(
     private val overlay: NotificationPresenter,
+    private val audioPreferences: StateFlow<AudioPreferences>? = null,
+    private val audioPlayer: DesktopAudioPlayer? = null,
+    private val audioScope: CoroutineScope? = null,
 ) : NotificationPublisher {
     @Volatile
     private var action: NotificationAction = NotificationAction.OpenApp
@@ -50,11 +61,57 @@ class NotificationDispatcher(
 
     override fun publish(notice: NotificationNotice) {
         action = notice.action
+        val sounds = audioPreferences?.value
+        val audioContext =
+            when (val content = notice.content) {
+                is NotificationContent.Prayer -> "prayer ${content.prayerKey?.id ?: "unknown"}"
+                is NotificationContent.Remembrance -> "remembrance notification"
+                null -> null
+            }
+        val audioPath =
+            when (notice.content) {
+                is NotificationContent.Prayer -> sounds?.prayerFile
+                is NotificationContent.Remembrance -> sounds?.notificationFile
+                null -> null
+            }
+        audioScope?.launch {
+            try {
+                when (val content = notice.content) {
+                    is NotificationContent.Prayer ->
+                        if (
+                            sounds?.prayerEnabled == true &&
+                            (content.prayerKey?.let { sounds.prayerSoundsEnabled[it.id] == true } ?: true) &&
+                            sounds.prayerFile.isNotBlank()
+                        ) {
+                            audioPlayer?.playPrayer(sounds.prayerFile, sounds.prayerVolume)
+                        }
+                    is NotificationContent.Remembrance ->
+                        if (
+                            sounds?.notificationsEnabled == true && sounds.notificationFile.isNotBlank()
+                        ) {
+                            audioPlayer?.playNotification(sounds.notificationFile, sounds.notificationVolume)
+                        }
+                    null -> Unit
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                logger.warn(failure) {
+                    "Unable to start ${audioContext ?: "notification"} audio " +
+                        "(path='${audioPath?.ifBlank { "unset" } ?: "unset"}')"
+                }
+            }
+        }
         overlay.present(notice)
     }
 
-    override fun dispose() {
+    override suspend fun dispose() {
         overlay.dispose()
+        audioPlayer?.release()
         action = NotificationAction.OpenApp
+    }
+
+    private companion object {
+        val logger = KotlinLogging.logger {}
     }
 }
