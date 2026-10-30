@@ -43,7 +43,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -85,9 +84,7 @@ import com.azkar.ui.i18n.hadithGradeLabel
 import com.azkar.ui.library.model.RemembranceTranslationEntry
 import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.library.model.missingRemembranceLanguages
-import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import org.jetbrains.compose.resources.stringResource
@@ -477,18 +474,15 @@ private data class RemembranceCreateNavigation(
     val onConfirm: () -> Unit,
 )
 
-@Preview
-@RoborazziDesktopPreviewExclude
+@AzkarVariantsPreview
 @Composable
-private fun RemembranceCreateDialogPreview() {
-    AzkarThemePreview(width = 640.dp, height = 680.dp) {
-        RemembranceCreateDialog(
-            draft = RemembranceCreateDraft(textLocale = Locale.forLanguageTag("ar")),
-            availableTags = listOf("morning", "sleep", "travel").map(TagOption::of),
-            onDismiss = {},
-            onConfirm = {},
-        )
-    }
+internal fun RemembranceCreateDialogPreview() {
+    RemembranceCreateDialog(
+        draft = RemembranceCreateDraft(textLocale = Locale.forLanguageTag("ar")),
+        availableTags = listOf("morning", "sleep", "travel").map(TagOption::of),
+        onDismiss = {},
+        onConfirm = {},
+    )
 }
 
 @AzkarVariantsPreview

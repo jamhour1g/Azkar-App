@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -72,9 +71,7 @@ import com.azkar.ui.library.data.TagSaveResult
 import com.azkar.ui.library.model.TranslationEntry
 import com.azkar.ui.library.model.missingLanguages
 import com.azkar.ui.library.model.survivingRename
-import com.azkar.ui.preview.RoborazziDesktopPreviewExclude
 import com.azkar.ui.theme.AzkarTheme
-import com.azkar.ui.theme.AzkarThemePreview
 import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.isRtlLayout
 import kotlinx.coroutines.CoroutineScope
@@ -725,34 +722,28 @@ private fun DialogFooter(
 
 // ---- previews ------------------------------------------------------------------------------------
 
-@Preview
-@RoborazziDesktopPreviewExclude
+@AzkarVariantsPreview
 @Composable
-private fun TagDeleteDialogPreview() {
-    AzkarThemePreview(width = 520.dp) {
-        TagDeleteDialog(
-            tag = previewTagSummary("evening", collections = 1, remembrances = 54, added = true),
-            onDismiss = {},
-            onConfirm = {},
-        )
-    }
+internal fun TagDeleteDialogPreview() {
+    TagDeleteDialog(
+        tag = previewTagSummary("evening", collections = 1, remembrances = 54, added = true),
+        onDismiss = {},
+        onConfirm = {},
+    )
 }
 
-@Preview
-@RoborazziDesktopPreviewExclude
+@AzkarVariantsPreview
 @Composable
-private fun TagNameDialogPreview() {
-    AzkarThemePreview(width = 520.dp) {
-        TagNameDialog(
-            title = stringResource(Res.string.tagsDialogRenameTitle),
-            initialName = "evening",
-            confirmLabel = stringResource(Res.string.tagsActionSave),
-            subtitle = stringResource(Res.string.tagsDialogRenameCurrent, "evening"),
-            note = stringResource(Res.string.tagsDialogRenameNote),
-            onSubmit = { _, _ -> TagSaveResult.Saved },
-            onDismiss = {},
-        )
-    }
+internal fun TagNameDialogPreview() {
+    TagNameDialog(
+        title = stringResource(Res.string.tagsDialogRenameTitle),
+        initialName = "evening",
+        confirmLabel = stringResource(Res.string.tagsActionSave),
+        subtitle = stringResource(Res.string.tagsDialogRenameCurrent, "evening"),
+        note = stringResource(Res.string.tagsDialogRenameNote),
+        onSubmit = { _, _ -> TagSaveResult.Saved },
+        onDismiss = {},
+    )
 }
 
 @AzkarVariantsPreview

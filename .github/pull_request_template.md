@@ -14,7 +14,7 @@
 
 ## Screenshots
 
-<!-- For UI changes, add before/after screenshots or a short recording. Remove this section if not applicable. -->
+<!-- Required for PRs that change the UI: attach before/after screenshots or a short recording showing the change. PRs with UI changes and no screenshots will be refused. Remove this section only when the PR has no UI changes. -->
 
 ## Checklist
 

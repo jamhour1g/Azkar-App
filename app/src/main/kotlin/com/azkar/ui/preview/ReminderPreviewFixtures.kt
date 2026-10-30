@@ -11,7 +11,7 @@ import com.azkar.ui.notifications.ReminderScheduleEditor
  * The notification-related screens' preview fixtures, split out of [PreviewFixtures].
  *
  * Same rules as that file — in-memory only, never registered in `appModule`, reachable only from a
- * `@Preview` body or `RoborazziScreenshotSuite`. It lives here rather than there because the catalogue
+ * `@Preview` body or gallery scene. It lives here rather than there because the catalogue
  * fixtures already ran [PreviewFixtures] past the per-file size limit, and because a screen's own
  * fixtures read better beside the screen than buried in a list of everything else's.
  */

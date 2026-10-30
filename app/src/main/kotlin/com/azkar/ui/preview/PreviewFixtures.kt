@@ -8,7 +8,7 @@
  * **Nothing in this file may be registered in `appModule`.** These are in-memory objects with no
  * database behind them: a preview that resolved one of them from the container would show fixture
  * data and look like it worked. They are reachable only from a `@Preview` body or from
- * `RoborazziScreenshotSuite`, both of which name the fake they want at the call site.
+ * the preview or gallery fixture that names the fake it needs at the call site.
  *
  * They do ship in the jar, which is the price of not adding a fourth source set for a few hundred
  * lines of literals. Nothing here opens a file, a socket or a database, so the cost is a little
