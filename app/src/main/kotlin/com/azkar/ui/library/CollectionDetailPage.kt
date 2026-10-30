@@ -28,6 +28,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -259,7 +260,7 @@ private fun tileWithReorder(
         RemembranceTileRow(
             tile = tile,
             actions = tileActions,
-            modifier = placed,
+            modifier = placed.testTag("member-tile-${tile.id}"),
             selected = tile.id in detail.selectedToRemove,
             memberCount = detail.memberCount,
             dragGesture = dragGesture,

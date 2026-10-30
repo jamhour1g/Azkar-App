@@ -15,6 +15,7 @@ ch-qos-logback = "1.5.32"
 io-github-oshai-kotlin-logging = "7.0.7"
 jetbrains-kotlin = "2.4.20"
 jetbrains-compose = "1.12.1"
+dejavu = "0.5.1"
 roborazzi = "1.76.0"
 webp-imageio = "0.3.3"
 compose-hot-reload = "1.3.0-beta01"
@@ -110,6 +111,7 @@ org-jetbrains-compose-material3 = { module = "org.jetbrains.compose.material3:ma
 org-jetbrains-compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "jetbrains-material-icons-extended" }
 org-jetbrains-compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "jetbrains-compose" }
 org-jetbrains-compose-ui-test = { module = "org.jetbrains.compose.ui:ui-test", version.ref = "jetbrains-compose" }
+dev-mttmcknn-dejavu = { module = "dev.mttmcknn:dejavu", version.ref = "dejavu" }
 org-jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "jetbrains-compose" }
 io-github-takahirom-roborazzi-compose-desktop = { module = "io.github.takahirom.roborazzi:roborazzi-compose-desktop", version.ref = "roborazzi" }
 io-github-takahirom-roborazzi-compose-desktop-preview-scanner-support = { module = "io.github.takahirom.roborazzi:roborazzi-compose-desktop-preview-scanner-support", version.ref = "roborazzi" }

@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -732,7 +733,12 @@ internal fun CollectionEditorDialog(
     var page by rememberSaveable { mutableStateOf(0) }
     val step = steps[page.coerceIn(steps.indices)]
     Dialog(onDismissRequest = onDismiss) {
-        AzkarDialogSurface(modifier = Modifier.widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)) {
+        AzkarDialogSurface(
+            modifier =
+                Modifier
+                    .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
+                    .testTag("collection-editor-dialog"),
+        ) {
             Column {
                 CollectionEditorHeader(
                     mode = draft.mode,

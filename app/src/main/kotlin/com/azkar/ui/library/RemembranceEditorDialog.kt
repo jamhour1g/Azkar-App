@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -89,7 +90,9 @@ internal fun RemembranceEditorContent(
         }
     // The Box inside AzkarDialogSurface has no arrangement of its own, so the children need a
     // Column of their own to stack. The reset dialog learned this the hard way.
-    AzkarDialogSurface(modifier = Modifier.widthIn(min = 380.dp, max = 560.dp)) {
+    AzkarDialogSurface(
+        modifier = Modifier.widthIn(min = 380.dp, max = 560.dp).testTag("remembrance-editor-dialog"),
+    ) {
         Column {
             Text(
                 text = stringResource(Res.string.remembranceEditorTitle),

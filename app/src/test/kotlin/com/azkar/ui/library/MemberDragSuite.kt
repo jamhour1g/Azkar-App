@@ -12,15 +12,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteractionCollection
 import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.azkar.testing.assertTrackedRecompositions
+import com.azkar.testing.assertTrackedStable
+import com.azkar.testing.withDesktopDejavu
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.model.CollectionMemberView
 import com.azkar.ui.preview.previewReminders
@@ -28,6 +33,8 @@ import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.LocalWindowSizeClass
 import com.azkar.ui.theme.windowSizeClassFor
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
 import java.util.Locale
 
@@ -40,10 +47,20 @@ import java.util.Locale
  * them fit under the hero band, which is why this is a real desktop window rather than the default.
  */
 private val DRAG_SCREEN = Size(1440f, 1200f)
+private const val DETAIL_SCREEN_TAG = "member-detail-screen"
 
 @OptIn(ExperimentalTestApi::class)
-private fun dragScreen(block: SkikoComposeUiTest.() -> Unit) =
-    runSkikoComposeUiTest(size = DRAG_SCREEN, density = Density(1f), block = block)
+private fun trackedDragScreen(block: SkikoComposeUiTest.() -> Unit) {
+    withDesktopDejavu {
+        runSkikoComposeUiTest(size = DRAG_SCREEN, density = Density(1f)) {
+            resetRecompositionCounts()
+            block()
+        }
+    }
+}
+
+@OptIn(ExperimentalTestApi::class)
+private fun dragScreen(block: SkikoComposeUiTest.() -> Unit) = trackedDragScreen(block)
 
 /**
  * The handle's accessible name, which is the translation of its tooltip.
@@ -105,6 +122,7 @@ private fun DragFixture(
                     onStartSession = {},
                     onOpenRemembrance = {},
                     showToast = { _, _, _ -> },
+                    modifier = Modifier.testTag(DETAIL_SCREEN_TAG),
                 )
                 Box(Modifier.fillMaxSize()) { content(detail) }
             }
@@ -166,22 +184,26 @@ private fun SkikoComposeUiTest.handleTops(): List<Float> =
 val MemberDragSuite by testSuite("dragging a card on the members page") {
     test("the handles are on the screen before anything is dragged") {
         dragScreen {
-            setContent { DragFixture(dragGateway()) {} }
+            setTrackedContent { DragFixture(dragGateway()) {} }
             waitForIdle()
+            resetRecompositionCounts()
+            mainClock.advanceTimeBy(100)
             assertThat(handles().fetchSemanticsNodes())
                 .describedAs("a handle on each of the four rows")
                 .hasSize(4)
+            onNodeWithTag(DETAIL_SCREEN_TAG).assertTrackedStable(expectedFunction = "DetailLazyPage")
         }
     }
 
     test("dragging the first row down onto the second one reorders the collection") {
         dragScreen {
             val gateway = dragGateway()
-            setContent { DragFixture(gateway) {} }
+            setTrackedContent { DragFixture(gateway) {} }
             waitForIdle()
             assertThat(gateway.memberIds()).describedAs("what the fixture starts as").containsExactly(1L, 2L, 3L, 4L)
 
             val rowPitch = handleTops()[1] - handleTops()[0]
+            resetRecompositionCounts()
             handles()[0].performTouchInput {
                 down(center)
                 moveBy(Offset(0f, rowPitch))
@@ -192,14 +214,16 @@ val MemberDragSuite by testSuite("dragging a card on the members page") {
             assertThat(gateway.memberIds())
                 .describedAs("the order the collection is stored in after the drop")
                 .containsExactly(2L, 1L, 3L, 4L)
+            onNodeWithTag("member-tile-1").assertTrackedRecompositions(exactly = 1, expectedFunction = "AzkarCard")
         }
     }
 
     test("a drag that goes nowhere leaves the order alone") {
         dragScreen {
             val gateway = dragGateway()
-            setContent { DragFixture(gateway) {} }
+            setTrackedContent { DragFixture(gateway) {} }
             waitForIdle()
+            resetRecompositionCounts()
 
             handles()[0].performTouchInput {
                 down(center)
@@ -211,16 +235,18 @@ val MemberDragSuite by testSuite("dragging a card on the members page") {
             assertThat(gateway.memberIds())
                 .describedAs("a nudge is not a reorder, and must not write one")
                 .containsExactly(1L, 2L, 3L, 4L)
+            onNodeWithTag(DETAIL_SCREEN_TAG).assertTrackedStable(expectedFunction = "DetailLazyPage")
         }
     }
 
     test("the rows are laid out again in the order the drop produced") {
         dragScreen {
             val gateway = dragGateway()
-            setContent { DragFixture(gateway) {} }
+            setTrackedContent { DragFixture(gateway) {} }
             waitForIdle()
 
             val tops = handleTops()
+            resetRecompositionCounts()
             handles()[0].performTouchInput {
                 down(center)
                 moveBy(Offset(0f, tops[1] - tops[0]))
@@ -232,6 +258,7 @@ val MemberDragSuite by testSuite("dragging a card on the members page") {
             // container re-laid the rows out rather than having lost one of them to the move.
             onNodeWithText("Remembrance 1").assertExists()
             onNodeWithText("Remembrance 2").assertExists()
+            onNodeWithTag("member-tile-1").assertTrackedRecompositions(exactly = 1, expectedFunction = "AzkarCard")
         }
     }
 }

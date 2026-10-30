@@ -3,12 +3,15 @@ package com.azkar.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
@@ -21,6 +24,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -29,6 +33,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.azkar.settings.FakePreferencesDataStore
 import com.azkar.settings.SettingsStore
+import com.azkar.testing.assertTrackedRecompositions
+import com.azkar.testing.assertTrackedStable
+import com.azkar.testing.withDesktopDejavu
 import com.azkar.ui.home.HomeGateway
 import com.azkar.ui.home.HomeScreen
 import com.azkar.ui.library.CollectionDetailScreen
@@ -56,6 +63,8 @@ import com.azkar.ui.theme.LocalWindowSizeClass
 import com.azkar.ui.theme.windowSizeClassFor
 import com.azkar.updates.UpdateManager
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.setTrackedContent
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import kotlinx.coroutines.CoroutineScope
@@ -87,9 +96,27 @@ private val SCREEN_SIZE = Size(1440f, 900f)
  */
 @OptIn(ExperimentalTestApi::class)
 private fun screenTest(block: SkikoComposeUiTest.() -> Unit) =
-    runSkikoComposeUiTest(size = SCREEN_SIZE, density = Density(1f), block = block)
+    withDesktopDejavu {
+        runSkikoComposeUiTest(size = SCREEN_SIZE, density = Density(1f), block = block)
+    }
 
 private const val FIRST_COLLECTION_NAME = "Morning Azkar"
+
+@OptIn(ExperimentalTestApi::class)
+private fun SkikoComposeUiTest.assertSettledAndTracked(
+    tag: String,
+    expectedFunction: String? = null,
+    changeInput: () -> Unit,
+) {
+    waitForIdle()
+    resetRecompositionCounts()
+    mainClock.advanceTimeBy(200)
+    waitForIdle()
+    onNodeWithTag(tag).assertTrackedStable(expectedFunction)
+    runOnIdle(changeInput)
+    waitForIdle()
+    onNodeWithTag(tag).assertTrackedRecompositions(exactly = 1, expectedFunction = expectedFunction)
+}
 
 private const val SECOND_COLLECTION_NAME = "My night route"
 
@@ -284,9 +311,11 @@ private fun withScreenContainer(block: () -> Unit) {
 val ScreenSuite by testSuite("Screen smoke") {
     test("the library lists the collections the fixture holds") {
         screenTest {
-            setContent {
+            val padding = mutableIntStateOf(0)
+            setTrackedContent {
                 ScreenFixture {
                     CollectionsScreen(
+                        modifier = Modifier.testTag("collections-screen").padding(padding.intValue.dp),
                         onOpenCollection = {},
                         onOpenRemembrance = {},
                         onManageTags = {},
@@ -295,9 +324,9 @@ val ScreenSuite by testSuite("Screen smoke") {
                     )
                 }
             }
-            waitForIdle()
             onNode(collectionCard(FIRST_COLLECTION_NAME)).assertIsDisplayed()
             onNode(collectionCard(SECOND_COLLECTION_NAME)).assertIsDisplayed()
+            assertSettledAndTracked("collections-screen", "ShelfColumn") { padding.intValue = 1 }
         }
     }
 
@@ -308,9 +337,10 @@ val ScreenSuite by testSuite("Screen smoke") {
      */
     test("searching the library narrows the list to the matching collection") {
         screenTest {
-            setContent {
+            setTrackedContent {
                 ScreenFixture {
                     CollectionsScreen(
+                        modifier = Modifier.testTag("collections-screen"),
                         onOpenCollection = {},
                         onOpenRemembrance = {},
                         onManageTags = {},
@@ -320,8 +350,12 @@ val ScreenSuite by testSuite("Screen smoke") {
                 }
             }
             waitForIdle()
+            resetRecompositionCounts()
             onNode(hasSetTextAction()).performTextInput("night")
             waitForIdle()
+            onNodeWithTag(
+                "collections-screen",
+            ).assertTrackedRecompositions(atLeast = 1, atMost = 1, expectedFunction = "ShelfColumn")
             onNode(collectionCard(SECOND_COLLECTION_NAME)).assertIsDisplayed()
             onAllNodes(collectionCard(FIRST_COLLECTION_NAME)).assertCountEquals(0)
         }
@@ -334,9 +368,10 @@ val ScreenSuite by testSuite("Screen smoke") {
     test("opening a collection card reports that collection's id") {
         screenTest {
             val opened = mutableListOf<Long>()
-            setContent {
+            setTrackedContent {
                 ScreenFixture {
                     CollectionsScreen(
+                        modifier = Modifier.testTag("collections-screen"),
                         onOpenCollection = { opened += it },
                         onOpenRemembrance = {},
                         onManageTags = {},
@@ -346,8 +381,10 @@ val ScreenSuite by testSuite("Screen smoke") {
                 }
             }
             waitForIdle()
+            resetRecompositionCounts()
             onNode(collectionCard(FIRST_COLLECTION_NAME)).performClick()
             waitForIdle()
+            onNodeWithTag("collections-screen").assertTrackedStable("ShelfColumn")
             assertThat(
                 opened,
             ).describedAs("the card must report the id it stands for").containsExactly(firstCollectionId())
@@ -356,10 +393,12 @@ val ScreenSuite by testSuite("Screen smoke") {
 
     test("the detail screen names the collection it was opened for") {
         screenTest {
-            setContent {
+            val padding = mutableIntStateOf(0)
+            setTrackedContent {
                 val catalogue = rememberPreviewCatalogue(Locale.ENGLISH)
                 ScreenFixture {
                     CollectionDetailScreen(
+                        modifier = Modifier.testTag("collection-detail-screen").padding(padding.intValue.dp),
                         detail =
                             rememberCollectionDetailState(
                                 catalogue = catalogue,
@@ -375,16 +414,18 @@ val ScreenSuite by testSuite("Screen smoke") {
             }
             waitForIdle()
             onNodeWithText(FIRST_COLLECTION_NAME).assertIsDisplayed()
+            assertSettledAndTracked("collection-detail-screen", "DetailLazyPage") { padding.intValue = 1 }
         }
     }
 
     test("leaving the detail screen calls back") {
         screenTest {
             var backs = 0
-            setContent {
+            setTrackedContent {
                 val catalogue = rememberPreviewCatalogue(Locale.ENGLISH)
                 ScreenFixture {
                     CollectionDetailScreen(
+                        modifier = Modifier.testTag("collection-detail-screen"),
                         detail =
                             rememberCollectionDetailState(
                                 catalogue = catalogue,
@@ -399,10 +440,12 @@ val ScreenSuite by testSuite("Screen smoke") {
                 }
             }
             waitForIdle()
+            resetRecompositionCounts()
             // The way out is a breadcrumb labelled with where it goes, not a generic "Back". Asserting
             // the label rather than the symbol keeps the test honest about what the control is.
             onNodeWithText(BREADCRUMB_TO_LIBRARY).performClick()
             waitForIdle()
+            onNodeWithTag("collection-detail-screen").assertTrackedStable("DetailLazyPage")
             assertThat(backs).describedAs("the screen has to be able to be left").isEqualTo(1)
         }
     }
@@ -420,7 +463,7 @@ val ScreenSuite by testSuite("Screen smoke") {
         withScreenContainer {
             screenTest {
                 val persisted = mutableListOf<ThemePreference>()
-                setContent {
+                setTrackedContent {
                     val state =
                         AzkarAppState(
                             initialThemePreference = ThemePreference.SYSTEM,
@@ -429,13 +472,24 @@ val ScreenSuite by testSuite("Screen smoke") {
                             persist = {},
                             persistTypography = {},
                         )
-                    ScreenFixture { SettingsScreen(state = state, onClose = {}) }
+                    ScreenFixture {
+                        SettingsScreen(
+                            state = state,
+                            onClose = {},
+                            modifier = Modifier.testTag("settings-screen"),
+                        )
+                    }
                 }
                 waitForIdle()
+                resetRecompositionCounts()
                 onNodeWithText("Theme").performClick()
                 waitForIdle()
+                onNodeWithTag("settings-screen")
+                    .assertTrackedRecompositions(atLeast = 1, atMost = 3, expectedFunction = "SettingsScreenContent")
+                resetRecompositionCounts()
                 onNodeWithText(THEME_OPTION_DARK).performClick()
                 waitForIdle()
+                onNodeWithTag("settings-screen").assertTrackedStable("SettingsScreenContent")
                 assertThat(
                     persisted,
                 ).describedAs(
@@ -445,26 +499,61 @@ val ScreenSuite by testSuite("Screen smoke") {
         }
     }
 
-    test("prayer navigation keeps the chosen section selected when the group fits on screen") {
+    test("scrolling to a settings section keeps screen recompositions bounded") {
         withScreenContainer {
             screenTest {
-                setContent {
+                setTrackedContent {
                     ScreenFixture {
                         SettingsScreen(
                             state = previewAzkarAppState(),
+                            onClose = {},
+                            modifier = Modifier.testTag("settings-screen"),
+                        )
+                    }
+                }
+                waitForIdle()
+                val before = onNodeWithText("Text size", ignoreCase = true).fetchSemanticsNode().boundsInRoot.top
+                resetRecompositionCounts()
+                onNode(hasText("Text") and hasClickAction()).performClick()
+                waitForIdle()
+                onNodeWithText("Text size", ignoreCase = true).assertIsDisplayed()
+                val after = onNodeWithText("Text size", ignoreCase = true).fetchSemanticsNode().boundsInRoot.top
+                assertThat(after).describedAs("section navigation must scroll the settings list").isLessThan(before)
+                onNodeWithTag("settings-screen")
+                    .assertTrackedRecompositions(atLeast = 1, atMost = 3, expectedFunction = "SettingsScreenContent")
+            }
+        }
+    }
+
+    test("prayer navigation keeps the chosen section selected when the group fits on screen") {
+        withScreenContainer {
+            screenTest {
+                setTrackedContent {
+                    ScreenFixture {
+                        SettingsScreen(
+                            state = previewAzkarAppState(),
+                            modifier = Modifier.testTag("settings-screen"),
                             onClose = {},
                             initialGroup = SettingsGroup.PRAYER,
                         )
                     }
                 }
                 waitForIdle()
+                resetRecompositionCounts()
                 onNodeWithText("Calculation").assertIsSelected()
                 onNodeWithText("Location").assertIsNotSelected().performClick()
                 waitForIdle()
                 onNodeWithText("Location").assertIsSelected()
+                onNodeWithTag(
+                    "settings-screen",
+                ).assertTrackedRecompositions(exactly = 1, expectedFunction = "SettingsScreenContent")
+                resetRecompositionCounts()
                 onNodeWithText("Calculation").assertIsNotSelected().performClick()
                 waitForIdle()
                 onNodeWithText("Calculation").assertIsSelected()
+                onNodeWithTag(
+                    "settings-screen",
+                ).assertTrackedRecompositions(exactly = 1, expectedFunction = "SettingsScreenContent")
             }
         }
     }
@@ -473,12 +562,20 @@ val ScreenSuite by testSuite("Screen smoke") {
         withScreenContainer {
             screenTest {
                 var closes = 0
-                setContent {
-                    ScreenFixture { SettingsScreen(state = previewAzkarAppState(), onClose = { closes++ }) }
+                setTrackedContent {
+                    ScreenFixture {
+                        SettingsScreen(
+                            state = previewAzkarAppState(),
+                            onClose = { closes++ },
+                            modifier = Modifier.testTag("settings-screen"),
+                        )
+                    }
                 }
                 waitForIdle()
+                resetRecompositionCounts()
                 onNodeWithContentDescription(SETTINGS_CLOSE).performClick()
                 waitForIdle()
+                onNodeWithTag("settings-screen").assertTrackedStable("SettingsScreenContent")
                 assertThat(
                     closes,
                 ).describedAs("settings is pushed onto a screen and has to pop back off it").isEqualTo(1)
@@ -488,10 +585,12 @@ val ScreenSuite by testSuite("Screen smoke") {
 
     test("the session names the collection it was started for") {
         screenTest {
-            setContent {
+            val padding = mutableIntStateOf(0)
+            setTrackedContent {
                 val catalogue = rememberPreviewCatalogue(Locale.ENGLISH)
                 ScreenFixture {
                     CollectionSessionScreen(
+                        modifier = Modifier.testTag("collection-session-screen").padding(padding.intValue.dp),
                         session = rememberCollectionSessionState(catalogue, firstCollectionId(), REMINDERS),
                         onBack = {},
                         onOpenRemembrance = {},
@@ -501,16 +600,18 @@ val ScreenSuite by testSuite("Screen smoke") {
             }
             waitForIdle()
             onNodeWithText(FIRST_COLLECTION_NAME).assertIsDisplayed()
+            assertSettledAndTracked("collection-session-screen", "CollectionSessionContent") { padding.intValue = 1 }
         }
     }
 
     test("leaving the session calls back") {
         screenTest {
             var backs = 0
-            setContent {
+            setTrackedContent {
                 val catalogue = rememberPreviewCatalogue(Locale.ENGLISH)
                 ScreenFixture {
                     CollectionSessionScreen(
+                        modifier = Modifier.testTag("collection-session-screen"),
                         session = rememberCollectionSessionState(catalogue, firstCollectionId(), REMINDERS),
                         onBack = { backs++ },
                         onOpenRemembrance = {},
@@ -519,8 +620,10 @@ val ScreenSuite by testSuite("Screen smoke") {
                 }
             }
             waitForIdle()
+            resetRecompositionCounts()
             onNodeWithText(SESSION_BREADCRUMB).performClick()
             waitForIdle()
+            onNodeWithTag("collection-session-screen").assertTrackedStable("CollectionSessionContent")
             assertThat(backs).isEqualTo(1)
         }
     }
@@ -537,12 +640,13 @@ val ScreenSuite by testSuite("Screen smoke") {
     test("skipping in a session advances to the next passage") {
         screenTest {
             var position = -1
-            setContent {
+            setTrackedContent {
                 val catalogue = rememberPreviewCatalogue(Locale.ENGLISH)
                 val session = rememberCollectionSessionState(catalogue, firstCollectionId(), REMINDERS)
                 position = session.position
                 ScreenFixture {
                     CollectionSessionScreen(
+                        modifier = Modifier.testTag("collection-session-screen"),
                         session = session,
                         onBack = {},
                         onOpenRemembrance = {},
@@ -552,8 +656,12 @@ val ScreenSuite by testSuite("Screen smoke") {
             }
             waitForIdle()
             val start = position
+            resetRecompositionCounts()
             onNodeWithContentDescription(SESSION_SKIP).performClick()
             waitForIdle()
+            onNodeWithTag(
+                "collection-session-screen",
+            ).assertTrackedRecompositions(atLeast = 1, atMost = 1, expectedFunction = "CollectionSessionContent")
             assertThat(
                 position,
             ).describedAs("skip must move on, not merely re-render the same one").isEqualTo(start + 1)
@@ -577,7 +685,8 @@ val ScreenSuite by testSuite("Screen smoke") {
      */
     test("the reader shows the passage's translation once the catalogue has loaded") {
         screenTest {
-            setContent {
+            val padding = mutableIntStateOf(0)
+            setTrackedContent {
                 val catalogue = rememberPreviewCatalogue(Locale.ENGLISH)
                 val passageId =
                     catalogue.allCollections
@@ -587,6 +696,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                         ?.id ?: 0L
                 ScreenFixture {
                     RemembranceReaderScreen(
+                        modifier = Modifier.testTag("remembrance-reader-screen").padding(padding.intValue.dp),
                         detail = rememberRemembranceReaderState(catalogue = catalogue, remembranceId = passageId),
                         onBack = {},
                         showToast = { _, _, _ -> },
@@ -595,6 +705,7 @@ val ScreenSuite by testSuite("Screen smoke") {
             }
             waitForIdle()
             onNodeWithText(TRANSLATION_HEADING).assertIsDisplayed()
+            assertSettledAndTracked("remembrance-reader-screen", "RemembranceReaderScreen") { padding.intValue = 1 }
         }
     }
 
@@ -609,9 +720,10 @@ val ScreenSuite by testSuite("Screen smoke") {
             screenTest {
                 val opened = mutableListOf<Long>()
                 var libraryOpens = 0
-                setContent {
+                setTrackedContent {
                     ScreenFixture {
                         HomeScreen(
+                            modifier = Modifier.testTag("home-screen"),
                             onOpenLibrary = { libraryOpens++ },
                             onOpenRemembrance = {},
                             onOpenCollection = { opened += it },
@@ -620,8 +732,10 @@ val ScreenSuite by testSuite("Screen smoke") {
                     }
                 }
                 waitForIdle()
+                resetRecompositionCounts()
                 onNode(collectionCard(HOME_RAIL_FIRST_COLLECTION)).performClick()
                 waitForIdle()
+                onNodeWithTag("home-screen").assertTrackedStable("HomeContent")
                 assertThat(opened)
                     .describedAs("the rail card must report the collection it stands for")
                     .containsExactly(HOME_RAIL_FIRST_COLLECTION_ID)

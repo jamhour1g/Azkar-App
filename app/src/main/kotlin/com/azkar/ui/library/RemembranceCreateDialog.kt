@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -115,7 +116,12 @@ internal fun RemembranceCreateDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         AzkarDialogSurface(
-            modifier = Modifier.widthIn(min = CREATE_MIN_WIDTH, max = CREATE_MAX_WIDTH),
+            modifier =
+                Modifier
+                    .widthIn(
+                        min = CREATE_MIN_WIDTH,
+                        max = CREATE_MAX_WIDTH,
+                    ).testTag("remembrance-create-dialog"),
         ) {
             Column {
                 RemembranceCreateHeader(step = step, onDismiss = onDismiss)

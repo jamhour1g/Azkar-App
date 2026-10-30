@@ -24,6 +24,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -300,18 +301,29 @@ private fun activeSettingsSection(
     listState: LazyListState,
     selectedSection: SettingsSection,
 ): SettingsSection {
-    // When the whole group fits, scrolling cannot express which section the user selected.
-    if (!listState.canScrollForward && !listState.canScrollBackward) return selectedSection
-    val visible = listState.layoutInfo.visibleItemsInfo
-    val index =
-        when {
-            visible.isEmpty() -> 0
-            !listState.canScrollBackward -> visible.firstOrNull { it.index >= OFFSET_FOR_HEADER }?.index ?: 0
-            listState.canScrollForward -> visible.first().index
-            else -> visible.last().index
+    // layoutInfo changes on every scroll frame, but the highlighted section changes only at boundaries.
+    val active by remember(listState, selectedSection) {
+        derivedStateOf {
+            if (!listState.canScrollForward && !listState.canScrollBackward) {
+                selectedSection
+            } else {
+                val visible = listState.layoutInfo.visibleItemsInfo
+                val index =
+                    when {
+                        visible.isEmpty() -> 0
+                        !listState.canScrollBackward ->
+                            visible.firstOrNull { it.index >= OFFSET_FOR_HEADER }?.index
+                                ?: 0
+                        listState.canScrollForward -> visible.first().index
+                        else -> visible.last().index
+                    }
+                selectedSection.group.sections.getOrElse(
+                    index - OFFSET_FOR_HEADER,
+                ) { selectedSection.group.sections.first() }
+            }
         }
-    val sections = selectedSection.group.sections
-    return sections.getOrElse(index - OFFSET_FOR_HEADER) { sections.first() }
+    }
+    return active
 }
 
 /** The number of items that are not blocks: the page header. */

@@ -5,14 +5,20 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SkikoComposeUiTest
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import com.azkar.i18n.ENGLISH
+import com.azkar.testing.assertComposableRecompositions
+import com.azkar.testing.assertTrackedRecompositions
+import com.azkar.testing.withDesktopDejavu
 import com.azkar.ui.theme.AzkarTheme
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
 
 /**
@@ -45,22 +51,37 @@ private class Reported {
 
 /** Opens the dialog on [EXISTING_ARABIC] / [EXISTING_ENGLISH], runs [body], and reports what happened. */
 @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
-private fun converse(body: SkikoComposeUiTest.() -> Unit): Reported {
+private fun converse(
+    fieldRecompositions: IntRange = 0..0,
+    body: SkikoComposeUiTest.() -> Unit,
+): Reported {
     val reported = Reported()
-    runSkikoComposeUiTest {
-        setContent {
-            AzkarTheme(darkTheme = false, uiLocale = ENGLISH) {
-                RemembranceEditorDialog(
-                    remembrance = remembrance(id = 1L, text = EXISTING_ENGLISH),
-                    onDismiss = { reported.dismissed = true },
-                    onConfirm = { arabic, english -> reported.confirmations += arabic to english },
-                )
+    withDesktopDejavu {
+        runSkikoComposeUiTest {
+            resetRecompositionCounts()
+            setTrackedContent {
+                AzkarTheme(darkTheme = false, uiLocale = ENGLISH) {
+                    RemembranceEditorDialog(
+                        remembrance = remembrance(id = 1L, text = EXISTING_ENGLISH),
+                        onDismiss = { reported.dismissed = true },
+                        onConfirm = { arabic, english -> reported.confirmations += arabic to english },
+                    )
+                }
             }
+            waitForIdle()
+            resetRecompositionCounts()
+            body()
+            waitForIdle()
+            onNodeWithTag(
+                REMEMBRANCE_EDITOR_DIALOG_TAG,
+            ).assertTrackedRecompositions(atMost = 0, expectedFunction = "AzkarDialogSurface")
+            assertComposableRecompositions("com.azkar.ui.library.EditorField", fieldRecompositions)
         }
-        body()
     }
     return reported
 }
+
+private const val REMEMBRANCE_EDITOR_DIALOG_TAG = "remembrance-editor-dialog"
 
 @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
 val RemembranceEditorSuite by testSuite("The remembrance editor dialog") {
@@ -77,7 +98,7 @@ val RemembranceEditorSuite by testSuite("The remembrance editor dialog") {
 
     test("saving hands back the Arabic that was typed and the translation that was typed") {
         val reported =
-            converse {
+            converse(fieldRecompositions = 2..4) {
                 onNodeWithText(EXISTING_ARABIC).performTextReplacement(EDITED_ARABIC)
                 onNodeWithText(EXISTING_ENGLISH).performTextReplacement("Whoever says good evening")
                 onNodeWithText(SAVE).performClick()
@@ -88,7 +109,7 @@ val RemembranceEditorSuite by testSuite("The remembrance editor dialog") {
 
     test("saving with the Arabic blank refuses to close, and says why") {
         val reported =
-            converse {
+            converse(fieldRecompositions = 1..2) {
                 onNodeWithText(EXISTING_ARABIC).performTextReplacement("")
                 onNodeWithText(SAVE).performClick()
             }
@@ -98,7 +119,7 @@ val RemembranceEditorSuite by testSuite("The remembrance editor dialog") {
     }
 
     test("the note about the empty Arabic waits until the user has tried to save") {
-        converse {
+        converse(fieldRecompositions = 1..2) {
             // Nobody is scolded on the way in: a red line under a field somebody has not finished
             // typing in is the dialog answering a first keystroke.
             onNodeWithText(REQUIRED_NOTE).assertDoesNotExist()
@@ -111,7 +132,7 @@ val RemembranceEditorSuite by testSuite("The remembrance editor dialog") {
     }
 
     test("typing after being told off takes the complaint away again") {
-        converse {
+        converse(fieldRecompositions = 2..4) {
             onNodeWithText(EXISTING_ARABIC).performTextReplacement("")
             onNodeWithText(SAVE).performClick()
             onNodeWithText(REQUIRED_NOTE).assertExists()
@@ -128,7 +149,7 @@ val RemembranceEditorSuite by testSuite("The remembrance editor dialog") {
         // The assertion the whole null-versus-empty-string distinction exists for. A blank box is
         // silence about the translation, and silence must never be read as "delete it".
         val reported =
-            converse {
+            converse(fieldRecompositions = 2..4) {
                 onNodeWithText(EXISTING_ARABIC).performTextReplacement(EDITED_ARABIC)
                 onNodeWithText(EXISTING_ENGLISH).performTextReplacement("")
                 onNodeWithText(SAVE).performClick()
@@ -139,7 +160,7 @@ val RemembranceEditorSuite by testSuite("The remembrance editor dialog") {
 
     test("cancelling closes the dialog without confirming anything") {
         val reported =
-            converse {
+            converse(fieldRecompositions = 1..2) {
                 onNodeWithText(EXISTING_ARABIC).performTextReplacement(EDITED_ARABIC)
                 onNodeWithText(CANCEL).performClick()
             }

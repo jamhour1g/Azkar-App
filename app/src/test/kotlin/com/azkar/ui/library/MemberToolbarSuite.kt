@@ -3,22 +3,43 @@ package com.azkar.ui.library
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import com.azkar.testing.assertTrackedStable
+import com.azkar.testing.withDesktopDejavu
 import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.library.model.CollectionMemberSort
 import com.azkar.ui.library.model.CollectionMemberView
 import com.azkar.ui.preview.previewCollectionStats
 import com.azkar.ui.theme.AzkarThemePreview
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
+
+private const val TOOLBAR_TAG = "members-toolbar"
+
+@OptIn(ExperimentalTestApi::class)
+private fun trackedToolbarTest(block: SkikoComposeUiTest.() -> Unit) {
+    withDesktopDejavu {
+        runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+            resetRecompositionCounts()
+            block()
+            mainClock.advanceTimeBy(100)
+            waitForIdle()
+            onNodeWithTag(TOOLBAR_TAG).assertTrackedStable(expectedFunction = "CollectionMemberToolbar")
+        }
+    }
+}
 
 /**
  * That the row above the members still says everything it is responsible for saying, and still offers
@@ -87,7 +108,7 @@ val MemberToolbarSuite by testSuite("the members toolbar") {
         canResetProgress: Boolean,
         canStart: Boolean = true,
     ) {
-        setContent {
+        setTrackedContent {
             AzkarThemePreview {
                 CollectionMemberToolbar(
                     stats = stats,
@@ -101,21 +122,23 @@ val MemberToolbarSuite by testSuite("the members toolbar") {
                             onSortSelected = { pressed = it.name },
                             onViewSelected = { pressed = it.name },
                         ),
-                    modifier = Modifier.width(1200.dp),
+                    modifier = Modifier.width(1200.dp).testTag(TOOLBAR_TAG),
                 )
             }
         }
+        waitForIdle()
+        resetRecompositionCounts()
     }
 
     test("how far through the collection you are is on the row") {
-        runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+        trackedToolbarTest {
             showToolbar(canResetProgress = false)
             onNodeWithText("31 of 54 recited", substring = true).assertIsDisplayed()
         }
     }
 
     test("a collection with no members prints no progress at all") {
-        runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+        trackedToolbarTest {
             showToolbar(
                 stats = previewCollectionStats(totalMembers = 0, completedMembers = 0, remainingRepeats = 0),
                 canResetProgress = false,
@@ -125,22 +148,24 @@ val MemberToolbarSuite by testSuite("the members toolbar") {
     }
 
     test("clearing progress is not offered before anything has been recited") {
-        runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+        trackedToolbarTest {
             showToolbar(canResetProgress = false)
             onNodeWithContentDescription(resetProgressLabel).assertDoesNotExist()
         }
     }
 
     test("clearing progress reaches its own callback") {
-        runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+        trackedToolbarTest {
             showToolbar(canResetProgress = true)
+            resetRecompositionCounts()
             onNodeWithContentDescription(resetProgressLabel).performClick()
             assertThat(pressed).describedAs("what the reset button reached").isEqualTo(resetProgressLabel)
+            onNodeWithTag(TOOLBAR_TAG).assertTrackedStable(expectedFunction = "CollectionMemberToolbar")
         }
     }
 
     test("the view toggle and the sort are still on the row") {
-        runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+        trackedToolbarTest {
             showToolbar(canResetProgress = true)
 
             onNodeWithText(gridLabel).assertIsDisplayed()
@@ -150,7 +175,7 @@ val MemberToolbarSuite by testSuite("the members toolbar") {
     }
 
     test("the two view options are halves of one control, not two buttons") {
-        runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+        trackedToolbarTest {
             showToolbar(canResetProgress = true)
 
             val grid = onNodeWithText(gridLabel).fetchSemanticsNode().boundsInRoot
@@ -166,15 +191,17 @@ val MemberToolbarSuite by testSuite("the members toolbar") {
     }
 
     test("choosing the list reaches the row's own callback") {
-        runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+        trackedToolbarTest {
             showToolbar(canResetProgress = true)
+            resetRecompositionCounts()
             onNodeWithText(listLabel).performClick()
             assertThat(pressed).describedAs("what the list half reached").isEqualTo(CollectionMemberView.LIST.name)
+            onNodeWithTag(TOOLBAR_TAG).assertTrackedStable(expectedFunction = "CollectionMemberToolbar")
         }
     }
 
     test("the sort is the height of the rest of the row, not a field") {
-        runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+        trackedToolbarTest {
             showToolbar(canResetProgress = true)
 
             val sort = onNodeWithText("In order").fetchSemanticsNode().boundsInRoot
@@ -191,7 +218,7 @@ val MemberToolbarSuite by testSuite("the members toolbar") {
     }
 
     test("choosing an order from the menu reaches the row's own callback") {
-        runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+        trackedToolbarTest {
             showToolbar(canResetProgress = true)
             onNodeWithText("In order").performClick()
             onNodeWithText("By title").performClick()

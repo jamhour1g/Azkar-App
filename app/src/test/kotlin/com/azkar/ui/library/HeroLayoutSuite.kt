@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.azkar.i18n.ARABIC
 import com.azkar.i18n.ENGLISH
+import com.azkar.testing.assertTrackedStable
+import com.azkar.testing.withDesktopDejavu
 import com.azkar.ui.preview.previewCollection
 import com.azkar.ui.preview.previewCollectionHeroActions
 import com.azkar.ui.preview.previewCollectionStats
@@ -25,8 +27,23 @@ import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.LocalWindowSizeClass
 import com.azkar.ui.theme.windowSizeClassFor
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
 import java.util.Locale
+
+@OptIn(ExperimentalTestApi::class)
+private fun trackedHeroTest(
+    size: Size = Size(1584f, 900f),
+    block: SkikoComposeUiTest.() -> Unit,
+) {
+    withDesktopDejavu {
+        runSkikoComposeUiTest(size = size, density = Density(1f)) {
+            resetRecompositionCounts()
+            block()
+        }
+    }
+}
 
 /**
  * That the hero band is tall enough for the copy printed on it, in the script it is printed in.
@@ -86,7 +103,7 @@ val HeroLayoutSuite by testSuite("the collection band holds its own copy") {
 
     /** Lays the band out on its own, at the width and density a real window gives it. */
     fun SkikoComposeUiTest.showBand(script: Script) {
-        setContent {
+        setTrackedContent {
             AzkarTheme(darkTheme = true, uiLocale = script.locale) {
                 Box(
                     Modifier
@@ -127,16 +144,23 @@ val HeroLayoutSuite by testSuite("the collection band holds its own copy") {
         val language = script.locale.displayLanguage
 
         test("the band is ${script.height.toInt()}dp tall in $language") {
-            runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+            trackedHeroTest {
                 showBand(script)
+                waitForIdle()
+                resetRecompositionCounts()
+                mainClock.advanceTimeBy(100)
                 val band = onNodeWithTag(BAND).fetchSemanticsNode().boundsInRoot
                 assertThat(band.height).describedAs("the band's height in $language").isEqualTo(script.height)
+                onNodeWithTag(BAND).assertTrackedStable(expectedFunction = "CollectionDetailHero")
             }
         }
 
         test("the band in $language is not cut through at the bottom") {
-            runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+            trackedHeroTest {
                 showBand(script)
+                waitForIdle()
+                resetRecompositionCounts()
+                mainClock.advanceTimeBy(100)
                 val band = onNodeWithTag(BAND).fetchSemanticsNode().boundsInRoot
                 val facts = factRow()
 
@@ -157,25 +181,30 @@ val HeroLayoutSuite by testSuite("the collection band holds its own copy") {
                     .describedAs(
                         "where the bottom of the band's last line falls, against a band ending at ${band.bottom}",
                     ).isLessThanOrEqualTo(band.bottom)
+                onNodeWithTag(BAND).assertTrackedStable(expectedFunction = "CollectionDetailHero")
             }
         }
 
         test("the back link in $language is a pill of a fixed height") {
-            runSkikoComposeUiTest(size = Size(1584f, 900f), density = Density(1f)) {
+            trackedHeroTest {
                 showBand(script)
+                waitForIdle()
+                resetRecompositionCounts()
+                mainClock.advanceTimeBy(100)
                 // Not a colour test — this suite never reads pixels. What it pins is the *height*,
                 // because that is the thing the band's budget was rebuilt around: a control of a fixed
                 // height cannot vary with the reading direction, and so the band no longer has to.
                 assertThat(backLink().height)
                     .describedAs("the height of the back link in $language")
                     .isEqualTo(HERO_PILL_HEIGHT.value)
+                onNodeWithTag(BAND).assertTrackedStable(expectedFunction = "CollectionDetailHero")
             }
         }
     }
 
     test("compact windows keep the add and create actions named") {
-        runSkikoComposeUiTest(size = Size(800f, 900f), density = Density(1f)) {
-            setContent {
+        trackedHeroTest(size = Size(800f, 900f)) {
+            setTrackedContent {
                 AzkarTheme(darkTheme = true, uiLocale = ENGLISH) {
                     CompositionLocalProvider(
                         LocalWindowSizeClass provides windowSizeClassFor(width = 800.dp, height = 900.dp),
@@ -186,13 +215,18 @@ val HeroLayoutSuite by testSuite("the collection band holds its own copy") {
                             stats = previewCollectionStats(),
                             inReminders = false,
                             actions = previewCollectionHeroActions(),
+                            modifier = Modifier.testTag(BAND),
                         )
                     }
                 }
             }
+            waitForIdle()
+            resetRecompositionCounts()
+            mainClock.advanceTimeBy(100)
 
             onNodeWithContentDescription("Add to Collection").assertExists()
             onNodeWithContentDescription("Create Remembrance").assertExists()
+            onNodeWithTag(BAND).assertTrackedStable(expectedFunction = "CollectionDetailHero")
         }
     }
 }

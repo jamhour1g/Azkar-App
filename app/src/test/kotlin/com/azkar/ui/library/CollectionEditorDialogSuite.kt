@@ -5,15 +5,21 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import com.azkar.i18n.ENGLISH
+import com.azkar.testing.assertComposableRecompositions
+import com.azkar.testing.assertTrackedRecompositions
+import com.azkar.testing.withDesktopDejavu
 import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.theme.AzkarTheme
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
 
 /**
@@ -63,32 +69,49 @@ private class EditorReported {
  * asserting it is *displayed* there would be testing the test window rather than the dialog.
  */
 @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
-private fun converse(body: SkikoComposeUiTest.() -> Unit): EditorReported {
+private fun converse(
+    pageRecompositions: IntRange = 0..0,
+    nameRecompositions: IntRange = 0..0,
+    body: SkikoComposeUiTest.() -> Unit,
+): EditorReported {
     val reported = EditorReported()
-    runSkikoComposeUiTest(size = Size(1440f, 1200f), density = Density(1f)) {
-        setContent {
-            AzkarTheme(darkTheme = false, uiLocale = ENGLISH) {
-                CollectionEditorDialog(
-                    draft = CollectionEditorDraft.create(),
-                    environment =
-                        CollectionEditorEnvironment(
-                            covers = null,
-                            availableTags = listOf(MORNING, "sleep").map(TagOption::of),
-                            onPickCover = { _ -> null },
-                        ),
-                    onDismiss = { reported.dismissed = true },
-                    onConfirm = { _, description, tagNames, _, _ ->
-                        reported.description = description
-                        reported.tags = tagNames
-                        reported.confirmations += tagNames
-                    },
-                )
+    withDesktopDejavu {
+        runSkikoComposeUiTest(size = Size(1440f, 1200f), density = Density(1f)) {
+            resetRecompositionCounts()
+            setTrackedContent {
+                AzkarTheme(darkTheme = false, uiLocale = ENGLISH) {
+                    CollectionEditorDialog(
+                        draft = CollectionEditorDraft.create(),
+                        environment =
+                            CollectionEditorEnvironment(
+                                covers = null,
+                                availableTags = listOf(MORNING, "sleep").map(TagOption::of),
+                                onPickCover = { _ -> null },
+                            ),
+                        onDismiss = { reported.dismissed = true },
+                        onConfirm = { _, description, tagNames, _, _ ->
+                            reported.description = description
+                            reported.tags = tagNames
+                            reported.confirmations += tagNames
+                        },
+                    )
+                }
             }
+            waitForIdle()
+            resetRecompositionCounts()
+            body()
+            waitForIdle()
+            onNodeWithTag(
+                COLLECTION_EDITOR_DIALOG_TAG,
+            ).assertTrackedRecompositions(atMost = 0, expectedFunction = "AzkarDialogSurface")
+            assertComposableRecompositions("com.azkar.ui.library.CollectionEditorDialog", pageRecompositions)
+            assertComposableRecompositions("com.azkar.ui.library.CollectionNameField", nameRecompositions)
         }
-        body()
     }
     return reported
 }
+
+private const val COLLECTION_EDITOR_DIALOG_TAG = "collection-editor-dialog"
 
 /** Names the collection, which every test that gets past the first page has to do first. */
 @OptIn(ExperimentalTestApi::class)
@@ -117,7 +140,7 @@ val CollectionEditorDialogSuite by testSuite("The create-collection dialog") {
     }
 
     test("the second page is the tag picker, reached by Next") {
-        converse {
+        converse(pageRecompositions = 1..1, nameRecompositions = 1..2) {
             nameTheCollection()
             advance()
 
@@ -129,7 +152,7 @@ val CollectionEditorDialogSuite by testSuite("The create-collection dialog") {
     }
 
     test("the last page is the cover, and the primary button finishes rather than advances") {
-        converse {
+        converse(pageRecompositions = 2..2, nameRecompositions = 1..2) {
             nameTheCollection()
             advance()
             advance()
@@ -143,7 +166,7 @@ val CollectionEditorDialogSuite by testSuite("The create-collection dialog") {
     }
 
     test("Back walks backwards through the pages it walked") {
-        converse {
+        converse(pageRecompositions = 4..4, nameRecompositions = 1..4) {
             nameTheCollection()
             advance()
             advance()
@@ -159,7 +182,7 @@ val CollectionEditorDialogSuite by testSuite("The create-collection dialog") {
 
     test("what was typed on an earlier page is still there on a later one") {
         val reported =
-            converse {
+            converse(pageRecompositions = 2..2, nameRecompositions = 1..2) {
                 nameTheCollection()
                 onNodeWithText(DESCRIPTION_PLACEHOLDER).performTextReplacement("Said before sunrise.")
                 advance()
@@ -174,7 +197,7 @@ val CollectionEditorDialogSuite by testSuite("The create-collection dialog") {
     }
 
     test("a nameless collection cannot leave the first page, and is told why") {
-        converse {
+        converse(nameRecompositions = 1..2) {
             advance()
 
             onNodeWithText(REQUIRED_NOTE).assertExists()
@@ -185,7 +208,7 @@ val CollectionEditorDialogSuite by testSuite("The create-collection dialog") {
 
     test("cancel is offered on every page, and leaves without creating anything") {
         val reported =
-            converse {
+            converse(pageRecompositions = 1..1, nameRecompositions = 1..2) {
                 nameTheCollection()
                 advance()
                 onNodeWithText(CANCEL).performClick()
@@ -197,7 +220,7 @@ val CollectionEditorDialogSuite by testSuite("The create-collection dialog") {
 
     test("a tag typed into the create row reaches the collection too") {
         val reported =
-            converse {
+            converse(pageRecompositions = 2..2, nameRecompositions = 1..2) {
                 nameTheCollection()
                 advance()
                 onNodeWithText(NEW_TAG_PLACEHOLDER).performTextReplacement("commute")

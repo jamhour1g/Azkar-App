@@ -8,11 +8,15 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
 import com.azkar.data.storage.CoverStorage
+import com.azkar.testing.assertTrackedRecompositions
+import com.azkar.testing.assertTrackedStable
 import com.azkar.ui.theme.AzkarTheme
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.runRecompositionTrackingUiTest
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -72,6 +76,9 @@ val CollectionCoverArtSuite by testSuite("Collection cover art") {
             renderArt(covers = covers, coverImagePath = stored) {
                 awaitPhoto()
                 onNodeWithContentDescription(COVER_PHOTO).assertIsDisplayed()
+                onNodeWithTag(
+                    COVER_TAG,
+                ).assertTrackedRecompositions(atMost = 2, expectedFunction = "CollectionCoverArt")
             }
         }
     }
@@ -81,6 +88,9 @@ val CollectionCoverArtSuite by testSuite("Collection cover art") {
             renderArt(covers = covers, coverImagePath = null) {
                 onNodeWithTag(COVER_TAG).assertIsDisplayed()
                 onNodeWithContentDescription(COVER_PHOTO).assertDoesNotExist()
+                mainClock.advanceTimeBy(1_000)
+                waitForIdle()
+                onNodeWithTag(COVER_TAG).assertTrackedStable(expectedFunction = "CollectionCoverArt")
             }
         }
     }
@@ -98,6 +108,9 @@ val CollectionCoverArtSuite by testSuite("Collection cover art") {
                 expectNoPhoto()
                 onNodeWithTag(COVER_TAG).assertIsDisplayed()
                 onNodeWithContentDescription(COVER_PHOTO).assertDoesNotExist()
+                onNodeWithTag(
+                    COVER_TAG,
+                ).assertTrackedRecompositions(atMost = 2, expectedFunction = "CollectionCoverArt")
             }
         }
     }
@@ -135,8 +148,8 @@ private fun renderArt(
     coverImagePath: String?,
     check: ComposeUiTest.() -> Unit,
 ) {
-    runComposeUiTest {
-        setContent {
+    runRecompositionTrackingUiTest {
+        setTrackedContent {
             AzkarTheme(darkTheme = false, uiLocale = Locale.ENGLISH) {
                 CollectionCoverArt(
                     iconKey = ICON_KEY,
@@ -146,6 +159,8 @@ private fun renderArt(
                 )
             }
         }
+        waitForIdle()
+        resetRecompositionCounts()
         check()
     }
 }
