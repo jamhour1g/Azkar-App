@@ -4,19 +4,26 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.azkar.i18n.ENGLISH
+import com.azkar.testing.assertTrackedRecompositions
+import com.azkar.testing.withDesktopDejavu
 import com.azkar.ui.theme.AzkarTheme
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
 
 /**
@@ -39,14 +46,21 @@ private const val SETTINGS = "Settings"
 private const val LIBRARY_TAB = "Azkar Library"
 
 @OptIn(ExperimentalTestApi::class)
-private fun headerTest(block: SkikoComposeUiTest.() -> Unit) =
-    runSkikoComposeUiTest(size = HEADER_SIZE, density = Density(1f), block = block)
+private fun trackedHeaderTest(block: SkikoComposeUiTest.() -> Unit) {
+    withDesktopDejavu {
+        runSkikoComposeUiTest(size = HEADER_SIZE, density = Density(1f)) {
+            resetRecompositionCounts()
+            block()
+        }
+    }
+}
 
 @OptIn(ExperimentalTestApi::class)
 val HeaderLayoutSuite by testSuite("The header's controls land where it says they do") {
     test("the settings gear sits at the far end, clear of the centred tabs") {
-        headerTest {
-            setContent {
+        trackedHeaderTest {
+            val activeTab = mutableStateOf<AzkarDestination>(AzkarDestination.Home)
+            setTrackedContent {
                 AzkarTheme(darkTheme = false, uiLocale = ENGLISH) {
                     Box(
                         Modifier
@@ -54,7 +68,8 @@ val HeaderLayoutSuite by testSuite("The header's controls land where it says the
                             .background(Color.White),
                     ) {
                         MainScreenHeader(
-                            activeTab = AzkarDestination.Home,
+                            activeTab = activeTab.value,
+                            modifier = Modifier.testTag("header"),
                             callbacks =
                                 HeaderCallbacks(
                                     onHome = {},
@@ -65,6 +80,8 @@ val HeaderLayoutSuite by testSuite("The header's controls land where it says the
                     }
                 }
             }
+            waitForIdle()
+            resetRecompositionCounts()
 
             val gear = onNodeWithContentDescription(SETTINGS).fetchSemanticsNode().boundsInRoot
             val tabs = onNodeWithText(LIBRARY_TAB).fetchSemanticsNode().boundsInRoot
@@ -73,12 +90,16 @@ val HeaderLayoutSuite by testSuite("The header's controls land where it says the
             // header's own padding to spare. Asserting the gear is merely "not overlapping" would
             // pass while it sat one pixel clear of the tabs in the middle of the bar.
             assertThat(gear.left).isGreaterThan(tabs.right)
+            runOnIdle { activeTab.value = AzkarDestination.Library }
+            waitForIdle()
+            onNodeWithTag("header").assertTrackedRecompositions(exactly = 1, expectedFunction = "MainScreenHeader")
         }
     }
 
     test("the gear is still to the end of the bar, not merely to the right of the tabs") {
-        headerTest {
-            setContent {
+        trackedHeaderTest {
+            val activeTab = mutableStateOf<AzkarDestination>(AzkarDestination.Home)
+            setTrackedContent {
                 AzkarTheme(darkTheme = false, uiLocale = ENGLISH) {
                     Box(
                         Modifier
@@ -86,7 +107,8 @@ val HeaderLayoutSuite by testSuite("The header's controls land where it says the
                             .background(Color.White),
                     ) {
                         MainScreenHeader(
-                            activeTab = AzkarDestination.Home,
+                            activeTab = activeTab.value,
+                            modifier = Modifier.testTag("header"),
                             callbacks =
                                 HeaderCallbacks(
                                     onHome = {},
@@ -97,6 +119,8 @@ val HeaderLayoutSuite by testSuite("The header's controls land where it says the
                     }
                 }
             }
+            waitForIdle()
+            resetRecompositionCounts()
 
             val gear = onNodeWithContentDescription(SETTINGS).fetchSemanticsNode().boundsInRoot
 
@@ -105,6 +129,9 @@ val HeaderLayoutSuite by testSuite("The header's controls land where it says the
             // a pixel test, and it is here to catch the specific regression of an `align` being read
             // by the wrong box and silently falling back to `contentAlignment`.
             assertThat(gear.left).isGreaterThan(HEADER_SIZE.width * 0.75f)
+            runOnIdle { activeTab.value = AzkarDestination.Library }
+            waitForIdle()
+            onNodeWithTag("header").assertTrackedRecompositions(exactly = 1, expectedFunction = "MainScreenHeader")
         }
     }
 }

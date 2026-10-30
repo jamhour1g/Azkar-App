@@ -1,6 +1,6 @@
 package com.azkar.ui.notifications.presentation
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,7 +61,9 @@ import com.azkar.ui.notifications.NotificationContent
 import com.azkar.ui.theme.AzkarMotion
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.isRtlLayout
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -151,9 +154,9 @@ fun NotificationCard(
      */
     onToggleFavorite: (suspend (Long, Boolean) -> Boolean)? = null,
 ) {
-    var hovered by remember { mutableStateOf(false) }
-    LaunchedEffect(hovered) { onPauseChanged(hovered) }
-    val favorite = rememberFavoriteControl(item, onToggleFavorite)
+    val currentPauseChanged = rememberUpdatedState(onPauseChanged)
+    LaunchedEffect(Unit) { currentPauseChanged.value(false) }
+    val favoriteScope = rememberCoroutineScope()
     val colors = AzkarTheme.colors
     // A fixed card is handed a bounded box and the passage takes what is left of it; a fitted card is
     // handed only a width and every part of it is as tall as it needs to be. `fillMaxSize` rather than
@@ -164,7 +167,7 @@ fun NotificationCard(
         modifier =
             modifier
                 .then(if (fillsSlot) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
-                .hoverTracking { hovered = it }
+                .hoverTracking(onPauseChanged)
                 .pressableClick(scale = 1f, onClick = onOpen),
         shape = MaterialTheme.shapes.extraLarge,
         background = SolidColor(colors.cardBackground),
@@ -183,7 +186,7 @@ fun NotificationCard(
                     is NotificationContent.Remembrance ->
                         RemembranceBody(
                             content = content,
-                            favorite = favorite,
+                            favorite = { FavoriteControlSlot(item, onToggleFavorite, favoriteScope) },
                             onDismiss = onDismiss,
                             fillsSlot = fillsSlot,
                         )
@@ -215,8 +218,8 @@ fun NotificationCard(
 private fun rememberFavoriteControl(
     item: PresentedNotice,
     onToggleFavorite: (suspend (Long, Boolean) -> Boolean)?,
+    scope: CoroutineScope,
 ): FavoriteControl? {
-    val scope = rememberCoroutineScope()
     val id = (item.action as? NotificationAction.Remembrance)?.id
     val content = item.content as? NotificationContent.Remembrance
     var favorite by remember(item.id) { mutableStateOf(content?.isFavorite ?: false) }
@@ -275,8 +278,8 @@ private class FavoriteControl(
  * The tick is a plain [delay] rather than `withFrameNanos` because the *sampling* does not need to
  * be frame-accurate: thirty readings a second is past what a three-pixel strip can express, and a
  * frame clock is not something every composition this card appears in has — the settings preview and
- * the screenshot harness both draw it somewhere without one. Only this composable is invalidated,
- * not the stack around it, because the fraction is remembered here and read through [remaining].
+ * the screenshot harness both draw it somewhere without one. The sampler updates an animation in an
+ * effect, and the resulting fraction is read during drawing rather than during composition.
  *
  * What is sampled is a *target*, not the number that is drawn. The drawn value chases that target
  * on [AzkarMotion.countdown] — a straight line, short enough to be outrun by the next reading — so
@@ -290,7 +293,10 @@ private class FavoriteControl(
  * fill the bar up again on the way out, which is the one motion a countdown must never make.
  */
 @Composable
-private fun CountdownRule(remaining: () -> Float) {
+internal fun CountdownRule(
+    remaining: () -> Float,
+    modifier: Modifier = Modifier,
+) {
     val colors = AzkarTheme.colors
     val isRtl = isRtlLayout()
     val fill = mirrorHorizontalGradient(listOf(colors.brandTileStart, colors.secondary), isRtl)
@@ -303,31 +309,32 @@ private fun CountdownRule(remaining: () -> Float) {
             isRtl,
         )
     val countdown = remember { CountdownState() }
+    val fraction = remember { Animatable(FULL_REMAINING) }
     // The reader is remembered rather than the reading: the overlay hands the card a fresh lambda
     // every time the stack is recomposed, and a loop keyed on that would be restarted by every
     // card that arrives.
     val sampler = rememberUpdatedState(remaining)
     LaunchedEffect(Unit) {
+        launch {
+            snapshotFlow { countdown.target }.collectLatest { target ->
+                fraction.animateTo(target, animationSpec = AzkarMotion.countdown())
+            }
+        }
         while (isActive) {
             countdown.sample(sampler.value())
             delay(COUNTDOWN_TICK_MILLIS)
         }
     }
-    val fraction by animateFloatAsState(
-        targetValue = countdown.target,
-        animationSpec = AzkarMotion.countdown(),
-        label = "notificationCountdownFill",
-    )
     Box(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .height(ACCENT_RULE_HEIGHT)
                 .background(track)
                 .drawBehind {
                     clipRect(
                         left = 0f,
-                        right = size.width * fraction.coerceIn(0f, 1f),
+                        right = size.width * fraction.value.coerceIn(0f, 1f),
                     ) {
                         drawRect(fill)
                     }
@@ -349,7 +356,7 @@ private fun CountdownRule(remaining: () -> Float) {
 @Composable
 private fun ColumnScope.RemembranceBody(
     content: NotificationContent.Remembrance,
-    favorite: FavoriteControl?,
+    favorite: @Composable () -> Unit,
     onDismiss: () -> Unit,
     fillsSlot: Boolean,
 ) {
@@ -537,7 +544,7 @@ private fun PassageBox(
 @Composable
 private fun CardHeader(
     onDismiss: () -> Unit,
-    favorite: FavoriteControl? = null,
+    favorite: (@Composable () -> Unit)? = null,
     claims: @Composable RowScope.() -> Unit,
 ) {
     Row(
@@ -547,9 +554,18 @@ private fun CardHeader(
     ) {
         claims()
         Spacer(Modifier.weight(1f))
-        favorite?.let { FavoriteButton(it) }
+        favorite?.invoke()
         DismissButton(onDismiss = onDismiss)
     }
+}
+
+@Composable
+private fun FavoriteControlSlot(
+    item: PresentedNotice,
+    onToggleFavorite: (suspend (Long, Boolean) -> Boolean)?,
+    scope: CoroutineScope,
+) {
+    rememberFavoriteControl(item, onToggleFavorite, scope)?.let { FavoriteButton(it) }
 }
 
 /**
@@ -617,19 +633,28 @@ private fun DismissButton(onDismiss: () -> Unit) {
     }
 }
 
-/** Reports whether the pointer is over this composable. */
-private fun Modifier.hoverTracking(onHoverChanged: (Boolean) -> Unit): Modifier =
-    pointerInput(onHoverChanged) {
+/** Reports pointer transitions without invalidating the card's composition. */
+@Composable
+private fun Modifier.hoverTracking(onHoverChanged: (Boolean) -> Unit): Modifier {
+    val currentOnHoverChanged = rememberUpdatedState(onHoverChanged)
+    return pointerInput(Unit) {
+        var hovered = false
         awaitPointerEventScope {
             while (true) {
-                when (awaitPointerEvent().type) {
-                    PointerEventType.Enter -> onHoverChanged(true)
-                    PointerEventType.Exit -> onHoverChanged(false)
-                    else -> Unit
+                val next =
+                    when (awaitPointerEvent().type) {
+                        PointerEventType.Enter -> true
+                        PointerEventType.Exit -> false
+                        else -> hovered
+                    }
+                if (next != hovered) {
+                    hovered = next
+                    currentOnHoverChanged.value(next)
                 }
             }
         }
     }
+}
 
 private val ACCENT_RULE_HEIGHT = 3.dp
 

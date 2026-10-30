@@ -27,14 +27,20 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
+import com.azkar.testing.assertComposableRecompositions
+import com.azkar.testing.assertTrackedRecompositions
+import com.azkar.testing.assertTrackedStable
 import com.azkar.ui.theme.AzkarTheme
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.runRecompositionTrackingUiTest
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
 import java.util.Locale
 
 private const val OVERFLOW_TAG = "overflow"
+private const val CONTROL_TAG = "control"
 private const val SWITCH_TAG = "switch"
 private const val TALL_FIELD_TAG = "tall-field"
 private const val SHORT_FIELD_TAG = "short-field"
@@ -115,6 +121,7 @@ private fun HostedSwitch(
 private fun HostedField(
     placeholder: String,
     onReport: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var value by remember { mutableStateOf("") }
     AzkarOutlinedField(
@@ -124,7 +131,7 @@ private fun HostedField(
             onReport(it)
         },
         placeholder = placeholder,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     )
 }
 
@@ -156,6 +163,20 @@ private fun ComposeUiTest.assertDisabledAndInert(node: SemanticsNodeInteraction)
     node.performClick()
 }
 
+private fun ComposeUiTest.resetControlBudget() {
+    waitForIdle()
+    resetRecompositionCounts()
+}
+
+private fun ComposeUiTest.assertControlBudget(
+    tag: String = CONTROL_TAG,
+    atMost: Int = 0,
+    expectedFunction: String? = null,
+) {
+    waitForIdle()
+    onNodeWithTag(tag).assertTrackedRecompositions(atMost = atMost, expectedFunction = expectedFunction)
+}
+
 /**
  * A tooltip button beside somewhere else for the pointer to be, so a hover can be *ended* rather
  * than merely begun.
@@ -172,7 +193,7 @@ private fun StarBesideElsewhere() {
             icon = AzkarIcons.Star,
             tooltip = STAR_TOOLTIP,
             onClick = {},
-            modifier = Modifier.align(Alignment.TopStart),
+            modifier = Modifier.align(Alignment.TopStart).testTag(CONTROL_TAG),
         )
         Box(
             Modifier
@@ -185,7 +206,7 @@ private fun StarBesideElsewhere() {
 }
 
 private fun ComposeUiTest.renderOverflowMenu(onPick: (String) -> Unit) {
-    setContent {
+    setTrackedContent {
         Themed {
             AzkarOverflowMenu(
                 icon = AzkarIcons.Settings,
@@ -251,11 +272,21 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
     // ---------------------------------------------------------------- buttons
 
     test("a primary button reports every click") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent { Themed { PrimaryButton(text = "Start session", onClick = { clicks++ }) } }
+            setTrackedContent {
+                Themed {
+                    PrimaryButton(
+                        text = "Start session",
+                        onClick = { clicks++ },
+                        modifier = Modifier.testTag(CONTROL_TAG),
+                    )
+                }
+            }
+            resetControlBudget()
             repeat(3) { onNodeWithText("Start session").performClick() }
             assertThat(clicks).describedAs("three clicks, three callbacks").isEqualTo(3)
+            assertControlBudget()
         }
     }
 
@@ -265,109 +296,161 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
      * the button would go dead at every call site that passes an icon, of which there are many.
      */
     test("a primary button with a leading icon still reports its clicks") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent {
+            setTrackedContent {
                 Themed {
-                    PrimaryButton(text = "Read", onClick = { clicks++ }, leadingIcon = ActionIcons.read)
+                    PrimaryButton(text = "Read", onClick = {
+                        clicks++
+                    }, leadingIcon = ActionIcons.read, modifier = Modifier.testTag(CONTROL_TAG))
                 }
             }
+            resetControlBudget()
             onNodeWithText("Read").performClick()
             assertThat(clicks).isEqualTo(1)
+            assertControlBudget()
         }
     }
 
     test("a disabled primary button cannot be activated by any route") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent {
+            setTrackedContent {
                 Themed {
-                    PrimaryButton(text = "Start session", onClick = { clicks++ }, enabled = false)
+                    PrimaryButton(
+                        text = "Start session",
+                        onClick = { clicks++ },
+                        enabled = false,
+                        modifier = Modifier.testTag(CONTROL_TAG),
+                    )
                 }
             }
+            resetControlBudget()
             assertDisabledAndInert(onNodeWithText("Start session"))
             assertThat(clicks).describedAs("a real pointer press must go nowhere").isZero()
+            assertControlBudget()
         }
     }
 
     test("a secondary button reports its clicks") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent { Themed { SecondaryButton(text = "Cancel", onClick = { clicks++ }) } }
+            setTrackedContent {
+                Themed {
+                    SecondaryButton(
+                        text = "Cancel",
+                        onClick = { clicks++ },
+                        modifier = Modifier.testTag(CONTROL_TAG),
+                    )
+                }
+            }
+            resetControlBudget()
             onNodeWithText("Cancel").performClick()
             assertThat(clicks).isEqualTo(1)
+            assertControlBudget()
         }
     }
 
     test("a disabled secondary button cannot be activated") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent { Themed { SecondaryButton(text = "Cancel", onClick = { clicks++ }, enabled = false) } }
+            setTrackedContent {
+                Themed {
+                    SecondaryButton(
+                        text = "Cancel",
+                        onClick = { clicks++ },
+                        enabled = false,
+                        modifier = Modifier.testTag(CONTROL_TAG),
+                    )
+                }
+            }
+            resetControlBudget()
             assertDisabledAndInert(onNodeWithText("Cancel"))
             assertThat(clicks).isZero()
+            assertControlBudget()
         }
     }
 
     test("a nav button reports its clicks") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent { Themed { NavButton(text = "Home", selected = false, onClick = { clicks++ }) } }
+            setTrackedContent {
+                Themed {
+                    NavButton(
+                        text = "Home",
+                        selected = false,
+                        onClick = { clicks++ },
+                        modifier = Modifier.testTag(CONTROL_TAG),
+                    )
+                }
+            }
+            resetControlBudget()
             onNodeWithText("Home").performClick()
             assertThat(clicks).isEqualTo(1)
+            assertControlBudget()
         }
     }
 
     // ----------------------------------------------------------- icon buttons
 
     test("an icon action button reports its clicks") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent {
+            setTrackedContent {
                 Themed {
                     IconActionButton(
                         icon = ActionIcons.favorite(on = true),
                         contentDescription = "Favourite",
                         onClick = { clicks++ },
+                        modifier = Modifier.testTag(CONTROL_TAG),
                     )
                 }
             }
+            resetControlBudget()
             onNodeWithContentDescription("Favourite").performClick()
             assertThat(clicks).isEqualTo(1)
+            assertControlBudget()
         }
     }
 
     test("a circle icon button reports its clicks") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent {
+            setTrackedContent {
                 Themed {
                     CircleIconButton(
                         icon = AzkarIcons.Star,
                         contentDescription = "Favourite",
                         onClick = { clicks++ },
+                        modifier = Modifier.testTag(CONTROL_TAG),
                     )
                 }
             }
+            resetControlBudget()
             onNodeWithContentDescription("Favourite").performClick()
             assertThat(clicks).isEqualTo(1)
+            assertControlBudget()
         }
     }
 
     test("a disabled circle icon button cannot be activated") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent {
+            setTrackedContent {
                 Themed {
                     CircleIconButton(
                         icon = AzkarIcons.Star,
                         contentDescription = "Favourite",
                         onClick = { clicks++ },
                         enabled = false,
+                        modifier = Modifier.testTag(CONTROL_TAG),
                     )
                 }
             }
+            resetControlBudget()
             assertDisabledAndInert(onNodeWithContentDescription("Favourite"))
             assertThat(clicks).isZero()
+            assertControlBudget()
         }
     }
 
@@ -376,19 +459,23 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
      * was meant for the button underneath.
      */
     test("a tooltip icon button still reports its clicks") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent {
+            setTrackedContent {
                 Themed {
                     TooltipIconButton(
                         icon = AzkarIcons.Star,
                         tooltip = "Add to favourites",
                         onClick = { clicks++ },
+                        modifier = Modifier.testTag(CONTROL_TAG),
                     )
                 }
             }
+            resetControlBudget()
             onNodeWithContentDescription("Add to favourites").performClick()
             assertThat(clicks).isEqualTo(1)
+            assertControlBudget(atMost = 1, expectedFunction = "AzkarTooltip")
+            assertComposableRecompositions("com.azkar.ui.components.CircleIconButton", 0..0)
         }
     }
 
@@ -406,8 +493,9 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
      * "Add to favourites" for the mouse would be describing two different buttons.
      */
     test("a tooltip names the control while the pointer rests on it, and leaves when it does not") {
-        runComposeUiTest {
-            setContent { Themed { StarBesideElsewhere() } }
+        runRecompositionTrackingUiTest {
+            setTrackedContent { Themed { StarBesideElsewhere() } }
+            resetControlBudget()
             onNodeWithText(STAR_TOOLTIP).assertDoesNotExist()
 
             onNodeWithContentDescription(STAR_TOOLTIP).performMouseInput { moveTo(center) }
@@ -415,6 +503,8 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
 
             onNodeWithTag(ELSEWHERE_TAG).performMouseInput { moveTo(center) }
             onNodeWithText(STAR_TOOLTIP).assertDoesNotExist()
+            assertControlBudget(atMost = 2, expectedFunction = "AzkarTooltip")
+            assertComposableRecompositions("com.azkar.ui.components.CircleIconButton", 0..0)
         }
     }
 
@@ -428,55 +518,82 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
      * from the control it names, or not at all.
      */
     test("an overflow menu's trigger names itself on hover") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             renderOverflowMenu { }
+            resetControlBudget()
             onNodeWithText("Row actions").assertDoesNotExist()
             hoverOverflowMenu()
             onNodeWithText("Row actions").assertIsDisplayed()
+            assertControlBudget(OVERFLOW_TAG, atMost = 1, expectedFunction = "AzkarTooltip")
+            assertComposableRecompositions("com.azkar.ui.components.AzkarOverflowMenu", 0..1)
+            assertComposableRecompositions("com.azkar.ui.components.CircleIconButton", 0..0)
         }
     }
 
     // ----------------------------------------------------------------- switch
 
     test("a switch reports the opposite of its current state, in both directions") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             val reported = mutableListOf<Boolean>()
-            setContent { Themed { HostedSwitch(enabled = true, onReport = { reported += it }) } }
+            setTrackedContent { Themed { HostedSwitch(enabled = true, onReport = { reported += it }) } }
+            waitForIdle()
+            resetRecompositionCounts()
             onNodeWithTag(SWITCH_TAG).performClick()
             assertThat(reported).describedAs("off must report on").isEqualTo(listOf(true))
             onNodeWithTag(SWITCH_TAG).performClick()
             assertThat(reported).describedAs("on must report off").isEqualTo(listOf(true, false))
+            onNodeWithTag(SWITCH_TAG).assertTrackedRecompositions(exactly = 2)
         }
     }
 
     test("a disabled switch cannot be activated") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             val reported = mutableListOf<Boolean>()
-            setContent { Themed { HostedSwitch(enabled = false, onReport = { reported += it }) } }
+            setTrackedContent { Themed { HostedSwitch(enabled = false, onReport = { reported += it }) } }
+            waitForIdle()
+            resetRecompositionCounts()
             assertDisabledAndInert(onNodeWithTag(SWITCH_TAG))
             assertThat(reported).isEmpty()
+            onNodeWithTag(SWITCH_TAG).assertTrackedStable()
         }
     }
 
     // ------------------------------------------------------------------ chips
 
     test("a pill toggle reports its clicks") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent { Themed { PillToggle(text = "Grid", selected = true, onClick = { clicks++ }) } }
+            setTrackedContent {
+                Themed {
+                    PillToggle(
+                        text = "Grid",
+                        selected = true,
+                        onClick = { clicks++ },
+                        modifier = Modifier.testTag(CONTROL_TAG),
+                    )
+                }
+            }
+            resetControlBudget()
             onNodeWithText("Grid").performClick()
             assertThat(clicks).isEqualTo(1)
+            assertControlBudget()
         }
     }
 
     test("a filter chip reports its clicks") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var clicks = 0
-            setContent {
-                Themed { AzkarFilterChip(text = "Favourites", selected = false, onClick = { clicks++ }) }
+            setTrackedContent {
+                Themed {
+                    AzkarFilterChip(text = "Favourites", selected = false, onClick = {
+                        clicks++
+                    }, modifier = Modifier.testTag(CONTROL_TAG))
+                }
             }
+            resetControlBudget()
             onNodeWithText("Favourites").performClick()
             assertThat(clicks).isEqualTo(1)
+            assertControlBudget()
         }
     }
 
@@ -489,18 +606,40 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
      * unselected fill is transparent and carries no minimum size of its own.
      */
     test("chips lay out in both the selected and unselected states") {
-        runComposeUiTest {
-            setContent {
+        runRecompositionTrackingUiTest {
+            setTrackedContent {
                 Themed {
                     Column {
-                        PillToggle(text = "Grid", selected = true, onClick = {})
-                        PillToggle(text = "List", selected = false, onClick = {})
-                        AzkarFilterChip(text = "All", selected = true, onClick = {})
-                        AzkarFilterChip(text = "Some", selected = false, onClick = {})
+                        PillToggle(
+                            text = "Grid",
+                            selected = true,
+                            onClick = {},
+                            modifier = Modifier.testTag("grid-chip"),
+                        )
+                        PillToggle(
+                            text = "List",
+                            selected = false,
+                            onClick = {},
+                            modifier = Modifier.testTag("list-chip"),
+                        )
+                        AzkarFilterChip(
+                            text = "All",
+                            selected = true,
+                            onClick = {},
+                            modifier = Modifier.testTag("all-chip"),
+                        )
+                        AzkarFilterChip(
+                            text = "Some",
+                            selected = false,
+                            onClick = {},
+                            modifier = Modifier.testTag("some-chip"),
+                        )
                     }
                 }
             }
+            resetControlBudget()
             listOf("Grid", "List", "All", "Some").forEach { onNodeWithText(it).assertIsDisplayed() }
+            listOf("grid-chip", "list-chip", "all-chip", "some-chip").forEach { assertControlBudget(it) }
         }
     }
 
@@ -512,76 +651,108 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
      * chrome, the icon slot and the click semantics.
      */
     test("an overflow menu reveals its items when opened") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             renderOverflowMenu { }
+            resetControlBudget()
             onNodeWithText("Edit").assertDoesNotExist()
             openOverflowMenu()
             onNodeWithText("Edit").assertIsDisplayed()
             onNodeWithText("Duplicate").assertIsDisplayed()
+            assertControlBudget(OVERFLOW_TAG, atMost = 2, expectedFunction = "AzkarTooltip")
+            assertComposableRecompositions("com.azkar.ui.components.AzkarOverflowMenu", 0..1)
         }
     }
 
     test("choosing an overflow menu item fires its action and closes the menu") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             val picked = mutableListOf<String>()
             renderOverflowMenu { picked += it }
             openOverflowMenu()
+            resetControlBudget()
             onNodeWithText("Duplicate").performClick()
             assertThat(picked).isEqualTo(listOf("Duplicate"))
             onNodeWithText("Duplicate").assertDoesNotExist()
             onNodeWithText("Edit").assertDoesNotExist()
+            assertControlBudget(OVERFLOW_TAG, atMost = 2, expectedFunction = "AzkarTooltip")
+            assertComposableRecompositions("com.azkar.ui.components.AzkarOverflowMenu", 0..1)
         }
     }
 
     // ------------------------------------------------------------ text field
 
     test("a text field shows its value and hides its placeholder") {
-        runComposeUiTest {
-            setContent {
+        runRecompositionTrackingUiTest {
+            setTrackedContent {
                 Themed {
                     AzkarOutlinedField(
                         value = "Ar-Rahman",
                         onValueChange = {},
                         placeholder = "Search collections",
+                        modifier = Modifier.testTag(CONTROL_TAG),
                     )
                 }
             }
+            resetControlBudget()
             onNodeWithText("Ar-Rahman").assertIsDisplayed()
             onNodeWithText("Search collections").assertDoesNotExist()
+            assertControlBudget()
         }
     }
 
     test("a text field shows its placeholder while empty") {
-        runComposeUiTest {
-            setContent {
-                Themed { AzkarOutlinedField(value = "", onValueChange = {}, placeholder = "Search") }
+        runRecompositionTrackingUiTest {
+            setTrackedContent {
+                Themed {
+                    AzkarOutlinedField(
+                        value = "",
+                        onValueChange = {},
+                        placeholder = "Search",
+                        modifier = Modifier.testTag(CONTROL_TAG),
+                    )
+                }
             }
+            resetControlBudget()
             onNodeWithText("Search").assertIsDisplayed()
+            assertControlBudget()
         }
     }
 
     test("a text field reports the text typed into it") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             var value = ""
-            setContent { Themed { HostedField(placeholder = "Search") { value = it } } }
+            setTrackedContent {
+                Themed {
+                    HostedField(
+                        placeholder = "Search",
+                        onReport = { value = it },
+                        modifier = Modifier.testTag("hosted-field"),
+                    )
+                }
+            }
+            waitForIdle()
+            resetRecompositionCounts()
             onNode(hasSetTextAction()).performTextInput("Ar-Rah")
             assertThat(value).isEqualTo("Ar-Rah")
+            onNodeWithTag("hosted-field").assertTrackedRecompositions(atLeast = 1, atMost = 2)
         }
     }
 
     test("a text field renders its supporting text") {
-        runComposeUiTest {
-            setContent {
+        runRecompositionTrackingUiTest {
+            setTrackedContent {
                 Themed {
                     AzkarOutlinedField(
                         value = "",
                         onValueChange = {},
                         placeholder = "Tags",
                         supportingText = "Comma separated",
+                        modifier = Modifier.testTag(CONTROL_TAG),
                     )
                 }
             }
+            resetControlBudget()
             onNodeWithText("Comma separated").assertIsDisplayed()
+            assertControlBudget()
         }
     }
 
@@ -593,8 +764,8 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
      * draws inside itself.
      */
     test("a text field honours a min height above Material's own floor") {
-        runComposeUiTest {
-            setContent {
+        runRecompositionTrackingUiTest {
+            setTrackedContent {
                 Themed {
                     AzkarOutlinedField(
                         value = "",
@@ -606,14 +777,16 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
                     )
                 }
             }
+            resetControlBudget()
             val height = onNodeWithTag(TALL_FIELD_TAG).fetchSemanticsNode().boundsInRoot.height
             assertThat(height).describedAs("minHeight=$TALL_FIELD_HEIGHT").isGreaterThanOrEqualTo(72f)
+            assertControlBudget(TALL_FIELD_TAG)
         }
     }
 
     test("a text field never renders shorter than Material's floor") {
-        runComposeUiTest {
-            setContent {
+        runRecompositionTrackingUiTest {
+            setTrackedContent {
                 Themed {
                     AzkarOutlinedField(
                         value = "",
@@ -624,32 +797,37 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
                     )
                 }
             }
+            resetControlBudget()
             val height = onNodeWithTag(SHORT_FIELD_TAG).fetchSemanticsNode().boundsInRoot.height
             assertThat(height)
                 .describedAs("Material's OutlinedTextField floor is $MATERIAL_FIELD_FLOOR")
                 .isGreaterThanOrEqualTo(MATERIAL_FIELD_FLOOR.value)
+            assertControlBudget(SHORT_FIELD_TAG)
         }
     }
 
     // ------------------------------------------------------------- tab strip
 
     test("a tab strip shows every tab and reports the index chosen") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             val chosen = mutableListOf<Int>()
-            setContent {
+            setTrackedContent {
                 Themed {
                     AzkarTabStrip(
                         tabs = listOf("Overview", "Members", "Activity"),
                         selectedIndex = 0,
                         onSelect = { chosen += it },
+                        modifier = Modifier.testTag(CONTROL_TAG),
                     )
                 }
             }
+            resetControlBudget()
             listOf("Overview", "Members", "Activity").forEach { onNodeWithText(it).assertIsDisplayed() }
             onNodeWithText("Members").performClick()
             assertThat(chosen).isEqualTo(listOf(1))
             onNodeWithText("Activity").performClick()
             assertThat(chosen).isEqualTo(listOf(1, 2))
+            assertControlBudget()
         }
     }
 
@@ -661,8 +839,8 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
      * content proves the styleable modifier did not swallow it along with the padding and border.
      */
     test("the shared surfaces all render their content") {
-        runComposeUiTest {
-            setContent {
+        runRecompositionTrackingUiTest {
+            setTrackedContent {
                 Themed {
                     Column {
                         AzkarCard(modifier = Modifier.testTag("card")) {
@@ -677,9 +855,11 @@ val ControlBehaviourSuite by testSuite("Control behaviour") {
                     }
                 }
             }
+            resetControlBudget()
             listOf("card-content", "state-box-content", "dialog-content").forEach {
                 onNodeWithTag(it).assertIsDisplayed()
             }
+            listOf("card", "state-box", "dialog").forEach { assertControlBudget(it) }
         }
     }
 }

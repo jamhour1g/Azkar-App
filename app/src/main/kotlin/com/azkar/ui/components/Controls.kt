@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
@@ -338,9 +339,8 @@ fun SecondaryButton(
  * does not clear. Borrowing the container but colouring the content by hand keeps that decision where
  * it was made.
  *
- * [leadingIcon] is the icon-first half of the header's tabs. Its tint is left to the button's content
- * colour rather than named, so the glyph and the label can never disagree about whether the tab is
- * the current one.
+ * [leadingIcon] is the icon-first half of the header's tabs. Its tint follows the same animated
+ * colour as the label, so the two agree about whether the tab is current.
  *
  * The elevation is pinned flat, and that is the whole of the fix for a bug this component shipped
  * with for a while: a grey pill under the pointer, in light mode only. [FilledTonalButton] raises its
@@ -370,26 +370,27 @@ fun NavButton(
     val colors = AzkarTheme.colors
     // Still animated, still by hand: M3's tonal button has no two-tone "selected" story to borrow,
     // and the header's tabs changing destination should slide rather than snap.
-    val containerColor by
+    val containerColor =
         animateColorAsState(
             targetValue = if (selected) colors.highlight else Color.Transparent,
             label = "navButtonContainer",
         )
     // primaryStrong rather than primary: this label sits *on* `highlight`, so it has to clear the
     // 4.5:1 that small text owes, and `primary` is a fill colour that does not.
-    val contentColor by
+    val contentColor =
         animateColorAsState(
             targetValue = if (selected) colors.primaryStrong else colors.textPrimary,
             label = "navButtonContent",
         )
+    val bounds = remember { NavButtonBounds() }
     FilledTonalButton(
         onClick = onClick,
         shapes = AzkarExpressive.navButtonShapes,
-        modifier = modifier,
+        modifier = modifier.onGloballyPositioned { bounds.button = it },
         colors =
             ButtonDefaults.filledTonalButtonColors(
-                containerColor = containerColor,
-                contentColor = contentColor,
+                containerColor = Color.Transparent,
+                contentColor = colors.textPrimary,
                 disabledContainerColor = Color.Transparent,
                 disabledContentColor = colors.textPrimary,
             ),
@@ -402,23 +403,7 @@ fun NavButton(
                 disabledElevation = 0.dp,
             ),
     ) {
-        if (leadingIcon != null) {
-            Icon(
-                imageVector = leadingIcon,
-                contentDescription = null,
-                modifier = Modifier.size(17.dp),
-            )
-            // `Button`'s content is a `RowScope`, and in this alpha the row applies no spacing of
-            // its own — the hand-drawn version got its 8dp gap from `Arrangement.spacedBy`, which
-            // the lambda has no way to reach. Without this the glyph sits flush against the label.
-            Spacer(Modifier.width(8.dp))
-        }
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-        )
+        NavButtonContent(text, leadingIcon, bounds, containerColor, contentColor)
     }
 }
 

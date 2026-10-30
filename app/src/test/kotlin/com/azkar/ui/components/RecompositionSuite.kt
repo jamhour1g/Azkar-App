@@ -5,43 +5,30 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performMouseInput
-import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.unit.dp
+import com.azkar.testing.assertTrackedRecompositions
+import com.azkar.testing.assertTrackedStable
 import com.azkar.ui.theme.AzkarTheme
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.runRecompositionTrackingUiTest
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
 import java.util.Locale
-
-/**
- * Counts how many times the composable a [composed] modifier sits on is recomposed.
- *
- * `SideEffect` runs after every *successful* composition of the scope it is in. Put on a control's
- * `modifier`, that scope is the control's own body, so this counts the control's recompositions and
- * not its parent's. A sibling probe would only ever prove that Compose's skipping works, which is
- * not the question being asked here.
- *
- * It is a plain function rather than a `Modifier` extension so it has to be applied with `.then()`.
- * That is deliberate: as an extension the receiver would be implicit and a future edit could
- * silently chain it in the wrong order relative to the control's own modifiers.
- */
-private fun countingProbe(onRecompose: () -> Unit): Modifier =
-    Modifier.composed {
-        SideEffect { onRecompose() }
-        this
-    }
 
 /**
  * Applies [pressFeedback] the way the app does, which is through [pressableClick] — it is the larger
@@ -76,59 +63,135 @@ private fun PressSurface(
  * These tests are the regression net for that. The budgets are **zero by intent**, not zero by
  * measurement luck: a control whose feedback is expressed declaratively will recompose once per
  * animation frame, so any non-zero count here is the old defect returning rather than noise. The
- * control case is Material 3's own `IconButton`, which already worked this way — a control should
- * cost no more to hover than the Material control it wraps.
+ * grid case checks the aggregate count across multiple instances of the same control.
  *
  * The failure this guards against is not hypothetical. Screenshot-based checking cannot see it (the
  * hover fill is invisible in a still), and it was found by counting compositions, not by looking.
  */
 @OptIn(ExperimentalTestApi::class)
 val RecompositionSuite by testSuite("Control recomposition budgets") {
-    test("hovering a circle icon button recomposes nothing") {
-        runComposeUiTest {
+    listOf(false, true).forEach { dark ->
+        test("nav selection and press keep their visible feedback in ${if (dark) "dark" else "light"} theme") {
+            runRecompositionTrackingUiTest {
+                mainClock.autoAdvance = false
+                val selected = mutableStateOf(false)
+                var highlight = Color.Unspecified
+                setTrackedContent {
+                    AzkarTheme(darkTheme = dark, uiLocale = Locale.ENGLISH) {
+                        highlight = AzkarTheme.colors.highlight
+                        Box(Modifier.background(AzkarTheme.colors.background)) {
+                            NavButton(
+                                text = "Home",
+                                selected = selected.value,
+                                onClick = {},
+                                modifier = Modifier.testTag("nav-visual"),
+                            )
+                        }
+                    }
+                }
+                mainClock.advanceTimeBy(1_000)
+                waitForIdle()
+                runOnIdle { selected.value = true }
+                mainClock.advanceTimeBy(1_000)
+                waitForIdle()
+                val node = onNodeWithTag("nav-visual")
+                val selectedPixels = node.captureToImage().toPixelMap()
+                val highlightPixels =
+                    (0 until selectedPixels.height).sumOf { y ->
+                        (0 until selectedPixels.width).count { x ->
+                            selectedPixels[x, y].toArgb() == highlight.toArgb()
+                        }
+                    }
+                assertThat(highlightPixels).describedAs("selected navigation fill").isGreaterThan(100)
+
+                node.performMouseInput { moveTo(center) }
+                mainClock.advanceTimeBy(500)
+                val hovered = node.captureToImage().toPixelMap()
+                resetRecompositionCounts()
+                node.performMouseInput { press() }
+                mainClock.advanceTimeBy(150)
+                val pressed = node.captureToImage().toPixelMap()
+                val changedPixels =
+                    (0 until pressed.height).sumOf { y ->
+                        (0 until pressed.width).count { x -> pressed[x, y].toArgb() != hovered[x, y].toArgb() }
+                    }
+                assertThat(changedPixels).describedAs("navigation press feedback").isGreaterThan(50)
+                node.assertTrackedStable(expectedFunction = "NavButton")
+                node.performMouseInput { release() }
+            }
+        }
+    }
+
+    test("changing the selected nav button does not recompose on every animation frame") {
+        runRecompositionTrackingUiTest {
             mainClock.autoAdvance = false
-            var recompositions = 0
-            setContent {
+            val selected = mutableStateOf(false)
+            setTrackedContent {
+                AzkarTheme(darkTheme = false, uiLocale = Locale.ENGLISH) {
+                    NavButton(
+                        text = "Home",
+                        selected = selected.value,
+                        onClick = {},
+                        modifier = Modifier.testTag("nav-selection"),
+                    )
+                }
+            }
+            mainClock.advanceTimeBy(1_000)
+            waitForIdle()
+            resetRecompositionCounts()
+            runOnIdle { selected.value = true }
+            mainClock.advanceTimeByFrame()
+            onNodeWithTag("nav-selection").assertTrackedRecompositions(atLeast = 1, expectedFunction = "NavButton")
+            resetRecompositionCounts()
+            repeat(40) { mainClock.advanceTimeBy(16) }
+            onNodeWithTag("nav-selection").assertTrackedStable(expectedFunction = "NavButton")
+        }
+    }
+    test("hovering a circle icon button recomposes nothing") {
+        runRecompositionTrackingUiTest {
+            mainClock.autoAdvance = false
+            setTrackedContent {
                 AzkarTheme(darkTheme = false, uiLocale = Locale.ENGLISH) {
                     Box(Modifier.size(300.dp).background(Color.White)) {
                         CircleIconButton(
                             icon = AzkarIcons.Star,
                             contentDescription = "favourite",
                             onClick = {},
-                            modifier = countingProbe { recompositions++ },
+                            modifier = Modifier.testTag("control"),
                         )
                     }
                 }
             }
             mainClock.advanceTimeBy(1_000)
-            val settled = recompositions
+            waitForIdle()
+            resetRecompositionCounts()
             onNodeWithContentDescription("favourite").performMouseInput { moveTo(center) }
             repeat(40) { mainClock.advanceTimeBy(16) }
-            assertThat(recompositions - settled).describedAs("hover should be draw-phase only").isZero()
+            onNodeWithTag("control").assertTrackedStable(expectedFunction = "CircleIconButton")
         }
     }
 
     test("hovering an icon action button recomposes nothing") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             mainClock.autoAdvance = false
-            var recompositions = 0
-            setContent {
+            setTrackedContent {
                 AzkarTheme(darkTheme = false, uiLocale = Locale.ENGLISH) {
                     Box(Modifier.size(300.dp).background(Color.White)) {
                         IconActionButton(
                             icon = ActionIcons.favorite(on = true),
                             contentDescription = "favourite",
                             onClick = {},
-                            modifier = countingProbe { recompositions++ },
+                            modifier = Modifier.testTag("control"),
                         )
                     }
                 }
             }
             mainClock.advanceTimeBy(1_000)
-            val settled = recompositions
+            waitForIdle()
+            resetRecompositionCounts()
             onNodeWithContentDescription("favourite").performMouseInput { moveTo(center) }
             repeat(40) { mainClock.advanceTimeBy(16) }
-            assertThat(recompositions - settled).describedAs("hover should be draw-phase only").isZero()
+            onNodeWithTag("control").assertTrackedStable(expectedFunction = "IconActionButton")
         }
     }
 
@@ -141,20 +204,20 @@ val RecompositionSuite by testSuite("Control recomposition budgets") {
      * here and still cost nothing" — not as "the press never arrived".
      */
     test("pressing a press-feedback surface recomposes nothing") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             mainClock.autoAdvance = false
-            var recompositions = 0
             var clicks = 0
-            setContent {
+            setTrackedContent {
                 AzkarTheme(darkTheme = false, uiLocale = Locale.ENGLISH) {
                     PressSurface(
                         onClick = { clicks++ },
-                        modifier = countingProbe { recompositions++ }.testTag("press-surface"),
+                        modifier = Modifier.testTag("press-surface"),
                     )
                 }
             }
             mainClock.advanceTimeBy(1_000)
-            val settled = recompositions
+            waitForIdle()
+            resetRecompositionCounts()
             onNodeWithTag("press-surface").performMouseInput {
                 moveTo(center)
                 press()
@@ -163,7 +226,7 @@ val RecompositionSuite by testSuite("Control recomposition budgets") {
                 repeat(40) { mainClock.advanceTimeBy(16) }
             }
             assertThat(clicks).describedAs("the press must actually land on this node").isEqualTo(1)
-            assertThat(recompositions - settled).describedAs("press should be draw-phase only").isZero()
+            onNodeWithTag("press-surface").assertTrackedStable(expectedFunction = "PressSurface")
         }
     }
 
@@ -179,17 +242,16 @@ val RecompositionSuite by testSuite("Control recomposition budgets") {
      * would eventually fail for reasons that are not a defect.
      */
     test("a tooltip button does not recompose per frame while its tooltip is on screen") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             mainClock.autoAdvance = false
-            var recompositions = 0
-            setContent {
+            setTrackedContent {
                 AzkarTheme(darkTheme = false, uiLocale = Locale.ENGLISH) {
                     Box(Modifier.size(300.dp).background(Color.White)) {
                         TooltipIconButton(
                             icon = AzkarIcons.Star,
                             tooltip = "Add to favourites",
                             onClick = {},
-                            modifier = countingProbe { recompositions++ },
+                            modifier = Modifier.testTag("control"),
                         )
                     }
                 }
@@ -198,24 +260,19 @@ val RecompositionSuite by testSuite("Control recomposition budgets") {
             onNodeWithContentDescription("Add to favourites").performMouseInput { moveTo(center) }
             // Long enough for the popup to compose and its scale/fade transition to finish.
             repeat(60) { mainClock.advanceTimeBy(16) }
-            val shown = recompositions
+            waitForIdle()
+            onNodeWithText("Add to favourites").assertIsDisplayed()
+            resetRecompositionCounts()
             repeat(40) { mainClock.advanceTimeBy(16) }
-            assertThat(recompositions - shown)
-                .describedAs("a settled tooltip must not keep recomposing the control beneath it")
-                .isZero()
+            onNodeWithTag("control").assertTrackedStable()
         }
     }
 
-    /**
-     * [NavButton] is allowed one: it has to animate its container between destinations, and that is a
-     * real state change rather than a hover reaction. What must not happen is a per-frame cost while
-     * the pointer merely rests on it — measured at zero over a 40-frame hover.
-     */
+    /** Hovering the unselected button must not create frame-by-frame compositions. */
     test("hovering a nav button does not recompose per frame") {
-        runComposeUiTest {
+        runRecompositionTrackingUiTest {
             mainClock.autoAdvance = false
-            var recompositions = 0
-            setContent {
+            setTrackedContent {
                 AzkarTheme(darkTheme = false, uiLocale = Locale.ENGLISH) {
                     Box(Modifier.size(600.dp).background(Color.White)) {
                         NavButton(
@@ -223,36 +280,26 @@ val RecompositionSuite by testSuite("Control recomposition budgets") {
                             selected = false,
                             onClick = {},
                             leadingIcon = AzkarIcons.Home,
-                            modifier = countingProbe { recompositions++ },
+                            modifier = Modifier.testTag("control"),
                         )
                     }
                 }
             }
             mainClock.advanceTimeBy(1_000)
-            val settled = recompositions
-            // Selected, so the container animation is actually in flight while hovered — this is the
-            // case that would surface a per-frame cost if one existed.
+            waitForIdle()
+            resetRecompositionCounts()
             onNodeWithText("Home").performMouseInput { moveTo(center) }
             repeat(40) { mainClock.advanceTimeBy(16) }
-            assertThat(recompositions - settled)
-                .describedAs("hover must not animate, so must not compose")
-                .isLessThanOrEqualTo(1)
+            onNodeWithTag("control").assertTrackedStable(expectedFunction = "NavButton")
         }
     }
 
-    /**
-     * The question that decides whether the per-control cost is worth fixing: does it multiply?
-     * Twenty-four buttons in a grid, pointer swept across them, compared against the same grid of
-     * raw Material 3 `IconButton`s. Any gap between the two lines is ours to account for; anything
-     * both share is the cost of the M3 control itself.
-     */
-    test("sweeping a grid of 24 circle icon buttons costs what 24 raw Material 3 icon buttons cost") {
-        var ours = 0
-        var raw = 0
-
-        runComposeUiTest {
+    /** One tag makes Dejavu count the whole function across all grid instances. */
+    test("sweeping 24 circle icon buttons does not recompose the buttons") {
+        runRecompositionTrackingUiTest {
             mainClock.autoAdvance = false
-            setContent {
+            val favorite = mutableStateOf(false)
+            setTrackedContent {
                 AzkarTheme(darkTheme = false, uiLocale = Locale.ENGLISH) {
                     Box(Modifier.size(600.dp).background(Color.White)) {
                         Column {
@@ -261,10 +308,18 @@ val RecompositionSuite by testSuite("Control recomposition budgets") {
                                     repeat(4) { col ->
                                         CircleIconButton(
                                             icon = AzkarIcons.Star,
-                                            contentDescription = "ours-$row-$col",
+                                            contentDescription = "grid-$row-$col",
                                             onClick = {},
                                             buttonSize = 40.dp,
-                                            modifier = countingProbe { ours++ },
+                                            favorite = row == 0 && col == 1 && favorite.value,
+                                            modifier =
+                                                if (row == 0 &&
+                                                    col == 0
+                                                ) {
+                                                    Modifier.testTag("grid-probe")
+                                                } else {
+                                                    Modifier
+                                                },
                                         )
                                     }
                                 }
@@ -274,51 +329,23 @@ val RecompositionSuite by testSuite("Control recomposition budgets") {
                 }
             }
             mainClock.advanceTimeBy(1_000)
-            val settled = ours
-            // Sweep the pointer across each row, stepping frames so any animation would run.
-            for (row in 0 until 6) {
-                for (col in 0 until 3) {
-                    onNodeWithContentDescription("ours-$row-$col").performMouseInput { moveTo(center) }
-                    repeat(8) { mainClock.advanceTimeBy(16) }
-                }
-            }
-            assertThat(ours - settled).describedAs("24 buttons, swept").isZero()
-        }
-
-        runComposeUiTest {
-            mainClock.autoAdvance = false
-            setContent {
-                AzkarTheme(darkTheme = false, uiLocale = Locale.ENGLISH) {
-                    Box(Modifier.size(600.dp).background(Color.White)) {
-                        Column {
-                            repeat(6) { row ->
-                                Row {
-                                    repeat(4) { col ->
-                                        IconButton(
-                                            onClick = {},
-                                            modifier =
-                                                Modifier
-                                                    .size(40.dp)
-                                                    .then(countingProbe { raw++ }),
-                                        ) {
-                                            Icon(AzkarIcons.Star, contentDescription = "raw-$row-$col")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            waitForIdle()
+            resetRecompositionCounts()
+            // Change an untagged instance: the tagged function must report that composition too.
+            runOnIdle { favorite.value = true }
+            mainClock.advanceTimeByFrame()
+            onNodeWithTag("grid-probe").assertTrackedRecompositions(atLeast = 1, expectedFunction = "CircleIconButton")
+            runOnIdle { favorite.value = false }
             mainClock.advanceTimeBy(1_000)
-            val settled = raw
+            waitForIdle()
+            resetRecompositionCounts()
             for (row in 0 until 6) {
-                for (col in 0 until 3) {
-                    onNodeWithContentDescription("raw-$row-$col").performMouseInput { moveTo(center) }
+                for (col in 0 until 4) {
+                    onNodeWithContentDescription("grid-$row-$col").performMouseInput { moveTo(center) }
                     repeat(8) { mainClock.advanceTimeBy(16) }
                 }
             }
-            assertThat(raw - settled).describedAs("Material 3's own hover baseline").isZero()
+            onNodeWithTag("grid-probe").assertTrackedStable(expectedFunction = "CircleIconButton")
         }
     }
 }

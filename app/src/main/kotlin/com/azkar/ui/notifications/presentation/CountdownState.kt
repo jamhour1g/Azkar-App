@@ -28,7 +28,7 @@ internal class CountdownState(
     /**
      * Where the bar is heading, as a fraction of the card's time.
      *
-     * Read by the composable to animate towards, and written only by [sample].
+     * Observed by the animation effect and written only by [sample].
      */
     var target by mutableFloatStateOf(initial.coerceIn(0f, 1f))
         private set

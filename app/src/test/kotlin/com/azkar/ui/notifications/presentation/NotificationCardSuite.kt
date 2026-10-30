@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
@@ -23,6 +24,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -31,10 +33,15 @@ import androidx.compose.ui.unit.height
 import androidx.compose.ui.unit.width
 import com.azkar.i18n.ARABIC
 import com.azkar.i18n.ENGLISH
+import com.azkar.testing.assertTrackedRecompositions
+import com.azkar.testing.assertTrackedStable
+import com.azkar.testing.withDesktopDejavu
 import com.azkar.ui.notifications.NotificationAction
 import com.azkar.ui.notifications.NotificationContent
 import com.azkar.ui.theme.AzkarTheme
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
 import java.util.Locale
 
@@ -122,6 +129,7 @@ private const val ENGLISH_POSITION_LABEL = "1 of 3"
 private const val ARABIC_POSITION_LABEL = "1 من 3"
 
 private const val REMEMBRANCE_ID = 42L
+private const val CARD_TAG = "notification-card"
 
 /** The fake deadline is long enough to observe several ticks and short enough for a fast UI suite. */
 private const val BAR_TEST_DURATION_NANOS = 2_000_000_000L
@@ -130,25 +138,42 @@ private const val BAR_TEST_DURATION_NANOS = 2_000_000_000L
 private const val BAR_TEST_TIMEOUT_MILLIS = 1_000L
 
 @OptIn(ExperimentalTestApi::class)
+private fun trackedCardUiTest(block: SkikoComposeUiTest.() -> Unit) {
+    withDesktopDejavu {
+        runSkikoComposeUiTest(size = CARD_SIZE, density = Density(1f), block = block)
+    }
+}
+
+@OptIn(ExperimentalTestApi::class)
 private fun cardTest(
     locale: Locale = ENGLISH,
     darkTheme: Boolean = false,
     cardWidth: Dp = DEFAULT_CARD_WIDTH,
     cardHeight: Dp = DEFAULT_CARD_HEIGHT,
+    maxRecompositions: Int = 0,
     content: @Composable () -> Unit,
     block: SkikoComposeUiTest.() -> Unit,
-) = runSkikoComposeUiTest(size = CARD_SIZE, density = Density(1f)) {
-    setContent {
-        AzkarTheme(darkTheme = darkTheme, uiLocale = locale) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(12.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(modifier = Modifier.size(cardWidth, cardHeight)) { content() }
+) {
+    trackedCardUiTest {
+        setTrackedContent {
+            AzkarTheme(darkTheme = darkTheme, uiLocale = locale) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(modifier = Modifier.size(cardWidth, cardHeight)) { content() }
+                }
             }
         }
+        waitForIdle()
+        resetRecompositionCounts()
+        block()
+        mainClock.advanceTimeBy(100)
+        waitForIdle()
+        onNodeWithTag(
+            CARD_TAG,
+        ).assertTrackedRecompositions(atMost = maxRecompositions, expectedFunction = "AzkarSurfaceCard")
     }
-    block()
 }
 
 /**
@@ -173,34 +198,43 @@ private const val FITTED_CARD_TAG = "fitted-card"
 private fun fittedCardTest(
     passage: String = ARABIC_PASSAGE,
     block: SkikoComposeUiTest.() -> Unit,
-) = runSkikoComposeUiTest(size = CARD_SIZE, density = Density(1f)) {
-    setContent {
-        AzkarTheme(uiLocale = ENGLISH) {
-            Box(modifier = Modifier.width(FITTED_CARD_WIDTH).wrapContentHeight(unbounded = true)) {
-                NotificationCard(
-                    item = passageNotice(passage = passage, position = 1, total = 3),
-                    onOpen = {},
-                    onDismiss = {},
-                    onPauseChanged = {},
-                    modifier = Modifier.testTag(FITTED_CARD_TAG),
-                    sizing = OverlayCardSizing.FIT,
-                )
+) {
+    trackedCardUiTest {
+        setTrackedContent {
+            AzkarTheme(uiLocale = ENGLISH) {
+                Box(modifier = Modifier.width(FITTED_CARD_WIDTH).wrapContentHeight(unbounded = true)) {
+                    NotificationCard(
+                        item = passageNotice(passage = passage, position = 1, total = 3),
+                        onOpen = {},
+                        onDismiss = {},
+                        onPauseChanged = {},
+                        modifier = Modifier.testTag(FITTED_CARD_TAG),
+                        sizing = OverlayCardSizing.FIT,
+                    )
+                }
             }
         }
+        waitForIdle()
+        resetRecompositionCounts()
+        block()
+        mainClock.advanceTimeBy(100)
+        waitForIdle()
+        onNodeWithTag(FITTED_CARD_TAG).assertTrackedStable(expectedFunction = "AzkarSurfaceCard")
     }
-    block()
 }
 
 @Composable
 private fun plainCard(
     onOpen: () -> Unit = {},
     onDismiss: () -> Unit = {},
+    onPauseChanged: (Boolean) -> Unit = {},
 ) {
     NotificationCard(
         item = plainNotice(),
         onOpen = onOpen,
         onDismiss = onDismiss,
-        onPauseChanged = {},
+        onPauseChanged = onPauseChanged,
+        modifier = Modifier.testTag(CARD_TAG),
     )
 }
 
@@ -220,6 +254,7 @@ private fun updateCard(
         onOpen = onOpen,
         onDismiss = onDismiss,
         onPauseChanged = {},
+        modifier = Modifier.testTag(CARD_TAG),
     )
 }
 
@@ -247,6 +282,7 @@ private fun passageCard(
         onPauseChanged = {},
         remaining = remaining,
         onToggleFavorite = onToggleFavorite,
+        modifier = Modifier.testTag(CARD_TAG),
     )
 }
 
@@ -260,6 +296,7 @@ private fun prayerCard(
         onOpen = onOpen,
         onDismiss = onDismiss,
         onPauseChanged = {},
+        modifier = Modifier.testTag(CARD_TAG),
     )
 }
 
@@ -325,8 +362,10 @@ val NotificationCardSuite by testSuite("The overlay notification card") {
 
     test("the body opens Azkar") {
         var opened = 0
-        cardTest(content = { plainCard(onOpen = { opened++ }) }) {
+        cardTest(maxRecompositions = 1, content = { plainCard(onOpen = { opened++ }) }) {
+            resetRecompositionCounts()
             onNodeWithText(TITLE).performClick()
+            onNodeWithTag(CARD_TAG).assertTrackedRecompositions(atMost = 1, expectedFunction = "AzkarSurfaceCard")
         }
 
         assertThat(opened).isEqualTo(1)
@@ -355,8 +394,10 @@ val NotificationCardSuite by testSuite("The overlay notification card") {
     test("the cross dismisses, and is not the same gesture as opening") {
         var opened = 0
         var dismissed = 0
-        cardTest(content = { plainCard(onOpen = { opened++ }, onDismiss = { dismissed++ }) }) {
+        cardTest(maxRecompositions = 1, content = { plainCard(onOpen = { opened++ }, onDismiss = { dismissed++ }) }) {
+            resetRecompositionCounts()
             onNodeWithContentDescription(ENGLISH_DISMISS_LABEL).performClick()
+            onNodeWithTag(CARD_TAG).assertTrackedRecompositions(atMost = 1, expectedFunction = "AzkarSurfaceCard")
         }
 
         assertThat(dismissed).isEqualTo(1)
@@ -375,6 +416,19 @@ val NotificationCardSuite by testSuite("The overlay notification card") {
             }
         } finally {
             Locale.setDefault(previous)
+        }
+    }
+
+    test("hovering pauses and resumes without recomposing the card") {
+        val pauses = mutableListOf<Boolean>()
+        cardTest(content = { plainCard(onPauseChanged = { pauses += it }) }) {
+            assertThat(pauses).containsExactly(false)
+            onNodeWithTag(CARD_TAG).performMouseInput { moveTo(center) }
+            waitForIdle()
+            assertThat(pauses).containsExactly(false, true)
+            onNodeWithTag(CARD_TAG).performMouseInput { moveTo(Offset(-10f, -10f)) }
+            waitForIdle()
+            assertThat(pauses).containsExactly(false, true, false)
         }
     }
 

@@ -29,6 +29,9 @@ val desktopMainClass = "com.azkar.MainKt"
 val installerPlatform = AzkarInstallerPlatform.current()
 
 kotlin {
+    composeCompiler {
+        includeSourceInformation = true
+    }
     compilerOptions {
         // The Compose Styles API (`androidx.compose.foundation.style.Style`,
         // `Modifier.styleable`, `rememberUpdatedStyleState`) is still flagged experimental and
@@ -153,6 +156,7 @@ dependencies {
     // through `mainClock`, so the recomposition cost of a hover can be counted a frame at a time
     // instead of being guessed at from a profiler attached to a live desktop session.
     testImplementation(libs.org.jetbrains.compose.ui.test)
+    testImplementation(libs.dev.mttmcknn.dejavu)
 
     // `MockEngine` stands in for the CIO engine the app installs, so the geocoding client can be
     // driven through canned responses without a socket. `ktor-client-mock` is already in the

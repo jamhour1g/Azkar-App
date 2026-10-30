@@ -5,15 +5,21 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.unit.Density
 import com.azkar.i18n.ENGLISH
+import com.azkar.testing.assertComposableRecompositions
+import com.azkar.testing.assertTrackedRecompositions
+import com.azkar.testing.withDesktopDejavu
 import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.theme.AzkarTheme
 import de.infix.testBalloon.framework.core.testSuite
+import dejavu.resetRecompositionCounts
+import dejavu.setTrackedContent
 import org.assertj.core.api.Assertions.assertThat
 import java.util.Locale
 
@@ -46,29 +52,46 @@ private class RemembranceCreateReport {
 }
 
 @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
-private fun converse(body: SkikoComposeUiTest.() -> Unit): RemembranceCreateReport {
+private fun converse(
+    pageRecompositions: IntRange = 0..0,
+    textRecompositions: IntRange = 0..0,
+    body: SkikoComposeUiTest.() -> Unit,
+): RemembranceCreateReport {
     val report = RemembranceCreateReport()
-    runSkikoComposeUiTest(size = Size(1440f, 1200f), density = Density(1f)) {
-        setContent {
-            AzkarTheme(darkTheme = false, uiLocale = ENGLISH) {
-                val draft = RemembranceCreateDraft(textLocale = Locale.forLanguageTag("ar"))
-                RemembranceCreateDialog(
-                    draft = draft,
-                    availableTags = listOf("morning", "sleep").map(TagOption::of),
-                    onDismiss = { report.dismissed = true },
-                    onConfirm = { submitted ->
-                        report.confirmedText = submitted.submittedText
-                        report.confirmedSource = submitted.submittedSource
-                        report.confirmedTags = submitted.tags
-                        report.confirmedTranslations = submitted.submittedTranslations
-                    },
-                )
+    withDesktopDejavu {
+        runSkikoComposeUiTest(size = Size(1440f, 1200f), density = Density(1f)) {
+            resetRecompositionCounts()
+            setTrackedContent {
+                AzkarTheme(darkTheme = false, uiLocale = ENGLISH) {
+                    val draft = RemembranceCreateDraft(textLocale = Locale.forLanguageTag("ar"))
+                    RemembranceCreateDialog(
+                        draft = draft,
+                        availableTags = listOf("morning", "sleep").map(TagOption::of),
+                        onDismiss = { report.dismissed = true },
+                        onConfirm = { submitted ->
+                            report.confirmedText = submitted.submittedText
+                            report.confirmedSource = submitted.submittedSource
+                            report.confirmedTags = submitted.tags
+                            report.confirmedTranslations = submitted.submittedTranslations
+                        },
+                    )
+                }
             }
+            waitForIdle()
+            resetRecompositionCounts()
+            body()
+            waitForIdle()
+            onNodeWithTag(
+                REMEMBRANCE_CREATE_DIALOG_TAG,
+            ).assertTrackedRecompositions(atMost = 0, expectedFunction = "AzkarDialogSurface")
+            assertComposableRecompositions("com.azkar.ui.library.RemembranceCreateDialog", pageRecompositions)
+            assertComposableRecompositions("com.azkar.ui.library.RemembranceTextStep", textRecompositions)
         }
-        body()
     }
     return report
 }
+
+private const val REMEMBRANCE_CREATE_DIALOG_TAG = "remembrance-create-dialog"
 
 @OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
 val RemembranceCreateDialogSuite by testSuite("The create-remembrance dialog") {
@@ -84,7 +107,7 @@ val RemembranceCreateDialogSuite by testSuite("The create-remembrance dialog") {
     }
 
     test("a blank passage cannot advance and the form explains what is missing") {
-        converse {
+        converse(textRecompositions = 1..2) {
             onNodeWithText(NEXT).performClick()
 
             onNodeWithText(TEXT_REQUIRED).assertIsDisplayed()
@@ -94,7 +117,7 @@ val RemembranceCreateDialogSuite by testSuite("The create-remembrance dialog") {
     }
 
     test("Back and Cancel remain available as the user moves through the wizard") {
-        converse {
+        converse(pageRecompositions = 2..2, textRecompositions = 1..3) {
             onNodeWithText(TEXT_PLACEHOLDER).performTextReplacement("الحمد لله")
             onNodeWithText(NEXT).performClick()
             onNodeWithText(STEP_TRANSLATIONS).assertIsDisplayed()
@@ -106,7 +129,7 @@ val RemembranceCreateDialogSuite by testSuite("The create-remembrance dialog") {
 
     test("text, translation, explanation, and a new tag reach confirmation") {
         val report =
-            converse {
+            converse(pageRecompositions = 2..2, textRecompositions = 1..2) {
                 onNodeWithText(TEXT_PLACEHOLDER).performTextReplacement("الحمد لله")
                 onNodeWithText(ADDITIONAL_INFO).performClick()
                 onNodeWithText("Book, reference, or source…").performTextReplacement("  Book 1  ")
