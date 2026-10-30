@@ -400,7 +400,7 @@ private fun RemembranceUsageRow(
  */
 @AzkarVariantsPreview
 @Composable
-private fun TagUsagePanelPreview() {
+internal fun TagUsagePanelPreview() {
     TagUsageDialog(
         usage = previewUsage(),
         onDismiss = {},

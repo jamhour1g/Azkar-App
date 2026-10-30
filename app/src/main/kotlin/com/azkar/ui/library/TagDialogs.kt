@@ -724,7 +724,7 @@ private fun DialogFooter(
 
 @AzkarVariantsPreview
 @Composable
-private fun TagDeleteDialogPreview() {
+internal fun TagDeleteDialogPreview() {
     TagDeleteDialog(
         tag = previewTagSummary("evening", collections = 1, remembrances = 54, added = true),
         onDismiss = {},
@@ -734,7 +734,7 @@ private fun TagDeleteDialogPreview() {
 
 @AzkarVariantsPreview
 @Composable
-private fun TagNameDialogPreview() {
+internal fun TagNameDialogPreview() {
     TagNameDialog(
         title = stringResource(Res.string.tagsDialogRenameTitle),
         initialName = "evening",

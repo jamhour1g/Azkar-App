@@ -1530,7 +1530,7 @@ internal class CollectionEditorNavigation(
  */
 @AzkarVariantsPreview
 @Composable
-private fun CollectionEditorDetailsPreview() {
+internal fun CollectionEditorDetailsPreview() {
     val draft = CollectionEditorDraft.create()
     draft.updateName("Morning Azkar")
     draft.updateDescription("The remembrances said before the sun is up.")
@@ -1586,7 +1586,7 @@ internal fun CollectionEditorSelectedCoverPreview() {
 
 @AzkarVariantsPreview
 @Composable
-private fun CollectionEditorTagsPreview() {
+internal fun CollectionEditorTagsPreview() {
     val draft = CollectionEditorDraft.create()
     draft.toggleTag("morning")
     draft.toggleTag("sleep")
@@ -1600,7 +1600,7 @@ private fun CollectionEditorTagsPreview() {
 
 @AzkarVariantsPreview
 @Composable
-private fun CollectionEditorCoverPreview() {
+internal fun CollectionEditorCoverPreview() {
     CollectionEditorDialog(
         draft = CollectionEditorDraft.create(),
         environment = previewEditorEnvironment(),
@@ -1621,12 +1621,6 @@ private fun previewEditorEnvironment() =
         availableTags = listOf("morning", "sleep", "travel", "after prayer").map(TagOption::of),
         onPickCover = { null },
     )
-
-@AzkarVariantsPreview
-@Composable
-private fun ConfirmCollectionDeleteDialogPreview() {
-    ConfirmCollectionDeleteDialog(name = "Morning Azkar", onDismiss = {}, onConfirm = {})
-}
 
 // ---- plumbing -------------------------------------------------------------------------------------
 

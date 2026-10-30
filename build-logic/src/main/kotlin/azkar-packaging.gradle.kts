@@ -82,6 +82,7 @@ tasks
 
 val smokeTestPackagedRuntime =
     tasks.register("smokeTestPackagedRuntime") {
+        notCompatibleWithConfigurationCache("Launches an external process and manages a temporary profile")
         group = "verification"
         description = "Opens and migrates an isolated database using the bundled release runtime."
         dependsOn("createReleaseDistributable")

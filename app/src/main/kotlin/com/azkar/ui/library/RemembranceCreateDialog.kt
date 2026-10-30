@@ -476,7 +476,7 @@ private data class RemembranceCreateNavigation(
 
 @AzkarVariantsPreview
 @Composable
-private fun RemembranceCreateDialogPreview() {
+internal fun RemembranceCreateDialogPreview() {
     RemembranceCreateDialog(
         draft = RemembranceCreateDraft(textLocale = Locale.forLanguageTag("ar")),
         availableTags = listOf("morning", "sleep", "travel").map(TagOption::of),

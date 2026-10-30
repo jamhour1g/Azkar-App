@@ -311,6 +311,7 @@ val alreadyKeptProviders =
 
 val collectProguardRules =
     tasks.register("collectProguardRules") {
+        notCompatibleWithConfigurationCache("Reads and inspects runtime classpath files inside the task action")
         val runtimeClasspath = configurations.named("runtimeClasspath")
         val output = layout.buildDirectory.file("compose/proguard-generated.pro")
         inputs.files(runtimeClasspath)
