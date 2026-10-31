@@ -256,12 +256,6 @@ private fun LazyListScope.settingsSections(
                             location = notificationValues.prayerLocation,
                             settings = notificationState,
                         )
-                    SettingsSection.PRAYER_ALERTS ->
-                        SettingsPrayerAlertsSection(
-                            prayerNotifications = notificationValues.prayerFlags,
-                            audio = notificationValues.audio,
-                            settings = notificationState,
-                        )
                     SettingsSection.AUDIO ->
                         SettingsAudioSection(
                             audio = notificationValues.audio,

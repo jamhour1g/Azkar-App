@@ -4,7 +4,6 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.azkar.ui.home.PrayerKey
 import com.azkar.ui.notifications.presentation.OverlayCardSize
 import com.azkar.ui.notifications.presentation.OverlayCardSizing
 import com.azkar.ui.notifications.presentation.OverlayDurationMode
@@ -78,20 +77,6 @@ class NotificationSettingsState(
 
     fun setAllPrayerSoundsEnabled(enabled: Boolean) {
         scope.launch { preferences.setAllPrayerSoundsEnabled(enabled) }
-    }
-
-    fun setPrayerNotificationEnabled(
-        key: PrayerKey,
-        enabled: Boolean,
-    ) {
-        scope.launch { preferences.setPrayerEnabled(key, enabled) }
-    }
-
-    fun setPrayerSoundEnabled(
-        key: PrayerKey,
-        enabled: Boolean,
-    ) {
-        scope.launch { preferences.setPrayerSoundEnabled(key, enabled) }
     }
 
     /**
