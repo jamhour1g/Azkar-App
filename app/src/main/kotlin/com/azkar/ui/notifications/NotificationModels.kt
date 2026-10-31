@@ -7,7 +7,7 @@ import java.time.DayOfWeek
 /** Persisted desktop playback choices. Paths point to audio files owned by the user. */
 @Serializable
 data class AudioPreferences(
-    val notificationsEnabled: Boolean = false,
+    val notificationsEnabled: Boolean = true,
     val notificationFile: String = "",
     val notificationVolume: Float = 0.7f,
     val prayerEnabled: Boolean = true,
