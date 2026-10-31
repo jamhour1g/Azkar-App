@@ -185,6 +185,7 @@ fun HomeScreen(
             onRemembranceSoundToggled = { enabled ->
                 notificationScope.launch {
                     notificationPreferences.updateAudio { it.copy(notificationsEnabled = enabled) }
+                    notificationPreferences.setAllPrayerSoundsEnabled(enabled)
                 }
             },
             rail = rail,
