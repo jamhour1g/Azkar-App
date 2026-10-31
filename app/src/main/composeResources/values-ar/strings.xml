@@ -62,6 +62,8 @@
     <string name="prayerNotificationTurnOff">إيقاف تنبيهات صلاة %1$s</string>
     <string name="prayerSoundTurnOn">تشغيل صوت صلاة %1$s</string>
     <string name="prayerSoundTurnOff">إيقاف صوت صلاة %1$s</string>
+    <string name="remembranceSoundTurnOn">تشغيل أصوات إشعارات الأذكار</string>
+    <string name="remembranceSoundTurnOff">إيقاف أصوات إشعارات الأذكار</string>
     <string name="prayerNotificationsShort">التنبيهات</string>
     <string name="fajr">الفجر</string>
     <string name="fajrTime">04:50 AM</string>
