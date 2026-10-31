@@ -4,6 +4,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.azkar.ui.home.PrayerKey
 import com.azkar.ui.notifications.presentation.OverlayCardSize
 import com.azkar.ui.notifications.presentation.OverlayCardSizing
 import com.azkar.ui.notifications.presentation.OverlayDurationMode
@@ -69,6 +70,29 @@ class NotificationSettingsState(
 
     /** Writes for the notifications tab's overlay-appearance and startup cards. */
     val notifications = NotificationEditor()
+
+    /** Writes the independent desktop audio preferences. */
+    fun updateAudio(transform: (AudioPreferences) -> AudioPreferences) {
+        scope.launch { preferences.updateAudio(transform) }
+    }
+
+    fun setAllPrayerSoundsEnabled(enabled: Boolean) {
+        scope.launch { preferences.setAllPrayerSoundsEnabled(enabled) }
+    }
+
+    fun setPrayerNotificationEnabled(
+        key: PrayerKey,
+        enabled: Boolean,
+    ) {
+        scope.launch { preferences.setPrayerEnabled(key, enabled) }
+    }
+
+    fun setPrayerSoundEnabled(
+        key: PrayerKey,
+        enabled: Boolean,
+    ) {
+        scope.launch { preferences.setPrayerSoundEnabled(key, enabled) }
+    }
 
     /**
      * Writes for the reminder schedule, the card at the top of the notifications tab.

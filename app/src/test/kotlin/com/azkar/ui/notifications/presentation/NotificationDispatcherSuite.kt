@@ -5,6 +5,7 @@ import com.azkar.ui.notifications.NotificationNotice
 import de.infix.testBalloon.framework.core.testSuite
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 
 /**
@@ -47,13 +48,15 @@ val NotificationDispatcherSuite by testSuite("The notification dispatcher") {
     }
 
     test("quitting releases the overlay and forgets the last notice") {
-        val harness = Harness()
-        harness.dispatcher.publish(harness.notice)
+        runTest {
+            val harness = Harness()
+            harness.dispatcher.publish(harness.notice)
 
-        harness.dispatcher.dispose()
+            harness.dispatcher.dispose()
 
-        assertThat(harness.overlay.disposed).isTrue()
-        assertThat(harness.dispatcher.latestAction).isEqualTo(NotificationAction.OpenApp)
+            assertThat(harness.overlay.disposed).isTrue()
+            assertThat(harness.dispatcher.latestAction).isEqualTo(NotificationAction.OpenApp)
+        }
     }
 }
 

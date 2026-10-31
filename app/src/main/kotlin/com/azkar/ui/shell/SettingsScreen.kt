@@ -40,6 +40,9 @@ import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.settingsSubtitle
 import com.azkar.generated.resources.settingsTitle
+import com.azkar.ui.home.PrayerKey
+import com.azkar.ui.notifications.AudioPreferences
+import com.azkar.ui.notifications.DesktopAudioPlayer
 import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationPreferencesRepository
@@ -59,6 +62,7 @@ import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.LocalUiLocale
 import com.azkar.updates.UpdateManager
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -110,6 +114,7 @@ fun SettingsScreen(
 ) {
     val notificationState = rememberNotificationSettingsState()
     val notificationValues = rememberNotificationSettingsValues()
+    val audioPlayer = koinInject<DesktopAudioPlayer>()
     val windowInfo = LocalWindowInfo.current
     LaunchedEffect(notificationState, windowInfo) {
         snapshotFlow { windowInfo.isWindowFocused }.collect { focused ->
@@ -127,6 +132,7 @@ fun SettingsScreen(
                 sectionRequest = sectionRequest,
                 notificationState = notificationState,
                 notificationValues = notificationValues,
+                audioPlayer = audioPlayer,
                 updateManager = koinInject(),
             ),
         modifier = modifier,
@@ -138,15 +144,11 @@ private fun SettingsScreenContent(
     inputs: SettingsScreenInputs,
     modifier: Modifier,
 ) {
-    val state = inputs.state
     val onClose = inputs.onClose
     val initialGroup = inputs.initialGroup
     val requestedSection = inputs.initialSection
     val initialSection = requestedSection ?: initialGroup.sections.first()
     val sectionRequest = inputs.sectionRequest
-    val notificationState = inputs.notificationState
-    val notificationValues = inputs.notificationValues
-    val updateManager = inputs.updateManager
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var selectedSection by remember(initialSection, sectionRequest) { mutableStateOf(initialSection) }
@@ -195,7 +197,7 @@ private fun SettingsScreenContent(
             item(key = "header") {
                 SettingsPageHeader(onClose = onClose, modifier = Modifier.fillMaxWidth())
             }
-            settingsSections(state, notificationState, notificationValues, selectedGroup, updateManager)
+            settingsSections(inputs, selectedGroup)
         }
     }
 }
@@ -208,17 +210,18 @@ private data class SettingsScreenInputs(
     val sectionRequest: Int,
     val notificationState: NotificationSettingsState,
     val notificationValues: NotificationSettingsValues,
+    val audioPlayer: DesktopAudioPlayer,
     val updateManager: UpdateManager,
 )
 
 /** Keeps the scroll declaration's body about the shell, with each settings block in its own item. */
 private fun LazyListScope.settingsSections(
-    state: AzkarAppState,
-    notificationState: NotificationSettingsState,
-    notificationValues: NotificationSettingsValues,
+    inputs: SettingsScreenInputs,
     selectedGroup: SettingsGroup,
-    updateManager: UpdateManager,
 ) {
+    val state = inputs.state
+    val notificationState = inputs.notificationState
+    val notificationValues = inputs.notificationValues
     selectedGroup.sections.forEach { section ->
         item(key = section.name) {
             SettingsColumn {
@@ -229,7 +232,7 @@ private fun LazyListScope.settingsSections(
                             startOnLogin = notificationState.notifications.startOnLogin,
                             settings = notificationState,
                         )
-                    SettingsSection.UPDATES -> UpdateSettingsSection(updateManager)
+                    SettingsSection.UPDATES -> UpdateSettingsSection(inputs.updateManager)
                     SettingsSection.THEME -> SettingsThemeSection(state = state)
                     SettingsSection.TEXT -> SettingsTypographySection(state = state)
                     SettingsSection.REMINDER_CARD ->
@@ -252,6 +255,18 @@ private fun LazyListScope.settingsSections(
                         SettingsPrayerCalculationSection(
                             location = notificationValues.prayerLocation,
                             settings = notificationState,
+                        )
+                    SettingsSection.PRAYER_ALERTS ->
+                        SettingsPrayerAlertsSection(
+                            prayerNotifications = notificationValues.prayerFlags,
+                            audio = notificationValues.audio,
+                            settings = notificationState,
+                        )
+                    SettingsSection.AUDIO ->
+                        SettingsAudioSection(
+                            audio = notificationValues.audio,
+                            settings = notificationState,
+                            player = inputs.audioPlayer,
                         )
                 }
             }
@@ -412,6 +427,8 @@ private data class NotificationSettingsValues(
     val queue: ReminderQueueConfig,
     val prayerLocation: PrayerLocationSettings,
     val presentation: NotificationPresentationSettings,
+    val audio: AudioPreferences,
+    val prayerFlags: Map<PrayerKey, Boolean>,
 )
 
 @Composable
@@ -420,7 +437,9 @@ private fun rememberNotificationSettingsValues(): NotificationSettingsValues {
     val queue by preferences.queue.collectAsState()
     val prayerLocation by preferences.prayerLocation.collectAsState()
     val presentation by preferences.presentation.collectAsState()
-    return NotificationSettingsValues(queue, prayerLocation, presentation)
+    val audio by preferences.audio.collectAsState()
+    val prayerFlags by preferences.prayerFlags.collectAsState()
+    return NotificationSettingsValues(queue, prayerLocation, presentation, audio, prayerFlags)
 }
 
 @AzkarVariantsPreview
@@ -452,6 +471,41 @@ private fun SettingsScreenPreviewContent(group: SettingsGroup) {
         onDispose { httpClient.close() }
     }
     val updateManager = remember(store, scope, httpClient) { UpdateManager(store, httpClient, scope) }
+    SeedSettingsPreview(preferences, scope)
+    val notificationState = remember(scope, preferences) { NotificationSettingsState(scope, preferences) }
+    val queue by preferences.queue.collectAsState()
+    val prayerLocation by preferences.prayerLocation.collectAsState()
+    val presentation by preferences.presentation.collectAsState()
+    val prayerFlags by preferences.prayerFlags.collectAsState()
+    SettingsScreenContent(
+        inputs =
+            SettingsScreenInputs(
+                state = previewAzkarAppState(locale = locale),
+                onClose = {},
+                initialGroup = group,
+                initialSection = null,
+                sectionRequest = 0,
+                notificationState = notificationState,
+                notificationValues =
+                    NotificationSettingsValues(
+                        queue,
+                        prayerLocation,
+                        presentation,
+                        preferences.audio.value,
+                        prayerFlags,
+                    ),
+                audioPlayer = remember { DesktopAudioPlayer() },
+                updateManager = updateManager,
+            ),
+        modifier = Modifier.fillMaxSize(),
+    )
+}
+
+@Composable
+private fun SeedSettingsPreview(
+    preferences: NotificationPreferencesRepository,
+    scope: CoroutineScope,
+) {
     LaunchedEffect(preferences, scope) {
         preferences.updateQueue {
             it.copy(
@@ -477,22 +531,4 @@ private fun SettingsScreenPreviewContent(group: SettingsGroup) {
         )
         preferences.observe(scope)
     }
-    val notificationState = remember(scope, preferences) { NotificationSettingsState(scope, preferences) }
-    val queue by preferences.queue.collectAsState()
-    val prayerLocation by preferences.prayerLocation.collectAsState()
-    val presentation by preferences.presentation.collectAsState()
-    SettingsScreenContent(
-        inputs =
-            SettingsScreenInputs(
-                state = previewAzkarAppState(locale = locale),
-                onClose = {},
-                initialGroup = group,
-                initialSection = null,
-                sectionRequest = 0,
-                notificationState = notificationState,
-                notificationValues = NotificationSettingsValues(queue, prayerLocation, presentation),
-                updateManager = updateManager,
-            ),
-        modifier = Modifier.fillMaxSize(),
-    )
 }

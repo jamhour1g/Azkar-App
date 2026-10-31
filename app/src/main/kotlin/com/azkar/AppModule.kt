@@ -14,6 +14,7 @@ import com.azkar.ui.library.data.DomainCollectionsGateway
 import com.azkar.ui.library.data.DomainTagsGateway
 import com.azkar.ui.library.data.ReminderSources
 import com.azkar.ui.library.data.TagGateway
+import com.azkar.ui.notifications.DesktopAudioPlayer
 import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationActionRouter
@@ -95,6 +96,7 @@ val appModule =
         // inherits its timeouts and its single close on Quit.
         single { GeocodingClient(get()) }
         single { NotificationPreferencesRepository(get()) }
+        single { DesktopAudioPlayer(get(named("notificationDispatcher"))) }
         single { NotificationActionRouter() }
         single { StartupRegistration() }
         single<CoroutineDispatcher>(named("notificationDispatcher")) { notificationDispatcher() }
@@ -121,6 +123,9 @@ val appModule =
                 // a parameterless `get()` would ask the container for the interface nothing is
                 // registered under.
                 overlay = get<OverlayNotificationPresenter>(),
+                audioPreferences = get<NotificationPreferencesRepository>().audio,
+                audioPlayer = get(),
+                audioScope = get(named("notificationScope")),
             )
         }
         single { NotificationRuntime(get(), get(), get(), get()) }
