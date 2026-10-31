@@ -61,6 +61,7 @@ import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.LocalUiLocale
 import com.azkar.updates.UpdateManager
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -142,16 +143,11 @@ private fun SettingsScreenContent(
     inputs: SettingsScreenInputs,
     modifier: Modifier,
 ) {
-    val state = inputs.state
     val onClose = inputs.onClose
     val initialGroup = inputs.initialGroup
     val requestedSection = inputs.initialSection
     val initialSection = requestedSection ?: initialGroup.sections.first()
     val sectionRequest = inputs.sectionRequest
-    val notificationState = inputs.notificationState
-    val notificationValues = inputs.notificationValues
-    val audioPlayer = inputs.audioPlayer
-    val updateManager = inputs.updateManager
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     var selectedSection by remember(initialSection, sectionRequest) { mutableStateOf(initialSection) }
@@ -200,7 +196,7 @@ private fun SettingsScreenContent(
             item(key = "header") {
                 SettingsPageHeader(onClose = onClose, modifier = Modifier.fillMaxWidth())
             }
-            settingsSections(state, notificationState, notificationValues, audioPlayer, selectedGroup, updateManager)
+            settingsSections(inputs, selectedGroup)
         }
     }
 }
@@ -219,13 +215,12 @@ private data class SettingsScreenInputs(
 
 /** Keeps the scroll declaration's body about the shell, with each settings block in its own item. */
 private fun LazyListScope.settingsSections(
-    state: AzkarAppState,
-    notificationState: NotificationSettingsState,
-    notificationValues: NotificationSettingsValues,
-    audioPlayer: DesktopAudioPlayer,
+    inputs: SettingsScreenInputs,
     selectedGroup: SettingsGroup,
-    updateManager: UpdateManager,
 ) {
+    val state = inputs.state
+    val notificationState = inputs.notificationState
+    val notificationValues = inputs.notificationValues
     selectedGroup.sections.forEach { section ->
         item(key = section.name) {
             SettingsColumn {
@@ -236,7 +231,7 @@ private fun LazyListScope.settingsSections(
                             startOnLogin = notificationState.notifications.startOnLogin,
                             settings = notificationState,
                         )
-                    SettingsSection.UPDATES -> UpdateSettingsSection(updateManager)
+                    SettingsSection.UPDATES -> UpdateSettingsSection(inputs.updateManager)
                     SettingsSection.THEME -> SettingsThemeSection(state = state)
                     SettingsSection.TEXT -> SettingsTypographySection(state = state)
                     SettingsSection.REMINDER_CARD ->
@@ -264,7 +259,7 @@ private fun LazyListScope.settingsSections(
                         SettingsAudioSection(
                             audio = notificationValues.audio,
                             settings = notificationState,
-                            player = audioPlayer,
+                            player = inputs.audioPlayer,
                         )
                 }
             }
@@ -467,31 +462,7 @@ private fun SettingsScreenPreviewContent(group: SettingsGroup) {
         onDispose { httpClient.close() }
     }
     val updateManager = remember(store, scope, httpClient) { UpdateManager(store, httpClient, scope) }
-    LaunchedEffect(preferences, scope) {
-        preferences.updateQueue {
-            it.copy(
-                enabled = true,
-                mode = QueueMode.MANUAL,
-                cadence = QueueCadence.INTERVAL,
-                collectionIds = listOf(1L, 2L),
-                activeDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
-                intervalMinutes = 30,
-                windowStartMinute = 9 * 60,
-                windowEndMinute = 21 * 60,
-            )
-        }
-        preferences.savePrayerLocation(
-            PrayerLocationSettings(
-                latitude = 31.95,
-                longitude = 35.91,
-                city = "Amman, Jordan",
-                zoneId = "Asia/Amman",
-                method = PrayerCalculationMethod.MUSLIM_WORLD_LEAGUE,
-                autoDetect = false,
-            ),
-        )
-        preferences.observe(scope)
-    }
+    SeedSettingsPreview(preferences, scope)
     val notificationState = remember(scope, preferences) { NotificationSettingsState(scope, preferences) }
     val queue by preferences.queue.collectAsState()
     val prayerLocation by preferences.prayerLocation.collectAsState()
@@ -517,4 +488,36 @@ private fun SettingsScreenPreviewContent(group: SettingsGroup) {
             ),
         modifier = Modifier.fillMaxSize(),
     )
+}
+
+@Composable
+private fun SeedSettingsPreview(
+    preferences: NotificationPreferencesRepository,
+    scope: CoroutineScope,
+) {
+    LaunchedEffect(preferences, scope) {
+        preferences.updateQueue {
+            it.copy(
+                enabled = true,
+                mode = QueueMode.MANUAL,
+                cadence = QueueCadence.INTERVAL,
+                collectionIds = listOf(1L, 2L),
+                activeDays = setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY),
+                intervalMinutes = 30,
+                windowStartMinute = 9 * 60,
+                windowEndMinute = 21 * 60,
+            )
+        }
+        preferences.savePrayerLocation(
+            PrayerLocationSettings(
+                latitude = 31.95,
+                longitude = 35.91,
+                city = "Amman, Jordan",
+                zoneId = "Asia/Amman",
+                method = PrayerCalculationMethod.MUSLIM_WORLD_LEAGUE,
+                autoDetect = false,
+            ),
+        )
+        preferences.observe(scope)
+    }
 }

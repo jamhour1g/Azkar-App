@@ -19,12 +19,13 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.IOException
 
 /** Owns the persisted settings shared by the manager UI and the process notification service. */
 class NotificationPreferencesRepository(
     private val settings: SettingsStore,
     private val installAudioDefaults: suspend () -> Pair<String, String> = {
-        BundledAudioDefaults.install().let { it.notification to it.prayer }
+        BundledAudioDefaults.install(ioDispatcher = AudioIoDispatcher.default).let { it.notification to it.prayer }
     },
 ) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -205,12 +206,14 @@ class NotificationPreferencesRepository(
                     installAudioDefaults()
                 } catch (cancelled: CancellationException) {
                     throw cancelled
-                } catch (failure: Exception) {
-                    val audioDirectory = SettingsStore.appDataDirectory().resolve("audio")
-                    logger.error(failure) {
-                        "Unable to install bundled audio defaults into '$audioDirectory'; " +
-                            "audio paths will remain unset until configured"
-                    }
+                } catch (failure: IOException) {
+                    logAudioDefaultFailure(failure)
+                    null
+                } catch (failure: IllegalStateException) {
+                    logAudioDefaultFailure(failure)
+                    null
+                } catch (failure: SecurityException) {
+                    logAudioDefaultFailure(failure)
                     null
                 }
             } else {
@@ -228,6 +231,14 @@ class NotificationPreferencesRepository(
             if (resolved != current) {
                 settings.edit { this[AUDIO_KEY] = json.encodeToString(resolved) }
             }
+        }
+    }
+
+    private fun logAudioDefaultFailure(failure: Exception) {
+        val audioDirectory = SettingsStore.appDataDirectory().resolve("audio")
+        logger.error(failure) {
+            "Unable to install bundled audio defaults into '$audioDirectory'; " +
+                "audio paths will remain unset until configured"
         }
     }
 

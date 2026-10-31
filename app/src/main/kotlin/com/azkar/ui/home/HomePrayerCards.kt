@@ -46,9 +46,9 @@ import com.azkar.generated.resources.prayerNotificationTurnOn
 import com.azkar.generated.resources.prayerNotificationsShort
 import com.azkar.generated.resources.prayerSoundTurnOff
 import com.azkar.generated.resources.prayerSoundTurnOn
+import com.azkar.generated.resources.prayerTimesLocation
 import com.azkar.generated.resources.remembranceSoundTurnOff
 import com.azkar.generated.resources.remembranceSoundTurnOn
-import com.azkar.generated.resources.prayerTimesLocation
 import com.azkar.generated.resources.todayPrayerTimes
 import com.azkar.generated.resources.trayNextPrayerCountdown
 import com.azkar.ui.components.AzkarCard
@@ -150,21 +150,25 @@ fun PrayerTimesCard(
             BoxWithConstraints {
                 if (maxWidth < HEADER_INLINE_MIN_WIDTH) {
                     StackedPrayerCardHeader(
-                        countdown = countdown,
-                        locationLabel = locationLabel,
-                        notificationsEnabled = notificationsEnabled,
-                        remembranceSoundEnabled = remembranceSoundEnabled,
-                        onGlobalToggle = onGlobalToggle,
-                        onRemembranceSoundToggled = onRemembranceSoundToggled,
+                        PrayerCardHeaderState(
+                            countdown,
+                            locationLabel,
+                            notificationsEnabled,
+                            remembranceSoundEnabled,
+                            onGlobalToggle,
+                            onRemembranceSoundToggled,
+                        ),
                     )
                 } else {
                     InlinePrayerCardHeader(
-                        countdown = countdown,
-                        locationLabel = locationLabel,
-                        notificationsEnabled = notificationsEnabled,
-                        remembranceSoundEnabled = remembranceSoundEnabled,
-                        onGlobalToggle = onGlobalToggle,
-                        onRemembranceSoundToggled = onRemembranceSoundToggled,
+                        PrayerCardHeaderState(
+                            countdown,
+                            locationLabel,
+                            notificationsEnabled,
+                            remembranceSoundEnabled,
+                            onGlobalToggle,
+                            onRemembranceSoundToggled,
+                        ),
                     )
                 }
             }
@@ -303,14 +307,18 @@ private fun PrayerCardTitle(
  * a control that unrecognisably explodes, which is why the threshold is set where the title still
  * fits whole and the layout stacks below that rather than clamping.
  */
+private data class PrayerCardHeaderState(
+    val countdown: CountdownState,
+    val locationLabel: String,
+    val notificationsEnabled: Boolean,
+    val remembranceSoundEnabled: Boolean,
+    val onGlobalToggle: (Boolean) -> Unit,
+    val onRemembranceSoundToggled: (Boolean) -> Unit,
+)
+
 @Composable
 private fun InlinePrayerCardHeader(
-    countdown: CountdownState,
-    locationLabel: String,
-    notificationsEnabled: Boolean,
-    remembranceSoundEnabled: Boolean,
-    onGlobalToggle: (Boolean) -> Unit,
-    onRemembranceSoundToggled: (Boolean) -> Unit,
+    state: PrayerCardHeaderState,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -319,14 +327,14 @@ private fun InlinePrayerCardHeader(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         SectionBadge(icon = AzkarIcons.Mosque)
-        PrayerCardTitle(locationLabel = locationLabel, modifier = Modifier.weight(1f))
+        PrayerCardTitle(locationLabel = state.locationLabel, modifier = Modifier.weight(1f))
         AllNotificationsButton(
-            enabled = notificationsEnabled,
-            onToggle = { onGlobalToggle(!notificationsEnabled) },
+            enabled = state.notificationsEnabled,
+            onToggle = { state.onGlobalToggle(!state.notificationsEnabled) },
             modifier = Modifier.padding(end = 2.dp),
         )
-        RemembranceSoundButton(remembranceSoundEnabled, onRemembranceSoundToggled)
-        CountdownPill(text = countdown.text)
+        RemembranceSoundButton(state.remembranceSoundEnabled, state.onRemembranceSoundToggled)
+        CountdownPill(text = state.countdown.text)
     }
 }
 
@@ -339,12 +347,7 @@ private fun InlinePrayerCardHeader(
  */
 @Composable
 private fun StackedPrayerCardHeader(
-    countdown: CountdownState,
-    locationLabel: String,
-    notificationsEnabled: Boolean,
-    remembranceSoundEnabled: Boolean,
-    onGlobalToggle: (Boolean) -> Unit,
-    onRemembranceSoundToggled: (Boolean) -> Unit,
+    state: PrayerCardHeaderState,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -357,7 +360,7 @@ private fun StackedPrayerCardHeader(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SectionBadge(icon = AzkarIcons.Mosque)
-            PrayerCardTitle(locationLabel = locationLabel, modifier = Modifier.weight(1f))
+            PrayerCardTitle(locationLabel = state.locationLabel, modifier = Modifier.weight(1f))
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -365,12 +368,12 @@ private fun StackedPrayerCardHeader(
             horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
         ) {
             AllNotificationsButton(
-                enabled = notificationsEnabled,
-                onToggle = { onGlobalToggle(!notificationsEnabled) },
+                enabled = state.notificationsEnabled,
+                onToggle = { state.onGlobalToggle(!state.notificationsEnabled) },
                 modifier = Modifier.weight(1f, fill = false),
             )
-            RemembranceSoundButton(remembranceSoundEnabled, onRemembranceSoundToggled)
-            CountdownPill(text = countdown.text)
+            RemembranceSoundButton(state.remembranceSoundEnabled, state.onRemembranceSoundToggled)
+            CountdownPill(text = state.countdown.text)
         }
     }
 }
@@ -382,7 +385,10 @@ private fun RemembranceSoundButton(
 ) {
     TooltipIconButton(
         icon = if (enabled) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeOff,
-        tooltip = stringResource(if (enabled) Res.string.remembranceSoundTurnOff else Res.string.remembranceSoundTurnOn),
+        tooltip =
+            stringResource(
+                if (enabled) Res.string.remembranceSoundTurnOff else Res.string.remembranceSoundTurnOn,
+            ),
         onClick = { onToggle(!enabled) },
     )
 }

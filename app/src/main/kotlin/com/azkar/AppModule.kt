@@ -96,7 +96,7 @@ val appModule =
         // inherits its timeouts and its single close on Quit.
         single { GeocodingClient(get()) }
         single { NotificationPreferencesRepository(get()) }
-        single { DesktopAudioPlayer() }
+        single { DesktopAudioPlayer(get(named("notificationDispatcher"))) }
         single { NotificationActionRouter() }
         single { StartupRegistration() }
         single<CoroutineDispatcher>(named("notificationDispatcher")) { notificationDispatcher() }

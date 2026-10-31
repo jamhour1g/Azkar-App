@@ -32,16 +32,21 @@ val AudioPreviewResponsivenessSuite by testSuite("Audio preview UI responsivenes
             setContent {
                 AzkarTheme {
                     AudioChoice(
-                        title = "Prayer sounds",
-                        pathLabel = "Audio file",
-                        enabled = true,
-                        path = "/audio/test.mp3",
-                        volume = 0.7f,
-                        onEnabled = {},
-                        onPath = {},
-                        onVolume = {},
-                        onPreview = { reportError = it },
-                        onChoose = {},
+                        choice =
+                            AudioChoiceModel(
+                                title = "Prayer sounds",
+                                pathLabel = "Audio file",
+                                enabled = true,
+                                path = "/audio/test.mp3",
+                                volume = 0.7f,
+                                onEnabled = {},
+                                onPath = {},
+                                onVolume = {},
+                                onPreview = { reportError = it },
+                                onChoose = {},
+                                onStop = null,
+                                stopLabel = null,
+                            ),
                     )
                 }
             }
@@ -63,19 +68,24 @@ val AudioPreviewResponsivenessSuite by testSuite("Audio preview UI responsivenes
                 AzkarTheme {
                     Column {
                         AudioChoice(
-                            title = "Prayer sounds",
-                            pathLabel = "Audio file",
-                            enabled = true,
-                            path = "/audio/test.mp3",
-                            volume = 0.7f,
-                            onEnabled = {},
-                            onPath = {},
-                            onVolume = {},
-                            onPreview = {
-                                previewStarted.complete(Unit)
-                                finishPreview.await()
-                            },
-                            onChoose = {},
+                            choice =
+                                AudioChoiceModel(
+                                    title = "Prayer sounds",
+                                    pathLabel = "Audio file",
+                                    enabled = true,
+                                    path = "/audio/test.mp3",
+                                    volume = 0.7f,
+                                    onEnabled = {},
+                                    onPath = {},
+                                    onVolume = {},
+                                    onPreview = {
+                                        previewStarted.complete(Unit)
+                                        finishPreview.await()
+                                    },
+                                    onChoose = {},
+                                    onStop = null,
+                                    stopLabel = null,
+                                ),
                         )
                         Button(onClick = { otherActionCount.incrementAndGet() }) {
                             Text("Still responsive")
@@ -106,19 +116,24 @@ val AudioPreviewResponsivenessSuite by testSuite("Audio preview UI responsivenes
                     AzkarTheme {
                         AudioChoice(
                             modifier = Modifier.width(520.dp).then(Modifier.testTag("audio-choice-card")),
-                            title = "Prayer sounds",
-                            pathLabel = "Audio file",
-                            enabled = true,
-                            path = "/audio/test.mp3",
-                            volume = 0.7f,
-                            onEnabled = {},
-                            onPath = {},
-                            onVolume = {},
-                            onPreview = {
-                                previewStarted.complete(Unit)
-                                finishPreview.await()
-                            },
-                            onChoose = {},
+                            choice =
+                                AudioChoiceModel(
+                                    title = "Prayer sounds",
+                                    pathLabel = "Audio file",
+                                    enabled = true,
+                                    path = "/audio/test.mp3",
+                                    volume = 0.7f,
+                                    onEnabled = {},
+                                    onPath = {},
+                                    onVolume = {},
+                                    onPreview = {
+                                        previewStarted.complete(Unit)
+                                        finishPreview.await()
+                                    },
+                                    onChoose = {},
+                                    onStop = null,
+                                    stopLabel = null,
+                                ),
                         )
                     }
                 }

@@ -1,7 +1,7 @@
 package com.azkar.ui.notifications
 
 import com.azkar.settings.SettingsStore
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -23,6 +23,7 @@ internal object BundledAudioDefaults {
 
     suspend fun install(
         directory: Path = SettingsStore.appDataDirectory().resolve("audio"),
+        ioDispatcher: CoroutineDispatcher = AudioIoDispatcher.default,
         openResource: (String) -> InputStream = { resource ->
             checkNotNull(BundledAudioDefaults::class.java.getResourceAsStream(resource)) {
                 "Bundled audio resource is missing: $resource"
@@ -30,7 +31,7 @@ internal object BundledAudioDefaults {
         },
     ): Fileset =
         mutex.withLock {
-            withContext(Dispatchers.IO) {
+            withContext(ioDispatcher) {
                 Files.createDirectories(directory)
                 Fileset(
                     prayer = installAsset(PRAYER_ASSET, directory, openResource),

@@ -6,6 +6,7 @@ import com.azkar.ui.notifications.NotificationAction
 import com.azkar.ui.notifications.NotificationContent
 import com.azkar.ui.notifications.NotificationNotice
 import io.github.oshai.kotlinlogging.KotlinLogging
+import javafx.scene.media.MediaException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
@@ -61,48 +62,72 @@ class NotificationDispatcher(
 
     override fun publish(notice: NotificationNotice) {
         action = notice.action
-        val sounds = audioPreferences?.value
-        val audioContext =
-            when (val content = notice.content) {
-                is NotificationContent.Prayer -> "prayer ${content.prayerKey?.id ?: "unknown"}"
-                is NotificationContent.Remembrance -> "remembrance notification"
-                null -> null
-            }
-        val audioPath =
-            when (notice.content) {
-                is NotificationContent.Prayer -> sounds?.prayerFile
-                is NotificationContent.Remembrance -> sounds?.notificationFile
-                null -> null
-            }
-        audioScope?.launch {
-            try {
-                when (val content = notice.content) {
-                    is NotificationContent.Prayer ->
-                        if (
-                            sounds?.prayerEnabled == true &&
-                            (content.prayerKey?.let { sounds.prayerSoundsEnabled[it.id] == true } ?: true) &&
-                            sounds.prayerFile.isNotBlank()
-                        ) {
-                            audioPlayer?.playPrayer(sounds.prayerFile, sounds.prayerVolume)
-                        }
-                    is NotificationContent.Remembrance ->
-                        if (
-                            sounds?.notificationsEnabled == true && sounds.notificationFile.isNotBlank()
-                        ) {
-                            audioPlayer?.playNotification(sounds.notificationFile, sounds.notificationVolume)
-                        }
-                    null -> Unit
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (failure: Exception) {
-                logger.warn(failure) {
-                    "Unable to start ${audioContext ?: "notification"} audio " +
-                        "(path='${audioPath?.ifBlank { "unset" } ?: "unset"}')"
-                }
+        val preferences = audioPreferences?.value
+        notice.content?.let { audioRequest(it, preferences) }?.let { audio ->
+            if (audio.enabled(preferences)) {
+                audioScope?.launch { playAudio(audio, preferences) }
             }
         }
         overlay.present(notice)
+    }
+
+    private data class AudioRequest(
+        val label: String,
+        val path: String,
+        val volume: Float,
+        val enabled: (AudioPreferences?) -> Boolean,
+        val play: suspend (DesktopAudioPlayer, String, Float) -> Unit,
+    )
+
+    private fun audioRequest(
+        content: NotificationContent,
+        preferences: AudioPreferences?,
+    ): AudioRequest =
+        when (content) {
+            is NotificationContent.Prayer ->
+                AudioRequest(
+                    label = "prayer ${content.prayerKey?.id ?: "unknown"}",
+                    path = preferences?.prayerFile.orEmpty(),
+                    volume = preferences?.prayerVolume ?: 0f,
+                    enabled = { prefs ->
+                        prefs?.prayerEnabled == true &&
+                            (content.prayerKey?.let { prefs.prayerSoundsEnabled[it.id] == true } ?: true)
+                    },
+                    play = { player, path, volume -> player.playPrayer(path, volume) },
+                )
+            is NotificationContent.Remembrance ->
+                AudioRequest(
+                    label = "remembrance notification",
+                    path = preferences?.notificationFile.orEmpty(),
+                    volume = preferences?.notificationVolume ?: 0f,
+                    enabled = { it?.notificationsEnabled == true },
+                    play = { player, path, volume -> player.playNotification(path, volume) },
+                )
+        }
+
+    private suspend fun playAudio(
+        request: AudioRequest,
+        preferences: AudioPreferences?,
+    ) {
+        if (request.path.isBlank() || audioPlayer == null) return
+        try {
+            if (request.enabled(preferences)) request.play(audioPlayer, request.path, request.volume)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: IllegalArgumentException) {
+            logAudioFailure(request, failure)
+        } catch (failure: IllegalStateException) {
+            logAudioFailure(request, failure)
+        } catch (failure: MediaException) {
+            logAudioFailure(request, failure)
+        }
+    }
+
+    private fun logAudioFailure(
+        request: AudioRequest,
+        failure: Exception,
+    ) {
+        logger.warn(failure) { "Unable to start ${request.label} audio (path='${request.path}')" }
     }
 
     override suspend fun dispose() {

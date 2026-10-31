@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
@@ -85,68 +86,115 @@ internal fun SettingsAudioSection(
     modifier: Modifier = Modifier,
 ) {
     val previewPlayer = remember { DesktopAudioPlayer() }
-    LaunchedEffect(previewPlayer) {
-        try {
-            awaitCancellation()
-        } finally {
-            withContext(NonCancellable) { previewPlayer.release() }
-        }
-    }
+    ReleasePreviewPlayer(previewPlayer)
     SettingsSectionBlock(
         title = stringResource(Res.string.settingsAudioTitle),
         subtitle = stringResource(Res.string.settingsAudioHint),
         modifier = modifier,
     ) {
-        BoxWithConstraints {
-            val notificationChoice: @Composable (Modifier) -> Unit = { choiceModifier ->
-                AudioChoice(
-                    modifier = choiceModifier,
-                    title = stringResource(Res.string.settingsAudioNotification),
-                    pathLabel = stringResource(Res.string.settingsAudioNotificationFile),
-                    enabled = audio.notificationsEnabled,
-                    path = audio.notificationFile,
-                    volume = audio.notificationVolume,
-                    onEnabled = { enabled -> settings.updateAudio { it.copy(notificationsEnabled = enabled) } },
-                    onPath = { path -> settings.updateAudio { it.copy(notificationFile = path) } },
-                    onVolume = { volume -> settings.updateAudio { it.copy(notificationVolume = volume) } },
-                    onPreview = { onError ->
-                        previewPlayer.playNotification(audio.notificationFile, audio.notificationVolume, onError)
-                    },
-                    onChoose = { path -> settings.updateAudio { it.copy(notificationFile = path) } },
-                    onStop = { previewPlayer.release() },
-                    stopLabel = stringResource(Res.string.settingsAudioStopPreview),
-                )
-            }
-            val prayerChoice: @Composable (Modifier) -> Unit = { choiceModifier ->
-                AudioChoice(
-                    modifier = choiceModifier,
-                    title = stringResource(Res.string.settingsAudioPrayer),
-                    pathLabel = stringResource(Res.string.settingsAudioPrayerFile),
-                    enabled = audio.prayerEnabled,
-                    path = audio.prayerFile,
-                    volume = audio.prayerVolume,
-                    onEnabled = settings::setAllPrayerSoundsEnabled,
-                    onPath = { path -> settings.updateAudio { it.copy(prayerFile = path) } },
-                    onVolume = { volume -> settings.updateAudio { it.copy(prayerVolume = volume) } },
-                    onPreview = { onError -> previewPlayer.playPrayer(audio.prayerFile, audio.prayerVolume, onError) },
-                    onChoose = { path -> settings.updateAudio { it.copy(prayerFile = path) } },
-                    onStop = {
-                        previewPlayer.release()
-                        player.stopPrayer()
-                    },
-                )
-            }
-            if (maxWidth >= 960.dp) {
-                Row(horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.md)) {
-                    notificationChoice(Modifier.weight(1f))
-                    prayerChoice(Modifier.weight(1f))
-                }
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.md)) {
-                    notificationChoice(Modifier.fillMaxWidth())
-                    prayerChoice(Modifier.fillMaxWidth())
-                }
-            }
+        AudioChoiceLayout(audio, settings, previewPlayer, player)
+    }
+}
+
+@Composable
+private fun AudioChoiceLayout(
+    audio: AudioPreferences,
+    settings: NotificationSettingsState,
+    previewPlayer: DesktopAudioPlayer,
+    player: DesktopAudioPlayer,
+) {
+    BoxWithConstraints {
+        val notificationChoice: @Composable (Modifier) -> Unit = { choiceModifier ->
+            AudioChoice(
+                modifier = choiceModifier,
+                choice =
+                    AudioChoiceModel(
+                        title = stringResource(Res.string.settingsAudioNotification),
+                        pathLabel = stringResource(Res.string.settingsAudioNotificationFile),
+                        enabled = audio.notificationsEnabled,
+                        path = audio.notificationFile,
+                        volume = audio.notificationVolume,
+                        onEnabled = { enabled -> settings.updateAudio { it.copy(notificationsEnabled = enabled) } },
+                        onPath = { path -> settings.updateAudio { it.copy(notificationFile = path) } },
+                        onVolume = { volume -> settings.updateAudio { it.copy(notificationVolume = volume) } },
+                        onPreview = { onError ->
+                            previewPlayer.playNotification(audio.notificationFile, audio.notificationVolume, onError)
+                        },
+                        onChoose = { path -> settings.updateAudio { it.copy(notificationFile = path) } },
+                        onStop = { previewPlayer.release() },
+                        stopLabel = stringResource(Res.string.settingsAudioStopPreview),
+                    ),
+            )
+        }
+        val prayerChoice: @Composable (Modifier) -> Unit = { choiceModifier ->
+            AudioChoice(
+                modifier = choiceModifier,
+                choice =
+                    AudioChoiceModel(
+                        title = stringResource(Res.string.settingsAudioPrayer),
+                        pathLabel = stringResource(Res.string.settingsAudioPrayerFile),
+                        enabled = audio.prayerEnabled,
+                        path = audio.prayerFile,
+                        volume = audio.prayerVolume,
+                        onEnabled = settings::setAllPrayerSoundsEnabled,
+                        onPath = { path -> settings.updateAudio { it.copy(prayerFile = path) } },
+                        onVolume = { volume -> settings.updateAudio { it.copy(prayerVolume = volume) } },
+                        onPreview = { onError ->
+                            previewPlayer.playPrayer(audio.prayerFile, audio.prayerVolume, onError)
+                        },
+                        onChoose = { path -> settings.updateAudio { it.copy(prayerFile = path) } },
+                        onStop = {
+                            previewPlayer.release()
+                            player.stopPrayer()
+                        },
+                    ),
+            )
+        }
+        ResponsiveAudioChoices(maxWidth, notificationChoice, prayerChoice)
+    }
+}
+
+@Composable
+private fun ResponsiveAudioChoices(
+    width: Dp,
+    notificationChoice: @Composable (Modifier) -> Unit,
+    prayerChoice: @Composable (Modifier) -> Unit,
+) {
+    if (width >= 960.dp) {
+        Row(horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.md)) {
+            notificationChoice(Modifier.weight(1f))
+            prayerChoice(Modifier.weight(1f))
+        }
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.md)) {
+            notificationChoice(Modifier.fillMaxWidth())
+            prayerChoice(Modifier.fillMaxWidth())
+        }
+    }
+}
+
+internal data class AudioChoiceModel(
+    val title: String,
+    val pathLabel: String,
+    val enabled: Boolean,
+    val path: String,
+    val volume: Float,
+    val onEnabled: (Boolean) -> Unit,
+    val onPath: (String) -> Unit,
+    val onVolume: (Float) -> Unit,
+    val onPreview: suspend (onError: (Throwable) -> Unit) -> Unit,
+    val onChoose: (String) -> Unit,
+    val onStop: (suspend () -> Unit)? = null,
+    val stopLabel: String? = null,
+)
+
+@Composable
+private fun ReleasePreviewPlayer(player: DesktopAudioPlayer) {
+    LaunchedEffect(player) {
+        try {
+            awaitCancellation()
+        } finally {
+            withContext(NonCancellable) { player.release() }
         }
     }
 }
@@ -154,119 +202,132 @@ internal fun SettingsAudioSection(
 @Composable
 internal fun AudioChoice(
     modifier: Modifier = Modifier,
-    title: String,
-    pathLabel: String,
-    enabled: Boolean,
-    path: String,
-    volume: Float,
-    onEnabled: (Boolean) -> Unit,
-    onPath: (String) -> Unit,
-    onVolume: (Float) -> Unit,
-    onPreview: suspend (onError: (Throwable) -> Unit) -> Unit,
-    onChoose: (String) -> Unit,
-    onStop: (suspend () -> Unit)? = null,
-    stopLabel: String? = null,
+    choice: AudioChoiceModel,
 ) {
-    val scope = rememberCoroutineScope()
-    var previewFailed by remember(path) { mutableStateOf(false) }
+    var previewFailed by remember(choice.path) { mutableStateOf(false) }
     SettingsGroupCard(modifier = modifier, contentPadding = 0.dp) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = AzkarSpacing.xl, vertical = AzkarSpacing.lg),
             verticalArrangement = Arrangement.spacedBy(AzkarSpacing.md),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                Switch(checked = enabled, onCheckedChange = onEnabled)
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = path,
-                    onValueChange = onPath,
-                    label = { Text(pathLabel) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-                TooltipIconButton(
-                    icon = Icons.Filled.FolderOpen,
-                    tooltip = stringResource(Res.string.settingsAudioChoose),
-                    onClick = {
-                        scope.launch {
-                            runCatching {
-                                FileKit.openFilePicker(
-                                    type = FileKitType.File("mp3", "wav", "aif", "aiff", "m4a", "mp4"),
-                                    dialogSettings = FileKitDialogSettings(title = title),
-                                )
-                            }.getOrNull()?.file?.absolutePath?.let(onChoose)
-                        }
-                    },
-                    buttonSize = 36.dp,
-                    iconSize = 20.dp,
-                    tint = AzkarTheme.colors.primaryStrong,
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.xs)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(stringResource(Res.string.settingsAudioVolume), color = AzkarTheme.colors.textSecondary)
-                    Text("${(volume * 100).roundToInt()}%", color = AzkarTheme.colors.textSecondary)
-                }
-                Slider(value = volume, onValueChange = onVolume, valueRange = 0f..1f)
-            }
+            AudioChoiceHeader(choice)
+            AudioFileSelector(choice)
+            AudioVolumeControl(choice)
             if (previewFailed) {
                 Text(stringResource(Res.string.settingsAudioFailed), color = AzkarTheme.colors.dialogValidation)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.xs)) {
-                TooltipIconButton(
-                    icon = Icons.Filled.PlayArrow,
-                    tooltip = stringResource(Res.string.settingsAudioPreview),
-                    onClick = {
-                        scope.launch {
-                            previewFailed = false
-                            try {
-                                onPreview { scope.launch { previewFailed = true } }
-                            } catch (cancelled: CancellationException) {
-                                throw cancelled
-                            } catch (_: Throwable) {
-                                previewFailed = true
-                            }
-                        }
-                    },
-                    enabled = path.isNotBlank(),
-                    buttonSize = 36.dp,
-                    iconSize = 20.dp,
-                    tint = AzkarTheme.colors.primaryStrong,
-                )
-                onStop?.let { stop ->
-                    TooltipIconButton(
-                        icon = Icons.Filled.Stop,
-                        tooltip = stopLabel ?: stringResource(Res.string.settingsAudioStop),
-                        onClick = {
-                            scope.launch {
-                                try {
-                                    stop()
-                                } catch (cancelled: CancellationException) {
-                                    throw cancelled
-                                } catch (_: Throwable) {
-                                    previewFailed = true
-                                }
-                            }
-                        },
-                        buttonSize = 36.dp,
-                        iconSize = 20.dp,
-                    )
+            AudioPreviewButtons(choice, onFailure = { previewFailed = it })
+        }
+    }
+}
+
+@Composable
+private fun AudioChoiceHeader(choice: AudioChoiceModel) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(choice.title, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        Switch(checked = choice.enabled, onCheckedChange = choice.onEnabled)
+    }
+}
+
+@Composable
+private fun AudioFileSelector(choice: AudioChoiceModel) {
+    val scope = rememberCoroutineScope()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedTextField(
+            value = choice.path,
+            onValueChange = choice.onPath,
+            label = { Text(choice.pathLabel) },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+        )
+        TooltipIconButton(
+            icon = Icons.Filled.FolderOpen,
+            tooltip = stringResource(Res.string.settingsAudioChoose),
+            onClick = {
+                scope.launch {
+                    runCatching {
+                        FileKit.openFilePicker(
+                            type = FileKitType.File("mp3", "wav", "aif", "aiff", "m4a", "mp4"),
+                            dialogSettings = FileKitDialogSettings(title = choice.title),
+                        )
+                    }.getOrNull()?.file?.absolutePath?.let(choice.onChoose)
                 }
-            }
+            },
+            buttonSize = 36.dp,
+            iconSize = 20.dp,
+            tint = AzkarTheme.colors.primaryStrong,
+        )
+    }
+}
+
+@Composable
+private fun AudioVolumeControl(choice: AudioChoiceModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.xs)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(Res.string.settingsAudioVolume), color = AzkarTheme.colors.textSecondary)
+            Text("${(choice.volume * 100).roundToInt()}%", color = AzkarTheme.colors.textSecondary)
+        }
+        Slider(value = choice.volume, onValueChange = choice.onVolume, valueRange = 0f..1f)
+    }
+}
+
+@Composable
+private fun AudioPreviewButtons(
+    choice: AudioChoiceModel,
+    onFailure: (Boolean) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    Row(horizontalArrangement = Arrangement.spacedBy(AzkarSpacing.xs)) {
+        TooltipIconButton(
+            icon = Icons.Filled.PlayArrow,
+            tooltip = stringResource(Res.string.settingsAudioPreview),
+            onClick = {
+                scope.launch {
+                    onFailure(false)
+                    try {
+                        choice.onPreview { scope.launch { onFailure(true) } }
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: RuntimeException) {
+                        onFailure(true)
+                    }
+                }
+            },
+            enabled = choice.path.isNotBlank(),
+            buttonSize = 36.dp,
+            iconSize = 20.dp,
+            tint = AzkarTheme.colors.primaryStrong,
+        )
+        choice.onStop?.let { stop ->
+            TooltipIconButton(
+                icon = Icons.Filled.Stop,
+                tooltip = choice.stopLabel ?: stringResource(Res.string.settingsAudioStop),
+                onClick = {
+                    scope.launch {
+                        try {
+                            stop()
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: RuntimeException) {
+                            onFailure(true)
+                        }
+                    }
+                },
+                buttonSize = 36.dp,
+                iconSize = 20.dp,
+            )
         }
     }
 }

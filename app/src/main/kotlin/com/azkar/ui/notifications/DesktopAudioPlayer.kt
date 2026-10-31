@@ -4,8 +4,9 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import javafx.application.Platform
 import javafx.embed.swing.JFXPanel
 import javafx.scene.media.Media
+import javafx.scene.media.MediaException
 import javafx.scene.media.MediaPlayer
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -15,7 +16,9 @@ import java.io.File
 import kotlin.coroutines.resume
 
 /** Owns the two independent JavaFX players used by desktop reminder and prayer audio. */
-class DesktopAudioPlayer {
+class DesktopAudioPlayer(
+    private val ioDispatcher: CoroutineDispatcher = AudioIoDispatcher.default,
+) {
     private val mutex = Mutex()
     private var notificationPlayer: MediaPlayer? = null
     private var prayerPlayer: MediaPlayer? = null
@@ -106,13 +109,17 @@ class DesktopAudioPlayer {
         }
 
     private suspend fun <T> onFx(action: () -> T): T {
-        withContext(Dispatchers.IO) { fxRuntime }
+        withContext(ioDispatcher) { fxRuntime }
         return suspendCancellableCoroutine { continuation ->
             Platform.runLater {
                 if (!continuation.isActive) return@runLater
                 try {
                     continuation.resume(action())
-                } catch (failure: Throwable) {
+                } catch (failure: IllegalStateException) {
+                    continuation.resumeWith(Result.failure(failure))
+                } catch (failure: IllegalArgumentException) {
+                    continuation.resumeWith(Result.failure(failure))
+                } catch (failure: MediaException) {
                     continuation.resumeWith(Result.failure(failure))
                 }
             }
