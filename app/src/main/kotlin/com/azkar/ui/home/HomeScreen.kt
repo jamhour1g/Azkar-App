@@ -557,7 +557,7 @@ private fun HomeMainColumn(
         PrayerTimesCard(
             rows =
                 snapshot.rows.map { row ->
-                    row.copy(soundEnabled = inputs.audio.prayerSoundsEnabled[row.key.id] == true)
+                    row.copy(soundEnabled = inputs.audio.isPrayerSoundEnabled(row.key))
                 },
             countdown = snapshot.countdown,
             locationLabel = inputs.prayerTimes.location.city,

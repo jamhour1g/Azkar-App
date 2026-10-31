@@ -157,7 +157,9 @@ class PrayerTimesModel(
                     timeLabel = if (isNext) nextPrayerLabel else "",
                     value = timeFormatter.format(time),
                     isNext = isNext,
-                    notificationsEnabled = false,
+                    // Match the fresh-install state in NotificationSettingsState while saved flags
+                    // are being observed; rows must not flash off beneath an enabled master button.
+                    notificationsEnabled = true,
                 )
             }
         return PrayerTimesSnapshot(

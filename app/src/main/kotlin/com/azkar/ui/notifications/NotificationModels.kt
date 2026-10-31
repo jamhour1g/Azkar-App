@@ -15,8 +15,11 @@ data class AudioPreferences(
     val prayerVolume: Float = 0.7f,
     val prayerSoundsEnabled: Map<String, Boolean> = PrayerKey.entries.associate { it.id to prayerEnabled },
 ) {
+    /** Uses the global first-run default when a saved per-prayer entry is absent. */
+    fun isPrayerSoundEnabled(key: PrayerKey): Boolean = prayerSoundsEnabled[key.id] ?: prayerEnabled
+
     fun validated(): AudioPreferences {
-        val sounds = PrayerKey.entries.associate { key -> key.id to (prayerSoundsEnabled[key.id] ?: prayerEnabled) }
+        val sounds = PrayerKey.entries.associate { key -> key.id to isPrayerSoundEnabled(key) }
         return copy(
             notificationVolume = notificationVolume.coerceIn(0f, 1f),
             prayerVolume = prayerVolume.coerceIn(0f, 1f),

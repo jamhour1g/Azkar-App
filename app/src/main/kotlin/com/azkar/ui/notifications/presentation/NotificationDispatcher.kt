@@ -91,7 +91,7 @@ class NotificationDispatcher(
                     volume = preferences?.prayerVolume ?: 0f,
                     enabled = { prefs ->
                         prefs?.prayerEnabled == true &&
-                            (content.prayerKey?.let { prefs.prayerSoundsEnabled[it.id] == true } ?: true)
+                            (content.prayerKey?.let(prefs::isPrayerSoundEnabled) ?: true)
                     },
                     play = { player, path, volume -> player.playPrayer(path, volume) },
                 )
