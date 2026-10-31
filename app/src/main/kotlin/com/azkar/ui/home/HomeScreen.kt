@@ -119,7 +119,7 @@ internal class HomeInputs(
     val navigation: HomeNavigation,
     val audio: AudioPreferences = AudioPreferences(),
     val onPrayerSoundToggled: (PrayerKey, Boolean) -> Unit = { _, _ -> },
-    val onRemembranceSoundToggled: (Boolean) -> Unit = {},
+    val onGlobalSoundToggled: (Boolean) -> Unit = {},
 )
 
 /**
@@ -182,7 +182,7 @@ fun HomeScreen(
             onPrayerSoundToggled = { key, enabled ->
                 notificationScope.launch { notificationPreferences.setPrayerSoundEnabled(key, enabled) }
             },
-            onRemembranceSoundToggled = { enabled ->
+            onGlobalSoundToggled = { enabled ->
                 notificationScope.launch {
                     notificationPreferences.updateAudio { it.copy(notificationsEnabled = enabled) }
                     notificationPreferences.setAllPrayerSoundsEnabled(enabled)
@@ -563,9 +563,9 @@ private fun HomeMainColumn(
             countdown = snapshot.countdown,
             locationLabel = inputs.prayerTimes.location.city,
             notificationsEnabled = inputs.notifications.globalEnabled,
-            remembranceSoundEnabled = inputs.audio.notificationsEnabled,
+            globalSoundEnabled = inputs.audio.notificationsEnabled || inputs.audio.prayerEnabled,
             onGlobalToggle = inputs.notifications::onGlobalToggleChanged,
-            onRemembranceSoundToggled = inputs.onRemembranceSoundToggled,
+            onGlobalSoundToggled = inputs.onGlobalSoundToggled,
             onNotificationToggled = inputs.notifications::onPrayerToggled,
             onSoundToggled = inputs.onPrayerSoundToggled,
         )

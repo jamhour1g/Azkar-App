@@ -134,9 +134,9 @@ fun PrayerTimesCard(
     countdown: CountdownState,
     locationLabel: String = "Ramallah, Palestine",
     notificationsEnabled: Boolean,
-    remembranceSoundEnabled: Boolean = true,
+    globalSoundEnabled: Boolean = true,
     onGlobalToggle: (Boolean) -> Unit,
-    onRemembranceSoundToggled: (Boolean) -> Unit = {},
+    onGlobalSoundToggled: (Boolean) -> Unit = {},
     onNotificationToggled: (PrayerKey, Boolean) -> Unit,
     onSoundToggled: (PrayerKey, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
@@ -154,9 +154,9 @@ fun PrayerTimesCard(
                             countdown,
                             locationLabel,
                             notificationsEnabled,
-                            remembranceSoundEnabled,
+                            globalSoundEnabled,
                             onGlobalToggle,
-                            onRemembranceSoundToggled,
+                            onGlobalSoundToggled,
                         ),
                     )
                 } else {
@@ -165,9 +165,9 @@ fun PrayerTimesCard(
                             countdown,
                             locationLabel,
                             notificationsEnabled,
-                            remembranceSoundEnabled,
+                            globalSoundEnabled,
                             onGlobalToggle,
-                            onRemembranceSoundToggled,
+                            onGlobalSoundToggled,
                         ),
                     )
                 }
@@ -219,9 +219,9 @@ internal fun PrayerTimesCardPreview(
                         },
                 ),
             notificationsEnabled = state.notificationsEnabled,
-            remembranceSoundEnabled = state.remembranceSoundEnabled,
+            globalSoundEnabled = state.globalSoundEnabled,
             onGlobalToggle = {},
-            onRemembranceSoundToggled = {},
+            onGlobalSoundToggled = {},
             onNotificationToggled = { _, _ -> },
             onSoundToggled = { _, _ -> },
         )
@@ -233,7 +233,7 @@ internal data class PrayerTimesCardPreviewState(
     val rows: List<PrayerRowState>,
     val countdown: CountdownState,
     val notificationsEnabled: Boolean,
-    val remembranceSoundEnabled: Boolean = true,
+    val globalSoundEnabled: Boolean = true,
 )
 
 internal class PrayerTimesCardStateProvider : PreviewParameterProvider<PrayerTimesCardPreviewState> {
@@ -311,9 +311,9 @@ private data class PrayerCardHeaderState(
     val countdown: CountdownState,
     val locationLabel: String,
     val notificationsEnabled: Boolean,
-    val remembranceSoundEnabled: Boolean,
+    val globalSoundEnabled: Boolean,
     val onGlobalToggle: (Boolean) -> Unit,
-    val onRemembranceSoundToggled: (Boolean) -> Unit,
+    val onGlobalSoundToggled: (Boolean) -> Unit,
 )
 
 @Composable
@@ -333,7 +333,7 @@ private fun InlinePrayerCardHeader(
             onToggle = { state.onGlobalToggle(!state.notificationsEnabled) },
             modifier = Modifier.padding(end = 2.dp),
         )
-        RemembranceSoundButton(state.remembranceSoundEnabled, state.onRemembranceSoundToggled)
+        RemembranceSoundButton(state.globalSoundEnabled, state.onGlobalSoundToggled)
         CountdownPill(text = state.countdown.text)
     }
 }
@@ -372,7 +372,7 @@ private fun StackedPrayerCardHeader(
                 onToggle = { state.onGlobalToggle(!state.notificationsEnabled) },
                 modifier = Modifier.weight(1f, fill = false),
             )
-            RemembranceSoundButton(state.remembranceSoundEnabled, state.onRemembranceSoundToggled)
+            RemembranceSoundButton(state.globalSoundEnabled, state.onGlobalSoundToggled)
             CountdownPill(text = state.countdown.text)
         }
     }
