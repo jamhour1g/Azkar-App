@@ -34,6 +34,7 @@ import com.azkar.generated.resources.settingsGroupPrayer
 import com.azkar.generated.resources.settingsGroupReminders
 import com.azkar.generated.resources.settingsLanguageHeader
 import com.azkar.generated.resources.settingsNotificationsScheduleTitle
+import com.azkar.generated.resources.settingsPrayerAlertsTitle
 import com.azkar.generated.resources.settingsPrayerCalculationTitle
 import com.azkar.generated.resources.settingsPrayerLocationTitle
 import com.azkar.generated.resources.settingsReminderCardTitle
@@ -142,6 +143,7 @@ enum class SettingsSection(
     REMINDER_CARD(SettingsGroup.REMINDERS),
     PRAYER_CALCULATION(SettingsGroup.PRAYER),
     PRAYER_LOCATION(SettingsGroup.PRAYER),
+    PRAYER_ALERTS(SettingsGroup.PRAYER),
     AUDIO(SettingsGroup.PRAYER),
 }
 
@@ -157,6 +159,7 @@ fun settingsSectionLabel(section: SettingsSection): String =
         SettingsSection.REMINDER_CARD -> stringResource(Res.string.settingsReminderCardTitle)
         SettingsSection.REMINDER_SCHEDULE -> stringResource(Res.string.settingsNotificationsScheduleTitle)
         SettingsSection.PRAYER_LOCATION -> stringResource(Res.string.settingsPrayerLocationTitle)
+        SettingsSection.PRAYER_ALERTS -> stringResource(Res.string.settingsPrayerAlertsTitle)
         SettingsSection.PRAYER_CALCULATION -> stringResource(Res.string.settingsPrayerCalculationTitle)
         SettingsSection.AUDIO -> stringResource(Res.string.settingsAudioTitle)
     }

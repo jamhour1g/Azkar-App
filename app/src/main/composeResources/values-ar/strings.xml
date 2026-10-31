@@ -607,7 +607,11 @@
     <!-- Settings screen: prayer blocks -->
     <string name="settingsPrayerLocationTitle">الموقع</string>
     <string name="settingsPrayerLocationHint">المكان الذي تُحسب منه كل أوقات الصلاة.</string>
-    <string name="settingsPrayerPerPrayerHint">يُفعَّل أو يُعطَّل كل وقت من الشاشة الرئيسية.</string>
+    <string name="settingsPrayerAlertsTitle">تنبيهات الصلاة</string>
+    <string name="settingsPrayerAlertsHint">تحكّم بشكل مستقل في إشعارات وأصوات كل صلاة.</string>
+    <string name="settingsPrayerNotifications">الإشعارات</string>
+    <string name="settingsPrayerSound">الصوت</string>
+    <string name="settingsPrayerPerPrayerHint">يمكن التحكم بكل صلاة بشكل مستقل.</string>
     <string name="settingsPrayerCalculationTitle">الحساب</string>
     <string name="settingsPrayerCalculationHint">الطريقة التي يحوّل بها ذلك المكان إلى أوقات صلاة.</string>
     <string name="settingsPrayerCityLabel">المدينة أو المكان</string>

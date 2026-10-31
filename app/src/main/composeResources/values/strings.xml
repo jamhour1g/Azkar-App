@@ -594,7 +594,11 @@
     <!-- Settings screen: prayer blocks -->
     <string name="settingsPrayerLocationTitle">Location</string>
     <string name="settingsPrayerLocationHint">The place every prayer time is calculated from.</string>
-    <string name="settingsPrayerPerPrayerHint">Each prayer is turned on or off from the home screen.</string>
+    <string name="settingsPrayerAlertsTitle">Prayer alerts</string>
+    <string name="settingsPrayerAlertsHint">Set notifications and sounds independently for each prayer.</string>
+    <string name="settingsPrayerNotifications">Notifications</string>
+    <string name="settingsPrayerSound">Sound</string>
+    <string name="settingsPrayerPerPrayerHint">Each prayer can be controlled independently.</string>
     <string name="settingsPrayerCalculationTitle">Calculation</string>
     <string name="settingsPrayerCalculationHint">The convention that turns that place into prayer times.</string>
     <string name="settingsPrayerCityLabel">City or place</string>

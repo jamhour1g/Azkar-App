@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.settingsSubtitle
 import com.azkar.generated.resources.settingsTitle
+import com.azkar.ui.home.PrayerKey
 import com.azkar.ui.notifications.AudioPreferences
 import com.azkar.ui.notifications.DesktopAudioPlayer
 import com.azkar.ui.notifications.GeocodingClient
@@ -255,6 +256,12 @@ private fun LazyListScope.settingsSections(
                             location = notificationValues.prayerLocation,
                             settings = notificationState,
                         )
+                    SettingsSection.PRAYER_ALERTS ->
+                        SettingsPrayerAlertsSection(
+                            prayerNotifications = notificationValues.prayerFlags,
+                            audio = notificationValues.audio,
+                            settings = notificationState,
+                        )
                     SettingsSection.AUDIO ->
                         SettingsAudioSection(
                             audio = notificationValues.audio,
@@ -421,6 +428,7 @@ private data class NotificationSettingsValues(
     val prayerLocation: PrayerLocationSettings,
     val presentation: NotificationPresentationSettings,
     val audio: AudioPreferences,
+    val prayerFlags: Map<PrayerKey, Boolean>,
 )
 
 @Composable
@@ -430,7 +438,8 @@ private fun rememberNotificationSettingsValues(): NotificationSettingsValues {
     val prayerLocation by preferences.prayerLocation.collectAsState()
     val presentation by preferences.presentation.collectAsState()
     val audio by preferences.audio.collectAsState()
-    return NotificationSettingsValues(queue, prayerLocation, presentation, audio)
+    val prayerFlags by preferences.prayerFlags.collectAsState()
+    return NotificationSettingsValues(queue, prayerLocation, presentation, audio, prayerFlags)
 }
 
 @AzkarVariantsPreview
@@ -467,6 +476,7 @@ private fun SettingsScreenPreviewContent(group: SettingsGroup) {
     val queue by preferences.queue.collectAsState()
     val prayerLocation by preferences.prayerLocation.collectAsState()
     val presentation by preferences.presentation.collectAsState()
+    val prayerFlags by preferences.prayerFlags.collectAsState()
     SettingsScreenContent(
         inputs =
             SettingsScreenInputs(
@@ -482,6 +492,7 @@ private fun SettingsScreenPreviewContent(group: SettingsGroup) {
                         prayerLocation,
                         presentation,
                         preferences.audio.value,
+                        prayerFlags,
                     ),
                 audioPlayer = remember { DesktopAudioPlayer() },
                 updateManager = updateManager,

@@ -153,6 +153,7 @@ class NotificationPreferencesRepository(
         key: PrayerKey,
         enabled: Boolean,
     ) {
+        _prayerFlags.value = _prayerFlags.value + (key to enabled)
         settings.edit { this[prayerKey(key)] = enabled }
     }
 
