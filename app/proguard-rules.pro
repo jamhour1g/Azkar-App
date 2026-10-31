@@ -50,6 +50,11 @@
 # (tray / Linux bus glue), so keep its infrastructure whole.
 -keep class com.sun.jna.** { *; }
 
+# FileKit's Linux file picker calls dbus-java APIs reflectively. Keeping only the
+# ServiceLoader transport provider is not enough: ProGuard otherwise removes
+# members such as Properties.Set that the portal client resolves by name.
+-keep class org.freedesktop.dbus.** { *; }
+
 # AutoLaunch selects the macOS backend by class name; JNI calls back into its bridges.
 -keep class dev.nucleusframework.autolaunch.** { *; }
 -keep class dev.nucleusframework.servicemanagement.** { *; }
