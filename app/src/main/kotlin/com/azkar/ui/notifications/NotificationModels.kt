@@ -1,7 +1,33 @@
 package com.azkar.ui.notifications
 
+import com.azkar.ui.home.PrayerKey
 import kotlinx.serialization.Serializable
 import java.time.DayOfWeek
+
+/** Persisted desktop playback choices. Paths point to audio files owned by the user. */
+@Serializable
+data class AudioPreferences(
+    val notificationsEnabled: Boolean = true,
+    val notificationFile: String = "",
+    val notificationVolume: Float = 0.7f,
+    val prayerEnabled: Boolean = true,
+    val prayerFile: String = "",
+    val prayerVolume: Float = 0.7f,
+    val prayerSoundsEnabled: Map<String, Boolean> = PrayerKey.entries.associate { it.id to prayerEnabled },
+) {
+    /** Uses the global first-run default when a saved per-prayer entry is absent. */
+    fun isPrayerSoundEnabled(key: PrayerKey): Boolean = prayerSoundsEnabled[key.id] ?: prayerEnabled
+
+    fun validated(): AudioPreferences {
+        val sounds = PrayerKey.entries.associate { key -> key.id to isPrayerSoundEnabled(key) }
+        return copy(
+            notificationVolume = notificationVolume.coerceIn(0f, 1f),
+            prayerVolume = prayerVolume.coerceIn(0f, 1f),
+            prayerEnabled = sounds.values.any { it },
+            prayerSoundsEnabled = sounds,
+        )
+    }
+}
 
 /**
  * The order in which an active queue cycle is prepared.
@@ -245,6 +271,7 @@ sealed interface NotificationContent {
         val prayer: String,
         val time: String,
         val city: String,
+        val prayerKey: PrayerKey? = null,
     ) : NotificationContent
 }
 

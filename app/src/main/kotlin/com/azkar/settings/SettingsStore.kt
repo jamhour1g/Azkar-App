@@ -190,6 +190,9 @@ class SettingsStore(
          */
         private fun settingsFile(): Path = resolveSettingsFile(System::getProperty)
 
+        /** Directory shared by settings and app-managed desktop assets. */
+        fun appDataDirectory(): Path = settingsFile().parent
+
         /**
          * Resolves the settings path from a property lookup.
          *

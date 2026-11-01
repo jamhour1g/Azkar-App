@@ -40,6 +40,7 @@ data class PrayerRowState(
     val value: String,
     val isNext: Boolean,
     val notificationsEnabled: Boolean,
+    val soundEnabled: Boolean = false,
 )
 
 /** `.next-prayer-time` text plus the raw remaining duration behind it. */
@@ -156,7 +157,9 @@ class PrayerTimesModel(
                     timeLabel = if (isNext) nextPrayerLabel else "",
                     value = timeFormatter.format(time),
                     isNext = isNext,
-                    notificationsEnabled = false,
+                    // Match the fresh-install state in NotificationSettingsState while saved flags
+                    // are being observed; rows must not flash off beneath an enabled master button.
+                    notificationsEnabled = true,
                 )
             }
         return PrayerTimesSnapshot(

@@ -220,7 +220,7 @@ private class RecordingPublisher : NotificationPublisher {
         published += notice
     }
 
-    override fun dispose() = Unit
+    override suspend fun dispose() = Unit
 }
 
 /** A location source that answers with the fixture's location, so the runtime never asks the network. */

@@ -1,7 +1,16 @@
 package com.azkar.ui.notifications.presentation
 
+import com.azkar.ui.notifications.AudioPreferences
+import com.azkar.ui.notifications.DesktopAudioPlayer
 import com.azkar.ui.notifications.NotificationAction
+import com.azkar.ui.notifications.NotificationContent
 import com.azkar.ui.notifications.NotificationNotice
+import io.github.oshai.kotlinlogging.KotlinLogging
+import javafx.scene.media.MediaException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * The one thing the scheduler is allowed to ask for.
@@ -24,8 +33,8 @@ interface NotificationPublisher {
     /** Hands [notice] to the overlay. Safe to call from any thread. */
     fun publish(notice: NotificationNotice)
 
-    /** Releases the overlay. Called once, from the app's Quit path. */
-    fun dispose()
+    /** Releases audio and overlay resources. Called once, from the app's Quit path. */
+    suspend fun dispose()
 }
 
 /**
@@ -41,6 +50,9 @@ interface NotificationPublisher {
  */
 class NotificationDispatcher(
     private val overlay: NotificationPresenter,
+    private val audioPreferences: StateFlow<AudioPreferences>? = null,
+    private val audioPlayer: DesktopAudioPlayer? = null,
+    private val audioScope: CoroutineScope? = null,
 ) : NotificationPublisher {
     @Volatile
     private var action: NotificationAction = NotificationAction.OpenApp
@@ -50,11 +62,81 @@ class NotificationDispatcher(
 
     override fun publish(notice: NotificationNotice) {
         action = notice.action
+        val preferences = audioPreferences?.value
+        notice.content?.let { audioRequest(it, preferences) }?.let { audio ->
+            if (audio.enabled(preferences)) {
+                audioScope?.launch { playAudio(audio, preferences) }
+            }
+        }
         overlay.present(notice)
     }
 
-    override fun dispose() {
+    private data class AudioRequest(
+        val label: String,
+        val path: String,
+        val volume: Float,
+        val enabled: (AudioPreferences?) -> Boolean,
+        val play: suspend (DesktopAudioPlayer, String, Float) -> Unit,
+    )
+
+    private fun audioRequest(
+        content: NotificationContent,
+        preferences: AudioPreferences?,
+    ): AudioRequest =
+        when (content) {
+            is NotificationContent.Prayer ->
+                AudioRequest(
+                    label = "prayer ${content.prayerKey?.id ?: "unknown"}",
+                    path = preferences?.prayerFile.orEmpty(),
+                    volume = preferences?.prayerVolume ?: 0f,
+                    enabled = { prefs ->
+                        prefs?.prayerEnabled == true &&
+                            (content.prayerKey?.let(prefs::isPrayerSoundEnabled) ?: true)
+                    },
+                    play = { player, path, volume -> player.playPrayer(path, volume) },
+                )
+            is NotificationContent.Remembrance ->
+                AudioRequest(
+                    label = "remembrance notification",
+                    path = preferences?.notificationFile.orEmpty(),
+                    volume = preferences?.notificationVolume ?: 0f,
+                    enabled = { it?.notificationsEnabled == true },
+                    play = { player, path, volume -> player.playNotification(path, volume) },
+                )
+        }
+
+    private suspend fun playAudio(
+        request: AudioRequest,
+        preferences: AudioPreferences?,
+    ) {
+        if (request.path.isBlank() || audioPlayer == null) return
+        try {
+            if (request.enabled(preferences)) request.play(audioPlayer, request.path, request.volume)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: IllegalArgumentException) {
+            logAudioFailure(request, failure)
+        } catch (failure: IllegalStateException) {
+            logAudioFailure(request, failure)
+        } catch (failure: MediaException) {
+            logAudioFailure(request, failure)
+        }
+    }
+
+    private fun logAudioFailure(
+        request: AudioRequest,
+        failure: Exception,
+    ) {
+        logger.warn(failure) { "Unable to start ${request.label} audio (path='${request.path}')" }
+    }
+
+    override suspend fun dispose() {
         overlay.dispose()
+        audioPlayer?.release()
         action = NotificationAction.OpenApp
+    }
+
+    private companion object {
+        val logger = KotlinLogging.logger {}
     }
 }

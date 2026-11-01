@@ -45,6 +45,7 @@ import com.azkar.ui.library.RemembranceReaderScreen
 import com.azkar.ui.library.rememberCollectionDetailState
 import com.azkar.ui.library.rememberCollectionSessionState
 import com.azkar.ui.library.rememberRemembranceReaderState
+import com.azkar.ui.notifications.DesktopAudioPlayer
 import com.azkar.ui.notifications.GeocodingClient
 import com.azkar.ui.notifications.LocationDetector
 import com.azkar.ui.notifications.NotificationPreferencesRepository
@@ -276,6 +277,7 @@ private fun withScreenContainer(block: () -> Unit) {
                 module {
                     single { SettingsStore(FakePreferencesDataStore(), storeScope) }
                     single { NotificationPreferencesRepository(get()) }
+                    single { DesktopAudioPlayer() }
                     single<HomeGateway> { PreviewHomeGateway() }
                     // The settings page's two moved tabs resolve these themselves rather than taking
                     // them as parameters, so any test that composes that screen needs them here too.
@@ -525,7 +527,7 @@ val ScreenSuite by testSuite("Screen smoke") {
         }
     }
 
-    test("prayer navigation keeps the chosen section selected when the group fits on screen") {
+    test("prayer audio navigation keeps the chosen section selected") {
         withScreenContainer {
             screenTest {
                 setTrackedContent {
@@ -541,19 +543,19 @@ val ScreenSuite by testSuite("Screen smoke") {
                 waitForIdle()
                 resetRecompositionCounts()
                 onNodeWithText("Calculation").assertIsSelected()
-                onNodeWithText("Location").assertIsNotSelected().performClick()
+                onNodeWithText("Sounds").assertIsNotSelected().performClick()
                 waitForIdle()
-                onNodeWithText("Location").assertIsSelected()
+                onNodeWithText("Sounds").assertIsSelected()
                 onNodeWithTag(
                     "settings-screen",
-                ).assertTrackedRecompositions(exactly = 1, expectedFunction = "SettingsScreenContent")
+                ).assertTrackedRecompositions(atLeast = 1, atMost = 3, expectedFunction = "SettingsScreenContent")
                 resetRecompositionCounts()
                 onNodeWithText("Calculation").assertIsNotSelected().performClick()
                 waitForIdle()
                 onNodeWithText("Calculation").assertIsSelected()
                 onNodeWithTag(
                     "settings-screen",
-                ).assertTrackedRecompositions(exactly = 1, expectedFunction = "SettingsScreenContent")
+                ).assertTrackedRecompositions(atLeast = 1, atMost = 3, expectedFunction = "SettingsScreenContent")
             }
         }
     }

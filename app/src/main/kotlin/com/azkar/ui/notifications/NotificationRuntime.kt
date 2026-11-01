@@ -272,6 +272,7 @@ class NotificationRuntime(
             prayer = key.name(),
             time = AzkarClock.format(time, Locale.getDefault()),
             city = location.city,
+            prayerKey = key,
         )
 
     /**

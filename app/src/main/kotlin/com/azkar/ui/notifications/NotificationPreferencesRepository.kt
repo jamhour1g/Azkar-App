@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.home.PrayerKey
 import com.azkar.ui.notifications.presentation.NotificationPresentationSettings
+import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,10 +19,14 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.IOException
 
 /** Owns the persisted settings shared by the manager UI and the process notification service. */
 class NotificationPreferencesRepository(
     private val settings: SettingsStore,
+    private val installAudioDefaults: suspend () -> Pair<String, String> = {
+        BundledAudioDefaults.install(ioDispatcher = AudioIoDispatcher.default).let { it.notification to it.prayer }
+    },
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val mutex = Mutex()
@@ -31,6 +37,7 @@ class NotificationPreferencesRepository(
     private val _prayerFlags = MutableStateFlow(PrayerKey.entries.associateWith { true })
     private val _startOnLogin = MutableStateFlow(false)
     private val _presentation = MutableStateFlow(NotificationPresentationSettings())
+    private val _audio = MutableStateFlow(AudioPreferences())
 
     val queue: StateFlow<ReminderQueueConfig> = _queue.asStateFlow()
     val queueProgress: StateFlow<ReminderQueueProgress> = _queueProgress.asStateFlow()
@@ -50,6 +57,7 @@ class NotificationPreferencesRepository(
      * the other's pending write.
      */
     val presentation: StateFlow<NotificationPresentationSettings> = _presentation.asStateFlow()
+    val audio: StateFlow<AudioPreferences> = _audio.asStateFlow()
 
     /** Begins following the DataStore once; safe to call from both the process service and a screen. */
     fun observe(scope: CoroutineScope) {
@@ -62,6 +70,7 @@ class NotificationPreferencesRepository(
                 _prayerFlags.value = PrayerKey.entries.associateWith { key -> stored[prayerKey(key)] ?: true }
                 _startOnLogin.value = stored[START_ON_LOGIN_KEY] ?: false
                 _presentation.value = decode(stored[PRESENTATION_KEY], NotificationPresentationSettings())
+                loadAudioPreferences(stored[AUDIO_KEY])
             }
         }
     }
@@ -75,6 +84,7 @@ class NotificationPreferencesRepository(
         _prayerFlags.value = PrayerKey.entries.associateWith { key -> stored[prayerKey(key)] ?: true }
         _startOnLogin.value = stored[START_ON_LOGIN_KEY] ?: false
         _presentation.value = decode(stored[PRESENTATION_KEY], NotificationPresentationSettings())
+        loadAudioPreferences(stored[AUDIO_KEY])
     }
 
     suspend fun updateQueue(transform: (ReminderQueueConfig) -> ReminderQueueConfig) =
@@ -143,6 +153,7 @@ class NotificationPreferencesRepository(
         key: PrayerKey,
         enabled: Boolean,
     ) {
+        _prayerFlags.value = _prayerFlags.value + (key to enabled)
         settings.edit { this[prayerKey(key)] = enabled }
     }
 
@@ -151,6 +162,30 @@ class NotificationPreferencesRepository(
             val next = transform(_presentation.value).validated()
             _presentation.value = next
             settings.edit { this[PRESENTATION_KEY] = json.encodeToString(next) }
+        }
+
+    suspend fun updateAudio(transform: (AudioPreferences) -> AudioPreferences) =
+        mutex.withLock {
+            val current = decode(settings.read(AUDIO_KEY), _audio.value).validated()
+            val next = transform(current).validated()
+            _audio.value = next
+            settings.edit { this[AUDIO_KEY] = json.encodeToString(next) }
+        }
+
+    suspend fun setPrayerSoundEnabled(
+        key: PrayerKey,
+        enabled: Boolean,
+    ) = updateAudio { current ->
+        val sounds = current.prayerSoundsEnabled + (key.id to enabled)
+        current.copy(prayerEnabled = sounds.values.any { it }, prayerSoundsEnabled = sounds)
+    }
+
+    suspend fun setAllPrayerSoundsEnabled(enabled: Boolean) =
+        updateAudio {
+            it.copy(
+                prayerEnabled = enabled,
+                prayerSoundsEnabled = PrayerKey.entries.associate { key -> key.id to enabled },
+            )
         }
 
     suspend fun setStartOnLogin(enabled: Boolean) =
@@ -163,6 +198,50 @@ class NotificationPreferencesRepository(
         value: String?,
         fallback: T,
     ): T = value?.let { runCatching { json.decodeFromString<T>(it) }.getOrNull() } ?: fallback
+
+    private suspend fun loadAudioPreferences(serialized: String?) {
+        val stored = decode(serialized, AudioPreferences())
+        val defaults =
+            if (stored.notificationFile.isBlank() || stored.prayerFile.isBlank()) {
+                try {
+                    installAudioDefaults()
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: IOException) {
+                    logAudioDefaultFailure(failure)
+                    null
+                } catch (failure: IllegalStateException) {
+                    logAudioDefaultFailure(failure)
+                    null
+                } catch (failure: SecurityException) {
+                    logAudioDefaultFailure(failure)
+                    null
+                }
+            } else {
+                null
+            }
+        mutex.withLock {
+            val current = decode(settings.read(AUDIO_KEY), AudioPreferences())
+            val resolved =
+                current
+                    .copy(
+                        notificationFile = current.notificationFile.ifBlank { defaults?.first.orEmpty() },
+                        prayerFile = current.prayerFile.ifBlank { defaults?.second.orEmpty() },
+                    ).validated()
+            _audio.value = resolved
+            if (resolved != current) {
+                settings.edit { this[AUDIO_KEY] = json.encodeToString(resolved) }
+            }
+        }
+    }
+
+    private fun logAudioDefaultFailure(failure: Exception) {
+        val audioDirectory = SettingsStore.appDataDirectory().resolve("audio")
+        logger.error(failure) {
+            "Unable to install bundled audio defaults into '$audioDirectory'; " +
+                "audio paths will remain unset until configured"
+        }
+    }
 
     private fun ReminderQueueConfig.validated(): ReminderQueueConfig =
         copy(
@@ -181,11 +260,13 @@ class NotificationPreferencesRepository(
     private fun prayerKey(key: PrayerKey) = booleanPreferencesKey("prayer.${key.id}.enabled")
 
     private companion object {
+        val logger = KotlinLogging.logger {}
         val QUEUE_KEY = stringPreferencesKey("notifications.queue.v1")
         val QUEUE_PROGRESS_KEY = stringPreferencesKey("notifications.queue.progress.v1")
         val PRAYER_LOCATION_KEY = stringPreferencesKey("prayer.location.v1")
         val PRAYER_PROGRESS_KEY = stringPreferencesKey("prayer.notification.progress.v1")
         val START_ON_LOGIN_KEY = booleanPreferencesKey("notifications.startOnLogin.enabled")
         val PRESENTATION_KEY = stringPreferencesKey("notifications.presentation.v1")
+        val AUDIO_KEY = stringPreferencesKey("audio.preferences.v1")
     }
 }

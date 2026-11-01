@@ -88,6 +88,19 @@ dependencies {
     // add the live-reload devtools; the preview artifact itself is tiny and lets
     // the IDE render `@Preview` composables without a running app.
     implementation(libs.org.jetbrains.compose.ui.tooling.preview)
+    // JavaFX Media and Swing bootstrap, including native libraries for this installer platform.
+    val javafxClassifier =
+        when (installerPlatform.id) {
+            "linux-x64" -> "linux"
+            "linux-arm64" -> "linux-aarch64"
+            "windows-x64" -> "win"
+            "macos-x64" -> "mac"
+            "macos-arm64" -> "mac-aarch64"
+            else -> error("JavaFX runtime is unavailable for ${installerPlatform.id}")
+        }
+    listOf("base", "graphics", "swing", "media").forEach { module ->
+        implementation("org.openjfx:javafx-$module:27.0.1:$javafxClassifier")
+    }
 
     // `kotlinx-coroutines-swing` below is what drives Swing-dispatched coroutines; `core` is
     // declared in its own right because `DatabaseWarmUp` reaches for `Dispatchers`, `Job` and

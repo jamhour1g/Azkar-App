@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.settingsAudioTitle
 import com.azkar.generated.resources.settingsClose
 import com.azkar.generated.resources.settingsCloseKey
 import com.azkar.generated.resources.settingsGroupGeneral
@@ -141,6 +142,7 @@ enum class SettingsSection(
     REMINDER_CARD(SettingsGroup.REMINDERS),
     PRAYER_CALCULATION(SettingsGroup.PRAYER),
     PRAYER_LOCATION(SettingsGroup.PRAYER),
+    AUDIO(SettingsGroup.PRAYER),
 }
 
 /** This block's name — the rail's row and the page's heading are the same word for the same thing. */
@@ -156,6 +158,7 @@ fun settingsSectionLabel(section: SettingsSection): String =
         SettingsSection.REMINDER_SCHEDULE -> stringResource(Res.string.settingsNotificationsScheduleTitle)
         SettingsSection.PRAYER_LOCATION -> stringResource(Res.string.settingsPrayerLocationTitle)
         SettingsSection.PRAYER_CALCULATION -> stringResource(Res.string.settingsPrayerCalculationTitle)
+        SettingsSection.AUDIO -> stringResource(Res.string.settingsAudioTitle)
     }
 
 /** This family's name, as the rail's own row writes it. */

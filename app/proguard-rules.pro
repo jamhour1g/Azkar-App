@@ -50,6 +50,11 @@
 # (tray / Linux bus glue), so keep its infrastructure whole.
 -keep class com.sun.jna.** { *; }
 
+# FileKit's Linux file picker calls dbus-java APIs reflectively. Keeping only the
+# ServiceLoader transport provider is not enough: ProGuard otherwise removes
+# members such as Properties.Set that the portal client resolves by name.
+-keep class org.freedesktop.dbus.** { *; }
+
 # AutoLaunch selects the macOS backend by class name; JNI calls back into its bridges.
 -keep class dev.nucleusframework.autolaunch.** { *; }
 -keep class dev.nucleusframework.servicemanagement.** { *; }
@@ -91,3 +96,14 @@
 
 # Generic signatures + annotations are needed by serialization and DI lookups.
 -keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*,SourceFile,LineNumberTable
+
+# JavaFX selects Glass/Prism/toolkit implementations using constructed class names.
+# Media's native backend also calls these implementation classes through JNI.
+-keep class com.sun.glass.** { *; }
+-keep class com.sun.javafx.tk.** { *; }
+-keep class com.sun.prism.** { *; }
+-keep class com.sun.scenario.** { *; }
+-keep class com.sun.media.** { *; }
+-keepclasseswithmembernames,includedescriptorclasses class javafx.** {
+    native <methods>;
+}
