@@ -12,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -68,7 +67,6 @@ private fun PressSurface(
  * The failure this guards against is not hypothetical. Screenshot-based checking cannot see it (the
  * hover fill is invisible in a still), and it was found by counting compositions, not by looking.
  */
-@OptIn(ExperimentalTestApi::class)
 val RecompositionSuite by testSuite("Control recomposition budgets") {
     listOf(false, true).forEach { dark ->
         test("nav selection and press keep their visible feedback in ${if (dark) "dark" else "light"} theme") {

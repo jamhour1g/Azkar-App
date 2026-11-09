@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.azkar.domain.model.RecitationProgress
 import com.azkar.ui.library.data.CollectionProgressGateway
+import com.azkar.util.runCatchingCancellable
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +32,6 @@ class CollectionProgressState(
     private val logger: KLogger = KotlinLogging.logger {},
 ) {
     private var byCollection by mutableStateOf<Map<Long, List<RecitationProgress>>>(emptyMap())
-        private set
 
     /** The progress recorded against one collection, or nothing when it has never been recited. */
     fun of(collectionId: Long): List<RecitationProgress> = byCollection[collectionId].orEmpty()
@@ -49,7 +49,7 @@ class CollectionProgressState(
         }
         byCollection = byCollection + (collectionId to emptyList())
         scope.launch {
-            runCatching { gateway.fetchProgress(collectionId) }
+            runCatchingCancellable { gateway.fetchProgress(collectionId) }
                 .onSuccess { loaded -> byCollection = byCollection + (collectionId to loaded) }
                 .onFailure { failure ->
                     logger.warn(failure) { "Unable to read the recitation progress of collection $collectionId" }
@@ -82,7 +82,7 @@ class CollectionProgressState(
         }
         write(collectionId, stored, remembranceId, after, hadRow = true)
         scope.launch {
-            runCatching { gateway.recordRecitation(collectionId, mapOf(remembranceId to times)) }
+            runCatchingCancellable { gateway.recordRecitation(collectionId, mapOf(remembranceId to times)) }
                 .onFailure { failure ->
                     logger.error(failure) { "Unable to record $times recitations in collection $collectionId" }
                     // A count that was zero before the write has no row to restore, so the row the
@@ -112,7 +112,7 @@ class CollectionProgressState(
         val previous = byCollection[collectionId]
         byCollection = byCollection + (collectionId to emptyList())
         scope.launch {
-            runCatching { gateway.resetProgress(collectionId) }
+            runCatchingCancellable { gateway.resetProgress(collectionId) }
                 .onSuccess { onSuccess() }
                 .onFailure { failure ->
                     logger.error(failure) { "Unable to reset the recitation progress of collection $collectionId" }

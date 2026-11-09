@@ -31,7 +31,7 @@ data class LocalizedPair(
 /**
  * The name to draw this collection by, in [locale]'s language.
  *
- * The same chain [RemembranceI18n] walks, and for the same reason — a user reading `ar-EG` should not
+ * The same chain `RemembranceI18n` walks, and for the same reason — a user reading `ar-EG` should not
  * be shown a gap where an `ar` translation is sitting right there, and a name is not written per
  * country. Past the language check it stops rather than reaching for an arbitrary other language,
  * because [fallback] is the row's own name: a shelf the user named themselves shows that name in
@@ -85,7 +85,7 @@ fun Map<Locale, LocalizedPair>.displayDescription(
  * Same chain as [displayName] and the same reasoning, with one extra step worth naming: a tag's
  * canonical name is stored *folded* — lower-cased, because `uq_tag__name` is a plain unique index
  * and folding at the boundary is what lets it be one — so falling all the way through to it and
- * printing it raw would put "food & drink" where "Food & Drink" belongs. [capitalized] is applied at
+ * printing it raw would put "food & drink" where "Food & Drink" belongs. Capitalization is applied at
  * the floor for that reason alone, and is a no-op on a script without case.
  *
  * This is also what makes translations double as duplicate prevention. Two tags are the same tag

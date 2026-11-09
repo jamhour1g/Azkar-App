@@ -1,10 +1,8 @@
 plugins {
     `java-library`
     id("azkar-common")
+    alias(libs.plugins.org.jetbrains.kotlin.plugin.serialization)
 }
-
-// Apply from the convention plugin classpath, shared with the app.
-apply(plugin = "org.jetbrains.kotlin.plugin.serialization")
 
 java {
     // `azkar-common` turns module-path inference on for every module. Exposed is a

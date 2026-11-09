@@ -13,7 +13,6 @@ import androidx.compose.ui.LocalSystemTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.SystemTheme
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithTag
 import com.azkar.testing.assertNoAzkarRecompositions
 import com.azkar.testing.assertTrackedRecompositions
@@ -50,7 +49,6 @@ private val screenshotTester =
 @OptIn(
     com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class,
     InternalComposeUiApi::class,
-    ExperimentalTestApi::class,
 )
 private val recompositionTester =
     DefaultDesktopComposePreviewTester(

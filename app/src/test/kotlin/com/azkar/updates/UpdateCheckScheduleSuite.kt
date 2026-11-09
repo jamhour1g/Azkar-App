@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 val UpdateCheckScheduleSuite by testSuite("Automatic update checks") {
@@ -23,10 +24,10 @@ val UpdateCheckScheduleSuite by testSuite("Automatic update checks") {
 
             runCurrent()
             assertThat(checks).isEqualTo(1)
-            advanceTimeBy(59_999)
+            advanceTimeBy(59_999.milliseconds)
             runCurrent()
             assertThat(checks).isEqualTo(1)
-            advanceTimeBy(1)
+            advanceTimeBy(1.milliseconds)
             runCurrent()
             assertThat(checks).isEqualTo(2)
             job.cancel()

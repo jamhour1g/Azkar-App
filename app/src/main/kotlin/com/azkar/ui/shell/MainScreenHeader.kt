@@ -51,8 +51,8 @@ import org.jetbrains.compose.resources.stringResource
  * have centred them between the brand and the actions, which drifts sideways whenever either side
  * changes width — and the wordmark already changes with the locale.
  *
- * [activeTab] is a [NavKey] rather than an enum so the highlight cannot disagree with what
- * [NavDisplay] drew: both read the same entry at the top of [AzkarNavigator]'s back stack. The
+ * [activeTab] is a [androidx.navigation3.runtime.NavKey] rather than an enum so the highlight cannot disagree with what
+ * [androidx.navigation3.ui.NavDisplay] drew: both read the same entry at the top of [AzkarNavigator]'s back stack. The
  * settings screen is in that stack too and lights up neither, which is correct: it is not a peer of the
  * other two, and offering it a tab beside them would claim it was.
  *

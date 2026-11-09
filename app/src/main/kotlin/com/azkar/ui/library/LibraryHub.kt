@@ -642,10 +642,12 @@ private fun CollectionTile.overflowItems(
     val id = collection.id
     val isUncategorized = id == state.catalogue.uncategorizedCollectionId
     val isProtectedFromDeletion = isUncategorized || id == state.catalogue.favoritesCollectionId
-    return identityItems(callbacks, collection, isUncategorized) +
-        preferenceItems(state, collection) +
-        reminderItems(state, collection) +
-        destructiveItems(callbacks, collection, isProtectedFromDeletion)
+    return buildList {
+        addAll(this@overflowItems.identityItems(callbacks, collection, isUncategorized))
+        addAll(this@overflowItems.preferenceItems(state, collection))
+        addAll(this@overflowItems.reminderItems(state, collection))
+        addAll(destructiveItems(callbacks, collection, isProtectedFromDeletion))
+    }
 }
 
 /**
@@ -787,7 +789,7 @@ private fun CollectionTile.reminderItems(
  * saying "this one is different from the rest".
  */
 @Composable
-private fun CollectionTile.destructiveItems(
+private fun destructiveItems(
     callbacks: ShelfCallbacks,
     collection: RemembranceCollection,
     isProtectedFromDeletion: Boolean,

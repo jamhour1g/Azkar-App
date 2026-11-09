@@ -67,7 +67,7 @@ class CollectionSessionState(
     val current: Remembrance?
         get() {
             val source = collection ?: return null
-            val pinned = pinnedId ?: return source.let { nextMember(it, detail.progress) }
+            val pinned = pinnedId ?: return nextMember(source, detail.progress)
             return source.members.findById(pinned) ?: nextMember(source, detail.progress)
         }
 

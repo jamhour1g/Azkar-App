@@ -11,6 +11,8 @@ import com.azkar.domain.repo.LibrarySeedState
 import com.azkar.domain.service.CollectionService
 import com.azkar.testUtils.TestDatabase
 import de.infix.testBalloon.framework.core.testSuite
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -32,215 +34,231 @@ import java.util.Locale
  */
 val LibraryBootstrapperSuite by testSuite("Library bootstrapper") {
     test("a first run writes the dataset and marks it seeded") {
-        val database = TestDatabase.bootstrapWithH2()
-        val seedState = InMemorySeedState()
-        val transactions = ExposedTransactionRunner(database)
-        val bootstrapper =
-            LibraryBootstrapper(
-                transactions = transactions,
-                seedState = seedState,
-                collectionService =
-                    CollectionService(
-                        ExposedCollectionRepository(transactions, ExposedTagRepository(transactions)),
-                        transactions,
-                    ),
-                collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions)),
-                covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
-            )
+        withContext(Dispatchers.IO) {
+            val database = TestDatabase.bootstrapWithH2()
+            val seedState = InMemorySeedState()
+            val transactions = ExposedTransactionRunner(database)
+            val bootstrapper =
+                LibraryBootstrapper(
+                    transactions = transactions,
+                    seedState = seedState,
+                    collectionService =
+                        CollectionService(
+                            ExposedCollectionRepository(transactions, ExposedTagRepository(transactions)),
+                            transactions,
+                        ),
+                    collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions)),
+                    covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
+                )
 
-        bootstrapper.bootstrap()
+            bootstrapper.bootstrap()
 
-        assertThat(seedState.isSeeded()).isTrue()
-        transaction(database) {
-            assertThat(CollectionTable.selectAll().count()).isGreaterThan(0)
+            assertThat(seedState.isSeeded()).isTrue()
+            transaction(database) {
+                assertThat(CollectionTable.selectAll().count()).isGreaterThan(0)
+            }
         }
     }
 
     test("a first run creates the favourites shelf and remembers its id") {
-        val database = TestDatabase.bootstrapWithH2()
-        val seedState = InMemorySeedState()
-        val transactions = ExposedTransactionRunner(database)
-        val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
-        val bootstrapper =
-            LibraryBootstrapper(
-                transactions = transactions,
-                seedState = seedState,
-                collectionService = CollectionService(collections, transactions),
-                collections = collections,
-                covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
-            )
+        withContext(Dispatchers.IO) {
+            val database = TestDatabase.bootstrapWithH2()
+            val seedState = InMemorySeedState()
+            val transactions = ExposedTransactionRunner(database)
+            val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
+            val bootstrapper =
+                LibraryBootstrapper(
+                    transactions = transactions,
+                    seedState = seedState,
+                    collectionService = CollectionService(collections, transactions),
+                    collections = collections,
+                    covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
+                )
 
-        bootstrapper.bootstrap()
+            bootstrapper.bootstrap()
 
-        val stored = seedState.favoritesCollectionId()
-        assertThat(stored).isNotNull()
-        transaction(database) {
-            val row = CollectionTable.selectAll().where { CollectionTable.id eq stored!! }.single()
-            assertThat(row[CollectionTable.name]).isEqualTo("Favorites")
-            assertThat(row[CollectionTable.kind].name).isEqualTo("CUSTOM")
+            val stored = seedState.favoritesCollectionId()
+            assertThat(stored).isNotNull()
+            transaction(database) {
+                val row = CollectionTable.selectAll().where { CollectionTable.id eq stored!! }.single()
+                assertThat(row[CollectionTable.name]).isEqualTo("Favorites")
+                assertThat(row[CollectionTable.kind].name).isEqualTo("CUSTOM")
+            }
         }
     }
 
     test("an already-seeded installation gets one localized uncategorized shelf") {
-        val database = TestDatabase.bootstrapWithH2()
-        val seedState = InMemorySeedState().apply { markSeeded() }
-        val transactions = ExposedTransactionRunner(database)
-        val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
-        val collectionService = CollectionService(collections, transactions)
-        transactions.run {
-            val seeded = SeedDataLoader.load()
-            CollectionSeed.load(seeded.remembranceIds)
+        withContext(Dispatchers.IO) {
+            val database = TestDatabase.bootstrapWithH2()
+            val seedState = InMemorySeedState().apply { markSeeded() }
+            val transactions = ExposedTransactionRunner(database)
+            val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
+            val collectionService = CollectionService(collections, transactions)
+            transactions.run {
+                val seeded = SeedDataLoader.load()
+                CollectionSeed.load(seeded.remembranceIds)
+            }
+            val existingFavorites =
+                collectionService.create(
+                    name = "Favorites",
+                    description = "Existing stars",
+                    iconKey = "star",
+                )
+            seedState.setFavoritesCollectionId(requireNotNull(existingFavorites.id))
+            val existingCollectionCount = collections.findAll().size
+            val bootstrapper =
+                LibraryBootstrapper(
+                    transactions = transactions,
+                    seedState = seedState,
+                    collectionService = collectionService,
+                    collections = collections,
+                    covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
+                )
+
+            // Simulate a prior version's dataset and completed gate, before it tracked this system shelf.
+            bootstrapper.bootstrap()
+            val firstId = requireNotNull(seedState.uncategorizedCollectionId())
+            val shelf = requireNotNull(collections.findById(firstId))
+            assertThat(shelf.displayName(Locale.forLanguageTag("ar"))).isEqualTo("غير مصنّف")
+            assertThat(shelf.displayDescription(Locale.forLanguageTag("ar"))).isEqualTo("أذكار بلا تصنيف")
+            assertThat(collections.findAll()).hasSize(existingCollectionCount + 1)
+
+            bootstrapper.bootstrap()
+            assertThat(seedState.uncategorizedCollectionId()).isEqualTo(firstId)
+            assertThat(collections.findAll()).hasSize(existingCollectionCount + 1)
         }
-        val existingFavorites =
-            collectionService.create(
-                name = "Favorites",
-                description = "Existing stars",
-                iconKey = "star",
-            )
-        seedState.setFavoritesCollectionId(requireNotNull(existingFavorites.id))
-        val existingCollectionCount = collections.findAll().size
-        val bootstrapper =
-            LibraryBootstrapper(
-                transactions = transactions,
-                seedState = seedState,
-                collectionService = collectionService,
-                collections = collections,
-                covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
-            )
-
-        // Simulate a prior version's dataset and completed gate, before it tracked this system shelf.
-        bootstrapper.bootstrap()
-        val firstId = requireNotNull(seedState.uncategorizedCollectionId())
-        val shelf = requireNotNull(collections.findById(firstId))
-        assertThat(shelf.displayName(Locale.forLanguageTag("ar"))).isEqualTo("غير مصنّف")
-        assertThat(shelf.displayDescription(Locale.forLanguageTag("ar"))).isEqualTo("أذكار بلا تصنيف")
-        assertThat(collections.findAll()).hasSize(existingCollectionCount + 1)
-
-        bootstrapper.bootstrap()
-        assertThat(seedState.uncategorizedCollectionId()).isEqualTo(firstId)
-        assertThat(collections.findAll()).hasSize(existingCollectionCount + 1)
     }
 
     test("the favourites shelf is created in every shipped language, not just English") {
-        val database = TestDatabase.bootstrapWithH2()
-        val seedState = InMemorySeedState()
-        val transactions = ExposedTransactionRunner(database)
-        val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
+        withContext(Dispatchers.IO) {
+            val database = TestDatabase.bootstrapWithH2()
+            val seedState = InMemorySeedState()
+            val transactions = ExposedTransactionRunner(database)
+            val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
 
-        LibraryBootstrapper(
-            transactions = transactions,
-            seedState = seedState,
-            collectionService = CollectionService(collections, transactions),
-            collections = collections,
-            covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
-        ).bootstrap()
+            LibraryBootstrapper(
+                transactions = transactions,
+                seedState = seedState,
+                collectionService = CollectionService(collections, transactions),
+                collections = collections,
+                covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
+            ).bootstrap()
 
-        // The shelf is not part of the shipped dataset — it holds whatever this machine's user has
-        // starred — but nobody typed its name either, so it is shipped content and ships in both
-        // languages. Without this the home rail shows one English word in an Arabic app.
-        val shelf =
-            requireNotNull(collections.findById(requireNotNull(seedState.favoritesCollectionId()))) {
-                "The bootstrapper did not create the favourites shelf"
-            }
-        assertThat(shelf.displayName(Locale.forLanguageTag("ar"))).isEqualTo("المفضّلة")
-        assertThat(shelf.displayDescription(Locale.forLanguageTag("ar")))
-            .isEqualTo("الأذكار التي حفظتها بنجمة")
+            // The shelf is not part of the shipped dataset — it holds whatever this machine's user has
+            // starred — but nobody typed its name either, so it is shipped content and ships in both
+            // languages. Without this the home rail shows one English word in an Arabic app.
+            val shelf =
+                requireNotNull(collections.findById(requireNotNull(seedState.favoritesCollectionId()))) {
+                    "The bootstrapper did not create the favourites shelf"
+                }
+            assertThat(shelf.displayName(Locale.forLanguageTag("ar"))).isEqualTo("المفضّلة")
+            assertThat(shelf.displayDescription(Locale.forLanguageTag("ar")))
+                .isEqualTo("الأذكار التي حفظتها بنجمة")
+        }
     }
 
     test("a second run does not rewrite the dataset") {
-        val database = TestDatabase.bootstrapWithH2()
-        val seedState = InMemorySeedState()
-        val transactions = ExposedTransactionRunner(database)
-        val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
-        val bootstrapper =
-            LibraryBootstrapper(
-                transactions = transactions,
-                seedState = seedState,
-                collectionService = CollectionService(collections, transactions),
-                collections = collections,
-                covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
-            )
+        withContext(Dispatchers.IO) {
+            val database = TestDatabase.bootstrapWithH2()
+            val seedState = InMemorySeedState()
+            val transactions = ExposedTransactionRunner(database)
+            val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
+            val bootstrapper =
+                LibraryBootstrapper(
+                    transactions = transactions,
+                    seedState = seedState,
+                    collectionService = CollectionService(collections, transactions),
+                    collections = collections,
+                    covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
+                )
 
-        bootstrapper.bootstrap()
-        val firstCount = transaction(database) { CollectionTable.selectAll().count() }
+            bootstrapper.bootstrap()
+            val firstCount = transaction(database) { CollectionTable.selectAll().count() }
 
-        bootstrapper.bootstrap()
-        val secondCount = transaction(database) { CollectionTable.selectAll().count() }
+            bootstrapper.bootstrap()
+            val secondCount = transaction(database) { CollectionTable.selectAll().count() }
 
-        assertThat(secondCount).isEqualTo(firstCount)
+            assertThat(secondCount).isEqualTo(firstCount)
+        }
     }
 
     test("a database deleted behind the settings file is rebuilt from the shipped dataset") {
-        val database = TestDatabase.bootstrapWithH2()
-        val seedState = InMemorySeedState().apply { markSeeded() }
-        val transactions = ExposedTransactionRunner(database)
-        val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
-        val bootstrapper =
-            LibraryBootstrapper(
-                transactions = transactions,
-                seedState = seedState,
-                collectionService = CollectionService(collections, transactions),
-                collections = collections,
-                covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
-            )
+        withContext(Dispatchers.IO) {
+            val database = TestDatabase.bootstrapWithH2()
+            val seedState = InMemorySeedState().apply { markSeeded() }
+            val transactions = ExposedTransactionRunner(database)
+            val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
+            val bootstrapper =
+                LibraryBootstrapper(
+                    transactions = transactions,
+                    seedState = seedState,
+                    collectionService = CollectionService(collections, transactions),
+                    collections = collections,
+                    covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
+                )
 
-        bootstrapper.bootstrap()
+            bootstrapper.bootstrap()
 
-        assertThat(seedState.isSeeded()).isTrue()
-        transaction(database) {
-            assertThat(CollectionTable.selectAll().count()).isGreaterThan(0)
+            assertThat(seedState.isSeeded()).isTrue()
+            transaction(database) {
+                assertThat(CollectionTable.selectAll().count()).isGreaterThan(0)
+            }
         }
     }
 
     test("a rebuilt database gets a starred shelf rather than the id the deleted one had") {
-        val database = TestDatabase.bootstrapWithH2()
-        val seedState =
-            InMemorySeedState().apply {
-                markSeeded()
-                setFavoritesCollectionId(42L)
+        withContext(Dispatchers.IO) {
+            val database = TestDatabase.bootstrapWithH2()
+            val seedState =
+                InMemorySeedState().apply {
+                    markSeeded()
+                    setFavoritesCollectionId(42L)
+                }
+            val transactions = ExposedTransactionRunner(database)
+            val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
+            val bootstrapper =
+                LibraryBootstrapper(
+                    transactions = transactions,
+                    seedState = seedState,
+                    collectionService = CollectionService(collections, transactions),
+                    collections = collections,
+                    covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
+                )
+
+            bootstrapper.bootstrap()
+
+            val stored = seedState.favoritesCollectionId()
+            assertThat(stored).isNotEqualTo(42L)
+            transaction(database) {
+                val row = CollectionTable.selectAll().where { CollectionTable.id eq stored!! }.single()
+                assertThat(row[CollectionTable.name]).isEqualTo("Favorites")
             }
-        val transactions = ExposedTransactionRunner(database)
-        val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
-        val bootstrapper =
-            LibraryBootstrapper(
-                transactions = transactions,
-                seedState = seedState,
-                collectionService = CollectionService(collections, transactions),
-                collections = collections,
-                covers = CoverStorage(Files.createTempDirectory("azkar-bootstrap-covers")),
-            )
-
-        bootstrapper.bootstrap()
-
-        val stored = seedState.favoritesCollectionId()
-        assertThat(stored).isNotEqualTo(42L)
-        transaction(database) {
-            val row = CollectionTable.selectAll().where { CollectionTable.id eq stored!! }.single()
-            assertThat(row[CollectionTable.name]).isEqualTo("Favorites")
         }
     }
 
     test("an already-seeded installation still sweeps unreferenced cover files") {
-        val database = TestDatabase.bootstrapWithH2()
-        val seedState = InMemorySeedState()
-        seedState.markSeeded()
-        val coversDir = Files.createTempDirectory("azkar-bootstrap-covers")
-        val orphan = coversDir.resolve("orphan.jpg")
-        Files.write(orphan, byteArrayOf(1, 2, 3))
-        val transactions = ExposedTransactionRunner(database)
-        val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
-        val bootstrapper =
-            LibraryBootstrapper(
-                transactions = transactions,
-                seedState = seedState,
-                collectionService = CollectionService(collections, transactions),
-                collections = collections,
-                covers = CoverStorage(coversDir),
-            )
+        withContext(Dispatchers.IO) {
+            val database = TestDatabase.bootstrapWithH2()
+            val seedState = InMemorySeedState()
+            seedState.markSeeded()
+            val coversDir = Files.createTempDirectory("azkar-bootstrap-covers")
+            val orphan = coversDir.resolve("orphan.jpg")
+            Files.write(orphan, byteArrayOf(1, 2, 3))
+            val transactions = ExposedTransactionRunner(database)
+            val collections = ExposedCollectionRepository(transactions, ExposedTagRepository(transactions))
+            val bootstrapper =
+                LibraryBootstrapper(
+                    transactions = transactions,
+                    seedState = seedState,
+                    collectionService = CollectionService(collections, transactions),
+                    collections = collections,
+                    covers = CoverStorage(coversDir),
+                )
 
-        bootstrapper.bootstrap()
+            bootstrapper.bootstrap()
 
-        assertThat(Files.exists(orphan)).isFalse()
+            assertThat(Files.exists(orphan)).isFalse()
+        }
     }
 }
 

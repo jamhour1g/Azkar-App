@@ -1,6 +1,5 @@
 package com.azkar.ui.library
 
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
@@ -51,7 +50,7 @@ private class RemembranceCreateReport {
     var confirmedTranslations: Map<Locale, com.azkar.domain.model.Remembrance.Translations> = emptyMap()
 }
 
-@OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalTestApi::class)
 private fun converse(
     pageRecompositions: IntRange = 0..0,
     textRecompositions: IntRange = 0..0,
@@ -93,7 +92,7 @@ private fun converse(
 
 private const val REMEMBRANCE_CREATE_DIALOG_TAG = "remembrance-create-dialog"
 
-@OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalTestApi::class)
 val RemembranceCreateDialogSuite by testSuite("The create-remembrance dialog") {
     test("the first page asks for the passage and keeps additional information collapsed") {
         converse {

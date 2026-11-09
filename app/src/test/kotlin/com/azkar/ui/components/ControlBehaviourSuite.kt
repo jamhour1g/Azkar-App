@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ComposeUiTest
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -153,7 +152,7 @@ private fun menuItems(onPick: (String) -> Unit): List<AzkarMenuItem> =
  * a sharper contract to pin than its absence, and one that would catch a control advertising itself
  * as activatable and then quietly doing nothing anyway.
  */
-private fun ComposeUiTest.assertDisabledAndInert(node: SemanticsNodeInteraction) {
+private fun assertDisabledAndInert(node: SemanticsNodeInteraction) {
     node.assertIsNotEnabled()
     node.performMouseInput {
         moveTo(center)
@@ -267,7 +266,6 @@ private fun ComposeUiTest.hoverOverflowMenu() {
  * is what pushed the styling questions toward something a test can actually answer. What belongs
  * here is whether a control tells the caller the truth when the user touches it.
  */
-@OptIn(ExperimentalTestApi::class)
 val ControlBehaviourSuite by testSuite("Control behaviour") {
     // ---------------------------------------------------------------- buttons
 

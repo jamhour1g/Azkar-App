@@ -1,8 +1,8 @@
 package com.azkar.domain.service
 
 /**
- * Runs [block] inside a storage transaction, committing it on success and rolling it back when
- * [block] throws.
+ * Runs a block inside a storage transaction, committing it on success and rolling it back when
+ * it throws.
  *
  * The domain owns the *decision* to make a group of writes atomic; it does not own the mechanism,
  * so this stays a port rather than a concrete transaction manager. `com.azkar.data` supplies the

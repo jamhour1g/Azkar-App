@@ -661,7 +661,7 @@ class CollectionEditorDraft private constructor(
  *
  * Sorted by language rather than kept in the map's iteration order, because two opens of the same
  * collection should draw the same blocks in the same places — a set ordering that changed between
- * opens would put the Arabic version above the French one one day and below it the next. Blanks are
+ * opens would put the Arabic version above the French one on one day and below it the next. Blanks are
  * skipped: storage should not be holding one, but a translation with no name has nothing to show
  * and no way to be corrected from here.
  */
@@ -687,7 +687,7 @@ internal class CollectionEditorEnvironment(
     /** Every tag the library uses, offered as chips. */
     val availableTags: List<TagOption>,
     /**
-     * Opens the file chooser, captioned with the [title] it is given, and returns the name of the copy
+     * Opens the file chooser, captioned with the title it is given, and returns the name of the copy
      * the app made, or `null` if the user backed out. A parameter rather than a file dialog this file
      * opens itself for two reasons: a chooser is a blocking desktop call that has no business being
      * reached for from inside a composition, and the copy is a write that belongs to the gateway beside
@@ -1136,11 +1136,9 @@ private fun CollectionDescriptionField(draft: CollectionEditorDraft) {
 @Composable
 private fun CollectionTranslationSection(draft: CollectionEditorDraft) {
     val locale = AzkarTheme.locale
-    // What is already written, not what the screen is in — see [missingLanguages]. The description is
-    // consulted second so a name that is blank but a sentence that is not still counts.
+    // The recorded name language takes precedence over the current interface language.
     val offered =
         missingLanguages(
-            name = draft.name.ifBlank { draft.description },
             existing = draft.translations,
             uiLocale = locale,
             nameLocale = draft.nameLocale,

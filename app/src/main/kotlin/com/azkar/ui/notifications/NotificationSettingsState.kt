@@ -8,6 +8,7 @@ import com.azkar.ui.notifications.presentation.OverlayCardSize
 import com.azkar.ui.notifications.presentation.OverlayCardSizing
 import com.azkar.ui.notifications.presentation.OverlayDurationMode
 import com.azkar.ui.notifications.presentation.OverlayPlacement
+import com.azkar.util.runCatchingCancellable
 import dev.nucleusframework.autolaunch.AutoLaunchResult
 import dev.nucleusframework.autolaunch.AutoLaunchState
 import io.github.oshai.kotlinlogging.KLogger
@@ -18,11 +19,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Transient state for the notification and prayer settings that live on the settings screen.
  *
- * These used to sit on [ReminderManagerState] alongside the queue, because a single screen owned all
+ * These used to sit on `ReminderManagerState` alongside the queue, because a single screen owned all
  * three sets of settings. They do not any more: prayer *times* are toggled from the home screen's
  * prayer card, and the location that calculator reads and the way a reminder is drawn over other
  * windows are both preferences rather than anything about a queue. So this class holds the four
@@ -210,7 +212,7 @@ class NotificationSettingsState(
                         notice = LocationNotice.Unavailable(reason = null)
                         return@launch
                     }
-                runCatching { detector.detect() }
+                runCatchingCancellable { detector.detect() }
                     .onSuccess { detected ->
                         val updated = detected.copy(method = preferences.prayerLocation.value.method)
                         preferences.savePrayerLocation(updated)
@@ -221,11 +223,6 @@ class NotificationSettingsState(
                         notice = LocationNotice.Unavailable(failure.message)
                     }
             }
-        }
-
-        /** Clears the outstanding message. Called on every fresh action so errors do not linger. */
-        fun dismissNotice() {
-            notice = null
         }
 
         /**
@@ -250,7 +247,7 @@ class NotificationSettingsState(
             }
             searchDebounce =
                 scope.launch {
-                    delay(SEARCH_DEBOUNCE_MILLIS)
+                    delay(SEARCH_DEBOUNCE_MILLIS.milliseconds)
                     runSearch(query)
                 }
         }
@@ -263,7 +260,7 @@ class NotificationSettingsState(
                     return
                 }
             isSearching = true
-            runCatching { client.searchPlaces(query, searchLanguage()) }
+            runCatchingCancellable { client.searchPlaces(query, searchLanguage()) }
                 .onSuccess { results ->
                     // A slower early answer must not overwrite a later query's list.
                     if (searchQuery.trim() != query) return@onSuccess
@@ -297,11 +294,6 @@ class NotificationSettingsState(
                 zoneId = place.zoneId ?: preferences.prayerLocation.value.zoneId,
                 saved = { LocationNotice.PlaceSelected(place.label) },
             )
-        }
-
-        /** Hides the suggestion list, e.g. when the search box loses focus. */
-        fun clearSuggestions() {
-            suggestions = emptyList()
         }
 
         /**
@@ -551,11 +543,6 @@ class NotificationSettingsState(
                     notice = StartupNotice.Unavailable(reason = null)
                 }
             }
-        }
-
-        /** Clears the outstanding message. Called on every fresh action so errors do not linger. */
-        fun dismissNotice() {
-            notice = null
         }
     }
 

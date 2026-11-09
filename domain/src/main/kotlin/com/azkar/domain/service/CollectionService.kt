@@ -50,7 +50,7 @@ class CollectionService(
      * A new collection always starts empty and unpinned, so the generated wash is what the user sees
      * first and can be replaced by picking a picture. A name, a description and its labels are the only
      * things chosen up front — and the labels are written in a **second statement**, not left to
-     * [repository.save].
+     * [CollectionRepository.save].
      *
      * That second write is the whole reason this method is more than a call to `save`. `save` owns the
      * parent row and deliberately says nothing about labels, because a label is edited by picking one

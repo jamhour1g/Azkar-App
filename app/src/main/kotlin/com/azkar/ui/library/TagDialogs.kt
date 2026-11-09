@@ -417,7 +417,6 @@ internal fun TagNameDialog(
                 TagPrimaryNameBlock(draft = draft, nameLocale = initialNameLocale, note = note)
                 Spacer(Modifier.height(BODY_GAP))
                 TagTranslationSection(
-                    name = draft.name,
                     nameLocale = initialNameLocale,
                     edits = draft,
                 )
@@ -445,15 +444,13 @@ internal fun TagNameDialog(
  */
 @Composable
 private fun TagTranslationSection(
-    name: String,
     nameLocale: Locale,
     edits: TagTranslationEdits,
 ) {
     val locale = AzkarTheme.locale
     val available =
-        remember(edits.translations, name, nameLocale, locale) {
+        remember(edits.translations, nameLocale, locale) {
             missingLanguages(
-                name = name,
                 existing = edits.translations,
                 uiLocale = locale,
                 nameLocale = nameLocale,

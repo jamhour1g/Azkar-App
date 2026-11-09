@@ -1,5 +1,6 @@
 package com.azkar.ui.library
 
+import com.azkar.util.runCatchingCancellable
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.vinceglb.filekit.FileKit
@@ -7,6 +8,7 @@ import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openFilePicker
+import kotlinx.coroutines.CancellationException
 import java.io.IOException
 import java.nio.file.Path
 
@@ -45,7 +47,7 @@ internal object CoverImageChooser {
         title: String,
         logger: KLogger = KotlinLogging.logger {},
     ): PlatformFile? =
-        runCatching {
+        runCatchingCancellable {
             FileKit.openFilePicker(
                 type = FileKitType.Image,
                 dialogSettings = FileKitDialogSettings(title = title),
@@ -84,6 +86,8 @@ internal object CoverImageChooser {
         } catch (failure: IOException) {
             logger.warn(failure) { "Could not copy the chosen cover image from $source" }
             null
+        } catch (failure: CancellationException) {
+            throw failure
         } catch (failure: IllegalStateException) {
             logger.warn(failure) { "The cover storage refused the chosen image [$source]" }
             null

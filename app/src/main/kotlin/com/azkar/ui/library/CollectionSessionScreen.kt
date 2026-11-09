@@ -48,7 +48,6 @@ import com.azkar.ui.components.ActionIcons
 import com.azkar.ui.components.AzkarMenuItem
 import com.azkar.ui.components.PrimaryButton
 import com.azkar.ui.components.SecondaryButton
-import com.azkar.ui.library.CollectionSessionState
 import com.azkar.ui.preview.PREVIEW_COLLECTION_ID
 import com.azkar.ui.preview.previewCompletedCollectionProgress
 import com.azkar.ui.preview.previewReminders
@@ -441,7 +440,7 @@ private const val UNPINNED_ID = Long.MIN_VALUE
  * The publisher badge on the band: who put this collection together.
  *
  * Taken from the first member rather than from the collection, because the seed data records an author
- * per remembrance and the collection itself has no such field — and the first member's is as good a
+ * per remembrance and the collection itself has no such field — and the first member's is as good an
  * answer as any, since a collection is its members. Clamped through the same [remembranceSourceLabel]
  * the member cards use, because the raw source carries a number and a title that would make the badge
  * two facts instead of one.

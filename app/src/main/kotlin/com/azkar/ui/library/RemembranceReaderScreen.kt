@@ -298,8 +298,8 @@ private fun ReaderHeader(
  * grey was legible but looked *off* — the same ink the app uses for secondary copy, with no edge to
  * say "press me", sitting above a card that had a clear rounded border and above copy and favourite
  * buttons that had no surface at all. The pairing here is the app's own control idiom, the one the
- * toolbar's reset button uses: [colors.highlight] under a [colors.border] rule with
- * [colors.primaryStrong] ink. The collection page's back link wears the band's glass instead, because
+ * toolbar's reset button uses: `colors.highlight` under a `colors.border` rule with
+ * `colors.primaryStrong` ink. The collection page's back link wears the band's glass instead, because
  * there the backing is artwork and a translucent surface is the only contrast on offer.
  */
 @Composable

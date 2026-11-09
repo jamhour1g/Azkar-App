@@ -53,7 +53,6 @@ import com.azkar.ui.components.AzkarMenuItem
 import com.azkar.ui.components.AzkarOutlinedField
 import com.azkar.ui.components.SettingRow
 import com.azkar.ui.components.StepperControl
-import com.azkar.ui.library.CollectionDetailState
 import com.azkar.ui.library.data.CollectionPresenter.Companion.ARABIC_LOCALE
 import com.azkar.ui.library.data.findById
 import com.azkar.ui.library.model.RemembranceTile
@@ -78,11 +77,11 @@ import org.jetbrains.compose.resources.stringResource
  * then the members. Those four regions used to be four separately-bordered boxes above a grid, which
  * read as four unrelated panels rather than as a page with a header and a body.
  *
- * It reads the shell's shared [CollectionsCatalogue] rather than a shelf of its own. That is what
- * makes a change made here show up on the tile behind it: one read of the catalogue serves the shelf,
- * this page and the session under it, and every write goes back through the same holder. Reading it
- * again per page was cheap enough to ignore and wrong enough to fix — [NavDisplay] composes only the
- * entry on top of the stack, so a per-page holder was discarded and rebuilt on every hop in and out.
+ * It reads the shell's shared [CollectionsCatalogue] rather than a shelf of its own. That is what makes a
+ * change made here show up on the tile behind it: one read of the catalogue serves the shelf, this page and the
+ * session under it, and every write goes back through the same holder. Reading it again per page was cheap
+ * enough to ignore and wrong enough to fix: [androidx.navigation3.ui.NavDisplay] composes only the entry on top
+ * of the stack, so a per-page holder was discarded and rebuilt on every hop in and out.
  *
  * @param detail the page's state, already built by [rememberCollectionDetailState]. Handed in
  * rather than built here so the entry that pushed this page owns the holder's lifetime, which is the

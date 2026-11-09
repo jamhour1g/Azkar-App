@@ -96,8 +96,8 @@ enum class OverlayCardSizing {
  * reader: the words on it are reachable at reading speed, not in a fixed number the reader has to
  * guess. What the fixed number is then for is the same thing the chosen height is for under a fitted
  * card — [FIXED] keeps the turn-the-number behaviour, and [READING] falls back to nothing but its own
- * bounds, because the bounds are shared with [durationSeconds] and a card that earns a minute is
- * allowed one whether the reader set four seconds or forty.
+ * bounds, because they are shared with [NotificationPresentationSettings.durationSeconds]. A card
+ * that earns a minute is allowed one whether the reader set four seconds or forty.
  */
 @Serializable
 enum class OverlayDurationMode {
@@ -344,7 +344,7 @@ private fun NotificationNotice.textToRead(): String =
  * Reading time for [text], in milliseconds, at the model's rate and clamped to the store's bounds.
  *
  * The clamp shares [MIN_DURATION_SECONDS] and [MAX_DURATION_SECONDS] rather than restating them, so
- * the mode cannot produce a number the store would have refused in [FIXED] — the two modes differ
+ * the mode cannot produce a number the store would have refused in [OverlayDurationMode.FIXED] — the two modes differ
  * about where a duration comes from, not about what a duration is.
  */
 private fun readingMillisFor(text: String): Long {

@@ -1,6 +1,5 @@
 package com.azkar.ui.theme
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 

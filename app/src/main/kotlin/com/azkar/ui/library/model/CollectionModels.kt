@@ -21,11 +21,11 @@ import java.util.Locale
  * catalogue, and the detail screen's add-picker has to offer what is *not* already in the
  * collection.
  *
- * [recitedCounts] is keyed by collection and holds only the collections that have something counted,
- * for the same reason [RecitationSummary] leaves the rest out: a collection absent from the map has
- * recorded nothing, which is a different answer from one counted zero times. It travels with the
- * shelf rather than being read per tile because every card draws the figure, and one grouped read for
- * the whole shelf beats one query per card.
+ * [recitedCounts] is keyed by collection and holds only the collections that have something counted, for the
+ * same reason [com.azkar.domain.model.RecitationSummary] leaves the rest out: a collection absent from the map
+ * has recorded nothing, which is a different answer from one counted zero times. It travels with the shelf
+ * rather than being read per tile because every card draws the figure, and one grouped read for the whole shelf
+ * beats one query per card.
  *
  * [favoritesCollectionId] names the one collection that mirrors the user's stars. It travels here
  * rather than being looked up by name because the user can rename that collection like any other, and
@@ -365,8 +365,8 @@ data class TagOption(
  * matters while typing: a pair is complete and valid the moment it exists, while an entry here is
  * born empty. Someone who clicks "add a translation" and then backs out has left a blank entry
  * behind, and that is not something the domain should ever be asked to represent. The entry is
- * dropped on the way out — [CollectionEditorDraft.submittedTranslations] skips a blank name — so the
- * database only ever sees the ones that were actually filled in.
+ * dropped on the way out — [com.azkar.ui.library.CollectionEditorDraft.submittedTranslations] skips
+ * a blank name — so the database only ever sees the ones that were actually filled in.
  *
  * @property locale the language this version is written in.
  * @property name the name in that language. Blank until it is typed, which is legal here.
@@ -432,9 +432,7 @@ fun List<TranslationEntry>.survivingRename(
  * design, and a second field for a language that has one is how two versions of the same name start
  * disagreeing.
  */
-@Suppress("UNUSED_PARAMETER")
 fun missingLanguages(
-    name: String,
     existing: Collection<TranslationEntry>,
     uiLocale: Locale,
     nameLocale: Locale? = null,

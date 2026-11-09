@@ -23,9 +23,8 @@ data class AzkarInstallerPlatform(
                     osName.startsWith("Mac", ignoreCase = true) -> "macos"
                     else -> "linux"
                 }
-            val archName = System.getProperty("os.arch")
             val arch =
-                when (archName) {
+                when (val archName = System.getProperty("os.arch")) {
                     "amd64", "x86_64" -> "x64"
                     "aarch64", "arm64" -> "arm64"
                     else -> archName

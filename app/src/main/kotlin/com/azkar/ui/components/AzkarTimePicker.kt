@@ -3,7 +3,6 @@ package com.azkar.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -60,7 +59,6 @@ import java.time.format.TextStyle
  * @param dayLabel renders a day as the reader's language; a parameter rather than a resource lookup
  * so this control carries no knowledge of which screen is asking.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AzkarDayPicker(
     activeDays: Set<DayOfWeek>,
@@ -93,7 +91,8 @@ fun AzkarDayPicker(
  * of this was two dropdowns of hours and minutes, on the reasoning that the app had no picker of its
  * own — which is true, and is also an argument for using the one Compose ships instead of writing a
  * fourth way to set a time. The dial is [TimePicker]; the typed half is a text field over the same
- * [TimePickerState] machinery via [TimeInput], and the two are the same control in the two display
+ * [androidx.compose.material3.TimePickerState] machinery via [TimeInput], and the two are the same
+ * control in the two display
  * modes Material 3 already defines, so the dialog can hand the reader over from one to the other
  * without the field and the dial disagreeing about what the answer is.
  *
@@ -176,7 +175,7 @@ fun AzkarTimePicker(
  * Both display modes are offered and the reader chooses, because the dial is unusable for typing
  * `4:45` and the keyboard is unusable for finding four forty-five. Material 3 already models this as
  * one state with two renderings, so switching between them keeps the selection — which is why the
- * toggle is [TimePickerState.selection] rather than a second field.
+ * toggle is [androidx.compose.material3.TimePickerState.selection] rather than a second field.
  */
 @Composable
 private fun AzkarTimePickerDialog(

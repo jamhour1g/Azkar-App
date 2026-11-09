@@ -69,7 +69,7 @@ class LibraryBootstrapper(
      * Callers are expected to await this *before* reading the library rather than to race it, which
      * is why it is a plain suspending call rather than something that fires and forgets: a read that
      * did not wait would come back empty on a fresh install and cache that emptiness for the session.
-     * See [com.azkar.ui.library.data.DomainCollectionsGateway.fetchSnapshot] for the read path.
+     * The library gateway awaits this before reading its snapshot.
      */
     suspend fun bootstrap() = gate.withLock { runOnce() }
 

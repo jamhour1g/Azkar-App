@@ -348,7 +348,7 @@ class ExposedTagRepository(
         nameLocale: Locale,
     ): Tag? {
         val row = findTagRowByName(name)
-        if (row == null || row.deletedAt == null) {
+        if (row?.deletedAt == null) {
             return null
         }
         return row
@@ -431,8 +431,8 @@ class ExposedTagRepository(
      * Two `GROUP BY`-shaped reads rather than a correlated subquery per tag, because the screen asks
      * for every tag at once and a per-tag subquery would be one statement per row on the list.
      *
-     * The counts are folded in Kotlin off rows already fetched, the same trade [RecitationProgress]'
-     * summary read makes and for the same reason: the join tables are a few hundred rows, and this
+     * The counts are folded in Kotlin off rows already fetched, as in the recitation progress summary.
+     * The join tables are a few hundred rows, so this
      * keeps each statement a plain single-table read rather than an aggregate whose result is then
      * matched back to the tag rows by key.
      */
@@ -444,12 +444,12 @@ class ExposedTagRepository(
         val collectionCounts =
             CollectionTagEntity
                 .find { CollectionTagTable.tagId inList ids }
-                .groupBy({ it.tagId.value }, { Unit })
+                .groupBy({ it.tagId.value }, { })
                 .mapValues { (_, links) -> links.size }
         val remembranceCounts =
             RemembranceTagEntity
                 .find { RemembranceTagTable.tagId inList ids }
-                .groupBy({ it.tagId.value }, { Unit })
+                .groupBy({ it.tagId.value }, { })
                 .mapValues { (_, links) -> links.size }
         // One statement for the page, for the same reason the two counts above are: this is a list
         // screen, and a wording lookup per row would be a statement per tag on it.

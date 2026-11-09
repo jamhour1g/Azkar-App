@@ -1,7 +1,6 @@
 package com.azkar.ui.theme
 
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
@@ -20,7 +19,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import com.azkar.i18n.ENGLISH
 import com.azkar.i18n.isRightToLeft
 import com.azkar.ui.components.InstallAzkarImageLoader
-import com.azkar.ui.theme.AzkarTheme
 import java.util.Locale
 
 val LocalAzkarColors = staticCompositionLocalOf { LightAzkarColors }
@@ -47,17 +45,6 @@ object AzkarTheme {
     val shapes: Shapes
         @Composable @ReadOnlyComposable
         get() = MaterialTheme.shapes
-
-    /**
-     * Material 3 Expressive's spatial and effects specs, spring-based and deliberately spring-based.
-     *
-     * Note this does *not* govern [AzkarMotion]. That object hands Compose explicit tween specs on
-     * bezier curves, and a caller who passes its own spec never consults the motion scheme — so this
-     * only reaches the Material components that animate themselves (see [AzkarTheme] for the rest).
-     */
-    val motionScheme: MotionScheme
-        @Composable @ReadOnlyComposable
-        get() = MaterialTheme.motionScheme
 
     /** The locale the shell resolved, so data-layer helpers can format against it. */
     val locale: Locale
@@ -91,7 +78,7 @@ object AzkarTheme {
  * The slots app code never reads are still named, because "unused" is a property of *this* app's
  * screens rather than of every Material component, and a slot left to the baseline is the one that
  * shows up as a stray lilac the day a component starts using it. Where a slot has no honest answer
- * in the app's own palette it is left to the baseline on purpose — see [scrim].
+ * in the app's own palette it is left to the baseline on purpose — see [androidx.compose.material3.ColorScheme.scrim].
  */
 private fun toMaterialScheme(colors: AzkarColors): ColorScheme {
     val baseline = if (colors.isDark) darkColorScheme() else lightColorScheme()
@@ -180,7 +167,6 @@ private val DarkMaterialScheme: ColorScheme = toMaterialScheme(DarkAzkarColors)
  */
 private val AzkarMotionScheme: MotionScheme = MotionScheme.expressive()
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AzkarTheme(
     darkTheme: Boolean = rememberSystemTheme().isDark,

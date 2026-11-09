@@ -29,7 +29,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import java.time.OffsetDateTime
@@ -425,8 +424,8 @@ class ExposedCollectionRepository(
      * Passing an empty map therefore *deletes* every translation, which is correct rather than
      * dangerous: the editor is the thing that decides whether a shelf keeps its Arabic, and a shelf
      * whose only translation was just deleted by its owner should stop claiming to have one. What
-     * keeps that from being a trap is [CollectionService.rename] defaulting to the existing map, so
-     * "rename" and "rename and drop the translations" are two distinct calls rather than one call
+     * keeps that from being a trap is [com.azkar.domain.service.CollectionService.rename] defaulting to
+     * the existing map, so "rename" and "rename and drop the translations" are two distinct calls rather than one call
      * whose meaning depends on what a caller forgot to pass.
      */
     private fun applyTranslations(
@@ -533,7 +532,7 @@ class ExposedCollectionRepository(
     }
 
     /**
-     * Replaces the collection's labels with exactly [tagNames], creating any tag row that does not
+     * Replaces the collection's labels with exactly [tags], creating any tag row that does not
      * exist yet.
      *
      * Reconciles rather than deleting and reinserting, for the reason the remembrance's own tag

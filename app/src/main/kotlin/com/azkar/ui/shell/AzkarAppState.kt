@@ -69,9 +69,12 @@ class AzkarAppState(
     initialThemePreference: ThemePreference = ThemePreference.SYSTEM,
     initialLocale: Locale = Locale.getDefault(),
     initialTypography: AppTypography = AppTypography(),
-    persistTheme: (ThemePreference) -> Unit,
-    persist: (Locale) -> Unit,
-    persistTypography: (AppTypography) -> Unit,
+    /** Injected so a test can observe the write without touching the real settings file. */
+    private val persistTheme: (ThemePreference) -> Unit,
+    /** Injected so a test can observe the write without touching the real settings file. */
+    private val persist: (Locale) -> Unit,
+    /** Injected so a test can observe the write without touching the real settings file. */
+    private val persistTypography: (AppTypography) -> Unit,
 ) {
     var themePreference: ThemePreference by mutableStateOf(initialThemePreference)
         private set
@@ -117,15 +120,6 @@ class AzkarAppState(
         toastVisibility.remove(id)
         toasts.removeAll { it.id == id }
     }
-
-    /** Injected so a test can observe the write without touching the real settings file. */
-    private val persistTheme: (ThemePreference) -> Unit = persistTheme
-
-    /** Injected so a test can observe the write without touching the real settings file. */
-    private val persist: (Locale) -> Unit = persist
-
-    /** Injected so a test can observe the write without touching the real settings file. */
-    private val persistTypography: (AppTypography) -> Unit = persistTypography
 
     /**
      * Switches to [preference] and stores it for the next run.

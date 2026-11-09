@@ -93,16 +93,16 @@ fun AzkarSelect(
  *
  * Split from its menu so that each half is readable on its own. The two are separate composables
  * rather than one long one for a practical reason as much as a tidiness one: the menu is only in the
- * tree while it is open, so returning early on [expanded] keeps a closed dropdown's rows out of
+ * tree while it is open, so returning early on `expanded` keeps a closed dropdown's rows out of
  * composition entirely rather than merely out of sight.
  *
- * [fillMaxWidth] is deliberately *not* here. The trigger wraps its label so that a dropdown is as wide
- * as the value it is showing, because a closed select with eighty spare dp inside it reads as an empty
- * box rather than a chosen value. The consequence for callers is that they cap this with `widthIn`,
- * never with `width`: a pinned width sizes the [Box] but not the row drawing inside it, so the control
- * would occupy more space than it fills and every gap beside it would be measured from a reservation
- * nobody can see. Size it from the label, cap it for long translations, and let the caller give the
- * slack to something else.
+ * [androidx.compose.foundation.layout.fillMaxWidth] is deliberately *not* here. The trigger wraps its label so
+ * that a dropdown is as wide as the value it is showing, because a closed select with eighty spare dp inside it
+ * reads as an empty box rather than a chosen value. The consequence for callers is that they cap this with
+ * `widthIn`, never with `width`: a pinned width sizes the [Box] but not the row drawing inside it, so the
+ * control would occupy more space than it fills and every gap beside it would be measured from a reservation
+ * nobody can see. Size it from the label, cap it for long translations, and let the caller give the slack to
+ * something else.
  */
 @Composable
 private fun AzkarSelectTrigger(

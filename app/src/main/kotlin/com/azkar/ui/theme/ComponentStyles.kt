@@ -75,10 +75,10 @@ object ComponentStyles {
     /**
      * The full-bleed pane behind an empty or loading collection.
      *
-     * A card at the smallest [CardSize], so most of this is [AzkarCard]'s own shape carried over
-     * rather than decided here. What it does decide is the inset: this pane sits *inside* a scroll
-     * stack, and the shadow that reads as lift when a card is the whole screen reads as a seam when
-     * it is one item among many.
+     * A card at the smallest [CardSize], so most of this is the shape of [com.azkar.ui.components.AzkarCard]
+     * carried over rather than decided here. What it does decide is the inset: this pane sits *inside* a scroll
+     * stack, and the shadow that reads as lift when a card is the whole screen reads as a seam when it is one
+     * item among many.
      */
     val borderedStateBox: Style = {
         shape(shapes.medium)

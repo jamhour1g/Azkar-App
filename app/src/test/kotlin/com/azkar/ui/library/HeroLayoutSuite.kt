@@ -236,7 +236,7 @@ private const val BAND = "hero"
 /**
  * The destination the back link names, as the string resource names it.
  *
- * The English words, for the reason [factRow] gives: the locale under test is the *type scale*, not
+ * The English words, for the reason the fact-row helper gives: the locale under test is the *type scale*, not
  * the language the strings come out in.
  */
 private const val BACK_LINK = "All Collections"

@@ -97,9 +97,9 @@ interface CollectionRepository :
     /**
      * Stars or unstars the collection identified by [id].
      *
-     * A statement of its own rather than a field of [save] for the same reason [touchLastOpened] is:
-     * starring is not an edit to the collection, so a rename must not be the moment the star moves,
-     * and a full-row write would make the two inseparable.
+     * A statement of its own rather than a field of [CollectionRepository.save] for the same reason
+     * [touchLastOpened] is: starring is not an edit to the collection, so a rename must not be the moment the
+     * star moves, and a full-row write would make the two inseparable.
      */
     suspend fun setFavorite(
         id: Long,
@@ -118,7 +118,7 @@ interface CollectionHomeRepository {
     /**
      * Puts [id] on the Home screen or takes it off again.
      *
-     * A statement of its own rather than a field of [save], because being on Home is a per-device
+     * A statement of its own rather than a field of [CollectionRepository.save], because being on Home is a per-device
      * preference and a full-row write would let a rename quietly drop the collection off the rail.
      */
     suspend fun setHomePinned(

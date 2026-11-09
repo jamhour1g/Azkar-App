@@ -16,7 +16,7 @@ import com.azkar.ui.library.model.RemembranceTile
  * screen's worth of state pretending to be three fields. The query, the selection and the open flag
  * only mean anything between the dialog opening and the user confirming or dismissing it, and every
  * one of them is reset the moment it closes — so holding them on the page state made the page carry a
- * seven-method mini-screen that nothing outside [CollectionDetailDialogs] ever reads.
+ * seven-method mini-screen that nothing outside [AddRemembrancesDialog] ever reads.
  *
  * Kept reading the shelf through [CollectionsCatalogue] rather than being handed a snapshot, so a
  * picker opened after a membership change offers what the collection actually holds now.

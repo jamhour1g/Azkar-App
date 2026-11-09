@@ -47,7 +47,7 @@ import org.koin.dsl.module
  * The upper half of the dependency graph: the settings file, and the gateways the composables reach
  * for instead of the database.
  *
- * Composed with [com.azkar.data.config.dataModule] at the application's entry point in [Main].
+ * Composed with [com.azkar.data.config.dataModule] at the application's entry point in [main].
  *
  * Everything here is a `single`. The settings store owns a `DataStore` and the scope that keeps it
  * alive, the theme, locale and seed stores are the three places that decide how a stored preference
@@ -62,14 +62,14 @@ import org.koin.dsl.module
  * the same object, or a mutation made on one screen would not be visible from the other.
  *
  * The notification stack is built here too, and that is the point of it being here rather than in
- * [Main]. The scheduler, the dispatcher and the overlay's state machine are all window-independent —
+ * [main]. The scheduler, the dispatcher and the overlay's state machine are all window-independent —
  * a reminder has to fire whether or not anything is on screen — so none of them belongs to a
  * composition, and constructing them at the root would mean every one of them had to be re-created
  * by whatever composition happened to start first. The only genuinely window-owned collaborators,
  * the tray icon and the overlay's borderless frame, stay in `Main` and reach this graph for
  * everything they do not own.
  *
- * Koin 4 does not release `AutoCloseable` values on its own. [Main] cancels
+ * Koin 4 does not release `AutoCloseable` values on its own. [main] cancels
  * `notificationScope` and closes the shared Ktor client during explicit process shutdown; the
  * database pool is owned by `DatabaseWarmUp`.
  */

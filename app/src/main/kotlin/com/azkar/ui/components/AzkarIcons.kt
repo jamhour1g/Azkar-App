@@ -6,7 +6,6 @@ import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.bell
 import com.azkar.generated.resources.bell_off
 import com.azkar.generated.resources.book_open
-import com.azkar.generated.resources.bookmark
 import com.azkar.generated.resources.brand
 import com.azkar.generated.resources.calendar
 import com.azkar.generated.resources.chevron_left
@@ -31,7 +30,7 @@ import org.jetbrains.compose.resources.vectorResource
  * icons, which now ship as XML vector drawables in `composeResources/drawable`.
  *
  * The stroke icons are the adopted set — Lucide v0.544.0 (ISC) for bell, clock, calendar, house,
- * library, book-open, bookmark, star, settings, sun family and moon, plus the app's own khatim and
+ * library, book-open, star, settings, sun family and moon, plus the app's own khatim and
  * mosque. Every source SVG is versioned under `assets/icons` (upstream Lucide with its LICENSE, and
  * the `azkar` artwork), and each was converted to an XML `<vector>` whose geometry matches the code
  * that used to build them here. The conversion keeps the SVG contract — an empty fill and a black
@@ -140,9 +139,6 @@ object AzkarIcons {
      */
     val BookOpen: ImageVector
         @Composable get() = vectorResource(Res.drawable.book_open)
-
-    val Bookmark: ImageVector
-        @Composable get() = vectorResource(Res.drawable.bookmark)
 
     val Star: ImageVector
         @Composable get() = vectorResource(Res.drawable.star)

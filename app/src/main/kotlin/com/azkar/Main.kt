@@ -22,7 +22,6 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.azkar.data.config.DatabaseManager
 import com.azkar.data.config.dataModule
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.title
@@ -70,7 +69,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -80,6 +78,7 @@ import org.koin.core.qualifier.named
 import org.koin.mp.KoinPlatform
 import java.awt.Toolkit
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 private val logger = KotlinLogging.logger {}
 
@@ -106,7 +105,7 @@ private const val UPDATE_NOTIFICATION_PREVIEW_FLAG = "--update-notification-prev
 /**
  * Compose Multiplatform replacement for `com.azkar.Launcher` + `com.azkar.Home`.
  *
- * The JavaFX application warmed the database ([DatabaseManager.default.warmUp], which creates the schema
+ * The JavaFX application warmed the database ([com.azkar.data.config.DatabaseManager.warmUp], which creates the schema
  * and opens the connection pool) off the UI thread before showing the stage and closed it again in
  * `stop()`. The Compose entry point keeps that contract — [DatabaseWarmUp] runs the warm-up before
  * showing the window, while the notification runtime and data stores live until the explicit tray
@@ -248,7 +247,7 @@ private fun DesktopApplicationRoot(
     LaunchedEffect(trayAvailable, proofOfConcept, updateNotificationPreview, startedAtLogin) {
         // The harness starts hidden whatever the tray says: "a reminder with no window at all" is
         // the state being verified, and a tray icon would be the only other surface on screen.
-        windowVisible = if (proofOfConcept) false else !(startedAtLogin && trayAvailable)
+        windowVisible = !proofOfConcept && !(startedAtLogin && trayAvailable)
     }
 
     // The overlay is its own window, created once and hidden when there is nothing to say. It is
@@ -301,7 +300,14 @@ private fun rememberQuitAction(
     exitApplication: () -> Unit,
 ): () -> Unit {
     val shutdownScope = rememberCoroutineScope()
-    return remember(koin, startup.databaseWarmUp, notificationScope, dispatcher, exitApplication, shutdownScope) {
+    return remember<() -> Unit>(
+        koin,
+        startup.databaseWarmUp,
+        notificationScope,
+        dispatcher,
+        exitApplication,
+        shutdownScope,
+    ) {
         {
             shutdownScope.launch {
                 shutdown(
@@ -312,7 +318,6 @@ private fun rememberQuitAction(
                     exitApplication = exitApplication,
                 )
             }
-            Unit
         }
     }
 }
@@ -509,7 +514,7 @@ private fun OverlayProofOfConcept(publisher: NotificationPublisher) {
                 ),
             )
             index += 1
-            delay(PROOF_OF_CONSENT_INTERVAL_MILLIS)
+            delay(PROOF_OF_CONSENT_INTERVAL_MILLIS.milliseconds)
         }
     }
 }
@@ -569,7 +574,7 @@ private fun MainWindow(
  *
  * The `key` is the same device `AzkarApp` uses for the tree, and for the same reason. Compose
  * Multiplatform resources resolve against `androidx.compose.ui.text.intl.Locale.current`, which is
- * snapshot-backed and is not notified by the `Locale.setDefault` that [activateLocale] performs, so
+ * snapshot-backed and is not notified by the `Locale.setDefault` that [com.azkar.i18n.activateLocale] performs, so
  * a plain read would hand back the language the process started in. Keying discards the cached
  * resource and re-reads it, and dropping the cache is the only part that is actually needed here —
  * the title is a leaf, so unlike the tree it has no subtree to throw away.

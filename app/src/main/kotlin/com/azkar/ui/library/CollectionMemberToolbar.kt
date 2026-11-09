@@ -155,8 +155,8 @@ internal fun CollectionMemberToolbar(
  * once there is somewhere to resume to. A single label would have to be one of those two and would
  * be wrong half the time, and "Resume" on a fresh collection is a promise the page cannot keep.
  *
- * Painted rather than [PrimaryButton], which is Material's button at Material's height: this row is
- * one height throughout and a taller button in the middle of it undoes that.
+ * Painted rather than [com.azkar.ui.components.PrimaryButton], which is Material's button at its
+ * standard height: this row is one height throughout and a taller button in the middle of it undoes that.
  */
 @Composable
 private fun ToolbarStartButton(
@@ -209,7 +209,7 @@ private fun ToolbarStartButton(
  *
  * The rule takes the slack rather than the type: the digits grow as a collection gets longer
  * ("0 of 61" to "120 of 1,240"), and a layout that sized the bar from the text would have the bar
- * change width every time somebody added a member. [stats.hasMembers] is the only thing that hides
+ * change width every time somebody added a member. [CollectionStats.hasMembers] is the only thing that hides
  * the whole thing — an empty collection has nothing to be part-way through.
  *
  * The count and the rule and nothing else. An estimate sat between them for a while, and it was the
@@ -414,7 +414,7 @@ private fun MemberViewSegment(
  * reason a reader can see that the first three and the fourth belong to the same sentence.
  *
  * The menu and its option rows are drawn here too rather than reaching for [AzkarDropdown]'s, because
- * those are private to [CollectionControls.kt] and a list of choices that did not match the trigger
+ * those are private to `CollectionControls.kt` and a list of choices that did not match the trigger
  * that opened it would read as a different menu entirely.
  */
 @Composable
@@ -502,7 +502,7 @@ private fun ToolbarDropdownChevron(expanded: Boolean) {
  * One order to choose, filled when it is the answer.
  *
  * [AzkarDropdown]'s option row, repeated here because that one is private to
- * [CollectionControls.kt] and a list of choices that did not match the trigger that opened it would
+ * `CollectionControls.kt` and a list of choices that did not match the trigger that opened it would
  * read as a different menu entirely.
  */
 @Composable

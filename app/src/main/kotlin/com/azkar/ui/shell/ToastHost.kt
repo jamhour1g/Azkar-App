@@ -36,6 +36,7 @@ import com.azkar.ui.theme.fadeThroughExit
 import com.azkar.ui.theme.isRtlLayout
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Signature every screen uses to raise a `.library-toast`, owned by the shell. */
 typealias ShowToast = (title: String, message: String, priority: NotificationPriority) -> Unit
@@ -102,7 +103,7 @@ private fun ToastCard(
     // one and only animation this card has, and its duration is a constant.
     LaunchedEffect(toast.id, visibility.targetState) {
         if (visibility.targetState) return@LaunchedEffect
-        delay(AzkarMotion.OVERLAY.toLong())
+        delay(AzkarMotion.OVERLAY.toLong().milliseconds)
         state.retireToast(toast.id)
     }
 

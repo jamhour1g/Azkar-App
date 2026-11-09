@@ -280,7 +280,7 @@ private class Draft(
     /**
      * The English to write, or `null` to write nothing at all.
      *
-     * `null` is the instruction *keep what is there*, which is why [Remembrance.withTexts] treats it
+     * `null` is the instruction *keep what is there*, which is why [com.azkar.ui.library.data.withTexts] treats it
      * as different from an empty string: a blank box is silence about the translation, not a request
      * to delete one the user may have spent time on.
      */

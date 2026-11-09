@@ -73,7 +73,7 @@ class PrayerTrayCountdownState(
     private var lastKey: PrayerKey? = null
 
     /** The sentence the line is written into, `%1$s` the prayer name and `%2$s` the clock. */
-    private var format: String = "%1\$s in %2\$s"
+    private var format: String = $$"%1$s in %2$s"
 
     /**
      * Resolves the localized prayer text, then publishes the first line.

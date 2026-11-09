@@ -5,13 +5,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.azkar.domain.model.RecitationProgress
-import com.azkar.domain.model.Remembrance
 import com.azkar.ui.library.data.CollectionFiltering
 import com.azkar.ui.library.data.CollectionStats
 import com.azkar.ui.library.data.findById
-import com.azkar.ui.library.data.nextMember
 import com.azkar.ui.library.data.statsOf
-import com.azkar.ui.library.data.upcomingMembers
 import com.azkar.ui.library.model.CollectionMemberSort
 import com.azkar.ui.library.model.CollectionMemberView
 import com.azkar.ui.library.model.RemembranceTile
@@ -64,7 +61,7 @@ class CollectionDetailState(
      *
      * Held rather than inlined because it is a self-contained screen-in-a-dialog — its own query,
      * ticking and open flag, all reset when it closes — and the page has nothing to say about any of
-     * them outside [CollectionDetailDialogs].
+     * them outside [AddRemembrancesDialog].
      */
     val addPicker: CollectionDetailAddPicker = CollectionDetailAddPicker(collections, collectionId)
 
@@ -101,19 +98,6 @@ class CollectionDetailState(
     /** The progress summary shown in the page's header and in the session. */
     val stats: CollectionStats
         get() = collection?.let { statsOf(it, progress) } ?: EMPTY_STATS
-
-    /** The member to recite next, or `null` when the collection is finished or missing. */
-    val nextMember: Remembrance? get() = collection?.let { nextMember(it, progress) }
-
-    /**
-     * The members still to come, for the session's "ahead of this one" list.
-     *
-     * The current one is excluded by the caller asking for one more than it shows and dropping the first,
-     * because "what is next" is a property of the collection while "what is after this one" depends on
-     * where the session has got to — and the session owns that, not this page.
-     */
-    fun upcomingMembers(limit: Int): List<Remembrance> =
-        collection?.let { upcomingMembers(it, progress, limit) }.orEmpty()
 
     /**
      * Counts a member once. Optimistic, and rolled back by [CollectionProgressState] if the write

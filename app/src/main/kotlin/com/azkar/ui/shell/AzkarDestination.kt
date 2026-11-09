@@ -218,7 +218,7 @@ class AzkarNavigator(
     /**
      * Opens one remembrance for reading.
      *
-     * Pushed for the same reason every other [showX] here is, with the same no-op guard so a double
+     * Pushed for the same reason every other `show` function here is, with the same no-op guard so a double
      * click cannot stack two readers. What is different is that *every* screen in the app can reach
      * this one — the shelf's search results, a collection's grid, and the session it can interrupt —
      * which is the one thing a shared stack buys over a dialog: dismissing the reader leaves each of
@@ -248,9 +248,10 @@ class AzkarNavigator(
     /**
      * Leaves the screen on top for the one underneath.
      *
-     * Exactly one entry, and never the last: [NavDisplay] renders `backStack.last()`, so emptying the
-     * stack would leave it with nothing to draw. Stopping at the root rather than failing means a back
-     * press on the dashboard is swallowed instead of crashing, which is what the back gesture wants.
+     * Exactly one entry, and never the last: [androidx.navigation3.ui.NavDisplay] renders the last back-stack
+     * entry, so emptying the stack would leave it with nothing to draw. Stopping at the root rather than
+     * failing means a back press on the dashboard is swallowed instead of crashing, which is what the back
+     * gesture wants.
      */
     fun back() {
         if (backStack.size > ROOT_DEPTH) {

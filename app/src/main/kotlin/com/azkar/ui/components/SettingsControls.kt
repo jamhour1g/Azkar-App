@@ -5,13 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
@@ -21,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,46 +33,6 @@ import com.azkar.ui.notifications.presentation.OverlayPlacement
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import org.jetbrains.compose.resources.stringResource
-
-/**
- * The row vocabulary every settings page in the app is built from.
- *
- * Not in [Controls] because that file's kit is app-wide while these are sized and worded for a
- * settings page: a hint line under the label, a fixed-width stepper, a field tall enough to type a
- * coordinate into. They live here rather than beside either screen that uses them because there are
- * now two — the reminders screen and the settings screen — and a row kit only one of them can reach
- * is a row kit that will be copied and then drift.
- *
- * The one rule every row here follows is that the leading edge stays a single column of text however
- * long the sentences get, because that is what makes a long list of settings scannable. Anything a
- * row needs to say therefore goes *under* its label and never beside it — which is how the reminders
- * screen ended up with three-line rows on exactly the entries where the explanation mattered most.
- */
-@Composable
-fun SectionCard(
-    title: String,
-    body: String?,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    val colors = AzkarTheme.colors
-    AzkarCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        contentPadding = AzkarSpacing.xl,
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = title, color = colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-            if (body != null) {
-                Text(text = body, color = colors.textSecondary, fontSize = 12.sp)
-            }
-            Spacer(Modifier.height(6.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(AzkarSpacing.md)) {
-                content()
-            }
-        }
-    }
-}
 
 /**
  * One labelled control, with room for a switch, a dropdown or a stepper on the trailing edge.
@@ -208,31 +164,6 @@ fun StepperControl(
 
 /** The width the stepper column occupies, shared by [StepperControl] and the heading above it. */
 val STEPPER_WIDTH = 76.dp
-
-/** A labelled text field. The label is its own line because [AzkarOutlinedField] has no label slot. */
-@Composable
-fun TextFieldRow(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String = "",
-    supportingText: String? = null,
-    keyboardType: KeyboardType = KeyboardType.Text,
-) {
-    val colors = AzkarTheme.colors
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = label, color = colors.textSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-        AzkarOutlinedField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = placeholder,
-            modifier = Modifier.fillMaxWidth(),
-            supportingText = supportingText,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        )
-    }
-}
 
 /** One line of quiet explanation under a control. */
 @Composable

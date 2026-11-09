@@ -1,7 +1,8 @@
 package com.azkar.ui.notifications
 
 import de.infix.testBalloon.framework.core.testSuite
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.assertj.core.api.Assertions.assertThat
 import java.io.IOException
 import java.io.InputStream
@@ -10,7 +11,7 @@ import java.nio.file.Path
 
 val BundledAudioDefaultsSuite by testSuite("Bundled audio installation") {
     test("a failed copy leaves no partial sound and the next installation succeeds") {
-        runBlocking {
+        withContext(Dispatchers.IO) {
             val directory = Files.createTempDirectory("azkar-audio")
             try {
                 val failure =

@@ -50,7 +50,7 @@ private const val WATERMARK_ALPHA = 0.16f
  * [DailyHadithDetailsDialog], which the card opens; what changed is that the accent bar and the
  * separate "read more" button became the brand tile and a click target covering the whole card.
  *
- * [text] is whatever `RemembranceI18n` resolved for the *current* locale — Arabic in the Arabic
+ * `text` is whatever `RemembranceI18n` resolved for the *current* locale — Arabic in the Arabic
  * locale, the English rendering in the English one — so it deliberately does not pin a font family.
  * Pinning Amiri here (as the previous implementation did) meant the English locale set an English
  * sentence in a naskh face, which reads as a broken font rather than a choice. The theme already

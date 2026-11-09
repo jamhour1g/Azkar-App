@@ -221,30 +221,13 @@ private fun Collection<String>.toFixtureTags(nameLocale: Locale = Locale.ENGLISH
  * that failed only the write it cared about would first have to know the call order to set it up.
  */
 internal class FakeCollectionsGateway(
-    collections: List<RemembranceCollection> = emptyList(),
-    remembrances: List<Remembrance> = emptyList(),
-    progress: Map<Long, List<RecitationProgress>> = emptyMap(),
-    /**
-     * Which collection mirrors the user's stars, or `null` for none.
-     *
-     * Held as an id rather than a name because that is how the real snapshot carries it, and a fake
-     * that let the tests name the shelf would quietly reinstate the lookup by name that production
-     * deliberately does without — the one that stops mirroring the moment the user renames it.
-     */
-    favoritesCollectionId: Long? = null,
-    uncategorizedCollectionId: Long? = null,
-) : CollectionsGateway {
-    var collections: List<RemembranceCollection> = collections
-
-    var remembrances: List<Remembrance> = remembrances
-
-    var favoritesCollectionId: Long? = favoritesCollectionId
-
-    var uncategorizedCollectionId: Long? = uncategorizedCollectionId
-
+    var collections: List<RemembranceCollection> = emptyList(),
+    var remembrances: List<Remembrance> = emptyList(),
     /** Progress per collection id, held the way the gateway serves it. Tests can seed it. */
-    var progress: Map<Long, List<RecitationProgress>> = progress
-
+    var progress: Map<Long, List<RecitationProgress>> = emptyMap(),
+    var favoritesCollectionId: Long? = null,
+    var uncategorizedCollectionId: Long? = null,
+) : CollectionsGateway {
     /** When set, every call throws it. Used for the rollback and the failure-notice rules. */
     var failure: Throwable? = null
 

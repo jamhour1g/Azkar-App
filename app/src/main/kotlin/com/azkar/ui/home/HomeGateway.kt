@@ -22,10 +22,10 @@ interface HomeGateway {
     /**
      * Every collection the rail could offer: the ones the user pinned, then the rest.
      *
-     * Deliberately un-narrowed. Which of these earn a place on the first screen the user sees is a
-     * decision about reading, and it lives in [HomeCollections.pick] — one pure function, tested
-     * without a database. A gateway that applied it would put a layout rule inside a data read and
-     * leave no single place where the rule could be read on its own.
+     * Deliberately un-narrowed. Which of these earn a place on the first screen the user sees is a decision
+     * about reading, and it lives in [com.azkar.ui.library.data.HomeCollections.pick] — one pure function,
+     * tested without a database. A gateway that applied it would put a layout rule inside a data read and leave
+     * no single place where the rule could be read on its own.
      */
     suspend fun findHomeCollections(): List<HomeCollection>
 }

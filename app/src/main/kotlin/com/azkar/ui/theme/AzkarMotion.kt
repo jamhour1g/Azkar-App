@@ -12,14 +12,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.height
 
 /**
  * How long things take and how they ease, in one place.
  *
  * The app already animates — `animateColorAsState` on every hover, the spring on the switch thumb, the
  * chevron that turns when a dropdown opens — but each of those wrote its own numbers inline, so
- * nothing could be retimed without hunting through [com.azkar.ui.components.Controls] and every
+ * nothing could be retimed without hunting through `Controls.kt` and every
  * screen that copied its pattern. Durations and curves are the two properties that decide whether a
  * set of animations reads as *one* motion system or as a pile of effects, so they belong beside
  * [AzkarSpacing] and [CardSize] rather than inside the controls themselves.
@@ -76,9 +75,6 @@ object AzkarMotion {
 
     /** Accelerate curve — for motion that leaves. */
     val exit: Easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
-
-    /** [QUICK] on the enter curve: hover, selection, a chevron turning. */
-    fun <T> quick(): FiniteAnimationSpec<T> = tween(QUICK, easing = enter)
 
     /** [SCREEN] on the enter curve: a page arriving. */
     fun <T> screen(): FiniteAnimationSpec<T> = tween(SCREEN, easing = enter)

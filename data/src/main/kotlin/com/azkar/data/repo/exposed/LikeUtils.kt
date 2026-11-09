@@ -18,7 +18,7 @@ internal object LikeUtils {
     const val ESCAPE_CHARACTER: Char = '\\'
 
     /**
-     * Escapes the `LIKE` special characters (`\`, `%`, `_`) in [input] so they are matched
+     * Escapes the `LIKE` special characters (`\`, `%`, `_`) in the receiver so they are matched
      * literally.
      */
     fun String.escapeLikePattern(): String =
@@ -27,7 +27,7 @@ internal object LikeUtils {
             .replace("%", "\\%")
             .replace("_", "\\_")
 
-    /** Wraps [input] in `%…%` and escapes it, for a "contains" search. */
+    /** Wraps the receiver in `%…%` and escapes it, for a "contains" search. */
     fun String.containsPattern(): String = "%" + escapeLikePattern() + "%"
 
     /**

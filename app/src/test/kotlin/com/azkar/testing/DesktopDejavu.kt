@@ -3,14 +3,12 @@ package com.azkar.testing
 import androidx.compose.ui.platform.isDebugInspectorInfoEnabled
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import dejavu.Dejavu
 import dejavu.assertRecompositions
 import dejavu.runRecompositionTrackingUiTest
 
 /** Runs a custom-size Desktop test with the full reset used by Dejavu's public test runner. */
-@OptIn(ExperimentalTestApi::class)
 internal fun <T> withDesktopDejavu(block: () -> T): T {
     runRecompositionTrackingUiTest { }
     val previousInspectorInfoEnabled = isDebugInspectorInfoEnabled
@@ -28,7 +26,6 @@ internal fun <T> withDesktopDejavu(block: () -> T): T {
 }
 
 /** Fails closed when Dejavu cannot map a tag instead of accepting its fallback count of zero. */
-@OptIn(ExperimentalTestApi::class)
 internal fun SemanticsNodeInteraction.assertTrackedRecompositions(
     exactly: Int? = null,
     atLeast: Int? = null,
@@ -44,7 +41,6 @@ internal fun SemanticsNodeInteraction.assertTrackedRecompositions(
     return this
 }
 
-@OptIn(ExperimentalTestApi::class)
 internal fun SemanticsNodeInteraction.assertTrackedStable(expectedFunction: String? = null): SemanticsNodeInteraction =
     assertTrackedRecompositions(exactly = 0, expectedFunction = expectedFunction)
 
@@ -76,7 +72,7 @@ private object DejavuMapping {
     private val qualifiedName =
         Class
             .forName(
-                "dejavu.internal.DejavuTracer\$TracedComposable",
+                $$"dejavu.internal.DejavuTracer$TracedComposable",
             ).getMethod("getQualifiedName")
 
     fun functionFor(tag: String): String? = mapping.invoke(tracer, tag) as String?

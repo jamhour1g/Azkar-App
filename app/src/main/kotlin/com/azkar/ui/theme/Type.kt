@@ -283,7 +283,6 @@ object AzkarSpacing {
     val md = 12.dp
     val lg = 16.dp
     val xl = 20.dp
-    val xxl = 24.dp
     val section = 26.dp
     val dashboard = 24.dp
     val screenPaddingHorizontal = 28.dp

@@ -42,7 +42,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
@@ -474,10 +473,8 @@ private fun TypographyFontRow(
     modifier: Modifier = Modifier,
 ) {
     val name: @Composable (String) -> String = { candidate ->
-        if (candidate.isEmpty()) {
+        candidate.ifEmpty {
             stringResource(Res.string.settingsTypographyAzkarFont)
-        } else {
-            candidate
         }
     }
     val stored = state.typography.family
@@ -596,7 +593,7 @@ private fun FontPickerMenu(
             items(items = options, key = { it.ifEmpty { AZKAR_FONT_OPTION_KEY } }) { option ->
                 FontPickerOption(
                     option = option,
-                    label = if (option.isEmpty()) stringResource(Res.string.settingsTypographyAzkarFont) else option,
+                    label = option.ifEmpty { stringResource(Res.string.settingsTypographyAzkarFont) },
                     selected = option == selected,
                     defaultFamily = defaultFamily,
                     onClick = { onSelect(option) },
@@ -607,7 +604,6 @@ private fun FontPickerMenu(
 }
 
 /** One lazily created option, rendered in the actual face it names. */
-@OptIn(ExperimentalTextApi::class)
 @Composable
 private fun FontPickerOption(
     option: String,
@@ -672,7 +668,7 @@ private class FontPickerPositionProvider(
  *
  * The number sits beside the label rather than being left to the thumb's position because the thumb's
  * position is not a quantity anyone can hold in their head — "a bit past the middle" is a description of
- * where the thumb is, not of how big the text now is — and the one thing a reader who has just dragged a
+ * where the thumb is, not of how big the text now is — and the one thing a reader who has just dragged
  * a slider wants to be told is what they now have. It is the percentage, because that is the unit the
  * platform itself uses for this setting and the one a reader who has set it elsewhere will be looking for.
  *

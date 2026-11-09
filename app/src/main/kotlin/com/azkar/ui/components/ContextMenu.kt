@@ -167,8 +167,8 @@ internal fun AzkarContextMenu(
  * Where the menu goes: under the pointer, and never off the window.
  *
  * The anchor bounds are ignored deliberately. They describe the card that was pressed, and a menu
- * that opens under the card is a menu the pointer is no longer on — so the position comes from the
- * pointer instead, and the bounds are only ever used to know how much room is left.
+ * that opens under the card is a menu the pointer is no longer on. The pointer sets the position,
+ * which is clamped to the window bounds.
  */
 internal class CursorMenuPosition(
     private val cursor: () -> Offset,

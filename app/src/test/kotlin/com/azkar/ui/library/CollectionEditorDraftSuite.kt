@@ -513,26 +513,24 @@ val MissingLanguagesSuite by testSuite("Which languages a name can still be writ
     val english = Locale.ENGLISH
 
     test("a name marked English is missing Arabic, whoever is asking") {
-        val offered = missingLanguages(name = "Sleep", existing = emptyList(), uiLocale = arabic, nameLocale = english)
+        val offered = missingLanguages(existing = emptyList(), uiLocale = arabic, nameLocale = english)
 
         assertThat(offered.map { it.language }).containsExactly("ar")
     }
 
-    test("the interface language is only a fallback for a name nobody has typed") {
-        // An empty name says nothing, so the interface is the best guess there is — and it is a guess,
-        // which is why the English interface offers Arabic rather than offering nothing.
-        assertThat(missingLanguages("", emptyList(), english).map { it.language }).containsExactly("ar")
-        assertThat(missingLanguages("", emptyList(), arabic).map { it.language }).containsExactly("en")
+    test("the interface language is the fallback when no name language is recorded") {
+        assertThat(missingLanguages(emptyList(), english).map { it.language }).containsExactly("ar")
+        assertThat(missingLanguages(emptyList(), arabic).map { it.language }).containsExactly("en")
     }
 
     test("switching the interface does not change the language recorded for a name") {
-        assertThat(missingLanguages("Sleep", emptyList(), english, nameLocale = english))
-            .isEqualTo(missingLanguages("Sleep", emptyList(), arabic, nameLocale = english))
+        assertThat(missingLanguages(emptyList(), english, nameLocale = english))
+            .isEqualTo(missingLanguages(emptyList(), arabic, nameLocale = english))
     }
 
     test("a name marked Arabic is missing English, whoever is asking") {
         val offered =
-            missingLanguages(name = "قبل النوم", existing = emptyList(), uiLocale = english, nameLocale = arabic)
+            missingLanguages(existing = emptyList(), uiLocale = english, nameLocale = arabic)
 
         assertThat(offered.map { it.language }).containsExactly("en")
     }
@@ -540,7 +538,6 @@ val MissingLanguagesSuite by testSuite("Which languages a name can still be writ
     test("a language that already has a box is not offered a second one") {
         val offered =
             missingLanguages(
-                name = "Sleep",
                 existing = listOf(TranslationEntry(locale = arabic, name = "النوم")),
                 uiLocale = english,
                 nameLocale = english,
@@ -554,7 +551,6 @@ val MissingLanguagesSuite by testSuite("Which languages a name can still be writ
         // in step. Dropping it is the draft's job; this is only about not offering it again.
         val offered =
             missingLanguages(
-                name = "Sleep",
                 existing = listOf(TranslationEntry(locale = arabic)),
                 uiLocale = arabic,
                 nameLocale = english,
@@ -566,18 +562,11 @@ val MissingLanguagesSuite by testSuite("Which languages a name can still be writ
     test("a language is recognised by its language, not by the tag that named it") {
         val offered =
             missingLanguages(
-                name = "Sleep",
                 existing = listOf(TranslationEntry(locale = Locale.forLanguageTag("ar-EG"), name = "النوم")),
                 uiLocale = english,
                 nameLocale = english,
             )
 
         assertThat(offered).isEmpty()
-    }
-
-    test("a name of punctuation only falls back rather than claiming a language") {
-        // "!!!" is not English, and treating it as English would hide the Arabic chip for a name the
-        // user has barely started.
-        assertThat(missingLanguages("!!!", emptyList(), english).map { it.language }).containsExactly("ar")
     }
 }

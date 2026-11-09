@@ -18,6 +18,7 @@ import org.assertj.core.api.Assertions.assertThat
 import java.io.IOException
 import java.nio.file.Path
 import kotlin.io.path.exists
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The notification switches, against the settings store.
@@ -177,7 +178,7 @@ private inline fun withSwitches(block: (NotificationSettingsState, FakePreferenc
     }
 
 /**
- * Suspends until [state] has observed a complete snapshot satisfying [matches], then returns it.
+ * Suspends until the receiver has observed a complete snapshot satisfying [matches], then returns it.
  *
  * [snapshotFlow] rather than the polling loop this replaced. That loop re-read a `mutableStateOf` on
  * a timer, which is both a busy-wait and a way of writing the same assertion twice — a snapshot is
@@ -207,7 +208,7 @@ private fun storedFlagKey(key: PrayerKey) = booleanPreferencesKey("prayer.${key.
 private suspend fun awaitFileOnDisk(file: Path) {
     awaitOnRealClock(TIMEOUT_MILLIS) {
         while (!file.exists()) {
-            delay(FILE_POLL_MILLIS)
+            delay(FILE_POLL_MILLIS.milliseconds)
         }
     }
 }
@@ -225,7 +226,7 @@ private suspend fun awaitFileOnDisk(file: Path) {
 private suspend fun <T> awaitOnRealClock(
     timeoutMillis: Long,
     block: suspend () -> T,
-): T = withContext(Dispatchers.IO) { withTimeout(timeoutMillis) { block() } }
+): T = withContext(Dispatchers.IO) { withTimeout(timeoutMillis.milliseconds) { block() } }
 
 private const val TIMEOUT_MILLIS = 5_000L
 

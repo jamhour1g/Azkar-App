@@ -8,7 +8,6 @@ import com.azkar.ui.notifications.presentation.OverlayPlacement
 import de.infix.testBalloon.framework.core.testSuite
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import java.io.IOException
 
@@ -32,36 +31,32 @@ import java.io.IOException
 val NotificationPreferencesRepositorySuite by testSuite("The notification preferences") {
     test("audio defaults preserve changes made while installation is suspended") {
         withInMemorySettings { _, store, _ ->
-            runBlocking {
-                val started = CompletableDeferred<Unit>()
-                val finish = CompletableDeferred<Unit>()
-                val preferences =
-                    NotificationPreferencesRepository(store) {
-                        started.complete(Unit)
-                        finish.await()
-                        "/default/notification.mp3" to "/default/prayer.mp3"
-                    }
-                val loading = launch { preferences.refresh() }
-                started.await()
-                preferences.updateAudio { it.copy(notificationFile = "/custom.mp3") }
-                preferences.setPrayerSoundEnabled(PrayerKey.FAJR, false)
-                finish.complete(Unit)
-                loading.join()
-                assertThat(preferences.audio.value.notificationFile).isEqualTo("/custom.mp3")
-                assertThat(preferences.audio.value.prayerFile).isEqualTo("/default/prayer.mp3")
-                assertThat(preferences.audio.value.prayerSoundsEnabled[PrayerKey.FAJR.id]).isFalse()
-            }
+            val started = CompletableDeferred<Unit>()
+            val finish = CompletableDeferred<Unit>()
+            val preferences =
+                NotificationPreferencesRepository(store) {
+                    started.complete(Unit)
+                    finish.await()
+                    "/default/notification.mp3" to "/default/prayer.mp3"
+                }
+            val loading = launch { preferences.refresh() }
+            started.await()
+            preferences.updateAudio { it.copy(notificationFile = "/custom.mp3") }
+            preferences.setPrayerSoundEnabled(PrayerKey.FAJR, false)
+            finish.complete(Unit)
+            loading.join()
+            assertThat(preferences.audio.value.notificationFile).isEqualTo("/custom.mp3")
+            assertThat(preferences.audio.value.prayerFile).isEqualTo("/default/prayer.mp3")
+            assertThat(preferences.audio.value.prayerSoundsEnabled[PrayerKey.FAJR.id]).isFalse()
         }
     }
 
     test("audio installation failure does not stop observing prayer settings") {
         withInMemorySettings { scope, store, _ ->
-            runBlocking {
-                val preferences = NotificationPreferencesRepository(store) { throw IOException("unavailable") }
-                preferences.observe(scope)
-                preferences.setPrayerEnabled(PrayerKey.ASR, false)
-                assertThat(preferences.prayerFlags.value[PrayerKey.ASR]).isFalse()
-            }
+            val preferences = NotificationPreferencesRepository(store) { throw IOException("unavailable") }
+            preferences.observe(scope)
+            preferences.setPrayerEnabled(PrayerKey.ASR, false)
+            assertThat(preferences.prayerFlags.value[PrayerKey.ASR]).isFalse()
         }
     }
     test("a fresh install has the overlay it is designed with") {

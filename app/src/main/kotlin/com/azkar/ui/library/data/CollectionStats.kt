@@ -28,7 +28,7 @@ data class CollectionStats(
     val completion: Float
         get() = if (totalMembers == 0) 0f else completedMembers.toFloat() / totalMembers
 
-    /** Whether there is anything left to recite. An empty collection is complete, not incomplete. */
+    /** Whether every member has been recited. An empty collection is not complete. */
     val isComplete: Boolean
         get() = totalMembers > 0 && completedMembers == totalMembers
 
@@ -37,7 +37,7 @@ data class CollectionStats(
 }
 
 /**
- * Reads [stats] off a collection and the progress recorded against it.
+ * Calculates collection statistics from its members and recorded progress.
  *
  * A member with no progress row is not complete and contributes nothing to the total, which is the
  * same thing the database says — no row means no recitation.
@@ -86,7 +86,7 @@ fun nextMember(
     }
 }
 
-/** Whether [member] is one of the first [limit] members yet to be recited, for the session's preview. */
+/** The first [limit] members yet to be recited, for the session's preview. */
 fun upcomingMembers(
     collection: RemembranceCollection,
     progress: List<RecitationProgress>,

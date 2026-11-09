@@ -123,9 +123,9 @@ enum class SettingsGroup {
  * granularity is what the page was getting wrong, so it is worth stating what the earlier, coarser cut
  * looked like and why each of these exists. "Notifications" was one block holding three answers: when a
  * reminder is due, what the card that carries it looks like, and whether it could also leave the app.
- * Card size and duration are appearance and now sit under [SettingsGroup.APPEARANCE] next to the theme;
- * the schedule stays here, because it is the reminder itself. Start-on-login was in that card too,
- * under a heading about reminders, for a setting about the app launching — it is [STARTUP], under
+ * Card size and duration now sit in [SettingsSection.REMINDER_CARD], separate from the reminder
+ * schedule. Start-on-login was in that card too, under a heading about reminders, for a setting about
+ * the app launching — it is [STARTUP], under
  * [SettingsGroup.GENERAL]. Prayer times held a place *and* a calculation method under one subtitle
  * that described only the place, so the method read as a field of the address form; it is
  * [PRAYER_CALCULATION] now, and [PRAYER_LOCATION]'s subtitle says what its card actually holds.
@@ -407,7 +407,7 @@ fun SettingsSelectionRing(
  *
  * The caption is on screen rather than in a tooltip because this is the only control on the page that
  * is not a setting, and a reader who wants to close without reaching for the mouse should not have to
- * find that out by hovering. [keyCap] is deliberately untranslated — it names a key on the keyboard,
+ * find that out by hovering. The key label is deliberately untranslated — it names a key on the keyboard,
  * and keyboards are not localised.
  */
 @Composable

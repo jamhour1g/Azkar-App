@@ -1,7 +1,5 @@
 package com.azkar.ui.theme
 
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -130,7 +128,7 @@ private val MAX_WINDOW_HEIGHT: Dp = 1000.dp
  * [AzkarWindowSize.isCompactWidth] has the compact shelf standing by for it.
  *
  * Pure, so the sizing rules are testable without a display attached — which matters, because
- * [com.azkar.Main] can only reach the screen size when one is there.
+ * [com.azkar.main] can only reach the screen size when one is there.
  */
 fun windowSizeFor(
     screenWidth: Dp,
@@ -155,10 +153,10 @@ fun windowSizeFor(
 private fun openingEdge(
     screen: Dp,
     ceiling: Dp,
-): Dp = minOf(ceiling, screen * SCREEN_SHARE).let { Dp(kotlin.math.round(it.value)) }.coerceAtMost(screen)
+): Dp = Dp(kotlin.math.round(minOf(ceiling, screen * SCREEN_SHARE).value)).coerceAtMost(screen)
 
 /**
- * Defaults to the size the app opens at so a screen rendered outside [AzkarApp] (previews, tests)
+ * Defaults to the size the app opens at so a screen rendered outside [com.azkar.ui.shell.AzkarApp] (previews, tests)
  * still gets the layout it was designed for.
  */
 val LocalWindowSizeClass =

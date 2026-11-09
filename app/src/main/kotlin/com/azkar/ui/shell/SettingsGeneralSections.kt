@@ -67,7 +67,7 @@ private val LANGUAGE_FIELD_WIDTH = 170.dp
  * inside a container pays for that container twice.
  *
  * It leads the page because it is the one setting here that changes the words everything else is written
- * in. Under [SettingsGroup.APPEARANCE] it would have meant scrolling past two blocks about pixels to
+ * in. Under the former appearance grouping it would have meant scrolling past two blocks about pixels to
  * reach the answer to "why is this in the language it is in".
  *
  * The answer is named by its endonym via [displayNameIn] against the *active* locale rather than

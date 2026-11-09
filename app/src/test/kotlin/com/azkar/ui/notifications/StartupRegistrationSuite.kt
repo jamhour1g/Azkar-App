@@ -10,11 +10,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.assertj.core.api.Assertions.assertThat
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.time.Duration.Companion.milliseconds
 
 val StartupRegistrationSuite by testSuite("Native login registration") {
     test("successful enable verifies OS state and retires the legacy launcher") {
@@ -117,7 +118,9 @@ val StartupRegistrationSuite by testSuite("Native login registration") {
     test("migration respects a Linux startup entry disabled outside the app") {
         withStartup { fixture ->
             fixture.writeLegacyRegistration()
-            Files.writeString(fixture.legacyPath, Files.readString(fixture.legacyPath) + "Hidden=true\n")
+            withContext(Dispatchers.IO) {
+                Files.writeString(fixture.legacyPath, Files.readString(fixture.legacyPath) + "Hidden=true\n")
+            }
 
             fixture.registration.migrateLegacyRegistration(wasEnabled = true).getOrThrow()
 
@@ -138,11 +141,12 @@ val StartupRegistrationSuite by testSuite("Native login registration") {
 
     test("cleanup leaves a file without the legacy launch marker alone") {
         withStartup { fixture ->
-            Files.writeString(fixture.legacyPath, "A user-managed startup entry")
+            withContext(Dispatchers.IO) { Files.writeString(fixture.legacyPath, "A user-managed startup entry") }
 
             fixture.registration.setEnabled(true).getOrThrow()
 
-            assertThat(Files.readString(fixture.legacyPath)).isEqualTo("A user-managed startup entry")
+            val saved = withContext(Dispatchers.IO) { Files.readString(fixture.legacyPath) }
+            assertThat(saved).isEqualTo("A user-managed startup entry")
         }
     }
 
@@ -154,11 +158,9 @@ val StartupRegistrationSuite by testSuite("Native login registration") {
                 legacyPaths = emptyList(),
                 packaged = false,
             )
-        runBlocking {
-            assertThat(registration.state().getOrThrow()).isEqualTo(AutoLaunchState.UNSUPPORTED)
-            assertThat(registration.setEnabled(true).isFailure).isTrue()
-            assertThat(registration.migrateLegacyRegistration(wasEnabled = true).isSuccess).isTrue()
-        }
+        assertThat(registration.state().getOrThrow()).isEqualTo(AutoLaunchState.UNSUPPORTED)
+        assertThat(registration.setEnabled(true).isFailure).isTrue()
+        assertThat(registration.migrateLegacyRegistration(wasEnabled = true).isSuccess).isTrue()
     }
 
     test("settings display the OS state even when the saved preference disagrees") {
@@ -228,16 +230,17 @@ private class StartupFixture {
     }
 }
 
-private fun withStartup(block: suspend (StartupFixture) -> Unit) {
-    val fixture = StartupFixture()
-    try {
-        runBlocking { block(fixture) }
-    } finally {
-        fixture.directory.toFile().deleteRecursively()
+private suspend fun withStartup(block: suspend (StartupFixture) -> Unit) =
+    withContext(Dispatchers.IO) {
+        val fixture = StartupFixture()
+        try {
+            block(fixture)
+        } finally {
+            fixture.directory.toFile().deleteRecursively()
+        }
     }
-}
 
-private fun withStartupEditor(
+private suspend fun withStartupEditor(
     block: suspend (
         StartupFixture,
         NotificationPreferencesRepository,
@@ -257,7 +260,7 @@ private fun withStartupEditor(
 }
 
 private suspend fun awaitStartupChange(editor: NotificationSettingsState.NotificationEditor) {
-    withTimeout(5_000) {
-        while (editor.isUpdatingStartup) delay(10)
+    withTimeout(5_000.milliseconds) {
+        while (editor.isUpdatingStartup) delay(10.milliseconds)
     }
 }

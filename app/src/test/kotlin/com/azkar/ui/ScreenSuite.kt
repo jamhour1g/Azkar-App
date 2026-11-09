@@ -214,15 +214,6 @@ private fun ScreenFixture(
 }
 
 /**
- * The first collection id out of the catalogue rather than a literal.
- *
- * A test that hardcodes an id is a test that breaks when the fixture is renumbered, and it breaks in
- * the way that looks like a product bug — the screen genuinely renders nothing, for a reason that
- * has nothing to do with the screen.
- */
-private fun firstCollectionId(): Long = PREVIEW_COLLECTION_ID
-
-/**
  * Matches the collection *card*, and only the collection card.
  *
  * This indirection is not decoration. A collection can carry a name that also appears elsewhere on
@@ -301,8 +292,8 @@ private fun withScreenContainer(block: () -> Unit) {
 /**
  * Smoke tests for the screens themselves.
  *
- * [ControlBehaviourSuite] proves the controls work. This proves the screens *wire them up* — that
- * clicking a collection card reaches the callback with the right id, that the search field is bound
+ * [com.azkar.ui.components.ControlBehaviourSuite] proves the controls work. This proves the screens
+ * *wire them up*: clicking a collection card reaches the callback with the right id, that the search field is bound
  * to the catalogue rather than to a local field, that a toggle actually changes what is rendered.
  * Those are the wiring mistakes that survive every visual check, because the screen still looks
  * correct: it is only the journey from a tap to a navigation that is broken.
@@ -389,7 +380,7 @@ val ScreenSuite by testSuite("Screen smoke") {
             onNodeWithTag("collections-screen").assertTrackedStable("ShelfColumn")
             assertThat(
                 opened,
-            ).describedAs("the card must report the id it stands for").containsExactly(firstCollectionId())
+            ).describedAs("the card must report the id it stands for").containsExactly(PREVIEW_COLLECTION_ID)
         }
     }
 
@@ -404,7 +395,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                         detail =
                             rememberCollectionDetailState(
                                 catalogue = catalogue,
-                                collectionId = firstCollectionId(),
+                                collectionId = PREVIEW_COLLECTION_ID,
                                 reminders = REMINDERS,
                             ),
                         onBack = {},
@@ -431,7 +422,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                         detail =
                             rememberCollectionDetailState(
                                 catalogue = catalogue,
-                                collectionId = firstCollectionId(),
+                                collectionId = PREVIEW_COLLECTION_ID,
                                 reminders = REMINDERS,
                             ),
                         onBack = { backs++ },
@@ -593,7 +584,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                 ScreenFixture {
                     CollectionSessionScreen(
                         modifier = Modifier.testTag("collection-session-screen").padding(padding.intValue.dp),
-                        session = rememberCollectionSessionState(catalogue, firstCollectionId(), REMINDERS),
+                        session = rememberCollectionSessionState(catalogue, PREVIEW_COLLECTION_ID, REMINDERS),
                         onBack = {},
                         onOpenRemembrance = {},
                         showToast = { _, _, _ -> },
@@ -614,7 +605,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                 ScreenFixture {
                     CollectionSessionScreen(
                         modifier = Modifier.testTag("collection-session-screen"),
-                        session = rememberCollectionSessionState(catalogue, firstCollectionId(), REMINDERS),
+                        session = rememberCollectionSessionState(catalogue, PREVIEW_COLLECTION_ID, REMINDERS),
                         onBack = { backs++ },
                         onOpenRemembrance = {},
                         showToast = { _, _, _ -> },
@@ -631,7 +622,7 @@ val ScreenSuite by testSuite("Screen smoke") {
     }
 
     /**
-     * Asserted against [CollectionSessionState.position] rather than the "1 / 54" counter drawn on
+     * Asserted against [com.azkar.ui.library.CollectionSessionState.position] rather than the "1 / 54" counter drawn on
      * screen.
      *
      * The counter is a formatted, translated string, so a test written against it breaks on a
@@ -644,7 +635,7 @@ val ScreenSuite by testSuite("Screen smoke") {
             var position = -1
             setTrackedContent {
                 val catalogue = rememberPreviewCatalogue(Locale.ENGLISH)
-                val session = rememberCollectionSessionState(catalogue, firstCollectionId(), REMINDERS)
+                val session = rememberCollectionSessionState(catalogue, PREVIEW_COLLECTION_ID, REMINDERS)
                 position = session.position
                 ScreenFixture {
                     CollectionSessionScreen(
@@ -692,7 +683,7 @@ val ScreenSuite by testSuite("Screen smoke") {
                 val catalogue = rememberPreviewCatalogue(Locale.ENGLISH)
                 val passageId =
                     catalogue.allCollections
-                        .firstOrNull { it.id == firstCollectionId() }
+                        .firstOrNull { it.id == PREVIEW_COLLECTION_ID }
                         ?.members
                         ?.firstOrNull()
                         ?.id ?: 0L

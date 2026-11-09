@@ -9,9 +9,8 @@ import java.util.Locale
  *
  * Two things here are load-bearing enough to pin. [Locale.isSameLanguageAs] is what stops a user
  * re-picking the language they are already on from rebuilding the tree, so its "language only, not
- * the region" rule is a deliberate decision rather than a shortcut. And [Locale.isArabic] decides
- * both the layout direction and the typeface at once, which is only sound while those two questions
- * have the same answer — the last test says what would break them apart.
+ * the region" rule is a deliberate decision rather than a shortcut. The language profiles also
+ * supply layout direction and typeface choices, with English as the fallback for unsupported languages.
  */
 val SupportedLanguagesSuite by testSuite("The supported languages") {
     test("Arabic runs right to left and English does not") {
@@ -51,12 +50,8 @@ val SupportedLanguagesSuite by testSuite("The supported languages") {
         assertThat(supportedLocales).containsExactly(Locale.ENGLISH, Locale.forLanguageTag("ar"))
     }
 
-    test("one language answering both questions is what will stop being true") {
-        // `isArabic` decides the layout direction and the typeface from a single comparison, which
-        // holds only because Arabic is both the one right-to-left language and the one non-Latin
-        // script in the app. Hebrew is the case that breaks it: right to left, so mirrored layout,
-        // but not Arabic script, so it must still draw in Inter — and this predicate cannot say so.
-        // A language that needs a face we do not bundle is the other half of the same limit.
+    test("an unsupported language does not select the Arabic typeface") {
+        // Unsupported languages use the English profile until the app supplies their own profile.
         assertThat(Locale.forLanguageTag("he").usesArabicTypeface).isFalse()
     }
 }

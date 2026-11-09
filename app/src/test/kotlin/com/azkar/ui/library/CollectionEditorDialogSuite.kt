@@ -1,6 +1,5 @@
 package com.azkar.ui.library
 
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
@@ -68,7 +67,7 @@ private class EditorReported {
  * footer stay put — so on a short window the create-a-tag row is legitimately below the fold, and
  * asserting it is *displayed* there would be testing the test window rather than the dialog.
  */
-@OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalTestApi::class)
 private fun converse(
     pageRecompositions: IntRange = 0..0,
     nameRecompositions: IntRange = 0..0,
@@ -125,7 +124,7 @@ private fun SkikoComposeUiTest.advance() {
     onNodeWithText(NEXT).performClick()
 }
 
-@OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalTestApi::class)
 val CollectionEditorDialogSuite by testSuite("The create-collection dialog") {
 
     test("the first page is the name and nothing else") {

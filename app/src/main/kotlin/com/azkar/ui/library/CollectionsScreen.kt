@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -53,7 +52,6 @@ import com.azkar.ui.components.TooltipIconButton
 import com.azkar.ui.components.contextMenuTarget
 import com.azkar.ui.components.pressableClick
 import com.azkar.ui.components.rememberContextMenuState
-import com.azkar.ui.library.CollectionsState
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.library.model.TagOption
 import com.azkar.ui.preview.rememberPreviewCatalogue
@@ -67,6 +65,7 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The library's one and only view: the shelf.
@@ -255,7 +254,7 @@ private fun CollectionsScreenStatePreview(
     LaunchedEffect(state) {
         state.loadLabels()
         state.loadData()
-        while (state.loading) delay(10)
+        while (state.loading) delay(10.milliseconds)
         state.collectionQuery = collectionQuery
     }
     CollectionsScreenContent(

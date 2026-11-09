@@ -74,7 +74,7 @@ internal object ActionIcons {
     /**
      * Open the thing this row is about.
      *
-     * An arrow rather than [Icons.Outlined.OpenInNew] because nothing here opens in another window:
+     * An arrow rather than `OpenInNew` because nothing here opens in another window:
      * every one of these rows leads to a page inside this app, and an "open in new window" glyph on a
      * row that does not would be a small lie repeated once per card.
      */
@@ -118,9 +118,6 @@ internal object ActionIcons {
      * yet", which is a list of several things arriving at once.
      */
     val addMembers: ImageVector get() = Icons.Outlined.Layers
-
-    /** Throw the recorded progress away and start counting afresh. The same shape as [restart]. */
-    val resetProgress: ImageVector get() = Icons.Outlined.RestartAlt
 
     /**
      * Take a passage out of a collection.

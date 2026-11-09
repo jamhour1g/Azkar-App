@@ -39,12 +39,14 @@ import java.util.Locale
  * re-created after a delete comes back with an id nothing is holding, and the pair is the only
  * handle that means anything.
  *
- * Written as one function over every table that fits because [RemembranceTranslationEntity],
- * [ExplanationTranslationEntity] and [TagTranslationEntity] implement [LocalizedText] and have
- * identical shapes; the entity class and the table are passed in because that is the only thing that
- * tells them apart. The type carries two bounds rather than one because it has to be both halves of
- * that sentence at once: `EntityClass<ID, T>` requires `T : Entity<ID>`, and this function needs `T`
- * to be a [LocalizedText] as well. A single bound can only be one of the two.
+ * Written as one function over every table that fits because
+ * [com.azkar.data.table.entity.RemembranceTranslationEntity],
+ * [com.azkar.data.table.entity.ExplanationTranslationEntity] and
+ * [com.azkar.data.table.entity.TagTranslationEntity] implement [LocalizedText] and have identical shapes; the
+ * entity class and the table are passed in because that is the only thing that tells them apart. The type
+ * carries two bounds rather than one because it has to be both halves of that sentence at once:
+ * `EntityClass<ID, T>` requires `T : Entity<ID>`, and this function needs `T` to be a [LocalizedText] as well.
+ * A single bound can only be one of the two.
  */
 internal fun <T> syncLocalizedTexts(
     entityClass: EntityClass<Long, T>,

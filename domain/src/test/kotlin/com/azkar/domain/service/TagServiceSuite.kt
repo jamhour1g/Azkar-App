@@ -7,6 +7,7 @@ import com.azkar.domain.model.TagUsage
 import com.azkar.domain.model.impl.TagImpl
 import com.azkar.domain.repo.TagRepository
 import de.infix.testBalloon.framework.core.testSuite
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
 
@@ -14,7 +15,7 @@ import org.assertj.core.api.Assertions.assertThat
  * The two rules the tag service owns that the database only enforces.
  *
  * Everything else in this service is a pass-through, and pass-throughs earn their tests in the
- * adapter that does the real work — [com.azkar.data.repo.exposed.ExposedTagRepositorySuite] covers
+ * adapter that does the real work — `ExposedTagRepositorySuite` in the data module covers
  * the SQL. What is left is the part that has to hold no matter which database answers: two tags
  * cannot share a name, and the check has to happen *before* the write.
  *
@@ -153,6 +154,8 @@ private suspend fun failureFrom(block: suspend () -> Unit): Throwable? =
     try {
         block()
         null
+    } catch (cancelled: CancellationException) {
+        throw cancelled
     } catch (thrown: Exception) {
         thrown
     }

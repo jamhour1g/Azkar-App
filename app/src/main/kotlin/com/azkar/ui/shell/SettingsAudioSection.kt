@@ -15,6 +15,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,6 +50,7 @@ import com.azkar.ui.preview.rememberPreviewNotificationSettingsState
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarVariantsPreview
+import com.azkar.util.runCatchingCancellable
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
 import io.github.vinceglb.filekit.dialogs.FileKitType
@@ -253,7 +255,7 @@ private fun AudioFileSelector(choice: AudioChoiceModel) {
             tooltip = stringResource(Res.string.settingsAudioChoose),
             onClick = {
                 scope.launch {
-                    runCatching {
+                    runCatchingCancellable {
                         FileKit.openFilePicker(
                             type = FileKitType.File("mp3", "wav", "aif", "aiff", "m4a", "mp4"),
                             dialogSettings = FileKitDialogSettings(title = choice.title),
@@ -279,7 +281,9 @@ private fun AudioVolumeControl(choice: AudioChoiceModel) {
             Text(stringResource(Res.string.settingsAudioVolume), color = AzkarTheme.colors.textSecondary)
             Text("${(choice.volume * 100).roundToInt()}%", color = AzkarTheme.colors.textSecondary)
         }
-        Slider(value = choice.volume, onValueChange = choice.onVolume, valueRange = 0f..1f)
+        val sliderState = rememberSliderState(value = choice.volume)
+        sliderState.value = choice.volume
+        Slider(state = sliderState, onValueChange = choice.onVolume)
     }
 }
 

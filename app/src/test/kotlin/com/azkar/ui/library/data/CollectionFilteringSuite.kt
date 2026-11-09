@@ -401,7 +401,7 @@ val CollectionFilteringSuite by testSuite("Narrowing, ordering and searching the
         val unlabelled = customCollection(id = 21L, name = "Unlabelled", members = listOf(travel))
 
         fun shelfOf(
-            vararg collections: com.azkar.domain.model.RemembranceCollection,
+            vararg collections: RemembranceCollection,
             tagIds: Set<Long> = emptySet(),
         ) = CollectionFiltering.shelf(
             collections = collections.toList(),
