@@ -54,7 +54,7 @@ import org.jetbrains.compose.resources.stringResource
  * Below the azkar card's 0.16f, but not by much, and for a reason that only holds in one palette:
  * the dark wash underneath is already a saturated amber, so matching the blue card's opacity there
  * would print the texture twice over. The light wash is barely off white — see the note on
- * [AzkarColors.favoriteCardStart] — so in the light palette this watermark, the card's edge and the
+ * [com.azkar.ui.theme.AzkarColors.favoriteCardStart] — so in the light palette this watermark, the card's edge and the
  * count pill are what actually say "amber" out loud.
  */
 private const val FAVORITE_WATERMARK_ALPHA = 0.13f
@@ -144,8 +144,8 @@ fun DailyHadithDetailsDialog(
  * waste on the dhikr instead. The heading survives as a 15sp label because the star and the label
  * are what tell the user this is *their* pick rather than another card of the day's.
  *
- * One deliberate departure from the sibling: the edge is drawn in [AzkarColors.favoriteCardBorder]
- * rather than the shared [AzkarColors.border]. The wash alone cannot carry the distinction in the
+ * One deliberate departure from the sibling: the edge is drawn in [com.azkar.ui.theme.AzkarColors.favoriteCardBorder]
+ * rather than the shared [com.azkar.ui.theme.AzkarColors.border]. The wash alone cannot carry the distinction in the
  * light palette, because the deepest amber the grey body text can sit on is indistinguishable from
  * the page; an edge can, and it costs the reader nothing in legibility.
  *

@@ -4,11 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithTag
 import com.azkar.testing.assertTrackedRecompositions
 import de.infix.testBalloon.framework.core.testSuite
@@ -33,7 +31,6 @@ import java.util.Locale
  * page it is near-white, so the pair must come out light-on-dark. A projection that merely copied one
  * value into both slots would pass a "did you set it" test and still put dark ink on a dark chip.
  */
-@OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
 val SchemeProjectionSuite by testSuite("The Material scheme the app hands to its controls") {
     test("the inverse pair inverts with the page, so an overlay is legible on either") {
         runRecompositionTrackingUiTest {

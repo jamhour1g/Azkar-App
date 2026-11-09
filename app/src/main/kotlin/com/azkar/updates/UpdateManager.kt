@@ -2,6 +2,7 @@ package com.azkar.updates
 
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.azkar.settings.SettingsStore
+import com.azkar.util.runCatchingCancellable
 import dev.nucleusframework.core.runtime.ExecutableRuntime
 import dev.nucleusframework.core.runtime.ExecutableType
 import dev.nucleusframework.core.runtime.NucleusApp
@@ -20,7 +21,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -34,6 +34,7 @@ import java.io.File
 import java.io.IOException
 import java.math.BigInteger
 import java.nio.file.Path
+import kotlin.time.Duration.Companion.milliseconds
 import dev.nucleusframework.updater.provider.GitHubProvider as NucleusGitHubProvider
 
 enum class UpdateChannel(
@@ -151,7 +152,7 @@ class UpdateManager(
     suspend fun checkManually() {
         logger.info { "User requested an update check" }
         _status.value = UpdateStatus.Checking
-        delay(CHECK_FEEDBACK_DELAY_MILLIS)
+        delay(CHECK_FEEDBACK_DELAY_MILLIS.milliseconds)
         initialized.await()
         checkForUpdates(_channel.value, explicitChannelSwitch = false)
     }
@@ -263,9 +264,11 @@ class UpdateManager(
         val updater = activeUpdater ?: return
         logger.info { "Starting update installation" }
         _status.value = UpdateStatus.Installing
-        delay(INSTALL_ANIMATION_DELAY_MILLIS)
+        delay(INSTALL_ANIMATION_DELAY_MILLIS.milliseconds)
         try {
             updater.installAndRestart(file.toFile())
+        } catch (failure: CancellationException) {
+            throw failure
         } catch (failure: IOException) {
             logger.error(failure) { "Unable to start update installation" }
             _status.value = UpdateStatus.Failed(failure.message ?: "Update installation failed")
@@ -298,6 +301,8 @@ class UpdateManager(
                     logger.error(failure) { "Update check failed" }
                     _status.value = UpdateStatus.Failed(failure.message ?: "Update check failed")
                     return@withLock
+                } catch (failure: CancellationException) {
+                    throw failure
                 } catch (failure: IllegalStateException) {
                     logger.error(failure) { "Update check failed" }
                     _status.value = UpdateStatus.Failed(failure.message ?: "Update check failed")
@@ -369,9 +374,9 @@ class UpdateManager(
     }
 
     private suspend fun releaseNotes(version: String): String =
-        runCatching {
+        runCatchingCancellable {
             val response = httpClient.get("https://api.github.com/repos/jamhour1g/Azkar-App/releases/tags/v$version")
-            if (response.status.value !in 200..299) return@runCatching ""
+            if (response.status.value !in 200..299) return@runCatchingCancellable ""
             Json
                 .parseToJsonElement(response.bodyAsText())
                 .jsonObject["body"]

@@ -50,7 +50,7 @@ val DesktopWindowClassSuite by testSuite("The Linux desktop entry") {
             .describedAs(
                 "A nested entry class would put a `$` into the window class, which desktop " +
                     "entries and the shell that reads them both mangle",
-            ).doesNotContain("\$")
+            ).doesNotContain("$")
     }
 
     test("the AWT toolkit is initialised from the class that owns the entry point") {

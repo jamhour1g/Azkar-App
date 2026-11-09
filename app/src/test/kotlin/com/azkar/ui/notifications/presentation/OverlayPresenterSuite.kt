@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The overlay presenter's whole contract, exercised without a window, a display or a real clock.
@@ -69,18 +70,18 @@ val OverlayPresenterSuite by testSuite("The overlay notification presenter") {
     test("each card expires on its own deadline") {
         runPresenterTest(durationSeconds = 8) { presenter, scope ->
             presenter.present(notice(1))
-            scope.advanceTimeBy(4_000)
+            scope.advanceTimeBy(4_000.milliseconds)
             scope.runCurrent()
             presenter.present(notice(2))
 
-            scope.advanceTimeBy(4_500)
+            scope.advanceTimeBy(4_500.milliseconds)
             scope.runCurrent()
 
             // The first card's eight seconds are up; the second's are not, and dropping one has
             // left the other alone.
             assertThat(presenter.notices.value.map { it.title }).containsExactly("Second")
 
-            scope.advanceTimeBy(4_000)
+            scope.advanceTimeBy(4_000.milliseconds)
             scope.runCurrent()
             assertThat(presenter.notices.value).isEmpty()
         }
@@ -89,21 +90,21 @@ val OverlayPresenterSuite by testSuite("The overlay notification presenter") {
     test("hovering freezes a card, and leaving resumes the remainder") {
         runPresenterTest(durationSeconds = 5) { presenter, scope ->
             val id = presenter.present(notice(1))!!
-            scope.advanceTimeBy(2_000)
+            scope.advanceTimeBy(2_000.milliseconds)
             scope.runCurrent()
 
             presenter.setPaused(id, true)
-            scope.advanceTimeBy(30_000)
+            scope.advanceTimeBy(30_000.milliseconds)
             scope.runCurrent()
             assertThat(presenter.notices.value).hasSize(1)
 
             presenter.setPaused(id, false)
             // Only the three seconds that were left before the pointer arrived, not five.
-            scope.advanceTimeBy(2_900)
+            scope.advanceTimeBy(2_900.milliseconds)
             scope.runCurrent()
             assertThat(presenter.notices.value).hasSize(1)
 
-            scope.advanceTimeBy(200)
+            scope.advanceTimeBy(200.milliseconds)
             scope.runCurrent()
             assertThat(presenter.notices.value).isEmpty()
         }
@@ -115,11 +116,11 @@ val OverlayPresenterSuite by testSuite("The overlay notification presenter") {
 
             assertThat(presenter.remainingFraction(id)).isEqualTo(1f)
 
-            scope.advanceTimeBy(2_000)
+            scope.advanceTimeBy(2_000.milliseconds)
             scope.runCurrent()
             assertThat(presenter.remainingFraction(id)).isEqualTo(0.75f)
 
-            scope.advanceTimeBy(6_500)
+            scope.advanceTimeBy(6_500.milliseconds)
             scope.runCurrent()
             // The card is gone from the stack, but it is still on the screen on its way out and it is
             // still asking how much time it has. The answer is the truth: a card that has run out
@@ -132,7 +133,7 @@ val OverlayPresenterSuite by testSuite("The overlay notification presenter") {
     test("a card that is dismissed keeps the bar it was dismissed with") {
         runPresenterTest(durationSeconds = 8) { presenter, scope ->
             val id = presenter.present(notice(1))!!
-            scope.advanceTimeBy(2_000)
+            scope.advanceTimeBy(2_000.milliseconds)
             scope.runCurrent()
 
             presenter.dismiss(id)
@@ -146,20 +147,20 @@ val OverlayPresenterSuite by testSuite("The overlay notification presenter") {
     test("the countdown stops under the pointer and resumes from where it stopped") {
         runPresenterTest(durationSeconds = 8) { presenter, scope ->
             val id = presenter.present(notice(1))!!
-            scope.advanceTimeBy(4_000)
+            scope.advanceTimeBy(4_000.milliseconds)
             scope.runCurrent()
 
             presenter.setPaused(id, true)
-            scope.advanceTimeBy(30_000)
+            scope.advanceTimeBy(30_000.milliseconds)
             scope.runCurrent()
             assertThat(presenter.remainingFraction(id)).isEqualTo(0.5f)
 
             presenter.setPaused(id, false)
-            scope.advanceTimeBy(2_000)
+            scope.advanceTimeBy(2_000.milliseconds)
             scope.runCurrent()
             assertThat(presenter.remainingFraction(id)).isEqualTo(0.25f)
 
-            scope.advanceTimeBy(2_100)
+            scope.advanceTimeBy(2_100.milliseconds)
             scope.runCurrent()
             assertThat(presenter.notices.value).isEmpty()
         }
@@ -208,7 +209,7 @@ val OverlayPresenterSuite by testSuite("The overlay notification presenter") {
 
             assertThat(presenter.remainingFraction(id)).isEqualTo(1f)
 
-            scope.advanceTimeBy(1_550)
+            scope.advanceTimeBy(1_550.milliseconds)
             scope.runCurrent()
             assertThat(presenter.remainingFraction(id)).isEqualTo(0.5f)
         }
@@ -220,7 +221,7 @@ val OverlayPresenterSuite by testSuite("The overlay notification presenter") {
             presenter.present(notice(2))
 
             // Two words ≈ 3,100 ms; the long passage has already reached the model's ceiling.
-            scope.advanceTimeBy(3_200)
+            scope.advanceTimeBy(3_200.milliseconds)
             scope.runCurrent()
             assertThat(presenter.notices.value.map { it.id }).containsExactly(longId)
             presenter.dispose()

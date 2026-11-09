@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +66,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * One reminder, drawn the way the app draws everything else.
@@ -223,15 +223,14 @@ private fun rememberFavoriteControl(
     val id = (item.action as? NotificationAction.Remembrance)?.id
     val content = item.content as? NotificationContent.Remembrance
     var favorite by remember(item.id) { mutableStateOf(content?.isFavorite ?: false) }
-    val toggle = onToggleFavorite
-    if (id == null || content == null || toggle == null) return null
+    if (id == null || content == null || onToggleFavorite == null) return null
     return FavoriteControl(
         isFavorite = favorite,
         onToggle = {
             val next = !favorite
             favorite = next
             scope.launch {
-                val written = toggle(id, next)
+                val written = onToggleFavorite(id, next)
                 if (!written && favorite == next) {
                     favorite = !next
                 }
@@ -322,7 +321,7 @@ internal fun CountdownRule(
         }
         while (isActive) {
             countdown.sample(sampler.value())
-            delay(COUNTDOWN_TICK_MILLIS)
+            delay(COUNTDOWN_TICK_MILLIS.milliseconds)
         }
     }
     Box(

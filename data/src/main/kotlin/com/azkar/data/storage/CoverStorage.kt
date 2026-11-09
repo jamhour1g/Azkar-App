@@ -63,7 +63,7 @@ class CoverStorage(
     fun storedNames(): Set<String> =
         runCatching {
             if (!Files.isDirectory(directory)) {
-                emptySet<String>()
+                emptySet()
             } else {
                 Files.list(directory).use { entries ->
                     entries.filter { Files.isRegularFile(it) }.toList().mapTo(mutableSetOf()) { it.fileName.toString() }

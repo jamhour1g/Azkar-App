@@ -12,6 +12,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.assertj.core.api.Assertions.assertThat
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * That the picker's two ways in — search, and a picked suggestion — land in the same place, and that
@@ -170,8 +171,8 @@ private suspend fun awaitUntil(
     timeoutMillis: Long = 5_000,
     condition: () -> Boolean,
 ) {
-    withTimeout(timeoutMillis) {
-        while (!condition()) delay(10)
+    withTimeout(timeoutMillis.milliseconds) {
+        while (!condition()) delay(10.milliseconds)
     }
 }
 

@@ -236,7 +236,7 @@ class CollectionPresenter(
                 missingText,
             ).explanation
 
-    fun sourceLabel(remembrance: Remembrance): String = "${remembrance.source ?: sourceUnknown}"
+    fun sourceLabel(remembrance: Remembrance): String = remembrance.source ?: sourceUnknown
 
     /**
      * The remembrance in Arabic, whatever the interface is written in.
@@ -301,7 +301,7 @@ class CollectionPresenter(
      * Category tag name to collection mark.
      *
      * A table of English seed-data names rather than of localized labels, for the reason
-     * [iconKeyForCategory] gives. Kept beside [categoryLabels] on purpose: the two tables cover the
+     * [iconKeyForCategory] gives. Kept in step with the shipped tag vocabulary: both cover the
      * same list of categories and a tag added to one and not the other would show up as a
      * properly-labeled category wearing the fallback mark, which is the kind of thing nobody notices
      * until two tiles in a row look identical.
@@ -334,7 +334,7 @@ class CollectionPresenter(
          *
          * A table of English seed-data names rather than of localized labels, for the reason
          * [iconKeyFor] gives, and kept in step with the shipped wording in
-         * `OfficialTagVocabulary` for the same reason it used to be kept beside [categoryLabels]: a
+         * `OfficialTagVocabulary` so names and marks stay aligned: a
          * category added to one and not the other shows up as a properly-named category wearing the
          * fallback mark, which is the kind of thing nobody notices until two tiles in a row look
          * identical.
@@ -420,7 +420,7 @@ class CollectionPresenter(
  * The one tag in the seed data that names who compiled the row rather than what it is about.
  *
  * It is a tag like any other and it is on every shipped row, which is exactly why it is named here as
- * a file constant rather than left as one more entry in the label table: [primaryCategory] has to
+ * a file constant rather than left as one more entry in the label table: [CollectionPresenter.primaryCategory] has to
  * recognise it to step over it, and a localized label is not something it can recognise.
  */
 private const val PUBLISHER_TAG = "muslim data"

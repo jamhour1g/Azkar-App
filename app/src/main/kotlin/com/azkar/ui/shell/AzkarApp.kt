@@ -230,8 +230,8 @@ private fun RouteNotificationActions(
  * @param library the reads the three library destinations share, bundled rather than threaded one by
  * one. The shelf, the two collection pages and the Manage tags page all draw from the same holder
  * and the same reminder state, so the alternative was growing this signature every time a library
- * screen gained a dependency — which is the same reason [CollectionsGatewayDependencies] exists one
- * layer down.
+ * screen gained a dependency — the reason [com.azkar.ui.library.data.CollectionsGatewayDependencies]
+ * exists one layer down.
  */
 @Composable
 private fun ColumnScope.AzkarContent(
@@ -282,7 +282,7 @@ private fun ColumnScope.AzkarContent(
 /**
  * The Manage tags screen, remembered beside the shelf rather than inside its own entry.
  *
- * Held here for the same reason [catalogue] is: `NavDisplay` renders only the entry on top of the
+ * Held here for the same reason [LibraryContent.catalogue] is: `NavDisplay` renders only the entry on top of the
  * stack and disposes the one under it, so a holder remembered per entry would be thrown away and
  * rebuilt on every trip between the shelf and this page — which would re-read the vocabulary each
  * time and lose the half of it the user had scrolled to.
@@ -327,10 +327,10 @@ private fun EntryProviderScope<AzkarDestination>.tagsEntry(
 /**
  * The reads every library destination shares.
  *
- * A bag rather than a six-line parameter list for the same reason [CollectionsGatewayDependencies] is
- * one: the destinations under the library tab are a family, they draw from one shelf and one set of
- * reminders, and every screen added to that family would otherwise mean a new parameter here and a
- * new argument at the one call site that builds it.
+ * A bag rather than a six-line parameter list, like
+ * [com.azkar.ui.library.data.CollectionsGatewayDependencies]: the destinations under the library tab
+ * are a family, drawing from one shelf and one set of reminders. Every added screen would otherwise
+ * mean a new parameter here and a new argument at the one call site that builds it.
  *
  * [catalogue] is the one read of the shelf, remembered beside the navigation rather than inside any
  * entry. [NavDisplay] renders only the entry on top of the stack and disposes the one under it, so a

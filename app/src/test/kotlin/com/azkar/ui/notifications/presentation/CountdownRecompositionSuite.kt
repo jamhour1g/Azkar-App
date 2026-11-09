@@ -8,7 +8,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
@@ -25,7 +24,6 @@ import org.assertj.core.api.Assertions.assertThat
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-@OptIn(ExperimentalTestApi::class)
 val CountdownRecompositionSuite by testSuite("Notification countdown recomposition") {
     test("sampling a draining countdown does not recompose the rule") {
         runRecompositionTrackingUiTest {

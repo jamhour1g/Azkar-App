@@ -14,8 +14,9 @@ import java.util.concurrent.ConcurrentHashMap
  * for the time beside them, `ofLocalizedTime(SHORT)` for the collection reminder dialogs, and a
  * `"%02d"` pair for that dialog's two dropdowns. They disagreed with each other in the same row —
  * a prayer showed `05:12` on the right and `5:12 AM` underneath it — and the queue's fields were
- * pinned to 24-hour by a KDoc that argued the notices [NotificationRuntime] prints must match them,
- * which is an argument about two labels agreeing, not about which label a reader should see.
+ * pinned to 24-hour by a KDoc that argued the notices printed by
+ * [com.azkar.ui.notifications.NotificationRuntime] must match them. That is an argument about two
+ * labels agreeing, not about which label a reader should see.
  *
  * There is one answer now: a localised short time, which is `8:00 AM` in English and `8:00 ص` in
  * Arabic, resolved from the active UI locale rather than hard-coded. Which is why the whole app
@@ -30,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap
  * does not promise is digit shapes — see [formatMinuteOfHour].
  *
  * Formatters are immutable and expensive enough to build that caching them is worth it:
- * [PrayerTimesModel] republishes its whole table every second, and `ofLocalizedTime` resolves a
+ * [com.azkar.ui.home.PrayerTimesModel] republishes its whole table every second, and `ofLocalizedTime` resolves a
  * locale provider on each call. The cache is keyed by [Locale], which — unlike the string it often
  * wraps — has real `equals`/`hashCode`, so `Locale.ENGLISH` and `Locale.forLanguageTag("en")` hit the
  * same entry when they are the same locale and miss when they are not. Nothing is ever evicted:

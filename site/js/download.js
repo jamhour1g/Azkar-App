@@ -241,10 +241,12 @@ platformTabs.forEach((tab, index) => {
   });
 });
 
+/** @type {Navigator & {userAgentData?: {platform?: string}}} */
+const visitorNavigator = navigator;
 const visitorPlatform = [
-  navigator.userAgentData?.platform,
-  navigator.platform,
-  navigator.userAgent,
+  visitorNavigator.userAgentData?.platform,
+  visitorNavigator.platform,
+  visitorNavigator.userAgent,
 ]
   .filter(Boolean)
   .join(" ")
@@ -340,7 +342,10 @@ async function connectStableDownloads() {
     const response = await fetch(releaseListUrl, {
       headers: { Accept: "application/vnd.github+json" },
     });
-    if (!response.ok) throw new Error("Release lookup failed");
+    if (!response.ok) {
+      setReleaseStatus("Could not check for stable installers.", { showLink: true });
+      return;
+    }
 
     const releases = await response.json();
     const release = releases.find((item) => !item.draft && !item.prerelease);
@@ -423,7 +428,7 @@ async function connectStableDownloads() {
   }
 }
 
-connectStableDownloads();
+void connectStableDownloads();
 
 // Linux repository command switcher
 const repositoryTabs = Array.from(document.querySelectorAll(".repository-tab"));

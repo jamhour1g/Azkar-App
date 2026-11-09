@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The overlay's entire behaviour, expressed as state and rules, with no window in sight.
@@ -200,7 +201,7 @@ class OverlayNotificationPresenter(
                     // Capped so that a pause is noticed promptly: without the cap a card that
                     // freezes for a minute would still be sleeping on its original deadline and
                     // would vanish the moment the pointer left it.
-                    delay(minOf(wait, EXPIRY_POLL_MILLIS))
+                    delay(minOf(wait, EXPIRY_POLL_MILLIS).milliseconds)
                     if (isExpiredLocked(id)) {
                         expire(id)
                         return@launch

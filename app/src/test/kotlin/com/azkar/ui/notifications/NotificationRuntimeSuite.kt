@@ -22,6 +22,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * That the scheduler announces what came due while it was running, and stays quiet about the rest.
@@ -247,8 +248,8 @@ private suspend fun RecordingPublisher.awaitNotice(
     timeoutMillis: Long = AWAIT_TIMEOUT_MILLIS,
 ): NotificationNotice? =
     withContext(Dispatchers.IO) {
-        withTimeoutOrNull(timeoutMillis) {
-            while (notices.none(predicate)) delay(POLL_MILLIS)
+        withTimeoutOrNull(timeoutMillis.milliseconds) {
+            while (notices.none(predicate)) delay(POLL_MILLIS.milliseconds)
         }
         notices.firstOrNull(predicate)
     }
@@ -264,7 +265,7 @@ private suspend fun RecordingPublisher.awaitNotice(
  * the only thing the test knows.
  */
 private suspend fun settleOnRealClock(millis: Long) {
-    withContext(Dispatchers.IO) { delay(millis) }
+    withContext(Dispatchers.IO) { delay(millis.milliseconds) }
 }
 
 /**

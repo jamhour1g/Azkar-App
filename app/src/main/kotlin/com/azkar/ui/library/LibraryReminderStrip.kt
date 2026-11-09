@@ -37,6 +37,7 @@ import org.jetbrains.compose.resources.stringResource
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * One line under the library's banner saying what the queue will say next, and how much it has to
@@ -196,7 +197,7 @@ private fun summaryClock(): Instant {
     var now by remember { mutableStateOf(Instant.now()) }
     LaunchedEffect(Unit) {
         while (true) {
-            delay(SUMMARY_TICK_MILLIS)
+            delay(SUMMARY_TICK_MILLIS.milliseconds)
             now = Instant.now()
         }
     }

@@ -11,6 +11,7 @@ import com.azkar.ui.home.name
 import com.azkar.ui.library.data.CollectionsGateway
 import com.azkar.ui.library.model.CollectionsSnapshot
 import com.azkar.ui.notifications.presentation.NotificationPublisher
+import com.azkar.util.runCatchingCancellable
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +25,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Routes a notification activation to the live navigation tree, in two halves.
@@ -143,9 +145,9 @@ class NotificationRuntime(
             val startedAt = clock()
             schedulerJob =
                 scope.launch {
-                    runCatching { preferences.refresh() }
+                    runCatchingCancellable { preferences.refresh() }
                         .onFailure { logger.error(it) { "Unable to load notification preferences" } }
-                    runCatching {
+                    runCatchingCancellable {
                         preferences.initializeQueueDefaults {
                             val snapshot = collections.fetchSnapshot()
                             snapshot.collections
@@ -162,12 +164,12 @@ class NotificationRuntime(
                     val tickNanos = tickIntervalMillis * NANOS_PER_MILLI
                     var nextTickNanos = System.nanoTime()
                     while (isActive) {
-                        runCatching { tick(startedAt) }
+                        runCatchingCancellable { tick(startedAt) }
                             .onFailure { logger.error(it) { "Notification scheduler tick failed" } }
                         nextTickNanos += tickNanos
                         val remainingNanos = nextTickNanos - System.nanoTime()
                         if (remainingNanos > 0L) {
-                            delay(remainingNanos / NANOS_PER_MILLI)
+                            delay((remainingNanos / NANOS_PER_MILLI).milliseconds)
                         } else {
                             nextTickNanos = System.nanoTime()
                         }
@@ -177,9 +179,9 @@ class NotificationRuntime(
     }
 
     suspend fun refreshDetectedLocation(): Result<PrayerLocationSettings> =
-        runCatching {
+        runCatchingCancellable {
             val current = preferences.prayerLocation.value
-            if (!current.autoDetect) return@runCatching current
+            if (!current.autoDetect) return@runCatchingCancellable current
             locationDetector
                 .detect()
                 .copy(method = current.method, autoDetect = true)
@@ -412,7 +414,7 @@ class NotificationRuntime(
         id: Long,
         favorite: Boolean,
     ): Boolean =
-        runCatching { collections.setFavorite(id, favorite) }
+        runCatchingCancellable { collections.setFavorite(id, favorite) }
             .onFailure { failure ->
                 logger.error(failure) { "Unable to persist the favorite flag for remembrance $id" }
             }.isSuccess

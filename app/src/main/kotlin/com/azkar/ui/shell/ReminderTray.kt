@@ -49,6 +49,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import java.awt.GraphicsEnvironment
+import kotlin.time.Duration.Companion.milliseconds
 import com.azkar.ui.notifications.trayAvailable as isTrayAvailable
 
 private val logger = KotlinLogging.logger {}
@@ -147,7 +148,7 @@ private fun PrayerTrayCountdownTicker(countdown: PrayerTrayCountdownState?) {
         logger.info { "Prayer tray countdown ticker is running" }
         var previousTickFailed = false
         while (true) {
-            delay(COUNTDOWN_TICK_MS)
+            delay(COUNTDOWN_TICK_MS.milliseconds)
             val tickFailure = runCatching { state.tick() }.exceptionOrNull()
             if (tickFailure is CancellationException) throw tickFailure
             if (tickFailure != null && !previousTickFailed) {
@@ -194,9 +195,9 @@ private fun PrayerTrayNativeHost(
             quit = TrayMenuEntry(quitLabel, ActionIcons.dismiss, { currentMenuActions.quit() }),
             iconRenderProperties = menuIconRenderProperties,
         )
-    val currentMenu by rememberUpdatedState<TrayMenuBuilder.() -> Unit>({
+    val currentMenu by rememberUpdatedState<TrayMenuBuilder.() -> Unit> {
         addPrayerTrayMenu(menu)
-    })
+    }
     PrayerTrayNativeRegistration(tray, primaryAction, tooltip, menuKey, currentMenu)
 }
 

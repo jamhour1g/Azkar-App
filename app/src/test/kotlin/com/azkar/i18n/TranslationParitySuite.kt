@@ -117,7 +117,7 @@ private const val ARABIC_FILE = "values-ar"
 /**
  * One `strings.xml`, as the two things worth comparing: what it names, and what each name takes.
  *
- * A [plurals] is kept apart from a [string] rather than folded into the same map because the two are
+ * A [plurals] is kept apart from a [strings] rather than folded into the same map because the two are
  * allowed to disagree about their shape — see the suite comment — and because their placeholders are
  * counted over items rather than over one value.
  */

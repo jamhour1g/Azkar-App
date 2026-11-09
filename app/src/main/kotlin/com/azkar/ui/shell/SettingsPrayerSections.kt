@@ -95,8 +95,8 @@ import org.jetbrains.compose.resources.stringResource
  * The five per-prayer switches are *not* here. They live on the home screen, on the row of the prayer
  * they gate, which is the only place the time itself is shown — a switch on a settings page turns a
  * prayer off against a number the reader cannot see, and had to be duplicated on the reminders screen
- * before this moved. [LocationDetector] still fills the city from the network, but the user is not asked
- * to confirm it there.
+ * before this moved. [com.azkar.ui.notifications.LocationDetector] still fills the city from the
+ * network, but the user is not asked to confirm it there.
  *
  * The note saying so sits at the foot of the card rather than in the block's subtitle, because it is
  * about the other screen rather than about this block: as a subtitle it read as though the switches were

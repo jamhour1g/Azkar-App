@@ -32,7 +32,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -114,7 +113,8 @@ private const val PRESSED_STIFFNESS = 700f
  * alone — [shape] still defaults to the ramp's `large` step, and [size] still maps to the three
  * paddings and elevations the stylesheet defined — so nothing moves where the user left it.
  *
- * [content] stays a plain lambda rather than a [ColumnScope] one. Callers stack their own [Row]s and
+ * [content] stays a plain lambda rather than a [androidx.compose.foundation.layout.ColumnScope] one.
+ * Callers stack their own [Row]s and
  * [Box]es inside, and widening the scope would invite `.weight()` calls that resolve against the
  * card's own column while the padding below already hands them a box to live in.
  *
@@ -212,7 +212,8 @@ fun mirrorHorizontalGradient(
  *
  * The hand-drawn version drew its own press response: `indication = null` plus a whole-control scale
  * down to [PRESSED_SCALE] on a spring. Material 3 Expressive replaced that idea with something better
- * and this is the swap. [ButtonShapes] carries a resting and a *pressed* silhouette, so the press
+ * and this is the swap. [androidx.compose.material3.ButtonShapes] carries a resting and a *pressed*
+ * silhouette, so the press
  * signal is the corner geometry tightening rather than the whole control shrinking — which is what
  * was wanted, since a twelve percent shrink of a long label moves the button's own edges and reads as
  * a layout change. The ripple that used to be switched off here comes back for free.
@@ -224,7 +225,6 @@ fun mirrorHorizontalGradient(
  * Colours are still read from [AzkarTheme.colors] rather than [MaterialTheme.colorScheme], because the
  * app has a palette of its own and `toMaterialScheme` is only a one-way bridge.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PrimaryButton(
     text: String,
@@ -279,7 +279,6 @@ fun PrimaryButton(
  * disabled state is the ripple and colour system's answer rather than a whole-control `alpha(0.5f)`
  * that used to fade the border along with the label.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SecondaryButton(
     text: String,
@@ -333,7 +332,8 @@ fun SecondaryButton(
  * `.nav-btn` + `.nav-btn-active` — header navigation and the favourites prev/next pair.
  *
  * Drawn as a [FilledTonalButton] whose colours carry the whole selected/unselected distinction.
- * Material 3 has a real [ToggleButton] here and it was the obvious choice, but its checked state owns
+ * Material 3 has a real [androidx.compose.material3.ToggleButton] here and it was the obvious choice,
+ * but its checked state owns
  * the label colour as well as the container, and the header tabs need `primaryStrong` on `highlight`
  * for a contrast reason — the label sits *on* the highlight and owes small text 4.5:1, which `primary`
  * does not clear. Borrowing the container but colouring the content by hand keeps that decision where
@@ -344,7 +344,8 @@ fun SecondaryButton(
  *
  * The elevation is pinned flat, and that is the whole of the fix for a bug this component shipped
  * with for a while: a grey pill under the pointer, in light mode only. [FilledTonalButton] raises its
- * tonal elevation on hover, [Surface] resolves a container colour through `surfaceColorAtElevation`
+ * tonal elevation on hover, [androidx.compose.material3.Surface] resolves a container colour through
+ * `surfaceColorAtElevation`
  * once that elevation is above zero, and surface tint is applied in light themes only. A transparent
  * container therefore silently becomes a filled one the instant the pointer arrives. Every other
  * control here passes an opaque container, which is why it never showed up anywhere else — the
@@ -358,7 +359,6 @@ fun SecondaryButton(
  * itself — which is exactly why the hover layer alone would have tinted the tab near-black and why
  * that theory looked so convincing. It was never the cause.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun NavButton(
     text: String,
@@ -467,7 +467,6 @@ private fun rememberHoverAlpha(
  * snapping, and they are drawn in the order that preserves "selected wins": hover first, selected on
  * top.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun IconActionButton(
     icon: ImageVector,
@@ -629,7 +628,6 @@ fun Modifier.pressableClick(
  * the colour is read inside `drawBehind`; hover now costs one draw-phase invalidation rather than a
  * dozen compositions, and a `favorite` toggle is the only thing that recomposes at all.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CircleIconButton(
     icon: ImageVector,
@@ -666,10 +664,9 @@ fun CircleIconButton(
             .size(buttonSize)
             .drawBehind {
                 val radius = size.minDimension / 2f
-                val override = background
                 when {
-                    override != null ->
-                        if (override.alpha > 0f) drawCircle(override, radius = radius)
+                    background != null ->
+                        if (background.alpha > 0f) drawCircle(background, radius = radius)
                     else -> {
                         val alpha = fillAlpha.value
                         if (alpha > 0.001f) drawCircle(fillColor, radius = radius, alpha = alpha)
@@ -709,7 +706,7 @@ fun CircleIconButton(
  * was missing, and it is a one-word change for a chip that reads as a chip.
  *
  * **No colour is named here.** [PlainTooltip] defaults to the scheme's inverse pair, and
- * [toMaterialScheme] projects that pair onto [AzkarColors.textPrimary]/[AzkarColors.cardBackground],
+ * `toMaterialScheme` projects that pair onto [AzkarColors.textPrimary]/[AzkarColors.cardBackground],
  * so the tooltip inverts with the theme — dark chip on the light palette, light chip on the dark one
  * — without this file knowing anything about it. A tooltip sits on cards, artwork and hover fills
  * alike, which is precisely why it cannot be drawn from the page's own colours.
@@ -881,7 +878,6 @@ fun AzkarToggleSwitch(
  * turns a row of quiet toggles into a row of buttons. So the unselected fill is set back to
  * transparent and only [AzkarColors.highlight] is allowed to say "this one is on".
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PillToggle(
     text: String,
@@ -930,7 +926,6 @@ fun PillToggle(
  * differ only in what the selected state looks like. That was two hand-drawn `Row`s before; it is
  * now two colour arguments.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AzkarFilterChip(
     text: String,
@@ -983,7 +978,7 @@ fun AzkarFilterChip(
  *
  * The popup's own chrome is left to Material. It used to carry a hand-drawn 1dp border and a 4dp
  * inset, which is what a flat popup looked like before menus were given elevation; Material now
- * gives it a tonal fill over a shadow, and [toMaterialScheme]'s `surfaceContainer` already points
+ * gives it a tonal fill over a shadow, and `toMaterialScheme`'s `surfaceContainer` already points
  * at [AzkarColors.cardBackground], so the palette lands without anyone naming a colour here.
  *
  * The trigger is a [TooltipIconButton] and the popup is a [TooltipBox] sibling of it, which is the
@@ -1114,7 +1109,7 @@ fun AzkarOutlinedField(
      * whatever `AzkarTheme` set, so the override reaches only the fields that ask for it. It is
      * carried on the [TextStyle] rather than by wrapping the field in a `LocalLayoutDirection`, because
      * the theme provides that locally and any value a caller supplied around the field would be
-     * silently discarded on the way down ([AzkarThemePreview] records the same trap for previews).
+     * silently discarded on the way down ([com.azkar.ui.theme.AzkarThemePreview] records the same trap for previews).
      */
     textDirection: LayoutDirection? = null,
     /**
@@ -1178,7 +1173,7 @@ fun AzkarOutlinedField(
  *
  * `Content` is the meaningful null: it defers to whatever layout direction is already in effect,
  * which is what a field with no override wants. Keeping this conversion to one place means the rest
- * of the app can talk in [LayoutDirection] — the vocabulary [LocalLayoutDirection] and
+ * of the app can talk in [LayoutDirection] — the vocabulary [androidx.compose.ui.platform.LocalLayoutDirection] and
  * [isRtlLayout] already use — without every caller having to know there are two similar enums.
  */
 private fun LayoutDirection?.toTextDirection(): TextDirection =
@@ -1214,7 +1209,7 @@ private fun FieldHint(
  * still comes from `AzkarTheme`.
  *
  * That swap is also what deleted the estimate. Sixty-odd lines of character-width arithmetic existed
- * only to place the bar without measuring, and the KDoc on the old [tabUnderlineOffset] explains the
+ * only to place the bar without measuring, and the KDoc on the old `tabUnderlineOffset` explains the
  * real reason it stayed unmeasured: a measured position would not resolve until after first
  * composition, and the frame before that is the one the screenshot harness captures.
  *
@@ -1295,7 +1290,8 @@ fun IconTint(
  * border over the same scrim, and the one thing they must agree on is the padding inside it — a dialog
  * whose content sits 4dp further in than its neighbours reads as a mistake rather than a choice.
  *
- * The inner scope is a plain [ColumnScope] lambda, so a caller lays its own rows out and nothing here
+ * The inner scope is a plain [androidx.compose.foundation.layout.ColumnScope] lambda, so a caller
+ * lays its own rows out and nothing here
  * decides how many of them there are.
  *
  * Its chrome is a [Style] rather than a run of modifiers for the same reason as [BorderedStateBox]:

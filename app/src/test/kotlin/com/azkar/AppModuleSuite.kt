@@ -139,11 +139,10 @@ val AppModuleSuite by testSuite("AppModule") {
 
         test("the reminder sources are a single in their own right") { graph ->
             val koin = graph.koin
-            // Distinct from the collections gateway on purpose, and this is where that is pinned: the
-            // shelf asks the queue's own seam which collections are sources, and the library's
-            // gateway is about the library's rows. One copy of each, or the two would drift apart.
-            assertThat(koin.get<ReminderSources>()).isSameAs(koin.get<ReminderSources>())
-            assertThat(koin.get<ReminderSources>()).isNotSameAs(koin.get<CollectionsGateway>())
+            // The queue resolves one source instance, separate from the library gateway.
+            val reminderSources: Any = koin.get<ReminderSources>()
+            assertThat(reminderSources).isSameAs(koin.get<ReminderSources>())
+            assertThat(reminderSources).isNotSameAs(koin.get<CollectionsGateway>())
         }
 
         test("the prayer location source is the location detector") { graph ->

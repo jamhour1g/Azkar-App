@@ -5,7 +5,6 @@ import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.LoggerContext
 import ch.qos.logback.classic.PatternLayout
 import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.classic.spi.ThrowableProxy
 import ch.qos.logback.core.read.ListAppender
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -16,10 +15,7 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * What one logger emitted while [captureLogs] ran its block.
  *
- * The event list is the source of truth; the accessors exist so a test can assert on the thing it
- * actually cares about — a message, a level, a payload field, the throwable — without every
- * caller re-deriving the same `filter`/`map` chains. Anything richer than that is one
- * [ILoggingEvent] away.
+ * Events are kept in order and can be filtered by level for assertions on their rendered output.
  */
 class CapturedLogs internal constructor(
     events: List<ILoggingEvent>,
@@ -27,32 +23,9 @@ class CapturedLogs internal constructor(
     /** Every event, in emission order. */
     val events: List<ILoggingEvent> = events.toList()
 
-    /** Every formatted message, in emission order. */
-    val messages: List<String> get() = events.map { it.formattedMessage }
-
     /** The events logged at exactly [level]. */
     fun at(level: Level): List<ILoggingEvent> = events.filter { it.level == level }
-
-    /** The formatted messages logged at exactly [level]. */
-    fun messagesAt(level: Level): List<String> = at(level).map { it.formattedMessage }
-
-    /**
-     * Every `payload` entry of every structured `logger.atX { … }` call, keyed by field name.
-     *
-     * A field can legitimately appear more than once across a block, hence the list per key.
-     * Values are rendered with [Any.toString] because SLF4J types a key-value value as `Object`:
-     * what every payload in this codebase holds is a string, and an assertion reads better as one.
-     */
-    val payload: Map<String, List<String>>
-        get() = events.flatMap(::fieldsOf).groupBy({ (key, _) -> key }, { (_, value) -> value })
-
-    /** The throwable attached to the one event at [level]. */
-    fun throwableAt(level: Level): Throwable? = (at(level).single().throwableProxy as? ThrowableProxy)?.throwable
 }
-
-/** [event]'s key-value pairs, rendered as plain string pairs. */
-private fun fieldsOf(event: ILoggingEvent): List<Pair<String, String>> =
-    event.keyValuePairs.orEmpty().map { pair -> pair.key to pair.value.toString() }
 
 /**
  * Runs [block] with a logger of its own, and collects every event that logger emitted.

@@ -8,14 +8,15 @@ Before starting the migration, verify that your project meets the following
 requirements:
 
 1. **Navigation version**: Update to Jetpack Navigation 2.8.0 or higher
-2. **Kotlin serialization plugin**:
-3. Add the plugin to `libs.versions.toml`:
+2. **Kotlin serialization plugin**: Add the plugin to `libs.versions.toml`:
 
-    [libraries]
-    kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+   ```toml
+   [libraries]
+   kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 
-    [plugins]
-    kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+   [plugins]
+   kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+   ```
 
 - Add the dependencies to your top-level `build.gradle.kts` and module-level `build.gradle.kts`.
 

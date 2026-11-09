@@ -48,7 +48,7 @@ data class FavoriteState(
  * Port of `com.azkar.components.home.controller.FavoritesController`.
  *
  * `loadFavorites` blocked on a JPA read; here [loadFavorites] only stores the list and the
- * screen recomputes the visible text from [currentFavorite], so the same
+ * screen recomputes the visible text through [FavoritesState.resolve], so the same
  * `RemembranceI18n.resolveTexts` fallback chain is preserved without a second write path.
  */
 @Stable

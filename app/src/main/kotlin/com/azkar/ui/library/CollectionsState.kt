@@ -19,6 +19,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The shelf's own view of the library: what the user is narrowing it by, and nothing else.
@@ -285,7 +286,6 @@ class CollectionsState(
     var remembranceQuery: String by mutableStateOf(initialRemembranceQuery)
 
     private var settledRemembranceQuery: String by mutableStateOf(initialRemembranceQuery)
-        private set
 
     private var searchDebounce: Job? = null
 
@@ -341,16 +341,6 @@ class CollectionsState(
      */
     val shelfLabels: List<Tag> get() = catalogue.shelfTags
 
-    /**
-     * How many remembrances the whole shelf holds, for the sidebar's "All Collections" row.
-     *
-     * Summed over the members rather than counted from [allRemembrances], because a user collection
-     * may hold the same passage as a shipped one and the sidebar is counting what there is to read,
-     * not how many distinct rows the database has.
-     */
-    val totalRemembrances: Int
-        get() = allCollections.sumOf { it.members.size }
-
     /** Cross-collection hits, grouped by the collection each was found in. Empty unless searching. */
     val searchGroups: List<SearchGroup>
         get() =
@@ -377,7 +367,7 @@ class CollectionsState(
         }
         searchDebounce =
             scope.launch {
-                delay(SEARCH_DEBOUNCE_MILLIS)
+                delay(SEARCH_DEBOUNCE_MILLIS.milliseconds)
                 settledRemembranceQuery = value
             }
     }

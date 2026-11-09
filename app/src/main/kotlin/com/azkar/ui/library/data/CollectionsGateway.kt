@@ -254,7 +254,7 @@ interface CollectionMembershipGateway {
  * written instead of from what it hoped it wrote.
  */
 interface CollectionWriteGateway {
-/**
+    /**
      * Creates a collection and returns it.
      *
      * [tagNames] are resolved to real tags on the way in, creating any that do not exist yet, so a
@@ -270,7 +270,7 @@ interface CollectionWriteGateway {
         nameLocale: Locale = Locale.ENGLISH,
     ): RemembranceCollection
 
-/**
+    /**
      * Writes every editable field of a collection and returns it as stored.
      *
      * Takes the whole desired state rather than only what changed: the editor dialog opens seeded with
@@ -289,7 +289,7 @@ interface CollectionWriteGateway {
         tagLocale: Locale? = null,
     ): RemembranceCollection
 
-/**
+    /**
      * Takes a copy of [source] into the app's own cover storage and returns the name to store.
      *
      * Separate from [createCollection] and [editCollection] because the file has to be copied before
@@ -299,17 +299,17 @@ interface CollectionWriteGateway {
      */
     suspend fun storeCoverImage(source: Path): String
 
-/** Pins a collection to the top of the shelf, or unpins it, returning it as stored. */
+    /** Pins a collection to the top of the shelf, or unpins it, returning it as stored. */
     suspend fun setCollectionPinned(
         id: Long,
         pinned: Boolean,
     ): RemembranceCollection
 
-/**
+    /**
      * Stars a collection the user comes back to, or takes the star off, returning it as stored.
      *
-     * Named for its subject rather than simply `setFavorite` because [setFavorite] above already
-     * means the same word about a *remembrance*, and two favourites in one interface — one starred
+     * Named for its subject rather than simply `setFavorite` because [CollectionsGateway.setFavorite]
+     * already means the same word about a *remembrance*, and two favourites in one interface — one starred
      * passage, one starred collection — is exactly the pair of names that gets a caller wrong.
      */
     suspend fun setCollectionFavorite(
@@ -317,17 +317,17 @@ interface CollectionWriteGateway {
         favorite: Boolean,
     ): RemembranceCollection
 
-/** Copies a collection into a new one and returns the copy. */
+    /** Copies a collection into a new one and returns the copy. */
     suspend fun duplicateCollection(
         id: Long,
         newName: String,
         nameLocale: Locale = Locale.ENGLISH,
     ): RemembranceCollection
 
-/** Deletes a collection, and the cover image it owned if it had one. */
+    /** Deletes a collection, and the cover image it owned if it had one. */
     suspend fun deleteCollection(id: Long)
 
-/** Records that the collection was opened just now, so the shelf can lead with it. */
+    /** Records that the collection was opened just now, so the shelf can lead with it. */
     suspend fun touchCollectionOpened(id: Long)
 
     /**
@@ -452,7 +452,7 @@ data class CollectionsGatewayDependencies(
  * this gateway through its interface gets the same guarantee a user does.
  */
 class DomainCollectionsGateway(
-    private val dependencies: CollectionsGatewayDependencies,
+    dependencies: CollectionsGatewayDependencies,
     private val logger: KLogger = KotlinLogging.logger {},
 ) : CollectionsGateway {
     private val remembranceService = dependencies.remembranceService
@@ -747,7 +747,7 @@ class DomainCollectionsGateway(
      * the database it names, and adding a member to a row that is not there would fail on the
      * foreign key rather than quietly do nothing.
      */
-    private suspend fun ensurePicksShelf(): Long? {
+    private suspend fun ensurePicksShelf(): Long {
         val recorded = seedState.reminderPicksCollectionId()
         if (recorded != null) {
             if (collectionService.findById(recorded) != null) return recorded

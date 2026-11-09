@@ -37,9 +37,7 @@ import org.jetbrains.compose.resources.StringResource
  * sentence captured at write time would survive into the wrong language, so the outcome travels as a
  * key and is resolved after the switch.
  *
- * [FAILED] reuses the plain medium tone rather than anything alarming. It is the state for every
- * failure in the shelf — a duplicate name, a collection deleted in another window — and none of them
- * are errors the user can act on beyond trying again.
+ * [CollectionNoticeKey.FAILED] uses a high-priority notice so a failed mutation is visible.
  */
 val CollectionNoticeKey.messageResource: StringResource
     get() =

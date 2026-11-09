@@ -5,7 +5,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonShapes
 import androidx.compose.material3.ChipShapes
 import androidx.compose.material3.IconButtonShapes
-import androidx.compose.material3.MenuItemShapes
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
@@ -30,7 +29,7 @@ internal object AzkarShapeRamp {
     val extraExtraLarge = RoundedCornerShape(48.dp)
 
     /**
-     * The pressed half of the morph, one step below each resting radius.
+     * The pressed shapes used by controls, one step below their resting radii.
      *
      * This is the shape behaviour Expressive is actually built on: a pressed control does not fade or
      * ripple alone, it *tightens* — the corner radius pulls in toward a squarer silhouette and then
@@ -41,12 +40,10 @@ internal object AzkarShapeRamp {
      * Spelled out rather than derived from the resting radius above, because `CornerBasedShape`
      * exposes its corners as `CornerSize` and reaching through one to read a number back is a
      * round-trip through a type that exists to describe a rendering, not to be measured. The
-     * relationship is ~60% and it is held to by hand: 12→8, 16→10, 24→14, 32→18.
+     * relationship is ~60% and it is held to by hand: 12→8 and 16→10.
      */
     val smallPressed = RoundedCornerShape(8.dp)
     val mediumPressed = RoundedCornerShape(10.dp)
-    val largePressed = RoundedCornerShape(14.dp)
-    val extraLargePressed = RoundedCornerShape(18.dp)
 
     /** A full round. The resting shape of every chip and icon button in the app. */
     val pill = CircleShape
@@ -70,13 +67,13 @@ internal object AzkarShapeRamp {
  * 8dp because it only ever backs indicators and micro-chips, where more radius starts to read as a
  * pill — and the top three are where Expressive's larger silhouettes come from.
  *
- * Every slot is a [CornerBasedShape], which is what `Shapes` requires. Material 3 Expressive's own
- * shape library (`MaterialShapes` — the polygons, puffs and clamshells) is therefore *not* usable
- * here: those are `RoundedPolygon`, not `CornerBasedShape`, and they reach components one at a time
- * through a per-component `shape` parameter instead. That is the right trade for this app — a
- * polygon silhouette on every card would be the opposite of the hybrid this theme settled on — but
- * it means the expressive geometry the app *does* want arrives through the components themselves
- * (`LoadingIndicator`, the toggle morphs below, the button press) rather than through this ramp.
+ * Every slot is a [androidx.compose.foundation.shape.CornerBasedShape], which is what `Shapes` requires.
+ * Material 3 Expressive's own shape library (`MaterialShapes` — the polygons, puffs and clamshells) is
+ * therefore *not* usable here: those are `RoundedPolygon`, not `CornerBasedShape`, and they reach components
+ * one at a time through a per-component `shape` parameter instead. That is the right trade for this app — a
+ * polygon silhouette on every card would be the opposite of the hybrid this theme settled on — but it means the
+ * expressive geometry the app *does* want arrives through the components themselves (`LoadingIndicator`, the
+ * toggle morphs below, the button press) rather than through this ramp.
  */
 val AzkarShapes =
     Shapes(
@@ -141,9 +138,6 @@ object AzkarExpressive {
             pressedShape = AzkarShapeRamp.pillPressed,
         )
 
-    /** Menu rows. Tightens on press; the menu container around them keeps its own corner. */
-    val menuItemShapes = MenuItemShapes(AzkarShapeRamp.small, AzkarShapeRamp.smallPressed)
-
     /**
      * The surface a full-bleed empty or loading pane is drawn on.
      *
@@ -151,7 +145,4 @@ object AzkarExpressive {
      * is here to keep every other shape on this file answerable from one object.
      */
     val stateBoxShape: Shape = AzkarShapeRamp.medium
-
-    /** The dialog pane, which is the largest thing the app asks for a corner on. */
-    val dialogShape: Shape = AzkarShapeRamp.extraLarge
 }

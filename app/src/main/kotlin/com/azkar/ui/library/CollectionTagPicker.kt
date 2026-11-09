@@ -2,7 +2,6 @@ package com.azkar.ui.library
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,7 +39,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -85,7 +83,7 @@ import org.jetbrains.compose.resources.stringResource
  * "after prayer" should not have to remember the spelling to reach them again. The field it replaced
  * made both a matter of memory, and its own placeholder said as much: "morning, sleep".
  *
- * The two states are separate on purpose. [expanded] folds the whole chip list away so the dialog is
+ * The two states are separate on purpose. `expanded` folds the whole chip list away so the dialog is
  * short again once the tags are chosen, and the dashed chip is what says whether the new-tag row is
  * out — folded away by itself, it would hide the only control that can add a tag the library has never
  * heard of, which is the entire purpose of this panel on an empty library.
@@ -93,7 +91,6 @@ import org.jetbrains.compose.resources.stringResource
  * @param availableTags every tag the library uses. Sorted and de-duplicated by the catalogue, so
  * this panel never sorts and never reorders a chip under the pointer while someone is reaching for it.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun TagPickerPanel(
     draft: TagDraftView,
@@ -198,7 +195,6 @@ private fun TagSearchRow(
  * [TagOption]. That split is why this takes options rather than strings: a list of names could only
  * ever have meant one of the two, and the wrong one of those silently creates a duplicate tag.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TagChips(
     draft: TagDraftView,
@@ -260,7 +256,7 @@ private fun CreateTagChip(onClick: () -> Unit) {
     Row(
         modifier =
             Modifier
-                .dashedOutline(color = colors.primary, radius = CHIP_CORNER_RADIUS)
+                .dashedOutline(color = colors.primary)
                 .pressableClick(onClick = onClick)
                 .padding(horizontal = TAG_CHIP_PADDING_X, vertical = TAG_CHIP_PADDING_Y),
         verticalAlignment = Alignment.CenterVertically,
@@ -341,28 +337,21 @@ private fun NewTagRow(draft: TagDraftView) {
 }
 
 /**
- * A dashed outline with [radius] corners, drawn rather than composed.
+ * A dashed outline with the chip corner radius, drawn rather than composed.
  *
  * Compose's `border` has no dash pattern to hand it, and the alternative — a solid border — is exactly
  * the ambiguity this chip exists to avoid. The path is built from the size the layout has already
  * resolved rather than from a second guess at the chip's measurements, so the dashes land on whole
  * units and the row of chips does not shimmer when one of them changes width.
- *
- * A radius is passed instead of a `Shape` because a dash is a straight run of ink: rounding it to the
- * chip's own corner radius would need a per-corner dash phase, and a chip this small has no corner that
- * is more than a dash or two long.
  */
-private fun Modifier.dashedOutline(
-    color: Color,
-    radius: Dp,
-): Modifier =
+private fun Modifier.dashedOutline(color: Color): Modifier =
     drawBehind {
         val outline =
             Path().apply {
                 addRoundRect(
                     RoundRect(
                         rect = Rect(Offset.Zero, size),
-                        cornerRadius = CornerRadius(radius.toPx()),
+                        cornerRadius = CornerRadius(CHIP_CORNER_RADIUS.toPx()),
                     ),
                 )
             }

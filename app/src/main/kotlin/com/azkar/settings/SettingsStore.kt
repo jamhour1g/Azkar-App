@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The logger this file's own code writes to.
@@ -104,7 +105,7 @@ class SettingsStore(
             }
             if (failure is IOException && attempt < WRITE_ATTEMPTS - 1) {
                 attempt += 1
-                delay(WRITE_RETRY_MILLIS)
+                delay(WRITE_RETRY_MILLIS.milliseconds)
                 continue
             }
             logger.error(failure) { "Unable to persist a setting change" }
@@ -203,7 +204,7 @@ class SettingsStore(
             val settingsHome = property(SETTINGS_HOME_PROPERTY)
             val directory =
                 settingsHome
-                    ?: Path.of(requireNotNull(property("user.home")), DIRECTORY).toString()
+                    ?: Path.of(property("user.home"), DIRECTORY).toString()
             return Path.of(directory, FILE_NAME)
         }
 

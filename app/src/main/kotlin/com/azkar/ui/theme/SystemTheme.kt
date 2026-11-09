@@ -94,13 +94,7 @@ private fun freedesktopSystemTheme(): SystemTheme =
  * A missing `gsettings` — off GNOME, or in a container — is the ordinary case rather than an error,
  * so the failure is swallowed and the next source gets its turn.
  */
-private fun gsettingsColorScheme(): SystemTheme? =
-    commandOutput(
-        "gsettings",
-        "get",
-        "org.gnome.desktop.interface",
-        "color-scheme",
-    ).gsettingsColorScheme()
+private fun gsettingsColorScheme(): SystemTheme? = gsettingsOutput().gsettingsColorScheme()
 
 /**
  * Plasma's look and feel or colour scheme, from its own config file.
@@ -131,15 +125,15 @@ private fun desktopProperty(key: String): Any? =
     runCatching { Toolkit.getDefaultToolkit().getDesktopProperty(key) }.getOrNull()
 
 /**
- * Runs [command] and returns its single line of output, or null when it cannot be run.
+ * Reads the system color scheme with `gsettings`, or returns null when it cannot be run.
  *
  * Bounded because this runs before the window opens: a `gsettings` that hung would hang the launch.
  * The read happens after the wait, which is safe because the output is one short line — a process
  * that had to be killed for overrunning the budget has nothing worth reading anyway.
  */
-private fun commandOutput(vararg command: String): String? =
+private fun gsettingsOutput(): String? =
     runCatching {
-        val process = ProcessBuilder(*command).start()
+        val process = ProcessBuilder("gsettings", "get", "org.gnome.desktop.interface", "color-scheme").start()
         if (!process.waitFor(COMMAND_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
             process.destroyForcibly()
             null

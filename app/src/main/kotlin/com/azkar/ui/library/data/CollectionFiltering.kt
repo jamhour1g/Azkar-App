@@ -209,9 +209,9 @@ object CollectionFiltering {
         val parts = ArrayList<String>(2 + collection.translations.size * 2)
         parts += collection.name
         collection.description?.takeIf { it.isNotBlank() }?.let(parts::add)
-        for (pair in collection.translations.values) {
-            parts += pair.name
-            pair.description?.takeIf { it.isNotBlank() }?.let(parts::add)
+        for ((name, description) in collection.translations.values) {
+            parts += name
+            description?.takeIf { it.isNotBlank() }?.let(parts::add)
         }
         return parts.joinToString(" ").lowercase(Locale.ROOT)
     }
@@ -393,12 +393,7 @@ object CollectionFiltering {
     /**
      * The remembrances that may be added to [collection] — the catalogue minus its current members.
      *
-     * Answering it for a shipped collection too is deliberate even though nothing is added to one:
-     * a shipped collection's membership is derived from a tag rather than from rows, so an add
-     * would be rejected by the service on save. Returning a list the screen never shows would be
-     * harmless, but returning it only for the collections the picker is reachable on is what makes
-     * the question answerable — the caller checks [CollectionKind.isEditable] and does not show the
-     * affordance at all.
+     * Included and user-created collections both store their members explicitly and can be edited.
      */
     fun addableRemembrances(
         collection: RemembranceCollection,

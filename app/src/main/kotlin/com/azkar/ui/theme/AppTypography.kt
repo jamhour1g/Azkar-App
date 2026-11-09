@@ -24,7 +24,7 @@ import androidx.compose.runtime.Immutable
  *   means the same thing to a hardcoded size, a Material component, and a text field's own text.
  *
  * Layout does not move with it, and that is deliberate. A larger font with the same paddings clips
- * labels rather than reflowing them, which is why [AzkarAppState]'s size control is worth pairing
+ * labels rather than reflowing them, which is why [com.azkar.ui.shell.AzkarAppState]'s size control is worth pairing
  * with the card sizing that already exists.
  *
  * ## Why the face is a name and not an index

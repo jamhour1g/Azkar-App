@@ -24,7 +24,7 @@ import java.util.Locale
  * read one, which means attaching to a logger that the whole process shares and then hoping that
  * every line it collected was caused by its own call.
  *
- * So the mapper does not log. It hands the discard to [onDropped], and the caller decides what
+ * So the mapper does not log. It hands the discard to `onDropped`, and the caller decides what
  * happens to it. The application wires that to a log through [droppedExplanationsReported], which
  * is the line the application has always written, under the logger name it has always had. A test
  * wires it to something it can assert on.

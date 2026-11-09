@@ -396,8 +396,8 @@ private fun RemembranceSoundButton(
 /**
  * The header's master control for prayer notifications: one button that says what it governs.
  *
- * This was an [AzkarToggleSwitch]. A switch is the right control for a form field, but this one sits
- * in a card header beside five rows that each already carry their own bell, so the switch read as a
+ * This was an [com.azkar.ui.components.AzkarToggleSwitch]. A switch is right for a form field, but
+ * this one sits in a card header beside five rows that each already carry their own bell, so the switch read as a
  * settings row that belonged to nothing in particular — there was no label to say it covered the
  * whole table, and "on" was the only thing the blue track ever asserted.
  *

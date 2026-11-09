@@ -9,6 +9,7 @@ val installerPlatform = AzkarInstallerPlatform.current()
 
 val verifyJdkShipsJmods =
     tasks.register("verifyJdkShipsJmods") {
+        description = "Checks that the JDK contains modules required by ProGuard."
         val javaHome = providers.systemProperty("java.home")
         inputs.property("javaHome", javaHome)
         doLast {
@@ -33,6 +34,7 @@ tasks.matching { it.name == "proguardReleaseJars" }.configureEach {
 
 val verifyPackagingTools =
     tasks.register("verifyPackagingTools") {
+        description = "Checks whether the current platform supports packaging."
         dependsOn(verifyJdkShipsJmods)
         doLast {
             check(installerPlatform.id in setOf("linux-x64", "windows-x64", "macos-x64", "macos-arm64")) {
@@ -43,6 +45,7 @@ val verifyPackagingTools =
 
 val verifyRpmBuildTools =
     tasks.register("verifyRpmBuildTools") {
+        description = "Checks that RPM packaging tools are available on Linux."
         onlyIf { installerPlatform.os == "linux" }
         doLast {
             check(

@@ -5,7 +5,6 @@ import com.azkar.ui.library.model.CollectionMemberSort
 import com.azkar.ui.library.model.CollectionMemberView
 import de.infix.testBalloon.framework.core.testSuite
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.assertj.core.api.Assertions.assertThat
 import java.util.Locale
 
@@ -24,7 +23,6 @@ import java.util.Locale
  * change the shape of the whole grid. A "by category" *order* survives, because ordering the members
  * under the headings they already carry is not the same act as showing only one of them.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 val CollectionDetailStateSuite by testSuite("The collection detail grid") {
     test("positions are stamped in the collection's own order, not the shelf's") {
         val detail = detailWith(members = listOf(1L, 2L, 3L))
@@ -161,8 +159,9 @@ private const val COLLECTION_ID = 10L
  * Tag names as the presenter sees them: folded, since that is what a stored name always is.
  *
  * These are the inputs. Where the assertions below compare a *label*, the expectation is the
- * capitalised form — this suite runs without loaded string resources, so [CollectionPresenter]
- * has an empty label table and every label comes from capitalising the raw name.
+ * capitalised form — this suite runs without loaded string resources, so
+ * [com.azkar.ui.library.data.CollectionPresenter] has an empty label table, so every label comes from
+ * capitalising the raw name.
  */
 private const val PUBLISHER = "muslim data"
 private const val MORNING = "morning"

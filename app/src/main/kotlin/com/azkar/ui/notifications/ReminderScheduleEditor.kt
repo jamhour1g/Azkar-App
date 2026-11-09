@@ -125,39 +125,6 @@ class ReminderScheduleEditor(
         }
     }
 
-    fun setCollectionEnabled(
-        id: Long,
-        enabled: Boolean,
-    ) {
-        scope.launch {
-            preferences.updateQueue { config ->
-                config.copy(
-                    collectionIds =
-                        if (enabled) {
-                            (config.collectionIds + id).distinct()
-                        } else {
-                            config.collectionIds - id
-                        },
-                )
-            }
-        }
-    }
-
-    fun setCollectionDropChance(
-        id: Long,
-        chance: Int,
-    ) {
-        scope.launch {
-            preferences.updateQueue { config ->
-                config.copy(
-                    collectionDropChances =
-                        config.collectionDropChances +
-                            (id.toString() to chance.coerceIn(0, 100)),
-                )
-            }
-        }
-    }
-
     private companion object {
         /** Minutes in a day, for the wrap-around in the window setters. */
         const val MINUTES_IN_DAY = 24 * 60

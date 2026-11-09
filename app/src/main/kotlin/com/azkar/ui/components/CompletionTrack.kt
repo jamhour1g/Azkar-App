@@ -48,7 +48,8 @@ import com.azkar.ui.theme.AzkarTheme
  * @param height the rule's thickness. Also the default source of the corner radius, which is why it
  *   is a parameter rather than a constant: a bar drawn over cover art is thinner than one drawn in a
  *   panel and the rounding has to follow it or the ends look cut off.
- * @param shape the ends' shape. Defaults to fully rounded for [height]; pass [RectangleShape] for a
+ * @param shape the ends' shape. Defaults to fully rounded for [height]; pass
+ *   [androidx.compose.ui.graphics.RectangleShape] for a
  *   square-ended rule.
  * @param trackColor the unfilled part.
  * @param fillColor the fill, when [fillBrush] is absent.
@@ -105,7 +106,8 @@ internal fun CompletionTrackPreview() {
 }
 
 /**
- * The thickness the detail strip, the rail card and the session header use. [CollectionCard]'s cover
+ * The thickness the detail strip, the rail card and the session header use. The
+ * [com.azkar.ui.library.CollectionCard] cover
  * bar is thinner because it sits on top of cover art rather than in a panel of its own.
  */
 val COMPLETION_TRACK_HEIGHT = 6.dp

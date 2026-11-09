@@ -55,12 +55,12 @@ internal object LibraryTranslations {
     /**
      * Every stored label of the tags among [ids], keyed by tag and then by locale.
      *
-     * Same shape as [collectionTranslations] for the same reason, and against a single-text table, so
-     * this one could have gone through the generic [LocalizedText] path the remembrance translations
-     * take. It is spelled out rather than shared because the answer here is a bare `Map<Locale,
+     * Same shape as [collectionTranslations] for the same reason, and against a single-text table, so this one
+     * could have gone through the generic [com.azkar.data.table.entity.LocalizedText] path the remembrance
+     * translations take. It is spelled out rather than shared because the answer here is a bare `Map<Locale,
      * String>` with no row ids to carry — there is nothing a caller could do with the id of a label
-     * translation, and threading [com.azkar.data.mapping.LocalizedTextRow] through to discard it at
-     * three call sites would be the shape that reads worse.
+     * translation, and threading [com.azkar.data.mapping.LocalizedTextRow] through to discard it at three call
+     * sites would be the shape that reads worse.
      */
     fun tagTranslations(ids: List<Long>): Map<Long, Map<Locale, String>> {
         if (ids.isEmpty()) {

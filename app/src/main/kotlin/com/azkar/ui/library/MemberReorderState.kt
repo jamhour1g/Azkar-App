@@ -48,7 +48,6 @@ internal class MemberReorderState {
 
     /** How far the pointer has travelled since the drag began, in pixels. This is the drag itself. */
     private var travel by mutableStateOf(Offset.Zero)
-        private set
 
     /**
      * Where inside the dragged tile the pointer took hold, as an offset from its top-left.
@@ -64,7 +63,6 @@ internal class MemberReorderState {
      * alone was already most of the way to the next slot.
      */
     private var grab by mutableStateOf(Offset.Zero)
-        private set
 
     /** How far the dragged tile is drawn from the slot it was measured in. */
     val draggedBy: Offset get() = travel + grab
@@ -128,7 +126,7 @@ internal class MemberReorderState {
                     val next = slots.getOrNull(index + 1) ?: slot
                     (next.left - slot.left).takeIf { it > 0f } ?: (slot.width + gap)
                 }
-                ?: slot.width + gap
+                ?: (slot.width + gap)
     }
 
     /** Carries the dragged tile along by [delta]. */
@@ -234,7 +232,7 @@ internal class MemberReorderState {
         to: Int,
     ): Offset {
         val towardsEnd = index in (from + 1)..to
-        if (!towardsEnd && index !in to..(from - 1)) return Offset.Zero
+        if (!towardsEnd && index !in to..<from) return Offset.Zero
         return if (columns <= 1) {
             Offset(0f, if (towardsEnd) -rowPitch else rowPitch)
         } else {

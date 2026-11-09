@@ -11,13 +11,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.IOException
 
@@ -153,7 +150,7 @@ class NotificationPreferencesRepository(
         key: PrayerKey,
         enabled: Boolean,
     ) {
-        _prayerFlags.value = _prayerFlags.value + (key to enabled)
+        _prayerFlags.value += (key to enabled)
         settings.edit { this[prayerKey(key)] = enabled }
     }
 

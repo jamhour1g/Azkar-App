@@ -3,8 +3,10 @@ package com.azkar.settings
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import de.infix.testBalloon.framework.core.testSuite
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import java.io.IOException
@@ -116,7 +118,7 @@ val SettingsStoreSuite by testSuite("The settings store") {
 
     test("a corrupt file is replaced rather than bricking the store") {
         withSettingsFile { file, scope ->
-            Files.writeString(file, "this is not a preferences file")
+            withContext(Dispatchers.IO) { Files.writeString(file, "this is not a preferences file") }
 
             // Without a corruption handler DataStore's default is to throw `CorruptionException`
             // and keep throwing — every later read of the same store fails the same way, so a
@@ -132,7 +134,7 @@ val SettingsStoreSuite by testSuite("The settings store") {
 
     test("a store that met a corrupt file can still be written to, and the fix survives a restart") {
         withSettingsFile { file, scope ->
-            Files.writeString(file, "this is not a preferences file")
+            withContext(Dispatchers.IO) { Files.writeString(file, "this is not a preferences file") }
             val store = SettingsStore.create(file, scope)
 
             store.edit { this[TEST_KEY] = "after the corruption" }

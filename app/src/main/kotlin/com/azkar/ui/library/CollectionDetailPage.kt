@@ -37,7 +37,6 @@ import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.collectionDetailSearchNoResultsHint
 import com.azkar.generated.resources.collectionDetailSearchNoResultsTitle
 import com.azkar.generated.resources.collectionsActionBack
-import com.azkar.ui.library.CollectionDetailState
 import com.azkar.ui.library.model.CollectionMemberView
 import com.azkar.ui.library.model.RemembranceTile
 import com.azkar.ui.shell.ShowToast
@@ -284,7 +283,8 @@ private fun tileWithReorder(
  * press lands on and the difference between the two is the grab offset — which is what lets a tile
  * be drawn under the pointer instead of under its own corner.
  *
- * [detectDragGestures], not [detectDragGesturesAfterLongPress]. The long-press variant is a touch
+ * [detectDragGestures], not [androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress].
+ * The long-press variant is a touch
  * idiom: on a pointer device it means holding still for half a second before anything moves, which
  * reads as the app having missed the click. The web equivalent — dnd-kit, SortableJS — starts the
  * drag once the pointer has travelled past a small threshold, which is what this already does via
@@ -319,7 +319,7 @@ private fun Modifier.memberDragHandle(
  * slot along.
  *
  * Reading the reorder state inside [graphicsLayer] rather than composing with it is the same bargain
- * [Controls.rememberHoverAlpha] makes on every button: the offset changes on every pointer move, and
+ * `rememberHoverAlpha` makes on every button: the offset changes on every pointer move, and
  * a layer block is evaluated in the draw phase, so a drag costs draw invalidations instead of a
  * recomposition per frame.
  */

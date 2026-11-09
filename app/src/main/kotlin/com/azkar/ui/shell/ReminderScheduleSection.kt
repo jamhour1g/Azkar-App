@@ -66,9 +66,8 @@ import java.time.DayOfWeek
  * the queue draws from, and the order it walks them in. Those are the answers to "what will I see",
  * which is what that page's summary is a preview of, so it keeps them beside it.
  *
- * The design is unchanged by the move. The card is a [SectionCard] like every other one on this page,
- * its rows are the shared [SettingRow] and [SelectRow], and the only control it lost in the journey
- * was nothing: it already had no border, no shadow and no title treatment of its own to reconcile
+ * The design is unchanged by the move. Its rows use the shared [SettingRow] and [SelectRow]; it
+ * already had no border, shadow or title treatment of its own to reconcile
  * with the settings header it now sits under.
  */
 

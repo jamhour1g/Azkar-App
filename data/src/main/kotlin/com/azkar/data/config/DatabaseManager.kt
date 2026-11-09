@@ -1,6 +1,5 @@
 package com.azkar.data.config
 
-import com.azkar.data.config.migrateToLatestSchema
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.github.oshai.kotlinlogging.KLogger

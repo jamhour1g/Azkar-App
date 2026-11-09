@@ -17,7 +17,7 @@ import androidx.compose.runtime.Immutable
  * startup failure has nothing to say on the prayer tab. Giving each a type means neither renderer
  * needs a fall-through branch for cases that cannot reach it.
  *
- * Cases carrying a [reason] keep the underlying exception's message for the times it is worth
+ * Cases carrying a `reason` keep the underlying exception's message for the times it is worth
  * showing; the fallback for each is a string resource resolved at the point of display, so this file
  * stays free of Compose resources.
  */

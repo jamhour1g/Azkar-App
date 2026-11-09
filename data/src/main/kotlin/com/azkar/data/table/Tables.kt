@@ -111,7 +111,7 @@ object TagTable : TimestampedIdTable("tag") {
     override val primaryKey = PrimaryKey(id)
 
     /**
-     * Stored folded to lower case, and the only way to write it: [TagImpl] folds in its
+     * Stored folded to lower case, and the only way to write it: [com.azkar.domain.model.impl.TagImpl] folds in its
      * constructor, so a `Tag` in memory is already lower case by the time a row is written.
      *
      * That is what lets the uniqueness check below be a plain unique index. A unique index on a

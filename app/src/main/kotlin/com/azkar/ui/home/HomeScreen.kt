@@ -27,10 +27,6 @@ import com.azkar.generated.resources.*
 import com.azkar.i18n.RemembranceI18n
 import com.azkar.settings.SettingsStore
 import com.azkar.ui.components.AzkarClock
-import com.azkar.ui.home.FavoritesState
-import com.azkar.ui.home.HadithState
-import com.azkar.ui.home.NotificationSettingsState
-import com.azkar.ui.home.PrayerTimesState
 import com.azkar.ui.library.CollectionReminderState
 import com.azkar.ui.notifications.AudioPreferences
 import com.azkar.ui.notifications.NotificationPreferencesRepository
@@ -53,6 +49,7 @@ import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.ui.theme.AzkarWindowSize
 import com.azkar.ui.theme.LocalUiLocale
+import com.azkar.util.runCatchingCancellable
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,6 +62,7 @@ import java.time.chrono.HijrahDate
 import java.time.format.DateTimeFormatter
 import java.time.format.ResolverStyle
 import java.util.Locale
+import kotlin.time.Duration.Companion.milliseconds
 
 private val logger = KotlinLogging.logger {}
 
@@ -248,14 +246,14 @@ private fun HomeScreenEffects(
         // one is logged here: a favourites strip that silently renders nothing and a hadith card
         // that silently never appears are otherwise indistinguishable from a genuine empty result.
         val loaded =
-            runCatching {
+            runCatchingCancellable {
                 gateway.findFavorites()
             }.onFailure { failure -> logger.error(failure) { "Unable to load the favorites" } }
                 .getOrElse { emptyList() }
         inputs.favorites.loadFavorites(loaded)
 
         val single =
-            runCatching {
+            runCatchingCancellable {
                 gateway.findDailyRemembrance()
             }.onFailure { failure -> logger.error(failure) { "Unable to load the daily hadith" } }
                 .getOrNull()
@@ -268,7 +266,7 @@ private fun HomeScreenEffects(
         // does not, because a rail that silently never appears is otherwise indistinguishable from a
         // genuine empty result.
         val railCards =
-            runCatching {
+            runCatchingCancellable {
                 gateway.findHomeCollections()
             }.onFailure { failure -> logger.error(failure) { "Unable to load the collection rail" } }
                 .getOrElse { emptyList() }
@@ -279,7 +277,7 @@ private fun HomeScreenEffects(
     LaunchedEffect(prayerTimes) {
         prayerTimes.start()
         while (prayerTimes.running) {
-            delay(COUNTDOWN_INTERVAL_MILLIS)
+            delay(COUNTDOWN_INTERVAL_MILLIS.milliseconds)
             prayerTimes.tick()
         }
     }

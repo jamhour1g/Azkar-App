@@ -99,7 +99,7 @@ val GeocodingClientSuite by testSuite("The geocoding client") {
     }
 }
 
-/** An [HttpClient] over a [MockEngine] that always answers with [body] and [status]. */
+/** An [io.ktor.client.HttpClient] over a [MockEngine] that always answers with [body] and [status]. */
 private fun geocodingClient(
     body: String,
     status: HttpStatusCode = HttpStatusCode.OK,

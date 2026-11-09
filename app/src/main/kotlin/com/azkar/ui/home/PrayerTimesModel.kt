@@ -104,8 +104,7 @@ class PrayerTimesModel(
     private var prayers: List<ParsedPrayer> = emptyList()
 
     /**
-     * The label a bundle puts in place of a time for the next prayer, used by [parsePrayerTime] to
-     * skip it. Resolved by [load] before any parsing happens.
+     * The localized label shown for the next prayer, resolved by [load].
      */
     private var nextPrayerLabel: String = ""
 

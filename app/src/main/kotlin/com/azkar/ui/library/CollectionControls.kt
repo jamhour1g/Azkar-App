@@ -406,7 +406,7 @@ internal fun CollectionsInfoLinePreview() {
  * The tooltip is not optional. A glyph is a label to somebody who already knows it and a puzzle to
  * everybody else, and a tooltip is how a control says its name without spending the width on it.
  *
- * Sized up from [CircleIconButton]'s 28dp because this sits in an empty box with room around it
+ * Sized up from [com.azkar.ui.components.CircleIconButton]'s 28dp because this sits in an empty box with room around it
  * rather than in a dense toolbar — it is often the only thing on the screen to aim at.
  */
 @Composable

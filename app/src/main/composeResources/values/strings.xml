@@ -108,7 +108,7 @@
     <string name="contentTranslationFor">Name in %1$s</string>
     <string name="contentPrimaryLanguage">Primary name in %1$s</string>
     <string name="contentTranslationRemove">Remove this translation</string>
-    <string name="contentTranslationLanguageTaken">There is already a %s version.</string>
+    <string name="contentTranslationLanguageTaken">A version in %s already exists.</string>
     <!-- Library: the collections hub -->
     <string name="collectionsTitle">Collections</string>
     <string name="collectionsSubtitle">Every azkar has a home. Open one to read what is inside it.</string>

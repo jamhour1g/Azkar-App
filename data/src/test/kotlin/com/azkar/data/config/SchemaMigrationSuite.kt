@@ -149,10 +149,8 @@ private fun <T> withConnection(
     block: (Database) -> T,
 ): T {
     val dataSource = HikariDataSource(DatabaseManager.poolConfig(jdbcUrl(name)))
-    try {
+    dataSource.use { dataSource ->
         return block(Database.connect(dataSource, { }, ExposedDatabaseConfig.INSTANCE))
-    } finally {
-        dataSource.close()
     }
 }
 
@@ -168,10 +166,8 @@ private fun <T> withConnection(
  */
 private fun migrateAgain(name: String) {
     val dataSource = HikariDataSource(DatabaseManager.poolConfig(jdbcUrl(name)))
-    try {
+    dataSource.use { dataSource ->
         Database.connect(dataSource, { }, ExposedDatabaseConfig.INSTANCE).migrateToLatestSchema()
-    } finally {
-        dataSource.close()
     }
 }
 

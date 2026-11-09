@@ -253,7 +253,10 @@ val gallery =
     }
 configurations[gallery.implementationConfigurationName].extendsFrom(configurations.implementation.get())
 kotlin {
-    sourceSets.named("gallery") { kotlin.srcDir("src/galleryFixtures/kotlin") }
+    sourceSets.named("test") { kotlin.srcDir("src/previewShared/kotlin") }
+    sourceSets.named("gallery") {
+        kotlin.srcDirs("src/galleryFixtures/kotlin", "src/previewShared/kotlin")
+    }
     target.compilations.named("gallery") { associateWith(target.compilations.getByName("main")) }
 }
 
@@ -281,7 +284,7 @@ tasks.register<JavaExec>("captureDownloadScreenshots") {
     )
 }
 
-tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+tasks.withType<Test>().configureEach {
     // Match the desktop runtime flags so UI and persistence tests do not emit JDK access warnings.
     jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow")
     // The Compose plugin's `mainClass` is the single source of truth for the packaged entry
@@ -328,6 +331,7 @@ val alreadyKeptProviders =
 
 val collectProguardRules =
     tasks.register("collectProguardRules") {
+        description = "Collects ProGuard rules for runtime service providers."
         notCompatibleWithConfigurationCache("Reads and inspects runtime classpath files inside the task action")
         val runtimeClasspath = configurations.named("runtimeClasspath")
         val output = layout.buildDirectory.file("compose/proguard-generated.pro")
@@ -422,7 +426,7 @@ nucleus.application {
         packageVersion = nativePackageVersion
         description = "Daily adhkar and prayer reminders"
         vendor = "Azkar"
-        artifactName = "azkar-$fullVersion-${installerPlatform.id}.${'$'}{ext}"
+        artifactName = $$"azkar-$$fullVersion-$${installerPlatform.id}.${ext}"
         linux {
             iconFile.set(project.file("../assets/icons/azkar.png"))
             packageName = "azkar"
@@ -477,25 +481,23 @@ nucleus.application {
 tasks.matching { it.name == "proguardReleaseJars" }.configureEach {
     if (providers.environmentVariable("CI").map(String::toBoolean).getOrElse(false)) {
         // ProGuard sends its long informational notes to stdout; keep them available with --debug.
-        logging.captureStandardOutput(org.gradle.api.logging.LogLevel.DEBUG)
+        logging.captureStandardOutput(LogLevel.DEBUG)
     }
 }
 
 // A release tag that disagrees with the declared version would ship an installer whose name lies.
 // GitHub Actions identifies tags through GITHUB_REF; branch builds skip this check.
 tasks.register("checkTagParity") {
-    val tag =
-        providers
-            .environmentVariable("GITHUB_REF")
-            .filter { it.startsWith("refs/tags/") }
-            .map { it.removePrefix("refs/tags/") }
+    description = "Checks that a release tag matches the declared application version."
+    val gitRef = providers.environmentVariable("GITHUB_REF")
     val version = providers.provider { project.version.toString() }
     doLast {
-        val tagName = tag.orNull
-        if (tagName == null) {
+        val ref = gitRef.orNull
+        if (ref == null || !ref.startsWith("refs/tags/")) {
             logger.lifecycle("Not building a tag; skipping the release tag check")
             return@doLast
         }
+        val tagName = ref.removePrefix("refs/tags/")
         val declared = version.get()
         check(tagName.removePrefix("v") == declared && tagName.removePrefix("v") == defaultAppVersion) {
             "Tag $tagName must match the source version '$defaultAppVersion' and package version '$declared'"

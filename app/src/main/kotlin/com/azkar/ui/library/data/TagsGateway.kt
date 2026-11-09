@@ -6,6 +6,7 @@ import com.azkar.domain.model.TagUsage
 import com.azkar.domain.service.TagService
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CancellationException
 import java.util.Locale
 
 /**
@@ -179,6 +180,8 @@ class DomainTagsGateway(
         } catch (blank: IllegalArgumentException) {
             logger.debug { "Rename of tag $id rejected as blank: ${blank.message}" }
             TagSaveResult.Blank
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (missing: IllegalStateException) {
             logger.debug { "Rename of tag $id rejected: ${missing.message}" }
             TagSaveResult.Missing

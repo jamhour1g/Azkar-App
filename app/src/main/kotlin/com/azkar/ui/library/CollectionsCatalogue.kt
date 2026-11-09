@@ -28,6 +28,7 @@ import com.azkar.ui.library.data.withMemberFavorite
 import com.azkar.ui.library.data.withMemberTexts
 import com.azkar.ui.library.data.withTexts
 import com.azkar.ui.library.model.CollectionsSnapshot
+import com.azkar.util.runCatchingCancellable
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
@@ -101,7 +102,7 @@ enum class CollectionDisplayPreference {
      * A member of this family rather than a separate method on the catalogue, because it is answered
      * the same way and belongs in the same place: a per-device claim about how this device shows the
      * collection, written through one mutation that logs, applies and reports. What it is *not* is
-     * [FAVORITE_ADDED] — that notice is about a starred remembrance, and reusing it here would give
+     * [CollectionNoticeKey.FAVORITE_ADDED] — that notice is about a starred remembrance, and reusing it here would give
      * one word two meanings.
      */
     FAVORITE,
@@ -365,7 +366,7 @@ class CollectionsCatalogue(
             infoLine = loadingLabel
         }
         scope.launch {
-            val result = runCatching { gateway.fetchSnapshot() }
+            val result = runCatchingCancellable { gateway.fetchSnapshot() }
             if (version != loadVersion.load()) return@launch
             applyResult(result)
         }
@@ -413,7 +414,7 @@ class CollectionsCatalogue(
     fun findCollection(id: Long): RemembranceCollection? {
         val collection = allCollections.findById(id) ?: return null
         scope.launch {
-            runCatching { gateway.touchCollectionOpened(id) }
+            runCatchingCancellable { gateway.touchCollectionOpened(id) }
                 .onFailure { failure -> logger.warn(failure) { "Unable to record the last opening of collection $id" } }
         }
         return collection
@@ -434,7 +435,7 @@ class CollectionsCatalogue(
         val nextValue = !target.isFavorite
         setFavoriteOn(id, nextValue)
         scope.launch {
-            runCatching { gateway.setFavorite(id, nextValue) }
+            runCatchingCancellable { gateway.setFavorite(id, nextValue) }
                 .onSuccess { reloadQuietly() }
                 .onFailure { failure ->
                     // The star is rolled back below, so the screen recovers on its own. The cause of
@@ -496,7 +497,7 @@ class CollectionsCatalogue(
         // hands back that `Unit` — naming the notice in the lambda would shadow it with the wrong type.
         val notice = onSuccess
         scope.launch {
-            runCatching { operation() }
+            runCatchingCancellable { operation() }
                 .onSuccess {
                     if (notice != null) {
                         onNotice = CollectionNotice.Message(notice)
@@ -516,7 +517,7 @@ class CollectionsCatalogue(
      * `MutableState<Nothing?>`, and an invariant `MutableState` narrowed to `Nothing?` then refuses
      * every assignment the rest of the class actually makes.
      */
-    var onNotice: CollectionNotice? by mutableStateOf<CollectionNotice?>(null)
+    var onNotice: CollectionNotice? by mutableStateOf(null)
 
     fun createCollection(
         name: String,

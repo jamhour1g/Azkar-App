@@ -391,13 +391,6 @@ internal fun UpdateLinuxAvailablePreview() =
 @Composable
 internal fun UpdateInstallerOpenedPreview() = UpdateStatePreview(UpdateStatus.InstallerOpened)
 
-@Composable
-internal fun UpdateIdleActionPreview() = UpdateVersionActionPreview(UpdateStatus.Idle)
-
-@Composable
-internal fun UpdateAvailableActionPreview() =
-    UpdateVersionActionPreview(UpdateStatus.Available(updatePreviewInfo(), "", isDowngrade = false))
-
 @AzkarComponentVariantsPreview
 @Composable
 internal fun UpdateDownloadingStatePreview() = UpdateStatePreview(UpdateStatus.Downloading("0.2.0", 63.0))
@@ -432,15 +425,4 @@ private fun UpdateStatePreview(
         onSelectChannel = {},
         onAction = {},
     )
-}
-
-@Composable
-private fun UpdateVersionActionPreview(status: UpdateStatus) {
-    SettingsGroupCard(contentPadding = 0.dp) {
-        UpdateVersionRow(
-            UpdateSettingsCardState("0.1.0", status.channelVersion(), false, UpdateChannel.STABLE, status),
-            onShowRepositoryInfo = {},
-            onAction = {},
-        )
-    }
 }

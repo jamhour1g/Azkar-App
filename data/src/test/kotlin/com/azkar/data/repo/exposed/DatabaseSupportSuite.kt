@@ -25,7 +25,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 val DatabaseSupportSuite by testSuite("DatabaseSupport") {
     // One schema for the whole suite. Nothing here writes a row, so nothing has to be reset.
     val migratedDatabase = testFixture { TestDatabase.bootstrapWithH2() }
-    var answer: String? = null
+    var answer: String?
 
     test("a successful action hands its value back") {
         answer = guarded(KotlinLogging.logger {}, POINTLESS_OPERATION) { "answered" }

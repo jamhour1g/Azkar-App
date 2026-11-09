@@ -92,7 +92,7 @@ class LocaleStore(
 }
 
 /**
- * Points Compose at [locale].
+ * Points Compose at this [Locale].
  *
  * `org.jetbrains.compose.resources` resolves against the JVM default locale on desktop rather than
  * against one passed in, and both its `ResourceEnvironment` and the `LocalComposeEnvironment` that

@@ -5,7 +5,6 @@ import com.azkar.domain.model.RecitationProgress
 import com.azkar.ui.shell.NotificationPriority
 import de.infix.testBalloon.framework.core.testSuite
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.assertj.core.api.Assertions.assertThat
 import java.util.Locale
 
@@ -17,7 +16,6 @@ import java.util.Locale
  * write fails. A stored cursor would pass most of these by construction, which is exactly why they are
  * worth writing down.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 val CollectionSessionStateSuite by testSuite("The recitation session") {
     test("a session starts on the first member that has not been recited") {
         val session = sessionWith(members = listOf(1L, 2L, 3L), recited = setOf(2L))
@@ -313,14 +311,11 @@ private fun recitedAt(remembranceId: Long): RecitationProgress =
     RecitationProgress(remembranceId = remembranceId, repeatCount = 1, lastRecitedAt = FixtureInstant)
 
 /**
- * The three things a test needs to poke at: the session, the shelf state behind it, and the gateway
- * behind that. Returned together because the session hides the other two, and the interesting tests
- * are the ones that change the world underneath it.
+ * The session and its shelf state, returned together so tests can change the world underneath it.
  */
 private class SessionHarness(
     val session: CollectionSessionState,
     val collections: CollectionsCatalogue,
-    val gateway: FakeCollectionsGateway,
 )
 
 private fun sessionWith(
@@ -351,5 +346,5 @@ private fun harnessWith(
             reminders = CollectionReminderState(FakeReminderSources()),
         )
     session.loadProgress()
-    return SessionHarness(session = session, collections = collections, gateway = gateway)
+    return SessionHarness(session = session, collections = collections)
 }

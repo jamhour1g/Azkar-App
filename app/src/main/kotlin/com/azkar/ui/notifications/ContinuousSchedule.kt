@@ -16,7 +16,7 @@ import java.time.temporal.ChronoUnit
  * ignore is how a schedule that never stops ends up stopping at half past ten.
  *
  * Which is the bug this object exists to make impossible. The continuous cadence used to be computed by
- * the same windowed arithmetic with a smaller interval, so a queue the user had set to keep going went
+ * the same windowed arithmetic with a smaller interval, so a queue set to run continuously went
  * quiet the moment its window closed and the summary card reported the next passage nineteen hours
  * away — which is tomorrow's window, not the slot a minute from now.
  */

@@ -118,7 +118,7 @@ private val RAIL_CHILD_INSET = RAIL_TREE_X + RAIL_BRANCH_LENGTH
  * one flat list, because the page is two-level: theme, text and reminder cards are all ways of looking at
  * something, and a flat rail called them peers with "when reminders are due". The groups carry no
  * selection of their own and are not clickable; a header that jumped anywhere would be a second way to
- * reach a block under a different name, which is how two rows end up lighting up for one destination.
+ * reach a block under a different name, which is how two rows can light up for one destination.
  *
  * Row labels come from [settingsSectionLabel] and group names from [settingsGroupLabel] rather than
  * being passed in, so the one mapping from a section to its name is shared with the heading the page

@@ -8,6 +8,7 @@ import com.azkar.domain.model.TagSummary
 import com.azkar.domain.model.TagUsage
 import com.azkar.ui.library.data.TagGateway
 import com.azkar.ui.library.data.TagSaveResult
+import com.azkar.util.runCatchingCancellable
 import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CancellationException
@@ -245,7 +246,7 @@ class TagsState(
      * deleted list would offer to restore something the live list has already re-adopted.
      */
     private suspend fun refresh(announce: CollectionNoticeKey?) {
-        runCatching {
+        runCatchingCancellable {
             gateway.fetchSummaries() to gateway.fetchDeleted()
         }.onSuccess { (live, gone) ->
             tags = live

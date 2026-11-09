@@ -1,6 +1,5 @@
 package com.azkar.ui.library
 
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
@@ -50,7 +49,7 @@ private class Reported {
 }
 
 /** Opens the dialog on [EXISTING_ARABIC] / [EXISTING_ENGLISH], runs [body], and reports what happened. */
-@OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalTestApi::class)
 private fun converse(
     fieldRecompositions: IntRange = 0..0,
     body: SkikoComposeUiTest.() -> Unit,
@@ -83,7 +82,7 @@ private fun converse(
 
 private const val REMEMBRANCE_EDITOR_DIALOG_TAG = "remembrance-editor-dialog"
 
-@OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalTestApi::class)
 val RemembranceEditorSuite by testSuite("The remembrance editor dialog") {
     test("the dialog opens on the words the remembrance already carries") {
         converse {

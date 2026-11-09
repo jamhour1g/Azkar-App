@@ -70,7 +70,7 @@ inline fun withInMemorySettings(block: (CoroutineScope, SettingsStore, FakePrefe
  * a second store over the same path — the second one throws rather than reading. A copy parses what
  * was actually written to disk, which is the thing a second launch would read.
  *
- * [REPLACE_EXISTING] because a test is allowed to open the next launch twice, and the plain
+ * [StandardCopyOption.REPLACE_EXISTING] because a test is allowed to open the next launch twice, and the plain
  * `Files.copy` this replaced threw `FileAlreadyExistsException` rather than doing the obvious thing.
  */
 fun copyForNextLaunch(file: Path): Path =
