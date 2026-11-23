@@ -34,6 +34,7 @@ ktor = "3.6.1"
 # Desktop's `application { }`. The sibling `-app` artifact adds `TrayApp` (a tray-anchored popup
 # window) and pulls in the Nucleus windowing backend for it, which this app has no use for.
 compose-native-tray = "2.1.7"
+dbus-java = "5.2.2"
 # AutoLaunch is independent of the tray and packaging plugins.
 nucleus-autolaunch = "2.5.18"
 nucleus = "2.5.18"
@@ -87,6 +88,7 @@ coil = "3.6.3"
 # app already has a `suspend () -> String?` seam for the chooser that every host supplies, so
 # adopting it would mean wrapping a function the app has rather than deleting one.
 filekit = "0.17.1"
+jna = "5.19.1"
 
 [libraries]
 # Database Dependencies
@@ -119,8 +121,8 @@ dev-mttmcknn-dejavu = { module = "dev.mttmcknn:dejavu", version.ref = "dejavu" }
 org-jetbrains-compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "jetbrains-compose" }
 io-github-takahirom-roborazzi-compose-desktop = { module = "io.github.takahirom.roborazzi:roborazzi-compose-desktop", version.ref = "roborazzi" }
 io-github-takahirom-roborazzi-compose-desktop-preview-scanner-support = { module = "io.github.takahirom.roborazzi:roborazzi-compose-desktop-preview-scanner-support", version.ref = "roborazzi" }
+io-github-sergio-sastre-composable-preview-scanner-android = { module = "io.github.sergio-sastre.ComposablePreviewScanner:android", version = "0.9.0" }
 io-github-darkxanter-webp-imageio = { module = "io.github.darkxanter:webp-imageio", version.ref = "webp-imageio" }
-io-github-sergio-sastre-composable-preview-scanner-android = { module = "io.github.sergio-sastre.ComposablePreviewScanner:android", version = "0.10.1" }
 junit-junit = { module = "junit:junit", version = "4.13.2" }
 org-junit-vintage-junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version = "5.13.4" }
 org-jetbrains-kotlinx-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "jetbrains-serialization" }
@@ -130,6 +132,8 @@ io-ktor-ktor-client-content-negotiation = { module = "io.ktor:ktor-client-conten
 io-ktor-ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 io-ktor-ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 dev-nucleusframework-compose-native-tray = { module = "dev.nucleusframework:composenativetray", version.ref = "compose-native-tray" }
+dbus-java-core = { module = "com.github.hypfvieh:dbus-java-core", version.ref = "dbus-java" }
+dbus-java-unix-socket = { module = "com.github.hypfvieh:dbus-java-transport-native-unixsocket", version.ref = "dbus-java" }
 dev-nucleusframework-autolaunch = { module = "dev.nucleusframework:nucleus.autolaunch", version.ref = "nucleus-autolaunch" }
 dev-nucleusframework-updater-runtime = { module = "dev.nucleusframework:nucleus.updater-runtime", version.ref = "nucleus" }
 org-jetbrains-kotlinx-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "jetbrains-coroutines" }
@@ -164,6 +168,7 @@ io-insert-koin-koin-compose = { module = "io.insert-koin:koin-compose", version.
 # from these, so `coil-compose` is named here as well to make the dependency explicit.
 io-github-vinceglb-filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref = "filekit" }
 io-github-vinceglb-filekit-coil = { module = "io.github.vinceglb:filekit-coil", version.ref = "filekit" }
+jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 io-coil-kt-coil3-coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 
 # Testing (they are used in the BuildSrc just not by the plugin called by name don't remove)

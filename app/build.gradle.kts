@@ -1,5 +1,6 @@
 import azkar.buildlogic.AzkarInstallerPlatform
 import azkar.buildlogic.macPackageVersion
+import groovy.json.JsonOutput
 import org.gradle.api.artifacts.ExternalModuleDependency
 import java.util.jar.JarFile
 
@@ -129,6 +130,8 @@ dependencies {
     // `dev.nucleusframework.composenativetray.**`) -- JNA resolves its native functions by
     // reflection at call time, so a shrinking build would break the tray silently at runtime.
     implementation(libs.dev.nucleusframework.compose.native.tray)
+    implementation(libs.dbus.java.core)
+    runtimeOnly(libs.dbus.java.unix.socket)
     implementation(libs.dev.nucleusframework.autolaunch)
     implementation(libs.dev.nucleusframework.updater.runtime)
 
@@ -158,6 +161,7 @@ dependencies {
     implementation(libs.io.coil.kt.coil3.coil.compose)
     implementation(libs.io.github.vinceglb.filekit.dialogs)
     implementation(libs.io.github.vinceglb.filekit.coil)
+    implementation(libs.jna.platform)
 
     // `runTest` supplies virtual time and a deterministic scheduler, which is what makes the
     // library's debounced search assertable without a real 180 ms wait.
@@ -165,6 +169,7 @@ dependencies {
     testImplementation(libs.io.github.takahirom.roborazzi.compose.desktop)
     testImplementation(libs.io.github.takahirom.roborazzi.compose.desktop.preview.scanner.support)
     testImplementation(libs.io.github.darkxanter.webp.imageio)
+    // Keep the scanner core ABI compatible with Roborazzi's preview adapter.
     testImplementation(libs.io.github.sergio.sastre.composable.preview.scanner.android)
     testImplementation(libs.junit.junit)
 
@@ -379,6 +384,131 @@ val collectProguardRules =
         }
     }
 
+// Installer platform detection falls back to Linux for unknown hosts.
+if (providers.systemProperty("os.name").orNull.equals("Linux", ignoreCase = true)) {
+    tasks.register<Exec>("runGnomePanel") {
+        val appRun = tasks.named<JavaExec>("run")
+        group = "application"
+        description = "Run Azkar with its extension in a nested GNOME Shell."
+        dependsOn(provider { appRun.get().taskDependencies.getDependencies(appRun.get()) })
+        doFirst {
+            val run = appRun.get()
+            val resources = tasks.named<Sync>("prepareAppResources").get().destinationDir
+            environment(run.environment)
+            environment("AZKAR_EXTENSION", resources.resolve("gnome/azkar-prayers@azkar.app"))
+            workingDir(run.workingDir)
+            commandLine(
+                listOf(rootProject.file("scripts/dev/run-gnome-panel"), run.javaLauncher.get().executablePath) +
+                    run.allJvmArgs +
+                    listOf("-cp", run.classpath.asPath, desktopMainClass) +
+                    run.args.orEmpty(),
+            )
+        }
+    }
+    tasks.register<Exec>("captureGnomePanelPreviews") {
+        group = "verification"
+        description = "Capture the GNOME prayer menus in an isolated Shell session."
+        val resources = tasks.named<Sync>("prepareAppResources")
+        dependsOn(resources)
+        doFirst {
+            commandLine(
+                rootProject.file("scripts/dev/capture-gnome-panel"),
+                resources.get().destinationDir.resolve("gnome/azkar-prayers@azkar.app"),
+                layout.projectDirectory.dir("src/previewImages").asFile,
+            )
+        }
+    }
+    val linuxIcon = rootProject.layout.projectDirectory.file("assets/icons/azkar.png")
+    val panelIcons =
+        fileTree(rootProject.file("assets/icons/lucide")) {
+            include(
+                "bell.svg",
+                "bell-off.svg",
+                "calendar.svg",
+                "house.svg",
+                "moon.svg",
+                "sun.svg",
+                "sunrise.svg",
+                "sunset.svg",
+            )
+        }
+    val iconShape = Regex("<(path|line|rect|circle|polyline|polygon|ellipse) ")
+    val shellExtension = layout.projectDirectory.dir("src/desktopResources/linux/gnome")
+    val extensionVersion = version.toString()
+    val extensionSource = layout.projectDirectory.dir("src/gnomeExtension")
+    val extensionOutput = layout.buildDirectory.dir("generated/gnomeExtension")
+    val extensionWorkspace = layout.buildDirectory.dir("gnomeExtension")
+    val compileGnomeExtension =
+        tasks.register<Exec>("compileGnomeExtension") {
+            val source = extensionSource.asFile.absolutePath
+            val workspace = extensionWorkspace.get().asFile.absolutePath
+            val output = extensionOutput.get().asFile.absolutePath
+            commandLine(
+                "bash",
+                "-ec",
+                """
+                rm -rf -- "$2" "$3"
+                mkdir -p "$2"
+                cp "$1"/*.ts "$1"/tsconfig.json "$1"/package.json "$1"/pnpm-lock.yaml "$2/"
+                cd "$2"
+                pnpm install --frozen-lockfile --ignore-scripts
+                bun run build --outDir "$3"
+                """.trimIndent(),
+                "compile-gnome-extension",
+                source,
+                workspace,
+                output,
+            )
+            inputs
+                .files(fileTree(extensionSource) { include("*.ts", "tsconfig.json", "package.json", "pnpm-lock.yaml") })
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+            outputs.dir(extensionOutput)
+            localState.register(extensionWorkspace)
+        }
+    tasks.withType<Sync>().configureEach {
+        if (name == "prepareAppResources") {
+            inputs.property("gnomeSymbolicIconFormat", "stroke-mask")
+            inputs.property("gnomeExtensionVersion", extensionVersion)
+            filesMatching("gnome/azkar-prayers@azkar.app/metadata.json") {
+                val versionName = JsonOutput.toJson(extensionVersion)
+                filter { line: String ->
+                    line.replace("\"version-name\": \"development\"", "\"version-name\": $versionName")
+                }
+            }
+            from(panelIcons) {
+                into("gnome/azkar-prayers@azkar.app")
+                rename { it.removeSuffix(".svg") + "-symbolic.svg" }
+                // GNOME recolors fills in symbolic SVGs. Preserve Lucide's strokes as a mask.
+                filter { line: String ->
+                    when (line.trim()) {
+                        ">" -> ">\n  <mask id=\"outline\" maskUnits=\"userSpaceOnUse\">"
+                        "</svg>" ->
+                            """  </mask>
+                            |  <rect width="24" height="24" style="stroke: none" mask="url(#outline)"/>
+                            |</svg>
+                            """.trimMargin()
+                        else ->
+                            iconShape.replace(line) { match ->
+                                """${match.value}style="fill: none !important; stroke: #fff !important" """
+                            }
+                    }
+                }
+            }
+            from(listOf(linuxIcon, compileGnomeExtension)) {
+                into("gnome/azkar-prayers@azkar.app")
+            }
+        }
+    }
+    tasks.matching { it.name in setOf("createDistributable", "createReleaseDistributable") }.configureEach {
+        // Nucleus 2.5.18 treats appResourcesDir as internal on the jpackage task.
+        inputs.property("gnomeExtensionVersion", extensionVersion)
+        inputs.dir(shellExtension).withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.files(compileGnomeExtension).withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.files(panelIcons).withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.file(linuxIcon).withPathSensitivity(PathSensitivity.NONE)
+    }
+}
+
 nucleus.application {
     mainClass = desktopMainClass
     jvmArgs(
@@ -401,7 +531,12 @@ nucleus.application {
         }
     }
     nativeDistributions {
+        appResourcesRootDir.set(layout.projectDirectory.dir("src/desktopResources"))
         modules("java.sql", "java.naming")
+        if (installerPlatform.os == "linux") {
+            // The session D-Bus transport reads the Unix UID for SASL EXTERNAL authentication.
+            modules("jdk.security.auth")
+        }
         val fullVersion = project.version.toString()
         val isDev = fullVersion.contains("-beta.")
         val nativePackageVersion = fullVersion.substringBefore("-beta")
@@ -433,6 +568,8 @@ nucleus.application {
             debMaintainer = "Azkar <support@azkar.app>"
             debPackageVersion = fullVersion
             rpmPackageVersion = nativePackageVersion
+            afterInstall.set(rootProject.file("packaging/linux/gnome-extension-after-install.sh"))
+            afterRemove.set(rootProject.file("packaging/linux/gnome-extension-after-remove.sh"))
         }
         windows {
             iconFile.set(project.file("../assets/icons/azkar.ico"))
