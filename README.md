@@ -20,8 +20,21 @@
 Install the desktop app from the **[download page](https://jamhour1g.github.io/Azkar-App/download.html)**,
 or browse [GitHub releases](https://github.com/jamhour1g/Azkar-App/releases).
 
-For Linux repositories, update channels, and installation guidance, see the download page. For
-release channels and packaging details, see the [release guide](docs/releasing.md).
+You can also install from a terminal:
+
+```sh
+curl -fsSL https://jamhour1g.github.io/Azkar-App/install.sh | sh
+```
+
+The Linux installer configures APT on Debian/Ubuntu or DNF on Fedora for updates; other x86-64
+Linux distributions use an AppImage. On Windows, run this in PowerShell:
+
+```powershell
+irm https://jamhour1g.github.io/Azkar-App/install.ps1 | iex
+```
+
+Choose Stable or Dev when prompted. For release channels and packaging details, see the
+[release guide](docs/releasing.md).
 
 ## Made for a steady daily practice
 
