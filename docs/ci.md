@@ -11,7 +11,8 @@ count is required for the solo-maintainer workflow.
 
 ## Contributor approval
 
-Anyone can open or update a PR. The owner's PRs run automatically. Other authors'
+Anyone can open or update a PR. The owner's PRs run automatically on open, reopen, new commits, and base-branch changes.
+Title and description edits leave any active run in progress. Other authors'
 PRs start **no CI runners** until the owner reviews and manually dispatches CI with
 both the PR number and its full current head SHA. A new commit requires fresh approval.
 
@@ -27,6 +28,8 @@ branch, rather than a contributor's branch. The dispatch must be performed by th
 repository owner. Retargeted PRs also need a fresh run. To rehearse workflow changes, the owner can
 manually select their own same-repository PR branch; its branch and commit must match
 the PR exactly. Contributor approvals must always use the trusted default branch.
+Add `-f profile_gradle=true` to collect Linux build task timings in the
+`linux-gradle-profile` artifact.
 Use `-f validate_installers=true` for a full four-runner rehearsal of a dev PR.
 
 For an owner-reviewed documentation-only PR targeting `dev`, the owner can set
@@ -56,8 +59,8 @@ This catches PR/base races before executing code. Contributors cannot bypass app
 by editing the CI YAML in their PR.
 
 Build jobs use read-only repository permissions, no publishing secrets, and checkout
-with `persist-credentials: false`. TypeScript and Chromium checks run alongside the Linux
-Gradle build. Both jobs must succeed for `Azkar CI / Linux` unless the owner approved a
+with `persist-credentials: false`. TypeScript, Chromium, and Kotlin release-script checks share a runner
+alongside the Linux Gradle build. Both jobs must succeed for `Azkar CI / Linux` unless the owner approved a
 documentation-only skip. CI uses read-only cache tokens on both triggers, and the Linux
 build can restore trusted Gradle entries. On the default `dev` branch, Release validation
 writes the Linux Gradle cache and Intel macOS packaging writes its own cache. The other
