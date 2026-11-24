@@ -31,6 +31,9 @@ concurrency:
 permissions:
   contents: read
 
+# Manual approval can run contributor code, so enforce read-only cache tokens on every trigger.
+cache-mode: read
+
 defaults:
   run:
     shell: bash
@@ -165,7 +168,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
         with:
-          cache-disabled: true
+          cache-read-only: true
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
@@ -174,16 +177,6 @@ jobs:
 
       - name: Set up pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-
-      - name: Check TypeScript workspace
-        run: |
-          pnpm install --frozen-lockfile --ignore-scripts
-          bun run check
-
-      - name: Test the built download site in Chromium
-        run: |
-          bun --cwd site --bun playwright install --with-deps --only-shell chromium
-          bun run test:browser
 
       - name: Install native test dependencies
         run: sudo apt-get update && sudo apt-get install -y libgl1
@@ -270,6 +263,44 @@ jobs:
           name: build-jars
           path: 'app/build/libs/*.jar'
           retention-days: 7
+
+  check-site:
+    name: Check TypeScript workspace and download site
+    needs: select
+    if: needs.select.outputs.skip_checks != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: refs/pull/${{ needs.select.outputs.pr_number }}/merge
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify the approved merge revision
+        env:
+          REVIEWED_SHA: ${{ needs.select.outputs.head_sha }}
+          BASE_SHA: ${{ needs.select.outputs.base_sha }}
+        run: |
+          test "$(git rev-parse HEAD^2)" = "$REVIEWED_SHA"
+          test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.4.5'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - name: Check TypeScript workspace
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          bun run check
+
+      - name: Test the built download site in Chromium
+        run: |
+          bun --cwd site --bun playwright install --with-deps --only-shell chromium
+          bun run test:browser
 
   build-cross-platform:
     name: Build installers (Windows/macOS)
@@ -380,7 +411,7 @@ jobs:
 
   report:
     name: Report required checks on the reviewed commit
-    needs: [select, build-linux, build-cross-platform, validate-installers]
+    needs: [select, build-linux, check-site, build-cross-platform, validate-installers]
     if: always() && needs.select.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -399,6 +430,7 @@ jobs:
           INSTALLERS_REQUIRED: ${{ needs.select.outputs.installers }}
           SKIP_CHECKS: ${{ needs.select.outputs.skip_checks }}
           LINUX_RESULT: ${{ needs.build-linux.result }}
+          SITE_RESULT: ${{ needs.check-site.result }}
           CROSS_RESULT: ${{ needs.build-cross-platform.result }}
           INSTALLERS_RESULT: ${{ needs.validate-installers.result }}
         run: |
@@ -413,15 +445,17 @@ jobs:
               -f "state=$1" -f "context=$2" -f "description=$3" \
               -f "target_url=$GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           }
-          state=failure
-          description="Linux: $LINUX_RESULT; reviewed revision checked"
+          linux_state=failure
+          description="Linux ($LINUX_RESULT), site ($SITE_RESULT)"
           if [[ "$SKIP_CHECKS" == true ]]; then description='Owner-approved documentation-only CI skip'; fi
-          if [[ "$current" == true && ( "$LINUX_RESULT" == success || "$SKIP_CHECKS" == true ) ]]; then state=success; fi
-          post_status "$state" 'Azkar CI / Linux' "$description"
+          if [[ "$current" == true && ( ( "$LINUX_RESULT" == success && "$SITE_RESULT" == success ) || "$SKIP_CHECKS" == true ) ]]; then
+            linux_state=success
+          fi
+          post_status "$linux_state" 'Azkar CI / Linux' "$description"
           if [[ "$INSTALLERS_REQUIRED" == true ]]; then
             state=failure
-            if [[ "$LINUX_RESULT" == success && "$CROSS_RESULT" == success && "$INSTALLERS_RESULT" == success && "$current" == true ]]; then state=success; fi
-            post_status "$state" 'Azkar CI / Installers' "Native builds: $CROSS_RESULT; asset validation: $INSTALLERS_RESULT"
+            if [[ "$linux_state" == success && "$CROSS_RESULT" == success && "$INSTALLERS_RESULT" == success ]]; then state=success; fi
+            post_status "$state" 'Azkar CI / Installers' "Linux and site ($linux_state), native builds ($CROSS_RESULT), asset validation ($INSTALLERS_RESULT)"
           fi
           {
             echo '### Reviewed PR checks'
@@ -431,6 +465,7 @@ jobs:
             echo "- PR still matches the reviewed revision: $current"
             echo "- Documentation-only skip: $SKIP_CHECKS"
             echo "- Linux: $LINUX_RESULT"
+            echo "- Site: $SITE_RESULT"
             echo "- Native builds: $CROSS_RESULT"
             echo "- Installer validation: $INSTALLERS_RESULT"
           } >> "$GITHUB_STEP_SUMMARY"

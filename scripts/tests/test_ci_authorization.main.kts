@@ -137,6 +137,7 @@ try {
         mapOf(
             "INSTALLERS_REQUIRED" to "true",
             "LINUX_RESULT" to "success",
+            "SITE_RESULT" to "success",
             "CROSS_RESULT" to "success",
             "INSTALLERS_RESULT" to "success",
         )
@@ -151,10 +152,19 @@ try {
     check(
         "state=failure" !in
             report(
-                success +
-                    mapOf("SKIP_CHECKS" to "true", "LINUX_RESULT" to "skipped", "INSTALLERS_REQUIRED" to "false"),
+                mapOf(
+                    "SKIP_CHECKS" to "true",
+                    "LINUX_RESULT" to "skipped",
+                    "SITE_RESULT" to "skipped",
+                    "INSTALLERS_REQUIRED" to "false",
+                ),
             ),
     )
+    for (siteResult in listOf("failure", "cancelled", "skipped")) {
+        val output = report(success + ("SITE_RESULT" to siteResult))
+        check("state=failure -f context=Azkar CI / Linux" in output)
+        check("state=failure -f context=Azkar CI / Installers" in output)
+    }
     check(
         "state=success" !in
             report(success + ("MOCK_HEAD" to "c".repeat(40))),
@@ -171,7 +181,7 @@ try {
     )
     check("state=failure" in report(success + ("LINUX_RESULT" to "cancelled")))
     println(
-        "CI authorization fixtures passed: approval, documentation skips, renames, stale head/base, installer failures",
+        "CI authorization fixtures passed: approval, documentation skips, renames, stale head/base, site and installer failures",
     )
 } finally {
     Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) }
