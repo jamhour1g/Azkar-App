@@ -6,7 +6,7 @@ count is required for the solo-maintainer workflow.
 
 | PR target | Required status | Work |
 |---|---|---|
-| `dev` | `Azkar CI / Linux` | Linux build/tests/static analysis, packaged-runtime smoke test, release-script self-tests |
+| `dev` | `Azkar CI / Linux` | Linux build/tests/static analysis, packaged-runtime smoke test, release-script self-tests, TypeScript workspace and Chromium checks |
 | `production` | Both `Azkar CI / Linux` and `Azkar CI / Installers` | Above plus Windows, Intel/ARM macOS, all eight installers and merged asset validation |
 
 ## Contributor approval
@@ -30,7 +30,7 @@ the PR exactly. Contributor approvals must always use the trusted default branch
 Use `-f validate_installers=true` for a full four-runner rehearsal of a dev PR.
 
 For an owner-reviewed documentation-only PR targeting `dev`, the owner can set
-`skip_checks=true` to avoid the Gradle and installer jobs:
+`skip_checks=true` to skip the build and site checks:
 
 ```bash
 gh workflow run ci.yml --ref dev \
@@ -56,13 +56,17 @@ This catches PR/base races before executing code. Contributors cannot bypass app
 by editing the CI YAML in their PR.
 
 Build jobs use read-only repository permissions, no publishing secrets, and checkout
-with `persist-credentials: false`. Contributor CI disables Gradle caching. The trusted
-Release workflow caches Gradle state: only validation on the default `dev` branch writes
-entries, while its parallel packaging/screenshot jobs and release tags are read-only. A
-separate reporting runner, with no source checkout, writes the required statuses to the
-reviewed head from job results. A changed head, base revision, or target branch cannot receive a
-successful status from that run. If the base moves after the status is posted, GitHub branch
-protection must require the branch to be up to date before merging.
+with `persist-credentials: false`. TypeScript and Chromium checks run alongside the Linux
+Gradle build. Both jobs must succeed for `Azkar CI / Linux` unless the owner approved a
+documentation-only skip. CI uses read-only cache tokens on both triggers, and the Linux
+build can restore trusted Gradle entries. On the default `dev` branch, Release validation
+writes the Linux Gradle cache and Intel macOS packaging writes its own cache. The other
+release matrix jobs, screenshots, and release tags only restore Gradle entries.
+
+A separate reporting runner, with no source checkout, writes the required statuses to
+the reviewed head from job results. A changed head, base revision, or target branch
+cannot receive a successful status from that run. If the base moves after the status
+is posted, GitHub branch protection must require the branch to be up to date before merging.
 Manual workflow job checks alone do not satisfy PR branch protection, which is why the
 explicit `Azkar CI / …` commit statuses are used.
 The reporting job also records the reviewed head/base and each job result in the run summary.
@@ -129,9 +133,8 @@ and checks `scripts/release/*.sh` with ShellCheck (install ShellCheck locally; i
 on the Ubuntu CI runner). If
 actionlint is absent on Linux x64, the script downloads version 1.7.12 and verifies its pinned
 SHA-256 checksum. On other platforms, install actionlint first. PR CI runs this before Gradle;
-Release runs it during preparation. Until actionlint supports GitHub's `queue: max`, the
-script replaces only that exact setting with a comment in the lint input; the actual workflow
-keeps its full release queue, and other queue values still fail linting.
+Release runs it during preparation. The script masks the exact `queue: max` and
+`cache-mode: read` settings in the lint input until actionlint supports them.
 
 Native multi-platform jobs and Pages deployment must still be validated on GitHub after the new workflow definitions
 reach the default branch.

@@ -26,9 +26,9 @@ fi
 
 for workflow in .github/workflows/*.yml; do
   echo "Checking $workflow"
-  # actionlint 1.7.12 does not recognize GitHub's queue: max yet. Preserve line numbers
-  # and check every other field; other queue values still fail validation.
-  sed 's/^  queue: max$/  # queue: max/' "$workflow" | "$lint" -color -
+  # actionlint 1.7.12 lacks these GitHub settings. Mask the exact values used
+  # by our workflows and preserve line numbers for other diagnostics.
+  sed -e 's/^  queue: max$/  # queue: max/' -e 's/^cache-mode: read$/# cache-mode: read/' "$workflow" | "$lint" -color -
 done
 
 shellcheck scripts/ci/*.sh scripts/release/*.sh
