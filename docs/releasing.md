@@ -1,6 +1,6 @@
 # Releasing the desktop app
 
-Nucleus 2.5.18 packages the existing Compose Desktop JVM application. The Compose UI, AWT windows, tray and ProGuard rules remain in the app; only installation and update packaging moved from Conveyor.
+Nucleus `3.0.0-dev-202611222143` packages the existing Compose Desktop JVM application. The Compose UI, AWT windows, tray and ProGuard rules remain in the app; only installation and update packaging moved from Conveyor.
 
 | Platform | Installer and update path | Initial architecture |
 |---|---|---|
@@ -44,7 +44,7 @@ The release merger requires all eight platform/format artifacts and checks their
 
 The Linux packages include the Azkar GNOME Shell extension. DEB and RPM register the bundled files system-wide. AppImage installs a user copy when the prayer panel is enabled. If GNOME has yet to discover the files, sign out and back in, then launch Azkar. The panel uses AppIndicator while the extension is unavailable and respects an explicit disable in GNOME. Linux packaging requires Bun and pnpm to build the extension from `app/packaging/linux/gnomeExtension`. Gradle installs the locked dependencies with pnpm, runs TypeScript with Bun, and bundles the generated `extension.js`. The extension and website use the shared [TypeScript workspace](development.md#typescript-workspace) for local checks and formatting.
 
-Linux staging also checks the actual DEB/RPM internal versions and architectures. Both use `~beta.N` internally so Dev sorts below the next Stable version. The RPM task receives the full SemVer through Nucleus's public task API because its DSL validator rejects prereleases before electron-builder can convert them. Packaging regenerates each format's working directory because Nucleus 2.5.18 otherwise reuses an existing `package.json` and fallback manifest across versions.
+Linux staging also checks the actual DEB/RPM internal versions and architectures. Both use `~beta.N` internally so Dev sorts below the next Stable version. The RPM task receives the full SemVer through Nucleus's public task API because its DSL validator rejects prereleases before electron-builder can convert them. Packaging regenerates each format's working directory to avoid the stale outputs observed when Nucleus 2.5.18 reused an existing `package.json` and fallback manifest across versions.
 
 Local `act` runs never upload GitHub artifacts or publish releases. In a disposable checkout, run a Linux-only packaging rehearsal with a Dev event payload:
 
@@ -55,7 +55,7 @@ act workflow_dispatch -W .github/workflows/release.yml -e /tmp/azkar-act-event.j
 
 Local preparation uses `0.0.0-beta.1` without GitHub credentials. Outputs stay in that checkout's `build/installers/`; the publish job explicitly rejects `ACT=true`. Container-created files may have container-user ownership, so prefer the direct Gradle task in your working checkout. Linux containers cannot validate native Windows/macOS installers.
 
-Nucleus 2.5.18 was selected as a released, pinned baseline. It has Compose Gradle integration through reflection and an internal Compose JDK-probe dependency. The Linux DEB package was built successfully against this checkout's Kotlin 2.4.20, Compose 1.12.1 and Zulu JDK 25. Re-run package and installed-update checks when upgrading Compose or Nucleus. Review any future Compose bytecode patch before enabling it; the released 2.5.18 packaging path does not enable the later default text patch.
+The previous Nucleus 2.5.18 baseline produced a Linux DEB with Kotlin 2.4.20, Compose 1.12.1 and Zulu JDK 25. The current Nucleus development pin built Linux x64 DEB, RPM and AppImage packages and passed the bundled-runtime smoke test. Verify an installed update and the Windows and macOS packages before publishing with the new pin. Review any Compose bytecode patch before enabling it.
 
 ## Stable releases
 

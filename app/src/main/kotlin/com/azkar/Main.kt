@@ -75,6 +75,7 @@ import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
+import org.koin.core.module.Module
 import org.koin.core.qualifier.named
 import org.koin.mp.KoinPlatform
 import java.awt.Toolkit
@@ -117,9 +118,16 @@ suspend fun main(args: Array<String>) {
         verifyPackagedRuntime()
         return
     }
+    launchDesktop(args)
+}
+
+internal suspend fun launchDesktop(
+    args: Array<String>,
+    overrides: List<Module> = emptyList(),
+) {
     pinDesktopWindowClass()
     logger.info { "Starting Azkar" }
-    startKoin { modules(dataModule, appModule) }
+    startKoin { modules(listOf(dataModule, appModule) + overrides) }
     val koin = KoinPlatform.getKoin()
     val startup = prepareDesktopStartup(koin)
     runDesktopApplication(args, koin, startup)
