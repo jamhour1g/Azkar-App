@@ -104,6 +104,11 @@ screenshots then run in parallel, and publication requires all three to pass. Fa
 validation uploads test, Detekt, and shrinking logs for diagnosis. The release queue preserves
 waiting runs (up to GitHub's 100-pending-run queue limit); Dev and Stable publication is serialized.
 
+Release preparation and validation restore separate Kotlin script dependency caches.
+Successful default-branch runs can save those caches. Publishing restores the Maven
+repository artifact from validation in the same run. Gradle validation waits 60 seconds
+and retries once after a Maven Central HTTP 429.
+
 Repositories contain only the newest Stable and newest Dev DEB/RPM pair. Publication
 builds a fresh signed site from those GitHub release assets, deploys it explicitly with
 Pages Actions, verifies every live file against the generated site's checksums, and
