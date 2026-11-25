@@ -36,8 +36,8 @@ ktor = "3.6.1"
 compose-native-tray = "2.1.7"
 dbus-java = "5.2.2"
 # AutoLaunch is independent of the tray and packaging plugins.
-nucleus-autolaunch = "2.5.18"
-nucleus = "2.5.18"
+nucleus-autolaunch = "3.0.0-dev-202611222143"
+nucleus = "3.0.0-dev-202611222143"
 # detekt is the Kotlin/Compose static-analysis gate; it replaces SpotBugs.
 detekt = "2.0.0-alpha.5"
 # Keep the formatting rules stable across Spotless plugin releases.
@@ -136,6 +136,7 @@ dbus-java-core = { module = "com.github.hypfvieh:dbus-java-core", version.ref = 
 dbus-java-unix-socket = { module = "com.github.hypfvieh:dbus-java-transport-native-unixsocket", version.ref = "dbus-java" }
 dev-nucleusframework-autolaunch = { module = "dev.nucleusframework:nucleus.autolaunch", version.ref = "nucleus-autolaunch" }
 dev-nucleusframework-updater-runtime = { module = "dev.nucleusframework:nucleus.updater-runtime", version.ref = "nucleus" }
+dev-nucleusframework-updater-testing = { module = "dev.nucleusframework:nucleus.updater-testing", version.ref = "nucleus" }
 org-jetbrains-kotlinx-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "jetbrains-coroutines" }
 # Jetpack DataStore, the `common`/`jvm` artifact. `-core` is the variant without the Android
 # dependencies, which is the one a desktop-only build can use; `datastore-preferences` itself

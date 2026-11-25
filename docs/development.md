@@ -91,6 +91,25 @@ bun run test:browser
 Gradle builds the GNOME extension on Linux. Use `pnpm --filter azkar-gnome-extension run check`
 for the extension checks alone.
 
+## Mock app updates
+
+Run Azkar from source with a local release fixture and a temporary app profile. The app’s
+`mockUpdate` source set uses Nucleus’s testing library to serve the fixture.
+
+```bash
+./gradlew :app:runMockUpdate
+./gradlew :app:runMockUpdate --args='download-failed rpm'
+```
+
+Open **Settings → Updates** or click the startup update notification. Nucleus reads the local
+manifest, downloads a throttled fixture, and verifies its checksum. Once the restart button
+appears, clicking it simulates a successful install and shows the new version in Settings.
+The mock uses placeholder files and never launches a package installer.
+
+On Linux, choose `deb` (the default), `rpm`, or `appimage`. Azkar selects the native format
+on Windows and macOS. Pass `current`, `check-failed`, or `download-failed` as the first argument
+to exercise the other states. Close and rerun the app to reset the fixture.
+
 ## Preview images
 
 Capture all Compose previews outside the IDE and update the committed images:

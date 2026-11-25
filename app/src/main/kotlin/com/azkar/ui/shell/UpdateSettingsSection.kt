@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -37,12 +38,12 @@ import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.settingsUpdateChannelVersion
 import com.azkar.generated.resources.settingsUpdateCheck
 import com.azkar.generated.resources.settingsUpdateChecking
+import com.azkar.generated.resources.settingsUpdateCopyDowngrade
 import com.azkar.generated.resources.settingsUpdateDev
 import com.azkar.generated.resources.settingsUpdateDowngradeWarning
 import com.azkar.generated.resources.settingsUpdateDownload
 import com.azkar.generated.resources.settingsUpdateDownloading
 import com.azkar.generated.resources.settingsUpdateInstall
-import com.azkar.generated.resources.settingsUpdateInstallerOpened
 import com.azkar.generated.resources.settingsUpdateInstalling
 import com.azkar.generated.resources.settingsUpdateLinuxInfoTooltip
 import com.azkar.generated.resources.settingsUpdateStable
@@ -56,9 +57,7 @@ import com.azkar.ui.components.AzkarDialogSurface
 import com.azkar.ui.components.AzkarTooltip
 import com.azkar.ui.components.SelectRow
 import com.azkar.ui.library.setPlainText
-import com.azkar.ui.theme.AzkarComponentShowcasePreview
 import com.azkar.ui.theme.AzkarComponentVariantsPreview
-import com.azkar.ui.theme.AzkarPreview
 import com.azkar.ui.theme.AzkarTheme
 import com.azkar.ui.theme.AzkarVariantsPreview
 import com.azkar.updates.UpdateChannel
@@ -91,8 +90,10 @@ internal fun UpdateSettingsSection(manager: UpdateManager) {
                         isRepositoryManaged = manager.isRepositoryManaged,
                         channel = channel,
                         status = status,
+                        copyDowngradeCommand =
+                            (status as? UpdateStatus.Available)?.let(manager::requiresPackageManager) == true,
                     ),
-                onSelectChannel = { scope.launch { manager.selectChannel(it) } },
+                onSelectChannel = manager::requestChannel,
                 onCopyRepositoryCommands = {
                     scope.launch {
                         clipboard.setPlainText(
@@ -103,23 +104,31 @@ internal fun UpdateSettingsSection(manager: UpdateManager) {
                 onOpenLinuxRepositoryGuide = {
                     runCatching { uriHandler.openUri(LINUX_REPOSITORY_GUIDE_URL) }
                 },
-                onAction = {
-                    scope.launch {
-                        when (val current = manager.status.value) {
-                            UpdateStatus.Idle, UpdateStatus.Current, is UpdateStatus.Failed -> manager.checkManually()
-                            is UpdateStatus.Available -> manager.download(current.info)
-                            is UpdateStatus.ReadyToInstall -> manager.installAndRestart(current.file)
-                            UpdateStatus.Checking,
-                            UpdateStatus.Installing,
-                            UpdateStatus.InstallerOpened,
-                            is UpdateStatus.Downloading,
-                            -> Unit
-                        }
-                    }
-                },
+                onAction = { performUpdateAction(manager, scope, clipboard) },
             )
         },
     )
+}
+
+private fun performUpdateAction(
+    manager: UpdateManager,
+    scope: kotlinx.coroutines.CoroutineScope,
+    clipboard: androidx.compose.ui.platform.Clipboard,
+) {
+    manager.launchUpdateAction {
+        when (val current = manager.status.value) {
+            UpdateStatus.Idle, UpdateStatus.Current, is UpdateStatus.Failed -> manager.checkManually()
+            is UpdateStatus.Available ->
+                if (manager.requiresPackageManager(current)) {
+                    val commands = manager.packageManagerCommands(manager.channel.value, current.info.version, true)
+                    scope.launch { clipboard.setPlainText(commands) }
+                } else {
+                    manager.download(current.info)
+                }
+            is UpdateStatus.ReadyToInstall -> manager.installAndRestart(current.file)
+            UpdateStatus.Checking, UpdateStatus.Installing, is UpdateStatus.Downloading -> Unit
+        }
+    }
 }
 
 @Composable
@@ -163,6 +172,7 @@ private data class UpdateSettingsCardState(
     val isRepositoryManaged: Boolean,
     val channel: UpdateChannel,
     val status: UpdateStatus,
+    val copyDowngradeCommand: Boolean = false,
 )
 
 @Composable
@@ -204,7 +214,7 @@ private fun UpdateVersionRow(
             }
             UpdateVersionDetails(state)
         }
-        UpdateActionIconButton(state.status, onAction)
+        UpdateActionIconButton(state.status, state.copyDowngradeCommand, onAction)
     }
 }
 
@@ -241,9 +251,11 @@ private fun UpdateStatus.channelVersion(): String? =
 @Composable
 private fun UpdateActionIconButton(
     status: UpdateStatus,
+    copyDowngradeCommand: Boolean,
     onAction: () -> Unit,
 ) {
-    val buttonLabel = updateButtonLabel(status)
+    val buttonLabel =
+        if (copyDowngradeCommand) stringResource(Res.string.settingsUpdateCopyDowngrade) else updateButtonLabel(status)
     AzkarTooltip(tooltip = buttonLabel) {
         IconButton(
             onClick = onAction,
@@ -253,7 +265,11 @@ private fun UpdateActionIconButton(
                     contentDescription = buttonLabel
                 },
         ) {
-            UpdateActionIndicator(status)
+            if (copyDowngradeCommand) {
+                Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(22.dp))
+            } else {
+                UpdateActionIndicator(status)
+            }
         }
     }
 }
@@ -273,7 +289,6 @@ private fun updateButtonLabel(status: UpdateStatus): String =
                 Res.string.settingsUpdateCheck,
             )
         UpdateStatus.Checking -> stringResource(Res.string.settingsUpdateChecking)
-        UpdateStatus.InstallerOpened -> stringResource(Res.string.settingsUpdateInstallerOpened)
         is UpdateStatus.Available ->
             stringResource(
                 Res.string.settingsUpdateDownload,
@@ -342,14 +357,6 @@ private fun UpdateTrackSelector(
 
 @Composable
 private fun UpdateStatusDetails(state: UpdateSettingsCardState) {
-    if (state.status == UpdateStatus.InstallerOpened) {
-        Text(
-            stringResource(Res.string.settingsUpdateInstallerOpened),
-            color = AzkarTheme.colors.textSecondary,
-            fontSize = 12.sp,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-        )
-    }
     if (state.status is UpdateStatus.Available && state.status.isDowngrade) DowngradeWarning()
     if (state.status is UpdateStatus.ReadyToInstall && state.status.isDowngrade) DowngradeWarning()
 }
@@ -385,11 +392,6 @@ internal fun UpdateLinuxAvailablePreview() =
         UpdateStatus.Available(updatePreviewInfo(), "", isDowngrade = false),
         isRepositoryManaged = true,
     )
-
-@AzkarComponentShowcasePreview
-@AzkarPreview
-@Composable
-internal fun UpdateInstallerOpenedPreview() = UpdateStatePreview(UpdateStatus.InstallerOpened)
 
 @AzkarComponentVariantsPreview
 @Composable

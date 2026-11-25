@@ -688,8 +688,9 @@
     <string name="settingsUpdateChannelVersion">أحدث إصدار %1$s: %2$s</string>
     <string name="settingsUpdateTrackTitle">قناة التحديث</string>
     <string name="settingsUpdateTrackHint">استخدم الإصدارات المستقرة أو التجريبية. يمكنك التبديل في أي وقت.</string>
+    <string name="settingsUpdateInstallCancelled">أُلغي تثبيت التحديث. تحقّق من وجود تحديثات للمحاولة مجددًا.</string>
+    <string name="settingsUpdateInstallFailed">تعذّر تثبيت التحديث (رمز الخروج %1$d). تحقّق من وجود تحديثات للمحاولة مجددًا.</string>
     <string name="settingsUpdateInstalling">جارٍ تثبيت التحديث…</string>
-    <string name="settingsUpdateInstallerOpened">أكمل تثبيت التحديث في مدير الحزم، ثم أعد تشغيل أذكار.</string>
     <string name="settingsUpdateStable">مستقر</string>
     <string name="settingsUpdateDev">تجريبي</string>
     <string name="settingsUpdateCheck">التحقق من وجود تحديثات</string>
@@ -698,6 +699,7 @@
     <string name="settingsUpdateDownloading">جارٍ تنزيل %1$s (%2$d٪)</string>
     <string name="settingsUpdateInstall">التثبيت وإعادة التشغيل</string>
     <string name="settingsUpdateDowngradeWarning">سيؤدي هذا إلى تثبيت إصدار أقدم. لن يتراجع عن تغييرات قاعدة البيانات التي أجرتها الإصدارات الأحدث.</string>
+    <string name="settingsUpdateCopyDowngrade">نسخ أوامر الرجوع إلى إصدار أقدم</string>
     <string name="settingsUpdateCopyCommands">نسخ أوامر إعداد المستودع</string>
     <string name="settingsUpdateLinuxInfoTooltip">خيارات تحديث حزمة لينكس</string>
     <string name="settingsUpdateLinuxInfoTitle">تلقَّ تحديثات أذكار عبر مدير الحزم</string>

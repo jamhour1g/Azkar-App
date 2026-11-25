@@ -288,6 +288,30 @@ tasks.register<JavaExec>("captureDownloadScreenshots") {
     )
 }
 
+val mockUpdate =
+    sourceSets.create("mockUpdate") {
+        compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+    }
+kotlin {
+    target.compilations.named("mockUpdate") { associateWith(target.compilations.getByName("main")) }
+    target.compilations.named("test") { associateWith(target.compilations.getByName("mockUpdate")) }
+}
+dependencies.add(mockUpdate.implementationConfigurationName, libs.dev.nucleusframework.updater.testing)
+tasks.register<JavaExec>("runMockUpdate") {
+    group = "application"
+    description = "Run Azkar with a mock update in a temporary profile."
+    val appRun = tasks.named<JavaExec>("run").get()
+    dependsOn(tasks.named(mockUpdate.classesTaskName))
+    dependsOn(provider { appRun.taskDependencies.getDependencies(appRun) })
+    mainClass.set("com.azkar.updates.MockUpdateMainKt")
+    javaLauncher.set(appRun.javaLauncher)
+    classpath = appRun.classpath + mockUpdate.runtimeClasspath
+    jvmArgs(appRun.jvmArgs.orEmpty())
+    systemProperties(appRun.systemProperties)
+    environment(appRun.environment)
+    workingDir(appRun.workingDir)
+}
+
 tasks.withType<Test>().configureEach {
     // Match the desktop runtime flags so UI and persistence tests do not emit JDK access warnings.
     jvmArgs("--enable-native-access=ALL-UNNAMED", "--sun-misc-unsafe-memory-access=allow")
