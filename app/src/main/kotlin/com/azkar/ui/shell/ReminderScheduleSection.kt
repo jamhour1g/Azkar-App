@@ -32,6 +32,7 @@ import com.azkar.generated.resources.reminderManagerQueueWindowHint
 import com.azkar.generated.resources.reminderManagerQueueWindowLabel
 import com.azkar.generated.resources.reminderManagerQueueWindowStart
 import com.azkar.generated.resources.reminderPauseChooseDuration
+import com.azkar.generated.resources.reminderPauseHint
 import com.azkar.generated.resources.trayMenuPause
 import com.azkar.generated.resources.trayMenuResume
 import com.azkar.ui.components.AzkarDayPicker
@@ -152,7 +153,10 @@ private fun ReminderPauseRow(
 ) {
     val until = rememberQueuePauseUntil(config)
     if (until == null) {
-        SettingRow(label = stringResource(Res.string.trayMenuPause)) {
+        SettingRow(
+            label = stringResource(Res.string.trayMenuPause),
+            hint = stringResource(Res.string.reminderPauseHint),
+        ) {
             AzkarDropdown(
                 selected = null,
                 options = ReminderPauseDuration.entries,

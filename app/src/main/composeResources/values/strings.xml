@@ -12,6 +12,7 @@
     <string name="trayMenuResume">Resume reminders</string>
     <string name="trayMenuPauseIndefinitely">Pause until I resume</string>
     <string name="reminderPauseChooseDuration">Duration</string>
+    <string name="reminderPauseHint">Reminders resume automatically when the selected time is up.</string>
     <string name="reminderPauseOneHour">1 hour</string>
     <string name="reminderPauseEightHours">8 hours</string>
     <string name="reminderPausedUntil">Reminders paused until %1$s</string>
