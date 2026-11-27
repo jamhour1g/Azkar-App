@@ -1,4 +1,5 @@
 #!/usr/bin/env -S kotlinc -script
+@file:Repository("https://maven-central.storage-download.googleapis.com/maven2/")
 @file:DependsOn("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0")
 @file:Import("../release/release-rules.main.kts")
 

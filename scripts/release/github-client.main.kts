@@ -1,3 +1,4 @@
+@file:Repository("https://maven-central.storage-download.googleapis.com/maven2/")
 @file:DependsOn("io.ktor:ktor-client-cio-jvm:3.6.1")
 @file:DependsOn("io.ktor:ktor-client-content-negotiation-jvm:3.6.1")
 @file:DependsOn("io.ktor:ktor-serialization-kotlinx-json-jvm:3.6.1")

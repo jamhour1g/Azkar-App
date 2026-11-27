@@ -1,4 +1,5 @@
 #!/usr/bin/env -S bash scripts/release/kotlin.sh
+@file:Repository("https://maven-central.storage-download.googleapis.com/maven2/")
 @file:DependsOn("io.ktor:ktor-client-mock-jvm:3.6.1")
 @file:Import("../release/release-rules.main.kts", "../release/github-client.main.kts")
 

@@ -108,8 +108,9 @@ waiting runs (up to GitHub's 100-pending-run queue limit); Dev and Stable public
 
 Release preparation and validation restore separate Kotlin script dependency caches.
 Successful default-branch runs can save those caches. Publishing restores the Maven
-repository artifact from validation in the same run. Gradle validation waits 60 seconds
-and retries once after a Maven Central HTTP 429.
+repository artifact from validation in the same run. Gradle validation retries Maven Central
+HTTP 429 errors after waits of 60, 120 and 240 seconds. In CI, Gradle plugin resolution
+checks Google Cloud’s Maven Central mirror first for the `org.jetbrains.kotlin` group.
 
 Repositories contain only the newest Stable and newest Dev DEB/RPM pair. Publication
 builds a fresh signed site from those GitHub release assets, deploys it explicitly with
