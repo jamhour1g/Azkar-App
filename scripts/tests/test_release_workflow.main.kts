@@ -39,8 +39,14 @@ val mocks =
         "git" to
             """
             #!/usr/bin/env bash
-            if [[ "${'$'}1" == merge-base ]]; then exit "${'$'}MOCK_ANCESTOR_EXIT";
-            else printf '%s\n' "${'$'}MOCK_TAGS"; fi
+            case "${'$'}1" in
+              merge-base) exit "${'$'}MOCK_ANCESTOR_EXIT" ;;
+              show-ref) [[ -n "${'$'}{MOCK_TAG_COMMIT:-}" ]] ;;
+              rev-parse)
+                if [[ "${'$'}3" == refs/tags/* ]]; then echo "${'$'}MOCK_TAG_COMMIT";
+                else echo "${'$'}GITHUB_SHA"; fi ;;
+              *) printf '%s\n' "${'$'}MOCK_TAGS" ;;
+            esac
             """.trimIndent(),
         "curl" to
             """
@@ -239,7 +245,7 @@ runBlocking {
         check(result.calls.isEmpty())
     }
 
-    test("Dev prerelease label on new and resumed drafts") {
+    test("Dev prerelease label and build commit on new and resumed drafts") {
         listOf("false", "true").forEach { exists ->
             val result =
                 runScript(
@@ -248,6 +254,21 @@ runBlocking {
                     environment = mapOf("MOCK_EXISTS" to exists),
                 ).succeeds()
             check((if (exists == "true") "--prerelease=true" else "--prerelease") in result.calls)
+            check("--target ${"a".repeat(40)}" in result.calls)
+        }
+    }
+
+    test("existing release tags must match the build commit") {
+        listOf(true, false).forEach { matches ->
+            val result =
+                runScript(
+                    "github-release.sh",
+                    "prepare-draft",
+                    environment =
+                        mapOf("MOCK_EXISTS" to "true", "MOCK_TAG_COMMIT" to (if (matches) "a" else "b").repeat(40)),
+                )
+            check((result.exit == 0) == matches) { result.log }
+            check(("release upload" in result.calls) == matches)
         }
     }
 

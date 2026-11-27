@@ -18,13 +18,22 @@ validate_release() {
 
 prepare_draft() {
   validate_release
-  : "${APP_VERSION:?APP_VERSION is required}" "${RELEASE_CHANNEL:?RELEASE_CHANNEL is required}"
+  : "${APP_VERSION:?APP_VERSION is required}" "${RELEASE_CHANNEL:?RELEASE_CHANNEL is required}" "${GITHUB_SHA:?GITHUB_SHA is required}"
   [[ "$RELEASE_TAG" == "v$APP_VERSION" ]] || { echo 'Release tag and app version must match.' >&2; return 1; }
   [[ ( "$RELEASE_CHANNEL" == dev && "$PRE_RELEASE" == true ) || ( "$RELEASE_CHANNEL" == stable && "$PRE_RELEASE" == false ) ]] || {
     echo 'Release channel and prerelease flag must match.' >&2; return 1;
   }
-  local notes_file previous
+  local notes_file previous tag_ref tag_commit build_commit
   local -a note_args release_args
+  tag_ref="refs/tags/$RELEASE_TAG"
+  if git show-ref --verify --quiet "$tag_ref"; then
+    tag_commit="$(git rev-parse --verify "$tag_ref^{commit}")"
+    build_commit="$(git rev-parse --verify "$GITHUB_SHA^{commit}")"
+    if [[ "$tag_commit" != "$build_commit" ]]; then
+      echo "Release tag $RELEASE_TAG points to a different commit than the build." >&2
+      return 1
+    fi
+  fi
   notes_file="$RUNNER_TEMP/release-notes.md"
   if [[ "$RELEASE_CHANNEL" == stable ]]; then
     gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
@@ -42,7 +51,8 @@ prepare_draft() {
       exit 1
     }
     gh release upload "$RELEASE_TAG" release-assets/* --clobber
-    gh release edit "$RELEASE_TAG" --title "Azkar $APP_VERSION" --notes-file "$notes_file" --prerelease="$PRE_RELEASE"
+    gh release edit "$RELEASE_TAG" --target "$GITHUB_SHA" --title "Azkar $APP_VERSION" \
+      --notes-file "$notes_file" --prerelease="$PRE_RELEASE"
   else
     release_args=()
     if [[ "$PRE_RELEASE" == true ]]; then release_args+=(--prerelease); fi
