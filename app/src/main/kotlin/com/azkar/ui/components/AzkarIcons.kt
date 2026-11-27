@@ -31,7 +31,7 @@ import org.jetbrains.compose.resources.vectorResource
  *
  * The stroke icons are the adopted set — Lucide v0.544.0 (ISC) for bell, clock, calendar, house,
  * library, book-open, star, settings, sun family and moon, plus the app's own khatim and
- * mosque. Every source SVG is versioned under `assets/icons` (upstream Lucide with its LICENSE, and
+ * mosque. Every source SVG is versioned under `app/assets/icons` (upstream Lucide with its LICENSE, and
  * the `azkar` artwork), and each was converted to an XML `<vector>` whose geometry matches the code
  * that used to build them here. The conversion keeps the SVG contract — an empty fill and a black
  * stroke, instead of Lucide's CSS-only `currentColor` — so, as before, the icon has no colour of its

@@ -21,7 +21,7 @@ RELEASE_PATHS = (
     ":(exclude)app/packaging/linux/gnomeExtension/tests",
     ":(exclude)app/packaging/linux/gnomeExtension/.gitignore",
     ":(exclude)app/packaging/linux/gnomeExtension/.prettierignore",
-    "assets/icons", ".github/keys", "app/build.gradle.kts", "data/build.gradle.kts",
+    "app/assets/icons", ".github/keys", "app/build.gradle.kts", "data/build.gradle.kts",
     "domain/build.gradle.kts", "build.gradle.kts", "settings.gradle.kts", "gradle.properties",
     "gradle", "gradlew", "gradlew.bat", "build-logic/build.gradle.kts",
     "build-logic/settings.gradle.kts", "build-logic/src/main", "package.json", "pnpm-lock.yaml",

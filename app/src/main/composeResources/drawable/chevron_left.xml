@@ -1,5 +1,5 @@
 <!--
-  Lucide 0.544.0 - ISC (assets/icons/lucide/chevron-right.svg mirrored across x=12, which is how the
+  Lucide 0.544.0 - ISC (app/assets/icons/lucide/chevron-right.svg mirrored across x=12, which is how the
   other half of that chevron was always drawn - a mirror, not a rotation, because a rotation cannot
   flip and both ends of a row have to point the way the reader is already travelling.
 

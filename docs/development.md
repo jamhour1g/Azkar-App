@@ -147,6 +147,7 @@ It writes `gnome-prayer-schedule.png`, `gnome-prayer-actions.png`, and
 | Path | Responsibility |
 | --- | --- |
 | `app/` | Desktop UI, startup, settings, prayer times, and reminders |
+| `app/assets/icons/` | Desktop packaging icons and shared source SVGs for Compose and GNOME |
 | `domain/` | Library models, repository contracts, and services |
 | `data/` | H2 persistence, schema, repositories, and bundled seed data |
 | `build-logic/` | Shared Gradle conventions and packaging tasks |
