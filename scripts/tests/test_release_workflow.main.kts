@@ -269,6 +269,12 @@ runBlocking {
                 Triple(emptyList(), emptyMap(), "true"),
                 Triple(listOf(Release("v1.2.3", prerelease = false)), emptyMap(), "true"),
                 Triple(listOf(previous), emptyMap(), "true"), // Exactly six hours after publication.
+                Triple(listOf(previous), mapOf("MOCK_RELEASE_CHANGES" to "false"), "false"),
+                Triple(
+                    listOf(previous),
+                    mapOf("EVENT" to "workflow_dispatch", "MOCK_RELEASE_CHANGES" to "false"),
+                    "false",
+                ),
                 Triple(listOf(previous), mapOf("MOCK_NOW" to "1793167199"), "false"),
                 Triple(listOf(previous), mapOf("MOCK_COMPARISON" to "identical"), "false"),
                 Triple(listOf(previous), mapOf("MOCK_COMPARISON" to "behind"), "false"),
@@ -283,9 +289,13 @@ runBlocking {
         cases.forEach { (releases, environment, publish) ->
             val now = Instant.ofEpochSecond(environment["MOCK_NOW"]?.toLong() ?: 1793167200L)
             val result =
-                selectDevBatch(releases.map { it.info() }, environment["EVENT"] ?: "schedule", now) {
-                    environment["MOCK_COMPARISON"] ?: "ahead"
-                }
+                selectDevBatch(
+                    releases.map { it.info() },
+                    environment["EVENT"] ?: "schedule",
+                    now,
+                    compare = { environment["MOCK_COMPARISON"] ?: "ahead" },
+                    hasReleaseChanges = { environment["MOCK_RELEASE_CHANGES"] != "false" },
+                )
             check(result.publish.toString() == publish) { "$environment: $result" }
         }
     }
@@ -300,9 +310,13 @@ runBlocking {
                 listOf(Release("v1.2.4-beta.23", publishedAt = "2026-10-28T05:00:00Z")),
             )
         val result =
-            selectDevBatch(pages.flatten().map { it.info() }, "schedule", Instant.parse("2026-10-28T06:00:00Z")) {
-                error("Comparison must not run during the six-hour interval")
-            }
+            selectDevBatch(
+                pages.flatten().map { it.info() },
+                "schedule",
+                Instant.parse("2026-10-28T06:00:00Z"),
+                compare = { error("Comparison must not run during the six-hour interval") },
+                hasReleaseChanges = { error("Diff must not run during the six-hour interval") },
+            )
         check(!result.publish)
     }
 
@@ -425,7 +439,13 @@ runBlocking {
         val releases = listOf(Release("v1.2.4-beta.23.1").info())
         check(
             runCatching {
-                selectDevBatch(releases, "workflow_dispatch", Instant.parse("2026-10-28T06:00:00Z")) { "unknown" }
+                selectDevBatch(
+                    releases,
+                    "workflow_dispatch",
+                    Instant.parse("2026-10-28T06:00:00Z"),
+                    compare = { "unknown" },
+                    hasReleaseChanges = { error("Diff must not run for an unknown status") },
+                )
             }.isFailure,
         )
     }

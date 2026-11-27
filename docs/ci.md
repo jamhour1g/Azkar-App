@@ -94,8 +94,9 @@ status. Native build reports and installer artifacts are retained briefly for di
 ## Release publication
 
 Dev publication batches merged changes: schedules check every 30 minutes and publish only
-when there are new commits and six hours have passed since the last Dev release. Manual
-dispatch from `dev` can publish new commits sooner. PR checks still run per approved PR.
+when app or installer inputs have changed since the latest published Dev tag and six hours
+have passed since that release. Manual dispatch from `dev` bypasses the wait and uses the
+same change check. PR checks still run per approved PR.
 Stable publication
 uses explicit `vMAJOR.MINOR.PATCH` tags on `production` and requires current recorded
 installed-release evidence. Stable ancestry and installed-release evidence are checked in

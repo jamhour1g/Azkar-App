@@ -47,9 +47,47 @@ suspend fun selectBatch() {
             val event = environment("EVENT")
             require(event in setOf("schedule", "workflow_dispatch")) { "Unsupported Dev release event: $event" }
             github { client ->
-                selectDevBatch(client.releases(), event, Instant.now()) { previous ->
-                    client.comparison(previous, environment("GITHUB_SHA"))
-                }
+                val head = environment("GITHUB_SHA")
+                selectDevBatch(
+                    client.releases(),
+                    event,
+                    Instant.now(),
+                    compare = { previous -> client.comparison(previous, head) },
+                    hasReleaseChanges = { previous ->
+                        capture(
+                            "git",
+                            "diff",
+                            "--name-only",
+                            "--no-renames",
+                            previous,
+                            head,
+                            "--",
+                            "app/src/main",
+                            "data/src/main",
+                            "domain/src/main",
+                            "app/packaging",
+                            ":(exclude)app/packaging/linux/gnomeExtension/tests",
+                            "assets/icons",
+                            "assets/keys",
+                            "app/build.gradle.kts",
+                            "data/build.gradle.kts",
+                            "domain/build.gradle.kts",
+                            "build.gradle.kts",
+                            "settings.gradle.kts",
+                            "gradle.properties",
+                            "gradle",
+                            "gradlew",
+                            "gradlew.bat",
+                            "build-logic/build.gradle.kts",
+                            "build-logic/settings.gradle.kts",
+                            "build-logic/src/main",
+                            "package.json",
+                            "pnpm-lock.yaml",
+                            "pnpm-workspace.yaml",
+                            "site/package.json",
+                        ).isNotEmpty()
+                    },
+                )
             }
         }
     append("GITHUB_OUTPUT", "publish=${decision.publish}")

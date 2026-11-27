@@ -84,6 +84,7 @@ suspend fun selectDevBatch(
     event: String,
     now: Instant,
     compare: suspend (String) -> String,
+    hasReleaseChanges: suspend (String) -> Boolean,
 ): BatchDecision {
     val previous = latestDevRelease(releases) ?: return BatchDecision(true, "First Dev release")
     val elapsed = Duration.between(requireNotNull(previous.publishedAt), now)
@@ -94,9 +95,9 @@ suspend fun selectDevBatch(
     require(comparison in setOf("ahead", "identical", "behind", "diverged")) {
         "Unexpected GitHub comparison status: $comparison"
     }
-    return if (comparison == "ahead") {
-        BatchDecision(true, "New commits since ${previous.tag}")
-    } else {
-        BatchDecision(false, "No forward changes since ${previous.tag} ($comparison)")
+    return when {
+        comparison != "ahead" -> BatchDecision(false, "No forward changes since ${previous.tag} ($comparison)")
+        hasReleaseChanges(previous.tag) -> BatchDecision(true, "App or installer inputs changed since ${previous.tag}")
+        else -> BatchDecision(false, "No app or installer changes since ${previous.tag}")
     }
 }
