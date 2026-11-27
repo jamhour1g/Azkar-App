@@ -150,3 +150,12 @@ Release runs it during preparation. The script masks the exact `queue: max` and
 
 Native multi-platform jobs and Pages deployment must still be validated on GitHub after the new workflow definitions
 reach the default branch.
+
+Dev PRs limited to `site/src/` and `site/tests/` run site and release-script checks.
+Renames are checked at both paths. Installer validation and Gradle profiling request the full build.
+
+After uploading Pages, publication compares the actual tar file list with the expected site
+checksums before deployment. For an eligible scheduled Dev release, a prior failure limited to
+finalization on the same commit triggers one retry on the original run while its checksum
+artifact is available. After a second failure or artifact expiry, the schedule holds that
+revision. The run summary links the original failure. Manual dispatch permits a fresh build.
