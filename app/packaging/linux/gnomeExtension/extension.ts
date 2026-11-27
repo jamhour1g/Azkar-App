@@ -11,6 +11,7 @@ import {
     POSITIONS,
     type Position,
     type PrayerSnapshot,
+    type TimedPauseAction,
     parsePosition,
     parsePrayerSnapshot,
     positionAt,
@@ -20,7 +21,7 @@ const APP_BUS = 'com.azkar.PrayerPanel';
 const EXTENSION_BUS = 'com.azkar.PrayerPanelExtension.Ready1';
 const PANEL_PATH = '/com/azkar/PrayerPanel';
 const PANEL_INTERFACE = 'com.azkar.PrayerPanel1';
-type Action = 'open' | 'visibility' | 'reminders' | 'quit';
+type Action = 'open' | 'visibility' | 'reminders' | 'quit' | TimedPauseAction;
 
 const DRAG_THRESHOLD = 4;
 
@@ -245,7 +246,9 @@ export default class AzkarPrayerPanel extends Extension {
                         : (['scheduleTitle', 'open', 'close'] as const);
                 const changed =
                     fields.some((field) => previous[field] !== state[field]) ||
-                    (menu !== this._actions && JSON.stringify(previous.schedule) !== JSON.stringify(state.schedule));
+                    (menu === this._actions
+                        ? JSON.stringify(previous.pauseMenu) !== JSON.stringify(state.pauseMenu)
+                        : JSON.stringify(previous.schedule) !== JSON.stringify(state.schedule));
                 if (changed || themeChanged) this._refreshMenu(menu, state);
             }
         }
@@ -372,13 +375,28 @@ export default class AzkarPrayerPanel extends Extension {
                 this._panelIcon(state.hidden ? 'visibility' : 'visibility-off'),
             );
         }
-        menu.addAction(
-            state.reminders,
-            () => this._runAction('reminders'),
-            this._panelIcon(state.remindersPaused ? 'bell' : 'bell-off'),
-        );
+        let pauseMenu: PopupMenu.PopupSubMenuMenuItem | undefined;
+        if (state.pauseMenu) {
+            pauseMenu = new PopupMenu.PopupSubMenuMenuItem(state.pauseMenu.label);
+            pauseMenu.insert_child_at_index(
+                new St.Icon({ gicon: this._panelIcon('bell-off'), style_class: 'popup-menu-icon' }),
+                0,
+            );
+            for (const pause of state.pauseMenu.timedChoices) {
+                pauseMenu.menu.addAction(pause.label, () => this._runAction(pause.action));
+            }
+            pauseMenu.menu.addAction(state.reminders, () => this._runAction('reminders'));
+            menu.addMenuItem(pauseMenu);
+        } else {
+            menu.addAction(
+                state.reminders,
+                () => this._runAction('reminders'),
+                this._panelIcon(state.remindersPaused ? 'bell' : 'bell-off'),
+            );
+        }
         if (state.palette) {
             for (const item of menu.box.get_children()) (item as St.Widget).style = `color: ${state.palette.text};`;
+            if (pauseMenu) this._stylePauseMenu(pauseMenu, state.palette);
         }
         menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         const footer = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false });
@@ -402,6 +420,29 @@ export default class AzkarPrayerPanel extends Extension {
         footer.add_child(quit);
         if (!state.hidden) this._addPositionControls(footer, menu, state);
         menu.addMenuItem(footer);
+    }
+
+    private _stylePauseMenu(menu: PopupMenu.PopupSubMenuMenuItem, palette: NonNullable<PrayerSnapshot['palette']>) {
+        const text = `color: ${palette.text};`;
+        menu.menu.actor.style = `${text} background-color: ${palette.highlight};`;
+        const updateHeader = () => {
+            const background = menu.active || menu.menu.isOpen ? palette.highlight : 'transparent';
+            menu.style = `${text} background-color: ${background};`;
+            return undefined;
+        };
+        menu.menu.connect('open-state-changed', updateHeader);
+        menu.connect('notify::active', updateHeader);
+        updateHeader();
+
+        for (const actor of menu.menu.box.get_children()) {
+            const choice = actor as PopupMenu.PopupMenuItem;
+            const updateChoice = () => {
+                const background = choice.active ? palette.surface : 'transparent';
+                choice.style = `${text} background-color: ${background};`;
+            };
+            choice.connect('notify::active', updateChoice);
+            updateChoice();
+        }
     }
 
     private _addPositionControls(row: PopupMenu.PopupBaseMenuItem, menu: PopupMenu.PopupMenu, state: PrayerSnapshot) {

@@ -38,6 +38,10 @@ class Actor {
         this.children.push(child);
     }
 
+    insert_child_at_index(child: Actor, index: number) {
+        this.children.splice(index, 0, child);
+    }
+
     get_transformed_position() {
         return [0, 0];
     }
@@ -97,6 +101,33 @@ class Menu extends Actor {
 
     addMenuItem(item: Actor) {
         this.box.add_child(item);
+    }
+
+    activate(label: string): boolean {
+        const action = this.actions.get(label);
+        if (action) {
+            action();
+            return true;
+        }
+        return this.box.children.some((item) => item instanceof SubMenuItem && item.activate(label));
+    }
+}
+
+class SubMenuItem extends Actor {
+    readonly menu = new Menu();
+
+    constructor(label: string) {
+        super({ text: label });
+        this.menu.box.hide();
+        this.add_child(this.menu.box);
+    }
+
+    activate(label: string): boolean {
+        if (this.text === label) {
+            this.menu.box.visible = !this.menu.box.visible;
+            return true;
+        }
+        return this.menu.box.visible && this.menu.activate(label);
     }
 }
 
@@ -202,9 +233,7 @@ export const shell = {
         menuManager.activeMenu?.close();
     },
     activate(label: string) {
-        const action = menuManager.activeMenu?.actions.get(label);
-        if (!action) throw new Error(`Missing menu action ${label}`);
-        action();
+        if (!menuManager.activeMenu?.activate(label)) throw new Error(`Missing menu action ${label}`);
     },
 };
 
@@ -293,4 +322,5 @@ mock.module('resource:///org/gnome/shell/ui/popupMenu.js', () => ({
     },
     PopupBaseMenuItem: Actor,
     PopupSeparatorMenuItem: Actor,
+    PopupSubMenuMenuItem: SubMenuItem,
 }));

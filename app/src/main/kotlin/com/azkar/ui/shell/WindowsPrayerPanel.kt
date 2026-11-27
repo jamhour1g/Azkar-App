@@ -108,8 +108,7 @@ internal class WindowsPrayerPanel(
                         },
                         onContextMenu = { slot ->
                             popups.schedule = null
-                            val height = POSITION_TOOLTIP_HEIGHT + POSITION_ACTION_HEIGHT * menuContent.actions.size + 4
-                            popups.menu = popupAtWidget(slot, theme.typography.scale, height)
+                            popups.menu = slot
                         },
                     ),
                 ioDispatcher = ioDispatcher,
@@ -138,7 +137,7 @@ private fun DesktopPrayerStatus.taskbarContent(
 
 private class WindowsPrayerPopups {
     var schedule by mutableStateOf<Rectangle?>(null)
-    var menu by mutableStateOf<Rectangle?>(null)
+    var menu by mutableStateOf<WindowsTaskbarSlot?>(null)
     var moveEnabled by mutableStateOf(false)
 
     fun reset() {
@@ -154,7 +153,11 @@ private class WindowsPrayerPopups {
         position: MutableStateFlow<Int?>,
         savePosition: (Int?) -> Unit,
     ) {
-        val bounds = menu ?: return
+        val slot = menu ?: return
+        var pauseChoicesOpen by remember(slot, content.pauseMenu != null) { mutableStateOf(false) }
+        val rows = if (pauseChoicesOpen) content.pauseChoices.size + 1 else content.actions.size
+        val height = POSITION_TOOLTIP_HEIGHT + POSITION_ACTION_HEIGHT * rows + 4
+        val bounds = popupAtWidget(slot, theme.typography.scale, height) ?: return
         val displayedPosition by position.collectAsState()
         val dismiss = { menu = null }
         WindowsTaskbarPopup(bounds, stringResource(Res.string.taskbarPositionTitle), theme, dismiss) {
@@ -172,6 +175,8 @@ private class WindowsPrayerPopups {
                     savePosition(null)
                     dismiss()
                 },
+                pauseChoicesOpen = pauseChoicesOpen,
+                onPauseChoicesChanged = { pauseChoicesOpen = it },
             )
         }
     }
@@ -376,7 +381,7 @@ private fun popupAtWidget(
         Toolkit.getDefaultToolkit().getScreenInsets(config),
         anchor,
         size,
-        minimumHeight = height,
+        minimumHeight = minOf(height, SCHEDULE_HEIGHT),
     )
 }
 

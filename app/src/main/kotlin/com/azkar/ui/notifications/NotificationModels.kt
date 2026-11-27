@@ -3,6 +3,8 @@ package com.azkar.ui.notifications
 import com.azkar.ui.home.PrayerKey
 import kotlinx.serialization.Serializable
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /** Persisted desktop playback choices. Paths point to audio files owned by the user. */
 @Serializable
@@ -79,6 +81,14 @@ enum class QueueCadence {
     CONTINUOUS,
 }
 
+internal enum class ReminderPauseDuration(
+    val minutes: Int,
+) {
+    HALF_HOUR(30),
+    ONE_HOUR(60),
+    EIGHT_HOURS(480),
+}
+
 /** User-owned inputs for the single shared remembrance queue. */
 @Serializable
 data class ReminderQueueConfig(
@@ -105,6 +115,8 @@ data class ReminderQueueConfig(
     val defaultDropChance: Int = 0,
     /** Per-collection skip chance, keyed by the collection's id as a string. */
     val collectionDropChances: Map<String, Int> = emptyMap(),
+    /** The queue skips slots before this instant, including after a restart. */
+    val pausedUntilEpochMillis: Long? = null,
 ) {
     init {
         require(windowStartMinute in 0..1439)
@@ -114,6 +126,25 @@ data class ReminderQueueConfig(
         require(defaultDropChance in 0..100)
         require(activeDays.isNotEmpty())
     }
+
+    internal fun activePauseUntil(now: Instant): Instant? =
+        pausedUntilEpochMillis?.let(Instant::ofEpochMilli)?.takeIf { enabled && now.isBefore(it) }
+
+    internal fun pausedFor(
+        duration: ReminderPauseDuration,
+        now: Instant,
+    ): ReminderQueueConfig =
+        if (enabled && activePauseUntil(now) == null) {
+            copy(pausedUntilEpochMillis = now.plus(duration.minutes.toLong(), ChronoUnit.MINUTES).toEpochMilli())
+        } else {
+            this
+        }
+
+    internal fun resumedAt(now: Instant): ReminderQueueConfig =
+        copy(
+            enabled = true,
+            pausedUntilEpochMillis = if (activePauseUntil(now) != null) now.toEpochMilli() else pausedUntilEpochMillis,
+        )
 
     /**
      * The gap the scheduler spaces deliveries by.

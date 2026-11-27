@@ -1,6 +1,9 @@
 package com.azkar.ui.notifications
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import com.azkar.generated.resources.Res
 import com.azkar.generated.resources.reminderManagerDayFriday
 import com.azkar.generated.resources.reminderManagerDayMonday
@@ -15,9 +18,19 @@ import com.azkar.generated.resources.reminderManagerQueueIntervalValue
 import com.azkar.generated.resources.reminderManagerQueueModeInLibraryOrder
 import com.azkar.generated.resources.reminderManagerQueueModeRandom
 import com.azkar.generated.resources.reminderManagerQueueModeWeighted
+import com.azkar.generated.resources.reminderPauseEightHours
+import com.azkar.generated.resources.reminderPauseOneHour
+import com.azkar.generated.resources.reminderPausedUntil
+import com.azkar.ui.components.AzkarClock
+import com.azkar.ui.theme.LocalUiLocale
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.ZoneId
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The words the queue's own settings are named in.
@@ -41,6 +54,40 @@ internal fun queueModeLabel(mode: QueueMode): String =
 @Composable
 internal fun intervalLabel(minutes: Int): String =
     pluralStringResource(Res.plurals.reminderManagerQueueIntervalValue, minutes, minutes)
+
+@Composable
+internal fun reminderPauseDurationLabel(duration: ReminderPauseDuration): String =
+    when (duration) {
+        ReminderPauseDuration.HALF_HOUR -> intervalLabel(duration.minutes)
+        ReminderPauseDuration.ONE_HOUR -> stringResource(Res.string.reminderPauseOneHour)
+        ReminderPauseDuration.EIGHT_HOURS -> stringResource(Res.string.reminderPauseEightHours)
+    }
+
+@Composable
+internal fun reminderPausedUntilLabel(until: Instant): String =
+    stringResource(
+        Res.string.reminderPausedUntil,
+        AzkarClock.format(until.atZone(ZoneId.systemDefault()).toLocalTime(), LocalUiLocale.current),
+    )
+
+@Composable
+internal fun rememberQueuePauseUntil(config: ReminderQueueConfig): Instant? {
+    val active =
+        remember(config.enabled, config.pausedUntilEpochMillis) {
+            mutableStateOf(config.activePauseUntil(Instant.now()))
+        }
+    LaunchedEffect(active) {
+        while (true) {
+            val now = Instant.now()
+            val until = config.activePauseUntil(now)
+            active.value = until
+            if (until == null) break
+            val remaining = (until.toEpochMilli() - now.toEpochMilli()).milliseconds
+            delay(minOf(remaining, 30.seconds))
+        }
+    }
+    return active.value
+}
 
 /**
  * A cadence as the user named it.

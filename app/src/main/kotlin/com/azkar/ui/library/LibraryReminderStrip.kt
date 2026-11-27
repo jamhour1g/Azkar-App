@@ -31,6 +31,8 @@ import com.azkar.ui.notifications.QueueSources
 import com.azkar.ui.notifications.ReminderQueueConfig
 import com.azkar.ui.notifications.notificationLabel
 import com.azkar.ui.notifications.queuePreview
+import com.azkar.ui.notifications.rememberQueuePauseUntil
+import com.azkar.ui.notifications.reminderPausedUntilLabel
 import com.azkar.ui.theme.AzkarTheme
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
@@ -78,7 +80,13 @@ internal fun LibraryReminderStrip(
         }
     val preview = queuePreview(now, ZoneId.systemDefault(), config, progress, reading)
 
-    val message = stripMessage(config = config, preview = preview, uiLocale = state.uiLocale)
+    val pauseUntil = rememberQueuePauseUntil(config)
+    val message =
+        if (pauseUntil == null) {
+            stripMessage(config = config, preview = preview, uiLocale = state.uiLocale)
+        } else {
+            reminderPausedUntilLabel(pauseUntil)
+        }
     val sources =
         stringResource(
             Res.string.libraryReminderStripCount,
@@ -90,7 +98,7 @@ internal fun LibraryReminderStrip(
     StripRow(
         message = message,
         sources = sources,
-        lit = config.enabled && preview.hasSources,
+        lit = config.enabled && pauseUntil == null && preview.hasSources,
         onClick = { showQueue = true },
         modifier = modifier,
     )

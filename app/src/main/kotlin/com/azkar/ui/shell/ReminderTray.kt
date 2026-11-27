@@ -42,6 +42,7 @@ import com.azkar.generated.resources.todayPrayerTimes
 import com.azkar.generated.resources.trayMenuHidePanel
 import com.azkar.generated.resources.trayMenuOpen
 import com.azkar.generated.resources.trayMenuPause
+import com.azkar.generated.resources.trayMenuPauseIndefinitely
 import com.azkar.generated.resources.trayMenuQuit
 import com.azkar.generated.resources.trayMenuResume
 import com.azkar.generated.resources.trayMenuShowPanel
@@ -55,7 +56,10 @@ import com.azkar.ui.notifications.NotificationActionRouter
 import com.azkar.ui.notifications.NotificationNotice
 import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.PrayerMenuLayout
+import com.azkar.ui.notifications.ReminderPauseDuration
 import com.azkar.ui.notifications.presentation.NotificationPublisher
+import com.azkar.ui.notifications.rememberQueuePauseUntil
+import com.azkar.ui.notifications.reminderPauseDurationLabel
 import com.azkar.ui.theme.AzkarVariantsPreview
 import dev.nucleusframework.composenativetray.menu.api.TrayMenuBuilder
 import dev.nucleusframework.composenativetray.tray.api.NativeTray
@@ -64,6 +68,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import java.awt.GraphicsEnvironment
+import java.time.Instant
 import com.azkar.ui.notifications.trayAvailable as isTrayAvailable
 
 private val logger = KotlinLogging.logger {}
@@ -190,10 +195,8 @@ private fun rememberTrayContent(
     val trayLayout by preferences.prayerTrayMenuLayout.collectAsState()
     val displayLayout = if (prayerTrayLayoutAvailable) trayLayout else PrayerMenuLayout.COMPACT
     val readOnly = remember { {} }
-    val scope = rememberCoroutineScope()
     val openLabel = stringResource(Res.string.trayMenuOpen)
-    val pauseLabel =
-        stringResource(if (!queue.enabled) Res.string.trayMenuResume else Res.string.trayMenuPause)
+    val paused = !queue.enabled || rememberQueuePauseUntil(queue) != null
     val quitLabel = stringResource(Res.string.trayMenuQuit)
     val menuIconRenderProperties = remember { trayMenuIconRenderProperties() }
     val currentMenuActions by rememberUpdatedState(menuActions)
@@ -217,25 +220,55 @@ private fun rememberTrayContent(
                     isEnabled = false,
                 ),
             openApp = TrayMenuEntry(openLabel, AzkarIcons.Home, actions.openApp),
-            reminders =
-                TrayMenuEntry(
-                    pauseLabel,
-                    if (!queue.enabled) AzkarIcons.Bell else AzkarIcons.BellOff,
-                    onClick = {
-                        scope.launch { preferences.updateQueue { it.copy(enabled = !it.enabled) } }
-                    },
-                ),
+            reminders = reminderToggleEntry(paused, preferences),
             quit = TrayMenuEntry(quitLabel, ActionIcons.dismiss, actions.quit),
             iconRenderProperties = menuIconRenderProperties,
-            remindersPaused = !queue.enabled,
+            remindersPaused = paused,
             trayLayout = displayLayout,
             schedule = prayerTraySchedule(status, readOnly),
+            pauseMenu = if (paused) null else reminderPauseMenu(preferences),
         )
     return ReminderTrayContent(
         tooltip = status?.countdownLabel ?: stringResource(Res.string.title),
         icon = AzkarIcons.Brand,
         primaryAction = activate,
         menu = menu,
+    )
+}
+
+@Composable
+private fun reminderToggleEntry(
+    paused: Boolean,
+    preferences: NotificationPreferencesRepository,
+): TrayMenuEntry {
+    val scope = rememberCoroutineScope()
+    return TrayMenuEntry(
+        label = stringResource(if (paused) Res.string.trayMenuResume else Res.string.trayMenuPauseIndefinitely),
+        icon = if (paused) AzkarIcons.Bell else AzkarIcons.BellOff,
+        onClick = {
+            scope.launch {
+                preferences.updateQueue {
+                    if (paused) it.resumedAt(Instant.now()) else it.copy(enabled = false, pausedUntilEpochMillis = null)
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun reminderPauseMenu(preferences: NotificationPreferencesRepository): ReminderPauseMenu {
+    val scope = rememberCoroutineScope()
+    val icon = AzkarIcons.BellOff
+    return ReminderPauseMenu(
+        label = stringResource(Res.string.trayMenuPause),
+        timedChoices =
+            ReminderPauseDuration.entries.associateWith { duration ->
+                TrayMenuEntry(
+                    label = reminderPauseDurationLabel(duration),
+                    icon = icon,
+                    onClick = { scope.launch { preferences.updateQueue { it.pausedFor(duration, Instant.now()) } } },
+                )
+            },
     )
 }
 
@@ -273,6 +306,11 @@ internal data class TrayMenuEntry(
     val isEnabled: Boolean = true,
 )
 
+internal data class ReminderPauseMenu(
+    val label: String,
+    val timedChoices: Map<ReminderPauseDuration, TrayMenuEntry>,
+)
+
 internal data class PrayerTrayMenuContent(
     val countdown: TrayMenuEntry,
     val openApp: TrayMenuEntry,
@@ -283,8 +321,10 @@ internal data class PrayerTrayMenuContent(
     val remindersPaused: Boolean = false,
     val trayLayout: PrayerMenuLayout = PrayerMenuLayout.COMPACT,
     val schedule: List<TrayMenuEntry> = emptyList(),
+    val pauseMenu: ReminderPauseMenu? = null,
 ) {
     val actions = listOfNotNull(openApp, panelVisibility, reminders, quit)
+    val pauseChoices = pauseMenu?.timedChoices?.values.orEmpty() + reminders
 
     // Null entries are separators in both native menu implementations.
     val actionEntries = actions.flatMap { if (it == quit) listOf(null, it) else listOf(it) }
@@ -296,7 +336,16 @@ internal data class PrayerTrayMenuContent(
 
 private fun TrayMenuBuilder.addPrayerTrayMenu(menu: PrayerTrayMenuContent) {
     menu.entries.forEach { entry ->
-        if (entry == null) Divider() else addPrayerTrayMenuEntry(entry, menu.iconRenderProperties)
+        val pauseMenu = menu.pauseMenu
+        when {
+            entry == null -> Divider()
+            entry === menu.reminders && pauseMenu != null ->
+                SubMenu(pauseMenu.label, entry.icon, iconRenderProperties = menu.iconRenderProperties) {
+                    menu.pauseChoices.forEach { Item(it.label, isEnabled = it.isEnabled, onClick = it.onClick) }
+                }
+
+            else -> addPrayerTrayMenuEntry(entry, menu.iconRenderProperties)
+        }
     }
 }
 

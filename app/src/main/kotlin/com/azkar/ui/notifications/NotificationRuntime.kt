@@ -24,6 +24,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -208,12 +209,7 @@ class NotificationRuntime(
             location = location,
             since = since.atZone(prayerZone).toLocalDateTime(),
         )
-        val queueZone = ZoneId.systemDefault()
-        deliverQueueIfDue(
-            now = instant.atZone(queueZone).toLocalDateTime(),
-            config = preferences.queue.value,
-            since = since.atZone(queueZone).toLocalDateTime(),
-        )
+        deliverQueueIfDue(now = instant.atZone(ZoneId.systemDefault()), config = preferences.queue.value, since = since)
     }
 
     private suspend fun deliverPrayerIfDue(
@@ -292,12 +288,20 @@ class NotificationRuntime(
      * announced the slot it slept through would put a card on screen at the moment the app opened.
      */
     private suspend fun deliverQueueIfDue(
-        now: LocalDateTime,
+        now: ZonedDateTime,
         config: ReminderQueueConfig,
-        since: LocalDateTime,
+        since: Instant,
     ) {
-        val slot = DeliveryPolicy.dueQueueSlot(now = now, config = config, since = since) ?: return
-        deliverQueueAtSlot(slot, config)
+        if (config.activePauseUntil(now.toInstant()) != null) return
+        val slot =
+            DeliveryPolicy.dueQueueSlot(
+                now = now.toLocalDateTime(),
+                config = config,
+                since = LocalDateTime.ofInstant(since, now.zone),
+            ) ?: return
+        // A poll after resuming can still find a slot from before the pause ended.
+        val slotMillis = ZonedDateTime.ofLocal(slot, now.zone, now.offset).toInstant().toEpochMilli()
+        if (slotMillis >= (config.pausedUntilEpochMillis ?: Long.MIN_VALUE)) deliverQueueAtSlot(slot, config)
     }
 
     @Suppress("ReturnCount")

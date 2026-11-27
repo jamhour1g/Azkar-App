@@ -59,6 +59,8 @@ private const val WATCHER_PATH = "/StatusNotifierWatcher"
 private const val ITEM_PATH = "/StatusNotifierItem"
 private const val MENU_PATH = "/PrayerMenu"
 private const val PANEL_LABEL_PROPERTY = "XAyatanaLabel"
+private const val PAUSE_MENU_ID = 100
+private const val INDEFINITE_PAUSE_ID = 101
 
 internal class GnomePrayerPanel : DesktopPrayerPanel(Res.string.settingsDesktopPrayerGnomeHint) {
     @Composable
@@ -379,32 +381,60 @@ internal class GnomePrayerMenuItem(
         content: GnomePrayerContent,
         revision: Long,
     ): MenuSnapshot {
+        val menu = content.tray.menu
+        val pauseMenu = menu.pauseMenu
+        val pauseActions =
+            if (pauseMenu == null) {
+                emptyMap()
+            } else {
+                pauseMenu.timedChoices.mapKeys { (duration, _) -> PAUSE_MENU_ID + duration.minutes } +
+                    (INDEFINITE_PAUSE_ID to menu.reminders)
+            }
+        val pauseChildren = pauseActions.map { (id, entry) -> menuNode(content, id, entry, showIcon = false) }
         val visibleEntries = content.menuEntries()
-        val items = visibleEntries.map { (id, entry) -> menuNode(content, id, entry) }
+        val items =
+            visibleEntries.map { (id, entry) ->
+                if (pauseMenu != null && entry === menu.reminders) {
+                    // The client caches widget types by ID, so the submenu has a separate ID from Resume.
+                    val node = menuNode(content, PAUSE_MENU_ID, entry.copy(label = pauseMenu.label))
+                    GnomePrayerMenuNode(
+                        node.id,
+                        node.properties + ("children-display" to Variant("submenu")),
+                        pauseChildren.map { Variant(it) },
+                    )
+                } else {
+                    menuNode(content, id, entry)
+                }
+            }
         val actions =
             visibleEntries
                 .mapNotNull { (id, entry) ->
-                    entry?.takeIf { it.isEnabled }?.let { id to it }
-                }.toMap()
-        return MenuSnapshot(content, revision, items, actions)
+                    entry?.takeIf { it.isEnabled && (pauseMenu == null || it !== menu.reminders) }?.let { id to it }
+                }.toMap() + pauseActions.filterValues { it.isEnabled }
+        return MenuSnapshot(content, revision, items, pauseChildren, actions)
     }
 
     private fun menuNode(
         content: GnomePrayerContent,
         id: Int,
         entry: TrayMenuEntry?,
+        showIcon: Boolean = true,
     ): GnomePrayerMenuNode {
         val properties =
             if (entry == null) {
                 mapOf("type" to Variant("separator"))
             } else {
-                mapOf(
-                    "type" to Variant("standard"),
-                    "label" to Variant(entry.label),
-                    "enabled" to Variant(entry.isEnabled),
-                    "icon-data" to
-                        Variant(iconBytes(entry.icon, content.menuTint, content.tray.menu.iconRenderProperties)),
-                )
+                buildMap<String, Variant<*>> {
+                    put("type", Variant("standard"))
+                    put("label", Variant(entry.label))
+                    put("enabled", Variant(entry.isEnabled))
+                    if (showIcon) {
+                        put(
+                            "icon-data",
+                            Variant(iconBytes(entry.icon, content.menuTint, content.tray.menu.iconRenderProperties)),
+                        )
+                    }
+                }
             }
         return GnomePrayerMenuNode(id, properties, emptyList())
     }
@@ -435,20 +465,37 @@ internal class GnomePrayerMenuItem(
         properties: List<String>,
     ): GnomePrayerMenuLayout<UInt32, GnomePrayerMenuNode> {
         val current = snapshot
-        val node =
-            when {
-                parentId != root.id -> current.items.first { it.id == parentId }
-                depth == 0 -> root
-                else -> GnomePrayerMenuNode(root.id, root.properties, current.items.map { Variant(it) })
-            }
+        val node = if (parentId == root.id) current.rootLayout(depth) else current.itemLayout(parentId, depth)
         return GnomePrayerMenuLayout(UInt32(current.revision), node)
     }
+
+    private fun MenuSnapshot.rootLayout(depth: Int): GnomePrayerMenuNode {
+        val children =
+            when (depth) {
+                0 -> emptyList()
+                1 -> items.map { it.withoutChildren() }
+                else -> items
+            }
+        return GnomePrayerMenuNode(root.id, root.properties, children.map { Variant(it) })
+    }
+
+    private fun MenuSnapshot.itemLayout(
+        id: Int,
+        depth: Int,
+    ): GnomePrayerMenuNode {
+        val item =
+            (items + pauseChildren).firstOrNull { it.id == id } ?: GnomePrayerMenuNode(id, emptyMap(), emptyList())
+        return if (depth == 0) item.withoutChildren() else item
+    }
+
+    private fun GnomePrayerMenuNode.withoutChildren(): GnomePrayerMenuNode =
+        GnomePrayerMenuNode(id, properties, emptyList())
 
     override fun getGroupProperties(
         ids: List<Int>,
         properties: List<String>,
     ): List<GnomePrayerMenuProperties> =
-        (listOf(root) + snapshot.items).filter { ids.isEmpty() || it.id in ids }.map {
+        (listOf(root) + snapshot.let { it.items + it.pauseChildren }).filter { ids.isEmpty() || it.id in ids }.map {
             GnomePrayerMenuProperties(
                 it.id,
                 it.properties.filterKeys { name ->
@@ -474,6 +521,7 @@ internal class GnomePrayerMenuItem(
         val content: GnomePrayerContent,
         val revision: Long,
         val items: List<GnomePrayerMenuNode>,
+        val pauseChildren: List<GnomePrayerMenuNode>,
         val actions: Map<Int, TrayMenuEntry>,
     )
 }

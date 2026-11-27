@@ -5,6 +5,19 @@ import { shell } from './shellFixture.js';
 const { default: AzkarPrayerPanel } = await import('../extension.js');
 let extension: InstanceType<typeof AzkarPrayerPanel>;
 
+const pauseSnapshot = {
+    ...snapshot,
+    reminders: 'Pause until I resume',
+    pauseMenu: {
+        label: 'Pause reminders',
+        timedChoices: [
+            { action: 'pause-30', label: '30 minutes' },
+            { action: 'pause-60', label: '1 hour' },
+            { action: 'pause-480', label: '8 hours' },
+        ],
+    },
+} satisfies typeof snapshot;
+
 beforeEach(() => {
     shell.reset();
     extension = new AzkarPrayerPanel({ name: 'Azkar', uuid: 'azkar@test' } as ConstructorParameters<
@@ -54,6 +67,24 @@ test('secondary click opens the action menu and sends a reminder action to Azkar
     expect(shell.calls).toEqual(['reminders']);
 });
 
+test.each([
+    ['30 minutes', 'pause-30'],
+    ['1 hour', 'pause-60'],
+    ['8 hours', 'pause-480'],
+    ['Pause until I resume', 'reminders'],
+])('opens the pause submenu before routing %s to Azkar', (label, action) => {
+    shell.publish(pauseSnapshot);
+    shell.press(3);
+    expect(shell.visibleLabels()).toContain('Pause reminders');
+    expect(shell.visibleLabels()).not.toContain(label);
+
+    shell.activate('Pause reminders');
+    expect(shell.calls).toEqual([]);
+    expect(shell.visibleLabels()).toContain(label);
+    shell.activate(label);
+    expect(shell.calls).toEqual([action]);
+});
+
 test('updates schedule times in the open schedule', () => {
     shell.publish(snapshot);
     shell.press(1);
@@ -63,10 +94,13 @@ test('updates schedule times in the open schedule', () => {
 });
 
 test('updates the reminder action while the context menu is open', () => {
-    shell.publish(snapshot);
+    shell.publish(pauseSnapshot);
     shell.press(3);
+    shell.activate('Pause reminders');
+    expect(shell.visibleLabels()).toContain('30 minutes');
     shell.publish({ ...snapshot, remindersPaused: true, reminders: 'Resume reminders' });
     expect(shell.visibleLabels()).not.toContain('Pause reminders');
+    expect(shell.visibleLabels()).not.toContain('30 minutes');
     shell.activate('Resume reminders');
     expect(shell.calls).toEqual(['reminders']);
 });

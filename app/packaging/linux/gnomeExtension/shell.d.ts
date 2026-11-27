@@ -18,7 +18,7 @@ declare module '@girs/gnome-shell/ui/popupMenu' {
     }
 
     interface PopupMenuBase {
-        addAction(title: string, callback: () => void, icon: string): void;
+        addAction(title: string, callback: () => void, icon?: string): void;
     }
 
     interface PopupMenu {

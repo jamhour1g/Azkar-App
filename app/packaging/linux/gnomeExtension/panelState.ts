@@ -5,6 +5,18 @@ interface ScheduleRow {
     next: boolean;
 }
 
+export type TimedPauseAction = `pause-${number}`;
+
+interface TimedPause {
+    action: TimedPauseAction;
+    label: string;
+}
+
+interface PauseMenu {
+    label: string;
+    timedChoices: TimedPause[];
+}
+
 // Serialized by ShellPanelSnapshot in GnomeShellPrayerPanel.kt.
 export interface PrayerSnapshot {
     palette?: { surface: string; text: string; border: string; highlight: string; accent: string };
@@ -19,6 +31,7 @@ export interface PrayerSnapshot {
     visibility: string;
     reminders: string;
     remindersPaused: boolean;
+    pauseMenu?: PauseMenu;
     quit: string;
     close: string;
     automatic: string;
@@ -56,6 +69,24 @@ function isScheduleRow(row: unknown): row is ScheduleRow {
     );
 }
 
+function isTimedPause(value: unknown): value is TimedPause {
+    return (
+        isRecord(value) &&
+        typeof value.action === 'string' &&
+        /^pause-\d+$/.test(value.action) &&
+        typeof value.label === 'string'
+    );
+}
+
+function isPauseMenu(value: unknown): value is PauseMenu {
+    return (
+        isRecord(value) &&
+        typeof value.label === 'string' &&
+        Array.isArray(value.timedChoices) &&
+        value.timedChoices.every(isTimedPause)
+    );
+}
+
 function isSnapshot(value: unknown): value is PrayerSnapshot {
     return (
         isRecord(value) &&
@@ -63,7 +94,8 @@ function isSnapshot(value: unknown): value is PrayerSnapshot {
         typeof value.remindersPaused === 'boolean' &&
         SNAPSHOT_TEXT_FIELDS.every((field) => typeof value[field] === 'string') &&
         Array.isArray(value.schedule) &&
-        value.schedule.every(isScheduleRow)
+        value.schedule.every(isScheduleRow) &&
+        (value.pauseMenu === undefined || isPauseMenu(value.pauseMenu))
     );
 }
 
