@@ -40,7 +40,8 @@ build_site() {
   key_id="$(cat "$RUNNER_TEMP/azkar-repo-key-id")"
   ./scripts/release/publish_linux_repositories.main.kts \
     repository-input repository-site "$RUNNER_TEMP/azkar-repo.asc" "$key_id"
-  (cd repository-site && find . -type f -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/site-SHA256SUMS"
+  # The Pages artifact excludes the .nojekyll marker.
+  (cd repository-site && find . -type f ! -path './.nojekyll' -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/site-SHA256SUMS"
 }
 
 verify_site() {
@@ -58,7 +59,10 @@ verify_site() {
     [[ "$file" == ./* && "$file" != *..* ]]
     mkdir -p "verified/$(dirname "$file")"
     curl --fail --location --silent --show-error --retry 5 --retry-all-errors \
-      --output "verified/$file" "$site_url/${file#./}"
+      --output "verified/$file" "$site_url/${file#./}" || {
+      echo "Unable to download deployed file: $file" >&2
+      return 1
+    }
   done < expected/site-SHA256SUMS
   (cd verified && sha256sum --check ../expected/site-SHA256SUMS)
 }
