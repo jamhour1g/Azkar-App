@@ -300,6 +300,41 @@ runBlocking {
         }
     }
 
+    test("Dev release diff includes published installers and skips maintenance files") {
+        val root = Files.createTempDirectory("azkar-release-diff-")
+        try {
+            fun git(vararg command: String): String {
+                val process = ProcessBuilder(*command).directory(root.toFile()).redirectErrorStream(true).start()
+                val output = process.inputStream.bufferedReader().use { it.readText() }
+                check(process.waitFor() == 0) { output }
+                return output
+            }
+            git("git", "init", "--quiet")
+            git("git", "config", "user.name", "Release fixture")
+            git("git", "config", "user.email", "fixture@example.invalid")
+            git("git", "commit", "--quiet", "--allow-empty", "--no-gpg-sign", "-m", "Base")
+            git("git", "tag", "v1.2.4-beta.23")
+            mapOf(
+                "README.md" to false,
+                ".github/workflows/release.yml" to false,
+                "app/packaging/linux/gnomeExtension/.gitignore" to false,
+                "app/packaging/linux/gnomeExtension/.prettierignore" to false,
+                "site/public/install.sh" to true,
+                "site/public/install.ps1" to true,
+            ).forEach { (path, expected) ->
+                val file = root.resolve(path)
+                Files.createDirectories(file.parent)
+                Files.writeString(file, "Fixture")
+                git("git", "add", "-f", "--", path)
+                git("git", "commit", "--quiet", "--no-gpg-sign", "-m", path)
+                check(git(*releaseDiffCommand("HEAD^", "HEAD")).isNotBlank() == expected) { path }
+            }
+            check(git(*releaseDiffCommand("v1.2.4-beta.23", "HEAD")).isNotBlank())
+        } finally {
+            Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) }
+        }
+    }
+
     test("batch uses latest published Dev across pages") {
         val pages =
             listOf(

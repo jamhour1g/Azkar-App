@@ -101,3 +101,44 @@ suspend fun selectDevBatch(
         else -> BatchDecision(false, "No app or installer changes since ${previous.tag}")
     }
 }
+
+fun releaseDiffCommand(
+    base: String,
+    head: String,
+): Array<String> =
+    arrayOf(
+        "git",
+        "diff",
+        "--name-only",
+        "--no-renames",
+        base,
+        head,
+        "--",
+        "app/src/main",
+        "data/src/main",
+        "domain/src/main",
+        "app/packaging",
+        ":(exclude)app/packaging/linux/gnomeExtension/tests",
+        ":(exclude)app/packaging/linux/gnomeExtension/.gitignore",
+        ":(exclude)app/packaging/linux/gnomeExtension/.prettierignore",
+        "assets/icons",
+        "assets/keys",
+        "app/build.gradle.kts",
+        "data/build.gradle.kts",
+        "domain/build.gradle.kts",
+        "build.gradle.kts",
+        "settings.gradle.kts",
+        "gradle.properties",
+        "gradle",
+        "gradlew",
+        "gradlew.bat",
+        "build-logic/build.gradle.kts",
+        "build-logic/settings.gradle.kts",
+        "build-logic/src/main",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "site/package.json",
+        "site/public/install.sh",
+        "site/public/install.ps1",
+    )
