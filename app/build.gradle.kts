@@ -440,7 +440,7 @@ if (providers.systemProperty("os.name").orNull.equals("Linux", ignoreCase = true
             commandLine(
                 extensionDevScripts.file("capture-gnome-panel").asFile,
                 resources.get().destinationDir.resolve("gnome/azkar-prayers@azkar.app"),
-                layout.projectDirectory.dir("src/preview/images").asFile,
+                extensionSource.dir("previews").asFile,
             )
         }
     }

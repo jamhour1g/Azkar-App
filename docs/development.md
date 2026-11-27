@@ -139,7 +139,8 @@ Capture the GNOME extension's schedule, actions menu, and reminder pause submenu
 
 The task uses the bundled extension and fixture prayer data in an isolated GNOME Shell session.
 It writes `gnome-prayer-schedule.png`, `gnome-prayer-actions.png`, and
-`gnome-prayer-pause-options.png` to `app/src/preview/images/`.
+`gnome-prayer-pause-options.png` to
+[`app/packaging/linux/gnomeExtension/previews/`](../app/packaging/linux/gnomeExtension/previews/).
 
 ## Project layout
 
