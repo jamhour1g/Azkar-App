@@ -47,9 +47,16 @@ suspend fun selectBatch() {
             val event = environment("EVENT")
             require(event in setOf("schedule", "workflow_dispatch")) { "Unsupported Dev release event: $event" }
             github { client ->
-                selectDevBatch(client.releases(), event, Instant.now()) { previous ->
-                    client.comparison(previous, environment("GITHUB_SHA"))
-                }
+                val head = environment("GITHUB_SHA")
+                selectDevBatch(
+                    client.releases(),
+                    event,
+                    Instant.now(),
+                    compare = { previous -> client.comparison(previous, head) },
+                    hasReleaseChanges = { previous ->
+                        capture(*releaseDiffCommand(previous, head)).isNotEmpty()
+                    },
+                )
             }
         }
     append("GITHUB_OUTPUT", "publish=${decision.publish}")

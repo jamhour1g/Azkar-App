@@ -177,8 +177,9 @@ jobs:
           distribution: 'zulu'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
+          cache-provider: enhanced
           cache-read-only: true
 
       - name: Set up Bun
@@ -193,7 +194,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libgl1
 
       - name: Build, test, and check release shrinking
-        run: ./gradlew build :app:smokeTestPackagedRuntime --console=plain ${{ inputs.profile_gradle && '--profile' || '' }}
+        run: bash scripts/ci/retry_maven_429.sh ./gradlew build :app:smokeTestPackagedRuntime --console=plain ${{ inputs.profile_gradle && '--profile' || '' }}
         env:
           CI: true
 
@@ -207,7 +208,7 @@ jobs:
           retention-days: 7
 
       - name: Render documentation gallery
-        run: ./gradlew :app:captureDownloadScreenshots --console=plain
+        run: bash scripts/ci/retry_maven_429.sh ./gradlew :app:captureDownloadScreenshots --console=plain
         env:
           CI: true
 
@@ -217,7 +218,7 @@ jobs:
           CI: true
         run: |
           sudo apt-get update && sudo apt-get install -y rpm
-          ./gradlew :app:packageCurrentOS -PappVersion="0.0.0-beta.$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" --console=plain
+          bash scripts/ci/retry_maven_429.sh ./gradlew :app:packageCurrentOS -PappVersion="0.0.0-beta.$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" --console=plain
       - name: Upload promotion installers
         if: needs.select.outputs.installers == 'true' && env.ACT != 'true'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5

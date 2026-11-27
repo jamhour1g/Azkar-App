@@ -39,8 +39,14 @@ val mocks =
         "git" to
             """
             #!/usr/bin/env bash
-            if [[ "${'$'}1" == merge-base ]]; then exit "${'$'}MOCK_ANCESTOR_EXIT";
-            else printf '%s\n' "${'$'}MOCK_TAGS"; fi
+            case "${'$'}1" in
+              merge-base) exit "${'$'}MOCK_ANCESTOR_EXIT" ;;
+              show-ref) [[ -n "${'$'}{MOCK_TAG_COMMIT:-}" ]] ;;
+              rev-parse)
+                if [[ "${'$'}3" == refs/tags/* ]]; then echo "${'$'}MOCK_TAG_COMMIT";
+                else echo "${'$'}GITHUB_SHA"; fi ;;
+              *) printf '%s\n' "${'$'}MOCK_TAGS" ;;
+            esac
             """.trimIndent(),
         "curl" to
             """
@@ -239,7 +245,7 @@ runBlocking {
         check(result.calls.isEmpty())
     }
 
-    test("Dev prerelease label on new and resumed drafts") {
+    test("Dev prerelease label and build commit on new and resumed drafts") {
         listOf("false", "true").forEach { exists ->
             val result =
                 runScript(
@@ -248,6 +254,21 @@ runBlocking {
                     environment = mapOf("MOCK_EXISTS" to exists),
                 ).succeeds()
             check((if (exists == "true") "--prerelease=true" else "--prerelease") in result.calls)
+            check("--target ${"a".repeat(40)}" in result.calls)
+        }
+    }
+
+    test("existing release tags must match the build commit") {
+        listOf(true, false).forEach { matches ->
+            val result =
+                runScript(
+                    "github-release.sh",
+                    "prepare-draft",
+                    environment =
+                        mapOf("MOCK_EXISTS" to "true", "MOCK_TAG_COMMIT" to (if (matches) "a" else "b").repeat(40)),
+                )
+            check((result.exit == 0) == matches) { result.log }
+            check(("release upload" in result.calls) == matches)
         }
     }
 
@@ -269,6 +290,12 @@ runBlocking {
                 Triple(emptyList(), emptyMap(), "true"),
                 Triple(listOf(Release("v1.2.3", prerelease = false)), emptyMap(), "true"),
                 Triple(listOf(previous), emptyMap(), "true"), // Exactly six hours after publication.
+                Triple(listOf(previous), mapOf("MOCK_RELEASE_CHANGES" to "false"), "false"),
+                Triple(
+                    listOf(previous),
+                    mapOf("EVENT" to "workflow_dispatch", "MOCK_RELEASE_CHANGES" to "false"),
+                    "false",
+                ),
                 Triple(listOf(previous), mapOf("MOCK_NOW" to "1793167199"), "false"),
                 Triple(listOf(previous), mapOf("MOCK_COMPARISON" to "identical"), "false"),
                 Triple(listOf(previous), mapOf("MOCK_COMPARISON" to "behind"), "false"),
@@ -283,10 +310,49 @@ runBlocking {
         cases.forEach { (releases, environment, publish) ->
             val now = Instant.ofEpochSecond(environment["MOCK_NOW"]?.toLong() ?: 1793167200L)
             val result =
-                selectDevBatch(releases.map { it.info() }, environment["EVENT"] ?: "schedule", now) {
-                    environment["MOCK_COMPARISON"] ?: "ahead"
-                }
+                selectDevBatch(
+                    releases.map { it.info() },
+                    environment["EVENT"] ?: "schedule",
+                    now,
+                    compare = { environment["MOCK_COMPARISON"] ?: "ahead" },
+                    hasReleaseChanges = { environment["MOCK_RELEASE_CHANGES"] != "false" },
+                )
             check(result.publish.toString() == publish) { "$environment: $result" }
+        }
+    }
+
+    test("Dev release diff includes published installers and skips maintenance files") {
+        val root = Files.createTempDirectory("azkar-release-diff-")
+        try {
+            fun git(vararg command: String): String {
+                val process = ProcessBuilder(*command).directory(root.toFile()).redirectErrorStream(true).start()
+                val output = process.inputStream.bufferedReader().use { it.readText() }
+                check(process.waitFor() == 0) { output }
+                return output
+            }
+            git("git", "init", "--quiet")
+            git("git", "config", "user.name", "Release fixture")
+            git("git", "config", "user.email", "fixture@example.invalid")
+            git("git", "commit", "--quiet", "--allow-empty", "--no-gpg-sign", "-m", "Base")
+            git("git", "tag", "v1.2.4-beta.23")
+            mapOf(
+                "README.md" to false,
+                ".github/workflows/release.yml" to false,
+                "app/packaging/linux/gnomeExtension/.gitignore" to false,
+                "app/packaging/linux/gnomeExtension/.prettierignore" to false,
+                "site/public/install.sh" to true,
+                "site/public/install.ps1" to true,
+            ).forEach { (path, expected) ->
+                val file = root.resolve(path)
+                Files.createDirectories(file.parent)
+                Files.writeString(file, "Fixture")
+                git("git", "add", "-f", "--", path)
+                git("git", "commit", "--quiet", "--no-gpg-sign", "-m", path)
+                check(git(*releaseDiffCommand("HEAD^", "HEAD")).isNotBlank() == expected) { path }
+            }
+            check(git(*releaseDiffCommand("v1.2.4-beta.23", "HEAD")).isNotBlank())
+        } finally {
+            Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::delete) }
         }
     }
 
@@ -300,9 +366,13 @@ runBlocking {
                 listOf(Release("v1.2.4-beta.23", publishedAt = "2026-10-28T05:00:00Z")),
             )
         val result =
-            selectDevBatch(pages.flatten().map { it.info() }, "schedule", Instant.parse("2026-10-28T06:00:00Z")) {
-                error("Comparison must not run during the six-hour interval")
-            }
+            selectDevBatch(
+                pages.flatten().map { it.info() },
+                "schedule",
+                Instant.parse("2026-10-28T06:00:00Z"),
+                compare = { error("Comparison must not run during the six-hour interval") },
+                hasReleaseChanges = { error("Diff must not run during the six-hour interval") },
+            )
         check(!result.publish)
     }
 
@@ -425,7 +495,13 @@ runBlocking {
         val releases = listOf(Release("v1.2.4-beta.23.1").info())
         check(
             runCatching {
-                selectDevBatch(releases, "workflow_dispatch", Instant.parse("2026-10-28T06:00:00Z")) { "unknown" }
+                selectDevBatch(
+                    releases,
+                    "workflow_dispatch",
+                    Instant.parse("2026-10-28T06:00:00Z"),
+                    compare = { "unknown" },
+                    hasReleaseChanges = { error("Diff must not run for an unknown status") },
+                )
             }.isFailure,
         )
     }

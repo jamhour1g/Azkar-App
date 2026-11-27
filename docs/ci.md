@@ -62,9 +62,10 @@ Build jobs use read-only repository permissions, no publishing secrets, and chec
 with `persist-credentials: false`. TypeScript, Chromium, and Kotlin release-script checks share a runner
 alongside the Linux Gradle build. Both jobs must succeed for `Azkar CI / Linux` unless the owner approved a
 documentation-only skip. CI uses read-only cache tokens on both triggers, and the Linux
-build can restore trusted Gradle entries. On the default `dev` branch, Release validation
-writes the Linux Gradle cache and Intel macOS packaging writes its own cache. The other
-release matrix jobs, screenshots, and release tags only restore Gradle entries.
+build uses the same enhanced Gradle cache provider as Release. Gradle can restore
+previous cache entries when a build file or dependency changes. On the default `dev`
+branch, Release validation caches the packaging JDK probe and each packaging job saves
+its Gradle dependencies. Screenshots and release tags restore caches read-only.
 
 A separate reporting runner, with no source checkout, writes the required statuses to
 the reviewed head from job results. A changed head, base revision, or target branch
@@ -94,8 +95,9 @@ status. Native build reports and installer artifacts are retained briefly for di
 ## Release publication
 
 Dev publication batches merged changes: schedules check every 30 minutes and publish only
-when there are new commits and six hours have passed since the last Dev release. Manual
-dispatch from `dev` can publish new commits sooner. PR checks still run per approved PR.
+when app or installer inputs have changed since the latest published Dev tag and six hours
+have passed since that release. Manual dispatch from `dev` bypasses the wait and uses the
+same change check. PR checks still run per approved PR.
 Stable publication
 uses explicit `vMAJOR.MINOR.PATCH` tags on `production` and requires current recorded
 installed-release evidence. Stable ancestry and installed-release evidence are checked in

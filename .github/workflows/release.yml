@@ -102,7 +102,7 @@ jobs:
           distribution: zulu
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
-          cache-provider: basic
+          cache-provider: enhanced
           cache-read-only: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
       - name: Install native test dependencies
         run: sudo apt-get update && sudo apt-get install -y libgl1
@@ -112,7 +112,8 @@ jobs:
           APP_VERSION: ${{ needs.prepare.outputs.app_version }}
         run: |
           chmod +x ./gradlew
-          bash scripts/ci/retry_maven_429.sh ./gradlew check :app:checkTagParity :app:proguardReleaseJars -PappVersion="$APP_VERSION" --console=plain
+          # Resolve the Compose JDK probe before the shared Linux cache is saved.
+          bash scripts/ci/retry_maven_429.sh ./gradlew check :app:checkTagParity :app:proguardReleaseJars :app:checkRuntime -PappVersion="$APP_VERSION" --console=plain
       - name: Set up Kotlin compiler
         uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
         with:
@@ -190,8 +191,8 @@ jobs:
           distribution: zulu
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
-          cache-provider: basic
-          cache-read-only: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) || matrix.id != 'macos-x64' }}
+          cache-provider: enhanced
+          cache-read-only: ${{ github.ref != format('refs/heads/{0}', github.event.repository.default_branch) }}
       - name: Set up Bun
         if: runner.os == 'Linux'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
@@ -212,7 +213,7 @@ jobs:
         run: |
           if [[ "${ACT:-false}" == true ]]; then APP_VERSION="${APP_VERSION:-0.0.0-beta.1}"; fi
           test -n "$APP_VERSION"
-          ./gradlew :app:packageCurrentOS -PappVersion="$APP_VERSION" --console=plain
+          bash scripts/ci/retry_maven_429.sh ./gradlew :app:packageCurrentOS -PappVersion="$APP_VERSION" --console=plain
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: env.ACT != 'true'
         with:
@@ -250,7 +251,7 @@ jobs:
           distribution: zulu
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
-          cache-provider: basic
+          cache-provider: enhanced
           cache-read-only: true
       - name: Install screenshot runtime dependencies
         run: sudo apt-get update && sudo apt-get install -y libgl1

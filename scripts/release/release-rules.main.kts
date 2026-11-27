@@ -84,6 +84,7 @@ suspend fun selectDevBatch(
     event: String,
     now: Instant,
     compare: suspend (String) -> String,
+    hasReleaseChanges: suspend (String) -> Boolean,
 ): BatchDecision {
     val previous = latestDevRelease(releases) ?: return BatchDecision(true, "First Dev release")
     val elapsed = Duration.between(requireNotNull(previous.publishedAt), now)
@@ -94,9 +95,50 @@ suspend fun selectDevBatch(
     require(comparison in setOf("ahead", "identical", "behind", "diverged")) {
         "Unexpected GitHub comparison status: $comparison"
     }
-    return if (comparison == "ahead") {
-        BatchDecision(true, "New commits since ${previous.tag}")
-    } else {
-        BatchDecision(false, "No forward changes since ${previous.tag} ($comparison)")
+    return when {
+        comparison != "ahead" -> BatchDecision(false, "No forward changes since ${previous.tag} ($comparison)")
+        hasReleaseChanges(previous.tag) -> BatchDecision(true, "App or installer inputs changed since ${previous.tag}")
+        else -> BatchDecision(false, "No app or installer changes since ${previous.tag}")
     }
 }
+
+fun releaseDiffCommand(
+    base: String,
+    head: String,
+): Array<String> =
+    arrayOf(
+        "git",
+        "diff",
+        "--name-only",
+        "--no-renames",
+        base,
+        head,
+        "--",
+        "app/src/main",
+        "data/src/main",
+        "domain/src/main",
+        "app/packaging",
+        ":(exclude)app/packaging/linux/gnomeExtension/tests",
+        ":(exclude)app/packaging/linux/gnomeExtension/.gitignore",
+        ":(exclude)app/packaging/linux/gnomeExtension/.prettierignore",
+        "assets/icons",
+        "assets/keys",
+        "app/build.gradle.kts",
+        "data/build.gradle.kts",
+        "domain/build.gradle.kts",
+        "build.gradle.kts",
+        "settings.gradle.kts",
+        "gradle.properties",
+        "gradle",
+        "gradlew",
+        "gradlew.bat",
+        "build-logic/build.gradle.kts",
+        "build-logic/settings.gradle.kts",
+        "build-logic/src/main",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "site/package.json",
+        "site/public/install.sh",
+        "site/public/install.ps1",
+    )
