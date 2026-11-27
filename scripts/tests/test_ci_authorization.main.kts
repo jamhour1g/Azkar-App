@@ -131,6 +131,12 @@ try {
     )
     rejects(mapOf("SKIP_CHECKS" to "true", "FULL_INSTALLERS" to "true"))
     check(runShell("Resolve and authorize the PR", mapOf("SKIP_CHECKS" to "true"), target = "production").first != 0)
+    val site = """[[{"filename":"site/src/page.ts"}]]"""
+    val mixedRename = """[[{"filename":"site/tests/app.ts","previous_filename":"app/main.kt"}]]"""
+    for ((files, expected) in listOf(site to true, mixedRename to false)) {
+        accepts(mapOf("MOCK_FILES" to files))
+        check(Files.readAllLines(root.resolve("outputs")).last { it.startsWith("site_only=") } == "site_only=$expected")
+    }
     accepts(target = "production")
     check(runShell("Resolve and authorize the PR", emptyMap(), target = "other").first != 0)
     val success =
@@ -160,6 +166,9 @@ try {
                 ),
             ),
     )
+    val siteOnly = success + mapOf("SITE_ONLY" to "true", "LINUX_RESULT" to "skipped", "INSTALLERS_REQUIRED" to "false")
+    check("state=success" in report(siteOnly))
+    check("state=failure" in report(siteOnly + ("SITE_RESULT" to "failure")))
     for (siteResult in listOf("failure", "cancelled", "skipped")) {
         val output = report(success + ("SITE_RESULT" to siteResult))
         check("state=failure -f context=Azkar CI / Linux" in output)

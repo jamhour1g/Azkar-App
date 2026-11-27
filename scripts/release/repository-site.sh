@@ -44,6 +44,15 @@ build_site() {
   (cd repository-site && find . -type f ! -path './.nojekyll' -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/site-SHA256SUMS"
 }
 
+verify_archive() {
+  local expected="$RUNNER_TEMP/site-SHA256SUMS"
+  local members="$RUNNER_TEMP/pages-members"
+  tar -tf "$RUNNER_TEMP/artifact.tar" > "$members"
+  sed -i '/\/$/d' "$members"
+  LC_ALL=C sort -o "$members" "$members"
+  cut -c67- "$expected" | LC_ALL=C sort | diff -u --label 'Expected site files' --label 'Pages archive' - "$members"
+}
+
 verify_site() {
   local site_url attempt current entry file
   site_url="${PAGE_URL%/}"
@@ -58,6 +67,7 @@ verify_site() {
     file="${entry:66}"
     [[ "$file" == ./* && "$file" != *..* ]]
     mkdir -p "verified/$(dirname "$file")"
+    echo "Verifying deployed file: $file"
     curl --fail --location --silent --show-error --retry 5 --retry-all-errors \
       --output "verified/$file" "$site_url/${file#./}" || {
       echo "Unable to download deployed file: $file" >&2
@@ -71,6 +81,7 @@ case "${1:-}" in
   import-key) import_key ;;
   collect-packages) collect_packages ;;
   build) build_site ;;
+  verify-archive) verify_archive ;;
   verify) verify_site ;;
-  *) echo "Usage: $0 {import-key|collect-packages|build|verify}" >&2; exit 2 ;;
+  *) echo "Usage: $0 {import-key|collect-packages|build|verify-archive|verify}" >&2; exit 2 ;;
 esac

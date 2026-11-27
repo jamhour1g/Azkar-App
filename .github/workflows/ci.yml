@@ -65,6 +65,7 @@ jobs:
       base_sha: ${{ steps.pr.outputs.base_sha }}
       base_branch: ${{ steps.pr.outputs.base_branch }}
       installers: ${{ steps.pr.outputs.installers }}
+      site_only: ${{ steps.pr.outputs.site_only }}
       skip_checks: ${{ steps.pr.outputs.skip_checks }}
     steps:
       - name: Resolve and authorize the PR
@@ -76,6 +77,7 @@ jobs:
           ACTOR: ${{ github.actor }}
           EVENT: ${{ github.event_name }}
           DISPATCH_REF: ${{ github.ref }}
+          PROFILE_GRADLE: ${{ inputs.profile_gradle }}
           FULL_INSTALLERS: ${{ inputs.validate_installers }}
           SKIP_CHECKS: ${{ inputs.skip_checks }}
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
@@ -107,27 +109,32 @@ jobs:
           installers=false
           if [[ "$base" == production || "$FULL_INSTALLERS" == true ]]; then installers=true; fi
           skip_checks=false
-          if [[ "$EVENT" == workflow_dispatch && "$SKIP_CHECKS" == true ]]; then
+          site_only=false
+          if [[ "$base" == dev && "$installers" == false && ( "$PROFILE_GRADLE" != true || "$SKIP_CHECKS" == true ) ]]; then
+            count="$(jq -r .changed_files <<< "$pr")"
+            if (( count > 0 && count <= 3000 )); then
+              files_json="$(gh api --paginate --slurp "repos/$REPOSITORY/pulls/$PR_NUMBER/files?per_page=100")"
+              if jq -e --argjson count "$count" '[.[][]] | length == $count and
+                all(.[]; all((.filename, (.previous_filename // empty)); startswith("site/src/") or startswith("site/tests/")))' \
+                <<< "$files_json" >/dev/null; then
+                site_only=true
+              fi
+            fi
+          fi
+          if [[ "$SKIP_CHECKS" == true ]]; then
+            test "$EVENT" = workflow_dispatch
             test "$DISPATCH_REF" = "refs/heads/$default_branch"
             test "$base" = dev
             test "$installers" = false
-            files_json="$(gh api --paginate --slurp "repos/$REPOSITORY/pulls/$PR_NUMBER/files?per_page=100")"
-            # The pull request files API returns at most 3,000 files.
-            changed_files="$(jq -r .changed_files <<< "$pr")"
-            [[ "$changed_files" =~ ^[0-9]+$ && "$changed_files" -le 3000 ]]
-            test "$(jq '[.[][]] | length' <<< "$files_json")" -eq "$changed_files"
-            [[ "$changed_files" -gt 0 ]]
-            files="$(jq -r '.[][] | .filename, (.previous_filename // empty)' <<< "$files_json")"
-            while IFS= read -r file; do
-              case "$file" in
-                README.md|docs/*.md|data/src/main/resources/db/seed/SEED_DATA_NOTICE.md) ;;
-                *) echo "Cannot skip CI for non-documentation file: $file" >&2; exit 1 ;;
-              esac
-            done <<< "$files"
+            jq -e --argjson count "$count" '[.[][]] | length > 0 and length == $count and
+              all(.[]; all((.filename, (.previous_filename // empty)); . == "README.md" or
+                . == "data/src/main/resources/db/seed/SEED_DATA_NOTICE.md" or test("^docs/.*\\.md\\z")))' \
+              <<< "${files_json:-[]}" >/dev/null
             skip_checks=true
           fi
           {
             echo "installers=$installers"
+            echo "site_only=$site_only"
             echo "skip_checks=$skip_checks"
             echo "pr_number=$PR_NUMBER"
             echo "head_sha=$REVIEWED_SHA"
@@ -147,7 +154,7 @@ jobs:
   build-linux:
     name: Build (ubuntu-24.04)
     needs: select
-    if: needs.select.outputs.skip_checks != 'true'
+    if: needs.select.outputs.skip_checks != 'true' && needs.select.outputs.site_only != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
 
@@ -327,6 +334,7 @@ jobs:
           ./scripts/release/check_release_validation.main.kts self-test
           ./scripts/tests/test_ci_authorization.main.kts
           ./scripts/tests/test_release_workflow.main.kts
+          ./scripts/tests/test_release_recovery.sh
           ./scripts/tests/test_github_client.main.kts
 
   build-cross-platform:
@@ -456,6 +464,7 @@ jobs:
           BASE_BRANCH: ${{ needs.select.outputs.base_branch }}
           INSTALLERS_REQUIRED: ${{ needs.select.outputs.installers }}
           SKIP_CHECKS: ${{ needs.select.outputs.skip_checks }}
+          SITE_ONLY: ${{ needs.select.outputs.site_only }}
           LINUX_RESULT: ${{ needs.build-linux.result }}
           SITE_RESULT: ${{ needs.check-site.result }}
           CROSS_RESULT: ${{ needs.build-cross-platform.result }}
@@ -475,7 +484,7 @@ jobs:
           linux_state=failure
           description="Linux ($LINUX_RESULT), site and scripts ($SITE_RESULT)"
           if [[ "$SKIP_CHECKS" == true ]]; then description='Owner-approved documentation-only CI skip'; fi
-          if [[ "$current" == true && ( ( "$LINUX_RESULT" == success && "$SITE_RESULT" == success ) || "$SKIP_CHECKS" == true ) ]]; then
+          if [[ "$current" == true && ( ( "$SITE_RESULT" == success && ( "$LINUX_RESULT" == success || ( "$SITE_ONLY" == true && "$LINUX_RESULT" == skipped ) ) ) || "$SKIP_CHECKS" == true ) ]]; then
             linux_state=success
           fi
           post_status "$linux_state" 'Azkar CI / Linux' "$description"
