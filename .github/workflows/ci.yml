@@ -68,6 +68,12 @@ jobs:
       site_only: ${{ steps.pr.outputs.site_only }}
       skip_checks: ${{ steps.pr.outputs.skip_checks }}
     steps:
+      - name: Check out trusted workflow scripts
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts/ci
       - name: Resolve and authorize the PR
         id: pr
         env:
@@ -82,74 +88,7 @@ jobs:
           SKIP_CHECKS: ${{ inputs.skip_checks }}
           PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
           REVIEWED_SHA: ${{ github.event.pull_request.head.sha || inputs.reviewed_sha }}
-        run: |
-          trap 'echo "::error::Authorization failed at line $LINENO. Check the PR state, reviewed SHA, owner, and dispatch branch."' ERR
-          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
-          [[ "$REVIEWED_SHA" =~ ^[0-9a-f]{40}$ ]]
-          if [[ "$EVENT" == workflow_dispatch ]]; then
-            test "$ACTOR" = "$OWNER"
-            default_branch="$(gh api "repos/$REPOSITORY" --jq .default_branch)"
-          fi
-          pr="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")"
-          test "$(jq -r .state <<< "$pr")" = open
-          test "$(jq -r .head.sha <<< "$pr")" = "$REVIEWED_SHA"
-          test "$(jq -r .base.repo.full_name <<< "$pr")" = "$REPOSITORY"
-          if [[ "$EVENT" == workflow_dispatch && "$DISPATCH_REF" != "refs/heads/$default_branch" ]]; then
-            # The owner can rehearse their own workflow changes before landing on dev.
-            test "$(jq -r .user.login <<< "$pr")" = "$OWNER"
-            test "$(jq -r .head.repo.full_name <<< "$pr")" = "$REPOSITORY"
-            test "$DISPATCH_REF" = "refs/heads/$(jq -r .head.ref <<< "$pr")"
-            test "$GITHUB_SHA" = "$REVIEWED_SHA"
-          fi
-          if [[ "$EVENT" == pull_request_target ]]; then
-            test "$(jq -r .user.login <<< "$pr")" = "$OWNER"
-          fi
-          base="$(jq -r .base.ref <<< "$pr")"
-          [[ "$base" == dev || "$base" == production ]]
-          installers=false
-          if [[ "$base" == production || "$FULL_INSTALLERS" == true ]]; then installers=true; fi
-          skip_checks=false
-          site_only=false
-          if [[ "$base" == dev && "$installers" == false && ( "$PROFILE_GRADLE" != true || "$SKIP_CHECKS" == true ) ]]; then
-            count="$(jq -r .changed_files <<< "$pr")"
-            if (( count > 0 && count <= 3000 )); then
-              files_json="$(gh api --paginate --slurp "repos/$REPOSITORY/pulls/$PR_NUMBER/files?per_page=100")"
-              if jq -e --argjson count "$count" '[.[][]] | length == $count and
-                all(.[]; all((.filename, (.previous_filename // empty)); startswith("site/src/") or startswith("site/tests/")))' \
-                <<< "$files_json" >/dev/null; then
-                site_only=true
-              fi
-            fi
-          fi
-          if [[ "$SKIP_CHECKS" == true ]]; then
-            test "$EVENT" = workflow_dispatch
-            test "$DISPATCH_REF" = "refs/heads/$default_branch"
-            test "$base" = dev
-            test "$installers" = false
-            jq -e --argjson count "$count" '[.[][]] | length > 0 and length == $count and
-              all(.[]; all((.filename, (.previous_filename // empty)); . == "README.md" or
-                . == "data/src/main/resources/db/seed/SEED_DATA_NOTICE.md" or test("^docs/.*\\.md\\z")))' \
-              <<< "${files_json:-[]}" >/dev/null
-            skip_checks=true
-          fi
-          {
-            echo "installers=$installers"
-            echo "site_only=$site_only"
-            echo "skip_checks=$skip_checks"
-            echo "pr_number=$PR_NUMBER"
-            echo "head_sha=$REVIEWED_SHA"
-            echo "base_sha=$(jq -r .base.sha <<< "$pr")"
-            echo "base_branch=$base"
-          } >> "$GITHUB_OUTPUT"
-          contexts=('Azkar CI / Linux')
-          if [[ "$installers" == true ]]; then contexts+=('Azkar CI / Installers'); fi
-          for context in "${contexts[@]}"; do
-            description='Reviewed revision queued for CI'
-            if [[ "$skip_checks" == true ]]; then description='Owner-approved documentation-only skip queued'; fi
-            gh api --method POST "repos/$REPOSITORY/statuses/$REVIEWED_SHA" \
-              -f state=pending -f "context=$context" -f "description=$description" \
-              -f "target_url=$GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          done
+        run: ./.github/scripts/ci/authorize-pr.sh
 
   build-linux:
     name: Build (ubuntu-24.04)
@@ -174,7 +113,7 @@ jobs:
           test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
 
       - name: Check GitHub workflows
-        run: ./scripts/ci/check_workflows.sh
+        run: ./.github/scripts/ci/check_workflows.sh
 
       - name: Set up JDK 25
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
@@ -201,7 +140,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libgl1
 
       - name: Build, test, and check release shrinking
-        run: bash scripts/ci/retry_maven_429.sh ./gradlew build :app:smokeTestPackagedRuntime --console=plain ${{ inputs.profile_gradle && '--profile' || '' }}
+        run: bash .github/scripts/ci/retry_maven_429.sh ./gradlew build :app:smokeTestPackagedRuntime --console=plain ${{ inputs.profile_gradle && '--profile' || '' }}
         env:
           CI: true
 
@@ -215,7 +154,7 @@ jobs:
           retention-days: 7
 
       - name: Render documentation gallery
-        run: bash scripts/ci/retry_maven_429.sh ./gradlew :app:captureDownloadScreenshots --console=plain
+        run: bash .github/scripts/ci/retry_maven_429.sh ./gradlew :app:captureDownloadScreenshots --console=plain
         env:
           CI: true
 
@@ -225,7 +164,7 @@ jobs:
           CI: true
         run: |
           sudo apt-get update && sudo apt-get install -y rpm
-          bash scripts/ci/retry_maven_429.sh ./gradlew :app:packageCurrentOS -PappVersion="0.0.0-beta.$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" --console=plain
+          bash .github/scripts/ci/retry_maven_429.sh ./gradlew :app:packageCurrentOS -PappVersion="0.0.0-beta.$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT" --console=plain
       - name: Upload promotion installers
         if: needs.select.outputs.installers == 'true' && env.ACT != 'true'
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
@@ -316,26 +255,8 @@ jobs:
           bun --cwd site --bun playwright install --with-deps --only-shell chromium
           bun run test:browser
 
-      - name: Set up JDK 25
-        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
-        with:
-          java-version: '25'
-          distribution: 'zulu'
-
-      - name: Set up Kotlin compiler
-        uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
-        with:
-          version: '2.4.21'
-
       - name: Test release validation scripts
-        run: |
-          ./scripts/release/merge_nucleus_release.main.kts self-test
-          ./scripts/release/publish_linux_repositories.main.kts self-test
-          ./scripts/release/check_release_validation.main.kts self-test
-          ./scripts/tests/test_ci_authorization.main.kts
-          ./scripts/tests/test_release_workflow.main.kts
-          ./scripts/tests/test_release_recovery.sh
-          ./scripts/tests/test_github_client.main.kts
+        run: python3 -B -m unittest discover -s .github/scripts/tests
 
   build-cross-platform:
     name: Build installers (Windows/macOS)
@@ -432,17 +353,13 @@ jobs:
         run: |
           test "$(git rev-parse HEAD^2)" = "$REVIEWED_SHA"
           test "$(git rev-parse HEAD^1)" = "$BASE_SHA"
-      - name: Set up Kotlin compiler
-        uses: fwilhe2/setup-kotlin@b325539ca8f6e1d9ee04efed06f49bdbf5426dbb # v2.1
-        with:
-          version: '2.4.21'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: promotion-*
           path: promotion-input
           merge-multiple: true
       - name: Validate complete installer set
-        run: ./scripts/release/merge_nucleus_release.main.kts promotion-input promotion-validated "0.0.0-beta.$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT"
+        run: python3 -B .github/scripts/release/merge_nucleus_release.py promotion-input promotion-validated "0.0.0-beta.$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT"
 
   report:
     name: Report required checks on the reviewed commit
@@ -451,9 +368,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
+      contents: read
       pull-requests: read
       statuses: write
     steps:
+      - name: Check out trusted workflow scripts
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+          sparse-checkout: .github/scripts/ci
       - name: Publish required commit statuses
         env:
           GH_TOKEN: ${{ github.token }}
@@ -469,39 +393,4 @@ jobs:
           SITE_RESULT: ${{ needs.check-site.result }}
           CROSS_RESULT: ${{ needs.build-cross-platform.result }}
           INSTALLERS_RESULT: ${{ needs.validate-installers.result }}
-        run: |
-          pr="$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")"
-          current=false
-          if [[ "$(jq -r .state <<< "$pr")" == open && "$(jq -r .head.sha <<< "$pr")" == "$REVIEWED_SHA" && \
-                "$(jq -r .base.sha <<< "$pr")" == "$BASE_SHA" && "$(jq -r .base.ref <<< "$pr")" == "$BASE_BRANCH" ]]; then
-            current=true
-          fi
-          post_status() {
-            gh api --method POST "repos/$REPOSITORY/statuses/$REVIEWED_SHA" \
-              -f "state=$1" -f "context=$2" -f "description=$3" \
-              -f "target_url=$GITHUB_SERVER_URL/$REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          }
-          linux_state=failure
-          description="Linux ($LINUX_RESULT), site and scripts ($SITE_RESULT)"
-          if [[ "$SKIP_CHECKS" == true ]]; then description='Owner-approved documentation-only CI skip'; fi
-          if [[ "$current" == true && ( ( "$SITE_RESULT" == success && ( "$LINUX_RESULT" == success || ( "$SITE_ONLY" == true && "$LINUX_RESULT" == skipped ) ) ) || "$SKIP_CHECKS" == true ) ]]; then
-            linux_state=success
-          fi
-          post_status "$linux_state" 'Azkar CI / Linux' "$description"
-          if [[ "$INSTALLERS_REQUIRED" == true ]]; then
-            state=failure
-            if [[ "$linux_state" == success && "$CROSS_RESULT" == success && "$INSTALLERS_RESULT" == success ]]; then state=success; fi
-            post_status "$state" 'Azkar CI / Installers' "Linux, site and scripts ($linux_state), native builds ($CROSS_RESULT), asset validation ($INSTALLERS_RESULT)"
-          fi
-          {
-            echo '### Reviewed PR checks'
-            echo "- PR: #$PR_NUMBER"
-            echo "- Reviewed head: $REVIEWED_SHA"
-            echo "- Reviewed base: $BASE_BRANCH ($BASE_SHA)"
-            echo "- PR still matches the reviewed revision: $current"
-            echo "- Documentation-only skip: $SKIP_CHECKS"
-            echo "- Linux: $LINUX_RESULT"
-            echo "- Site and release scripts: $SITE_RESULT"
-            echo "- Native builds: $CROSS_RESULT"
-            echo "- Installer validation: $INSTALLERS_RESULT"
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: ./.github/scripts/ci/report-status.sh

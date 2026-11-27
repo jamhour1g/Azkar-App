@@ -26,7 +26,7 @@ collect_packages() {
   cp release-assets/*.deb release-assets/*.rpm release-assets/SHA256SUMS "repository-input/$CHANNEL/"
   other=stable
   if [[ "$CHANNEL" == stable ]]; then other=dev; fi
-  tag="$("$(dirname "${BASH_SOURCE[0]}")/metadata.main.kts" "latest-$other-tag")"
+  tag="$(python3 -B "$(dirname "${BASH_SOURCE[0]}")/metadata.py" "latest-$other-tag")"
   if [[ -n "$tag" ]]; then
     mkdir -p "repository-input/$other"
     gh release download "$tag" --dir "repository-input/$other" \
@@ -38,7 +38,7 @@ build_site() {
   local key_id
   export GNUPGHOME="$RUNNER_TEMP/azkar-repo-gnupg"
   key_id="$(cat "$RUNNER_TEMP/azkar-repo-key-id")"
-  ./scripts/release/publish_linux_repositories.main.kts \
+  python3 -B "$(dirname "${BASH_SOURCE[0]}")/publish_linux_repositories.py" \
     repository-input repository-site "$RUNNER_TEMP/azkar-repo.asc" "$key_id"
   # The Pages artifact excludes the .nojekyll marker.
   (cd repository-site && find . -type f ! -path './.nojekyll' -print0 | sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/site-SHA256SUMS"

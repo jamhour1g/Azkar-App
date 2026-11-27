@@ -53,7 +53,7 @@ prepare_draft() {
     gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
       -f "tag_name=$RELEASE_TAG" -f "target_commitish=$GITHUB_SHA" --jq .body > "$notes_file"
   else
-    previous="$("$(dirname "${BASH_SOURCE[0]}")/metadata.main.kts" latest-dev-tag)"
+    previous="$(python3 -B "$(dirname "${BASH_SOURCE[0]}")/metadata.py" latest-dev-tag)"
     note_args=()
     if [[ -n "$previous" ]]; then note_args+=(-f "previous_tag_name=$previous"); fi
     gh api --method POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
