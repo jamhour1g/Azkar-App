@@ -40,7 +40,7 @@ Final packages, update metadata and `SHA256SUMS` are staged under `build/install
 
 Linux CI packages DEB, RPM and AppImage; Windows CI packages NSIS; macOS CI packages DMG and ZIP on both supported architectures. Windows installer/uninstaller and macOS DMG icons are configured separately from the app icons. An AppImage embeds its icon, but file-manager thumbnails still depend on desktop support.
 
-The release merger requires all eight platform/format artifacts and checks their exact versioned filenames, channel, manifest coverage, sizes and SHA-512 hashes. Duplicate filenames, missing architectures, unsafe URLs and unexpected files fail validation before output is written. Windows NSIS filenames include the Nucleus `-nsis` suffix, for example `azkar-0.1.2-windows-x64-nsis.exe`. Native EXE metadata may contain the numeric base version; macOS bundle versions offset the major by one (app 0.1.2 → bundle 1.1.2) because jpackage requires a positive major. App UI/JVM version and artifact names keep the original version; final update manifests always carry the full release version. Run its fixture tests with `./scripts/release/merge_nucleus_release.main.kts self-test` (requires `kotlinc`).
+The release merger requires all eight platform/format artifacts and checks their exact versioned filenames, channel, manifest coverage, sizes and SHA-512 hashes. Duplicate filenames, missing architectures, unsafe URLs and unexpected files fail validation before output is written. Windows NSIS filenames include the Nucleus `-nsis` suffix, for example `azkar-0.1.2-windows-x64-nsis.exe`. Native EXE metadata may contain the numeric base version; macOS bundle versions offset the major by one (app 0.1.2 → bundle 1.1.2) because jpackage requires a positive major. App UI/JVM version and artifact names keep the original version; final update manifests always carry the full release version. Run its fixtures with `python3 -B -m unittest discover -s .github/scripts/tests`.
 
 The Linux packages include the Azkar GNOME Shell extension. DEB and RPM register the bundled files system-wide. AppImage installs a user copy when the prayer panel is enabled. If GNOME has yet to discover the files, sign out and back in, then launch Azkar. The panel uses AppIndicator while the extension is unavailable and respects an explicit disable in GNOME. Linux packaging requires Bun and pnpm to build the extension from `app/packaging/linux/gnomeExtension`. Gradle installs the locked dependencies with pnpm, runs TypeScript with Bun, and bundles the generated `extension.js`. The extension and website use the shared [TypeScript workspace](development.md#typescript-workspace) for local checks and formatting.
 
@@ -71,25 +71,13 @@ The workflow verifies the tag is on `production`, checks the recorded [installed
 ## Maintaining the release workflow
 
 `.github/workflows/release.yml` defines triggers, job dependencies, permissions, and step-scoped
-credentials. Release logic lives under `scripts/release/`:
+credentials. Release helpers live in `.github/scripts/release/`. Python handles release
+selection, installer manifests, and signed Linux repository generation. Bash handles GitHub
+draft publication and Pages verification. The installed-release evidence check tracks the
+workflow files and scripts.
 
-- `metadata.main.kts`: validated API records, Dev batch eligibility, version numbering, and Stable source ancestry.
-- `github-release.sh`: release notes, draft creation/resumption, and final publication.
-- `repository-site.sh`: signing-key checks, package collection, site creation, and deployed-file verification.
-- `release-rules.main.kts`: pure Kotlin rules shared by metadata and tests. The same selectors drive batching,
-  notes, and package collection. Stable versions are ordered numerically, not by API response order.
-- `github-client.main.kts`: Ktor HTTP client with typed `@Serializable` response models, pagination,
-  timeouts, and explicit authentication. Redirects are rejected instead of forwarding credentials.
-- `kotlin.sh`: loads the serialization plugin bundled with the selected compiler for metadata
-  commands and HTTP tests; their shebangs use this launcher automatically from the repository root.
-
-Run commands from the repository root. `./scripts/tests/test_release_workflow.main.kts` tests the scripts
-directly using temporary files and mocked external commands, without publishing. The workflow
-also runs `./scripts/tests/test_github_client.main.kts` with Ktor's MockEngine; no GitHub HTTP calls
-are made by either suite. The workflow linter also runs ShellCheck over the shell entry points.
-Changes remain covered by the installed-release
-evidence check because it tracks the entire `scripts/` directory.
-See the [scripts index](../scripts/README.md) for the folder layout, Kotlin tools, and local checks.
+Run the [workflow fixtures](../.github/scripts/README.md) from the repository root. They
+use temporary files and mocked GitHub calls.
 
 ## Dev releases
 
@@ -116,7 +104,7 @@ Repository metadata is signed by a dedicated GPG key, separate from any Windows 
 
 The public key, repository metadata and newest Stable/Dev DEB/RPM pairs are generated into a disposable site directory and deployed as a Pages artifact. They are not committed to `gh-pages` or any other Git branch. The public identity is pinned in `assets/keys/azkar-repository.asc`; the workflow rejects a secret key with a different fingerprint. Back up the private key and its passphrase outside Git before rotating or removing either Actions secret. The public key URL is `https://jamhour1g.github.io/Azkar-App/keys/azkar-repo.asc`. The Linux terminal installer on [the download page](../site/src/index.html) configures APT or DNF for the selected channel. RPM repository metadata is signed; its package checksums are covered by that signed metadata. APT verifies package checksums through its signed Release metadata.
 
-The `publish_linux_repositories.main.kts` script accepts an input directory with optional `stable/` and `dev/` subdirectories, an empty output site directory, an exported public key and a fingerprint. Each channel must have exactly one matching versioned DEB/RPM pair and its release `SHA256SUMS`. It validates hashes and channels, builds/verifies signed metadata, and produces the download page and `<channel>-version.txt` markers. It never commits, pushes or deploys anything itself. The workflow supplies the current release packages and downloads the latest published counterpart channel from GitHub Releases. If that channel has never been published, it remains absent until its first release.
+The `publish_linux_repositories.py` script accepts an input directory with optional `stable/` and `dev/` subdirectories, an empty output site directory, an exported public key and a fingerprint. Each channel must have exactly one matching versioned DEB/RPM pair and its release `SHA256SUMS`. It validates hashes and channels, builds/verifies signed metadata, and produces the download page and `<channel>-version.txt` markers. It never commits, pushes or deploys anything itself. The workflow supplies the current release packages and downloads the latest published counterpart channel from GitHub Releases. If that channel has never been published, it remains absent until its first release.
 
 The generated site must stay below 900 MiB, leaving space below Pages' 1 GB site limit. Only DEB/RPM files belong in the repositories; AppImage and other formats remain GitHub Release assets. The old `gh-pages` branch is left untouched and is no longer the deployment source.
 

@@ -59,16 +59,16 @@ This catches PR/base races before executing code. Contributors cannot bypass app
 by editing the CI YAML in their PR.
 
 Build jobs use read-only repository permissions, no publishing secrets, and checkout
-with `persist-credentials: false`. TypeScript, Chromium, and Kotlin release-script checks share a runner
-alongside the Linux Gradle build. Both jobs must succeed for `Azkar CI / Linux` unless the owner approved a
-documentation-only skip. CI uses read-only cache tokens on both triggers, and the Linux
+with `persist-credentials: false`. TypeScript, Chromium, and release-script checks share a runner
+alongside the Linux Gradle build. The required `Azkar CI / Linux` status combines both jobs and
+accounts for the documentation and site-only cases. CI uses read-only cache tokens on both triggers, and the Linux
 build uses the same enhanced Gradle cache provider as Release. Gradle can restore
 previous cache entries when a build file or dependency changes. On the default `dev`
 branch, Release validation caches the packaging JDK probe and each packaging job saves
 its Gradle dependencies. Screenshots and release tags restore caches read-only.
 
-A separate reporting runner, with no source checkout, writes the required statuses to
-the reviewed head from job results. A changed head, base revision, or target branch
+The reporting runner checks out its script from the commit that defines the trusted workflow
+and writes the required statuses to the reviewed head from job results. A changed head, base revision, or target branch
 cannot receive a successful status from that run. If the base moves after the status
 is posted, GitHub branch protection must require the branch to be up to date before merging.
 Manual workflow job checks alone do not satisfy PR branch protection, which is why the
@@ -106,9 +106,8 @@ screenshots then run in parallel, and publication requires all three to pass. Fa
 validation uploads test, Detekt, and shrinking logs for diagnosis. The release queue preserves
 waiting runs (up to GitHub's 100-pending-run queue limit); Dev and Stable publication is serialized.
 
-Release preparation and validation restore separate Kotlin script dependency caches.
-Successful default-branch runs can save those caches. Publishing restores the Maven
-repository artifact from validation in the same run. Gradle validation retries Maven Central
+CI and release scripts use Bash and Python's standard library on the Ubuntu runners.
+Gradle validation retries Maven Central
 HTTP 429 errors after waits of 60, 120 and 240 seconds. In CI, Gradle plugin resolution
 checks Google Cloud’s Maven Central mirror before the Gradle Plugin Portal.
 
@@ -126,26 +125,16 @@ Linux containers do not validate native Windows/macOS behavior.
 
 ## Local checks
 
-The [scripts index](../scripts/README.md) lists CI, release, and test entry points.
+The [workflow scripts index](../.github/scripts/README.md) lists the CI, release, and test entry points.
+
+Run from the repository root:
 
 ```bash
-./gradlew spotlessApply detekt test
-./gradlew :app:smokeTestPackagedRuntime
-./scripts/release/merge_nucleus_release.main.kts self-test
-./scripts/release/publish_linux_repositories.main.kts self-test
-./scripts/release/check_release_validation.main.kts self-test
-./scripts/tests/test_ci_authorization.main.kts
-./scripts/tests/test_release_workflow.main.kts
-./scripts/tests/test_github_client.main.kts
-./scripts/ci/check_workflows.sh
+python3 -B -m unittest discover -s .github/scripts/tests
+./.github/scripts/ci/check_workflows.sh
 ```
 
-CI verifies formatting; local Gradle `build` applies it. Git and Spotless both enforce LF.
-`check_workflows.sh` checks workflow expressions and embedded shell syntax with actionlint
-and checks `scripts/release/*.sh` with ShellCheck (install ShellCheck locally; it is included
-on the Ubuntu CI runner). If
-actionlint is absent on Linux x64, the script downloads version 1.7.12 and verifies its pinned
-SHA-256 checksum. On other platforms, install actionlint first. PR CI runs this before Gradle;
+The linter checks workflow expressions and Bash scripts with actionlint and ShellCheck.
 Release runs it during preparation. The script masks the exact `queue: max` and
 `cache-mode: read` settings in the lint input until actionlint supports them.
 

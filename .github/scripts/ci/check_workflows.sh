@@ -31,4 +31,4 @@ for workflow in .github/workflows/*.yml; do
   sed -e 's/^  queue: max$/  # queue: max/' -e 's/^cache-mode: read$/# cache-mode: read/' "$workflow" | "$lint" -color -
 done
 
-shellcheck scripts/ci/*.sh scripts/release/*.sh
+shellcheck .github/scripts/{ci,release}/*.sh
