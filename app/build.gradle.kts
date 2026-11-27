@@ -408,8 +408,12 @@ val collectProguardRules =
         }
     }
 
+val iconAssets = layout.projectDirectory.dir("assets/icons")
+
 // Installer platform detection falls back to Linux for unknown hosts.
 if (providers.systemProperty("os.name").orNull.equals("Linux", ignoreCase = true)) {
+    val extensionSource = layout.projectDirectory.dir("packaging/linux/gnomeExtension")
+    val extensionDevScripts = extensionSource.dir("scripts/dev")
     tasks.register<Exec>("runGnomePanel") {
         val appRun = tasks.named<JavaExec>("run")
         group = "application"
@@ -422,7 +426,7 @@ if (providers.systemProperty("os.name").orNull.equals("Linux", ignoreCase = true
             environment("AZKAR_EXTENSION", resources.resolve("gnome/azkar-prayers@azkar.app"))
             workingDir(run.workingDir)
             commandLine(
-                listOf(rootProject.file("scripts/dev/run-gnome-panel"), run.javaLauncher.get().executablePath) +
+                listOf(extensionDevScripts.file("run-gnome-panel").asFile, run.javaLauncher.get().executablePath) +
                     run.allJvmArgs +
                     listOf("-cp", run.classpath.asPath, desktopMainClass) +
                     run.args.orEmpty(),
@@ -436,15 +440,15 @@ if (providers.systemProperty("os.name").orNull.equals("Linux", ignoreCase = true
         dependsOn(resources)
         doFirst {
             commandLine(
-                rootProject.file("scripts/dev/capture-gnome-panel"),
+                extensionDevScripts.file("capture-gnome-panel").asFile,
                 resources.get().destinationDir.resolve("gnome/azkar-prayers@azkar.app"),
-                layout.projectDirectory.dir("src/preview/images").asFile,
+                extensionSource.dir("previews").asFile,
             )
         }
     }
-    val linuxIcon = rootProject.layout.projectDirectory.file("assets/icons/azkar.png")
+    val linuxIcon = iconAssets.file("azkar.png")
     val panelIcons =
-        fileTree(rootProject.file("assets/icons/lucide")) {
+        fileTree(iconAssets.dir("lucide").asFile) {
             include(
                 "bell.svg",
                 "bell-off.svg",
@@ -458,7 +462,6 @@ if (providers.systemProperty("os.name").orNull.equals("Linux", ignoreCase = true
         }
     val iconShape = Regex("<(path|line|rect|circle|polyline|polygon|ellipse) ")
     val extensionVersion = version.toString()
-    val extensionSource = layout.projectDirectory.dir("packaging/linux/gnomeExtension")
     val extensionResources = extensionSource.dir("resources")
     val extensionOutput = layout.buildDirectory.dir("generated/gnomeExtension")
     val extensionWorkspace = layout.buildDirectory.dir("gnomeExtension")
@@ -594,7 +597,7 @@ nucleus.application {
         vendor = "Azkar"
         artifactName = $$"azkar-$$fullVersion-$${installerPlatform.id}.${ext}"
         linux {
-            iconFile.set(project.file("../assets/icons/azkar.png"))
+            iconFile.set(iconAssets.file("azkar.png").asFile)
             packageName = "azkar"
             startupWMClass = desktopMainClass.replace('.', '-')
             debMaintainer = "Azkar <support@azkar.app>"
@@ -604,11 +607,11 @@ nucleus.application {
             afterRemove.set(project.file("packaging/linux/gnomeExtension/scripts/gnome-extension-after-remove.sh"))
         }
         windows {
-            iconFile.set(project.file("../assets/icons/azkar.ico"))
+            iconFile.set(iconAssets.file("azkar.ico").asFile)
             packageName = "azkar"
             nsis {
-                installerIcon.set(project.file("../assets/icons/azkar.ico"))
-                uninstallerIcon.set(project.file("../assets/icons/azkar.ico"))
+                installerIcon.set(iconAssets.file("azkar.ico").asFile)
+                uninstallerIcon.set(iconAssets.file("azkar.ico").asFile)
                 shortcutName = "Azkar"
                 createDesktopShortcut = true
                 createStartMenuShortcut = true
@@ -616,9 +619,9 @@ nucleus.application {
         }
         macOS {
             packageVersion = macPackageVersion(fullVersion)
-            iconFile.set(project.file("../assets/icons/azkar.icns"))
+            iconFile.set(iconAssets.file("azkar.icns").asFile)
             dmg {
-                icon.set(project.file("../assets/icons/azkar.icns"))
+                icon.set(iconAssets.file("azkar.icns").asFile)
             }
             bundleID = "com.azkar.app"
             minimumSystemVersion = "13.0"

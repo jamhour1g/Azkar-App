@@ -37,4 +37,4 @@ dbus-run-session -- bash -eu -s -- "$uuid" <<'SESSION'
 SESSION
 
 mkdir -p "$output"
-cp "$scratch/gnome-prayer-schedule.png" "$scratch/gnome-prayer-actions.png" "$output/"
+cp "$scratch"/gnome-prayer-{schedule,actions,pause-options}.png "$output/"

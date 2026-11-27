@@ -64,7 +64,8 @@ fun queuePreview(
     progress: ReminderQueueProgress,
     reading: QueueReading,
 ): QueuePreview {
-    val now = LocalDateTime.ofInstant(instant, zone)
+    val after = config.activePauseUntil(instant)?.minusNanos(1) ?: instant
+    val now = LocalDateTime.ofInstant(after, zone)
     return QueuePreview(
         enabled = config.enabled,
         hasSources = reading.orderedIds.isNotEmpty(),

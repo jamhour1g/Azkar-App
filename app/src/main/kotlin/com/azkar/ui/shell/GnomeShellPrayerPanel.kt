@@ -16,6 +16,7 @@ import com.azkar.generated.resources.taskbarPositionManual
 import com.azkar.generated.resources.taskbarPositionTip
 import com.azkar.generated.resources.title
 import com.azkar.generated.resources.todayPrayerTimes
+import com.azkar.ui.notifications.ReminderPauseDuration
 import com.azkar.ui.theme.DarkAzkarColors
 import com.azkar.ui.theme.LightAzkarColors
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -109,6 +110,15 @@ private fun shellPanelSnapshot(
                 .orEmpty(),
         reminders = tray.menu.reminders.label,
         remindersPaused = tray.menu.remindersPaused,
+        pauseMenu =
+            tray.menu.pauseMenu?.let { menu ->
+                ShellPauseMenu(
+                    menu.label,
+                    menu.timedChoices.map { (duration, entry) ->
+                        ShellTimedPause(duration.shellAction, entry.label)
+                    },
+                )
+            },
         quit = tray.menu.quit.label,
         close = stringResource(Res.string.desktopPrayerCloseSchedule),
         automatic = stringResource(Res.string.taskbarPositionAutomatic),
@@ -147,11 +157,27 @@ private data class ShellPanelSnapshot(
     val visibility: String,
     val reminders: String,
     val remindersPaused: Boolean,
+    val pauseMenu: ShellPauseMenu? = null,
     val quit: String,
     val close: String,
     val automatic: String,
     val manual: String,
     val dragHint: String,
+)
+
+private val ReminderPauseDuration.shellAction: String
+    get() = "pause-$minutes"
+
+@Serializable
+private data class ShellPauseMenu(
+    val label: String,
+    val timedChoices: List<ShellTimedPause>,
+)
+
+@Serializable
+private data class ShellTimedPause(
+    val action: String,
+    val label: String,
 )
 
 @Serializable
@@ -275,7 +301,12 @@ private class ShellPanelService(
                 "visibility" -> menu.panelVisibility
                 "reminders" -> menu.reminders
                 "quit" -> menu.quit
-                else -> null
+                else ->
+                    menu.pauseMenu
+                        ?.timedChoices
+                        ?.entries
+                        ?.firstOrNull { it.key.shellAction == action }
+                        ?.value
             }
         entry?.takeIf { it.isEnabled }?.onClick?.invoke()
     }

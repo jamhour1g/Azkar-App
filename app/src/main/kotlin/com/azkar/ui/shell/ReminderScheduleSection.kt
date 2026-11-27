@@ -31,21 +31,31 @@ import com.azkar.generated.resources.reminderManagerQueueWindowEnd
 import com.azkar.generated.resources.reminderManagerQueueWindowHint
 import com.azkar.generated.resources.reminderManagerQueueWindowLabel
 import com.azkar.generated.resources.reminderManagerQueueWindowStart
+import com.azkar.generated.resources.reminderPauseChooseDuration
+import com.azkar.generated.resources.reminderPauseHint
+import com.azkar.generated.resources.trayMenuPause
+import com.azkar.generated.resources.trayMenuResume
 import com.azkar.ui.components.AzkarDayPicker
+import com.azkar.ui.components.AzkarOutlinedButton
 import com.azkar.ui.components.AzkarTimePicker
 import com.azkar.ui.components.AzkarToggleSwitch
 import com.azkar.ui.components.HintText
 import com.azkar.ui.components.SelectRow
 import com.azkar.ui.components.SettingRow
 import com.azkar.ui.components.StepperRow
+import com.azkar.ui.library.AzkarDropdown
 import com.azkar.ui.notifications.QueueCadence
 import com.azkar.ui.notifications.QueueMode
+import com.azkar.ui.notifications.ReminderPauseDuration
 import com.azkar.ui.notifications.ReminderQueueConfig
 import com.azkar.ui.notifications.ReminderScheduleEditor
 import com.azkar.ui.notifications.activeDayLabel
 import com.azkar.ui.notifications.cadenceLabel
 import com.azkar.ui.notifications.intervalLabel
 import com.azkar.ui.notifications.queueModeLabel
+import com.azkar.ui.notifications.rememberQueuePauseUntil
+import com.azkar.ui.notifications.reminderPauseDurationLabel
+import com.azkar.ui.notifications.reminderPausedUntilLabel
 import com.azkar.ui.preview.rememberPreviewReminderScheduleEditor
 import com.azkar.ui.theme.AzkarSpacing
 import com.azkar.ui.theme.AzkarTheme
@@ -106,6 +116,8 @@ internal fun ReminderScheduleCard(
             )
         }
 
+        if (config.enabled) ReminderPauseRow(config, schedule)
+
         SelectRow(
             label = stringResource(Res.string.reminderManagerQueueModeLabel),
             selected = config.mode,
@@ -130,6 +142,33 @@ internal fun ReminderScheduleCard(
         DaysRow(config = config, schedule = schedule, enabled = config.enabled)
         if (config.cadence == QueueCadence.INTERVAL) {
             WindowRow(config = config, schedule = schedule, enabled = config.enabled)
+        }
+    }
+}
+
+@Composable
+private fun ReminderPauseRow(
+    config: ReminderQueueConfig,
+    schedule: ReminderScheduleEditor,
+) {
+    val until = rememberQueuePauseUntil(config)
+    if (until == null) {
+        SettingRow(
+            label = stringResource(Res.string.trayMenuPause),
+            hint = stringResource(Res.string.reminderPauseHint),
+        ) {
+            AzkarDropdown(
+                selected = null,
+                options = ReminderPauseDuration.entries,
+                label = ::reminderPauseDurationLabel,
+                onSelect = schedule::pauseFor,
+                placeholder = stringResource(Res.string.reminderPauseChooseDuration),
+                fieldWidth = 170.dp,
+            )
+        }
+    } else {
+        SettingRow(label = reminderPausedUntilLabel(until)) {
+            AzkarOutlinedButton(text = stringResource(Res.string.trayMenuResume), onClick = schedule::resume)
         }
     }
 }

@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.use
 import com.azkar.generated.resources.Res
+import com.azkar.generated.resources.collectionsActionStepBack
 import com.azkar.generated.resources.desktopPrayerCloseSchedule
 import com.azkar.generated.resources.taskbarPositionAutomatic
 import com.azkar.generated.resources.taskbarPositionManual
@@ -197,6 +198,8 @@ internal fun WindowsTaskbarPositionMenu(
     onDismiss: () -> Unit,
     onMove: () -> Unit,
     onAutomatic: () -> Unit,
+    pauseChoicesOpen: Boolean = false,
+    onPauseChoicesChanged: (Boolean) -> Unit = {},
 ) {
     val colors = MaterialTheme.colorScheme
     val menu = content
@@ -224,15 +227,27 @@ internal fun WindowsTaskbarPositionMenu(
             border = BorderStroke(1.dp, colors.outlineVariant),
         ) {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                TaskbarMenuItem(menu.openApp, onDismiss)
-                menu.panelVisibility?.let { TaskbarMenuItem(it, onDismiss) }
-                TaskbarMenuItem(menu.reminders, onDismiss)
-                HorizontalDivider()
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TaskbarMenuItem(menu.quit, onDismiss, Modifier.weight(1f))
-                    Box(Modifier.padding(end = 14.dp)) {
-                        TaskbarPositionControls(manual, onAutomatic, onMove) { label, hovered ->
-                            hoveredLabel = hoveredTooltip(hoveredLabel, label, hovered)
+                val pauseMenu = menu.pauseMenu
+                if (pauseChoicesOpen && pauseMenu != null) {
+                    TaskbarPauseChoices(menu.pauseChoices, onDismiss, onBack = { onPauseChoicesChanged(false) })
+                } else {
+                    TaskbarMenuItem(menu.openApp, onDismiss)
+                    menu.panelVisibility?.let { TaskbarMenuItem(it, onDismiss) }
+                    if (pauseMenu == null) {
+                        TaskbarMenuItem(menu.reminders, onDismiss)
+                    } else {
+                        TaskbarMenuItem(
+                            menu.reminders.copy(label = pauseMenu.label, onClick = { onPauseChoicesChanged(true) }),
+                            trailing = AzkarIcons.ChevronRight,
+                        )
+                    }
+                    HorizontalDivider()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TaskbarMenuItem(menu.quit, onDismiss, Modifier.weight(1f))
+                        Box(Modifier.padding(end = 14.dp)) {
+                            TaskbarPositionControls(manual, onAutomatic, onMove) { label, hovered ->
+                                hoveredLabel = hoveredTooltip(hoveredLabel, label, hovered)
+                            }
                         }
                     }
                 }
@@ -242,18 +257,45 @@ internal fun WindowsTaskbarPositionMenu(
 }
 
 @Composable
+private fun TaskbarPauseChoices(
+    choices: List<TrayMenuEntry>,
+    onDismiss: () -> Unit,
+    onBack: () -> Unit,
+) {
+    TaskbarMenuItem(
+        TrayMenuEntry(stringResource(Res.string.collectionsActionStepBack), AzkarIcons.ChevronStart, onBack),
+    )
+    choices.forEach { entry ->
+        DropdownMenuItem(
+            modifier = Modifier.heightIn(min = POSITION_ACTION_HEIGHT.dp),
+            text = { Text(entry.label) },
+            enabled = entry.isEnabled,
+            onClick = {
+                onDismiss()
+                entry.onClick()
+            },
+        )
+    }
+}
+
+@Composable
 private fun TaskbarMenuItem(
     entry: TrayMenuEntry,
-    onDismiss: () -> Unit,
+    onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    trailing: ImageVector? = null,
 ) {
     DropdownMenuItem(
         modifier = modifier.heightIn(min = POSITION_ACTION_HEIGHT.dp),
         text = { Text(entry.label) },
         leadingIcon = { Icon(entry.icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+        trailingIcon =
+            trailing?.let { icon ->
+                { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) }
+            },
         enabled = entry.isEnabled,
         onClick = {
-            onDismiss()
+            onDismiss?.invoke()
             entry.onClick()
         },
     )

@@ -29,8 +29,16 @@ const snapshot = {
     ].map(([name, time]) => ({ key: name.toLowerCase(), name, time, next: name === 'Dhuhr' })),
     open: 'Open Azkar',
     visibility: 'Hide panel',
-    reminders: 'Pause reminders',
+    reminders: 'Pause until I resume',
     remindersPaused: false,
+    pauseMenu: {
+        label: 'Pause reminders',
+        timedChoices: [
+            { action: 'pause-30', label: '30 minutes' },
+            { action: 'pause-60', label: '1 hour' },
+            { action: 'pause-480', label: '8 hours' },
+        ],
+    },
     quit: 'Quit',
     close: 'Close',
     automatic: 'Automatic',
@@ -95,6 +103,10 @@ export default class PrayerPanelCapture extends PrayerPanel {
         this._toggleMenu(true, 'mouse');
         await settle();
         await capture('actions', this._actions);
+        const pause = this._actions.box.get_children().find(item => item.label?.text === snapshot.pauseMenu.label);
+        pause.setSubmenuShown(true);
+        await settle();
+        await capture('pause-options', this._actions);
         GLib.file_set_contents(`${output}/done`, '');
     }
 }

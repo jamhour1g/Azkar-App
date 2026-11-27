@@ -16,10 +16,12 @@ DEV_TAG = re.compile(r"v\d+\.\d+\.\d+-beta\.\d+(\.\d+)*", re.ASCII)
 
 RELEASE_PATHS = (
     "app/src/main", "data/src/main", "domain/src/main", "app/packaging",
+    ":(exclude)app/packaging/linux/gnomeExtension/previews",
+    ":(exclude)app/packaging/linux/gnomeExtension/scripts/dev",
     ":(exclude)app/packaging/linux/gnomeExtension/tests",
     ":(exclude)app/packaging/linux/gnomeExtension/.gitignore",
     ":(exclude)app/packaging/linux/gnomeExtension/.prettierignore",
-    "assets/icons", "assets/keys", "app/build.gradle.kts", "data/build.gradle.kts",
+    "app/assets/icons", ".github/keys", "app/build.gradle.kts", "data/build.gradle.kts",
     "domain/build.gradle.kts", "build.gradle.kts", "settings.gradle.kts", "gradle.properties",
     "gradle", "gradlew", "gradlew.bat", "build-logic/build.gradle.kts",
     "build-logic/settings.gradle.kts", "build-logic/src/main", "package.json", "pnpm-lock.yaml",

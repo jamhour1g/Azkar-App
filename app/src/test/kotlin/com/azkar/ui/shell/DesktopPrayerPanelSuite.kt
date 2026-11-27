@@ -2,10 +2,20 @@ package com.azkar.ui.shell
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import com.azkar.ui.notifications.DesktopPlatform
 import com.azkar.ui.notifications.PrayerMenuLayout
+import com.azkar.ui.notifications.ReminderPauseDuration
 import com.azkar.ui.theme.AppTypography
+import com.azkar.ui.theme.AzkarTheme
 import com.sun.jna.platform.win32.WinDef.HWND
 import de.infix.testBalloon.framework.core.testSuite
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +28,66 @@ import java.awt.Insets
 import java.awt.Point
 import java.awt.Rectangle
 import java.util.Locale
+
+private fun pauseMenuFixture(onClick: (String) -> Unit): PrayerTrayMenuContent {
+    fun action(label: String) = TrayMenuEntry(label, Icons.Filled.Close, { onClick(label) })
+    return PrayerTrayMenuContent(
+        countdown = action("Dhuhr in 2 hours").copy(isEnabled = false),
+        openApp = action("Open Azkar"),
+        reminders = action("Pause until I resume"),
+        quit = action("Quit"),
+        iconRenderProperties = trayIconRenderProperties(DesktopPlatform.LINUX),
+        pauseMenu =
+            ReminderPauseMenu(
+                label = "Pause reminders",
+                timedChoices =
+                    mapOf(
+                        ReminderPauseDuration.HALF_HOUR to action("30 minutes"),
+                        ReminderPauseDuration.ONE_HOUR to action("1 hour"),
+                        ReminderPauseDuration.EIGHT_HOURS to action("8 hours"),
+                    ),
+            ),
+    )
+}
+
+@OptIn(ExperimentalTestApi::class)
+private fun checkWindowsPauseSubmenu() {
+    val clicks = mutableListOf<String>()
+    val menu = pauseMenuFixture(clicks::add)
+    var dismissals = 0
+    runSkikoComposeUiTest(size = Size(320f, 320f)) {
+        setContent {
+            val open = remember { mutableStateOf(false) }
+            AzkarTheme(uiLocale = Locale.ENGLISH) {
+                WindowsTaskbarPositionMenu(
+                    manual = false,
+                    content = menu,
+                    onDismiss = { dismissals++ },
+                    onMove = {},
+                    onAutomatic = {},
+                    pauseChoicesOpen = open.value,
+                    onPauseChoicesChanged = { open.value = it },
+                )
+            }
+        }
+        onNodeWithText("30 minutes").assertDoesNotExist()
+        onNodeWithText("Pause reminders").performClick()
+        onNodeWithText("30 minutes").assertIsDisplayed()
+        onNodeWithText("Back").performClick()
+        onNodeWithText("30 minutes").assertDoesNotExist()
+        runOnIdle {
+            assertThat(clicks).isEmpty()
+            assertThat(dismissals).isZero()
+        }
+
+        onNodeWithText("Pause reminders").performClick()
+        onNodeWithText("8 hours").performClick()
+        runOnIdle {
+            assertThat(clicks).containsExactly("8 hours")
+            assertThat(dismissals).isEqualTo(1)
+        }
+    }
+}
 
 @Suppress("unused")
 val DesktopPrayerPanelSuite by testSuite("The desktop prayer panel") {
@@ -55,7 +125,7 @@ val DesktopPrayerPanelSuite by testSuite("The desktop prayer panel") {
                 PrayerTrayMenuContent(
                     countdown = action("Dhuhr in 2 hours").copy(isEnabled = false),
                     openApp = action("Open Azkar"),
-                    reminders = action("Pause reminders"),
+                    reminders = action("Resume reminders"),
                     quit = action("Quit"),
                     iconRenderProperties = trayIconRenderProperties(DesktopPlatform.LINUX),
                     panelVisibility = action("Hide panel"),
@@ -118,15 +188,56 @@ val DesktopPrayerPanelSuite by testSuite("The desktop prayer panel") {
                             .label,
                     ).isEqualTo(summary)
                 }
-                val buttons = nodes.filter { it.properties["label"]?.value in listOf("Pause reminders", "Quit") }
+                val buttons = nodes.filter { it.properties["label"]?.value in listOf("Resume reminders", "Quit") }
                 assertThat(buttons.map { it.id }).containsExactly(5, 7)
                 for (button in buttons) {
                     assertThat(button.properties["type"]?.value).isEqualTo("standard")
                     menu.event(button.id, "clicked", Variant(""), UInt32(0))
                 }
             }
-            assertThat(clicks).containsExactlyElementsOf(layouts.flatMap { listOf("Pause reminders", "Quit") })
+            assertThat(clicks).containsExactlyElementsOf(layouts.flatMap { listOf("Resume reminders", "Quit") })
         }
+    }
+
+    test("AppIndicator nests the reminder pause choices and routes clicks to the chosen duration") {
+        withContext(Dispatchers.Main) {
+            val clicks = mutableListOf<String>()
+            val content =
+                GnomePrayerContent(
+                    label = "Dhuhr",
+                    tray = ReminderTrayContent("Azkar", Icons.Filled.Close, {}, pauseMenuFixture(clicks::add)),
+                    menuTint = Color.White,
+                    panelVisible = true,
+                    panelLayout = PrayerMenuLayout.COMPACT,
+                )
+            val menu = GnomePrayerMenuItem(content)
+            val topLevel =
+                menu
+                    .getLayout(0, 1, emptyList())
+                    .item.children
+                    .map { it.value as GnomePrayerMenuNode }
+            assertThat(topLevel.map { it.properties["label"]?.value })
+                .containsExactly("Open Azkar", "Pause reminders", null, "Quit")
+            val submenu = topLevel.single { it.properties["label"]?.value == "Pause reminders" }
+            assertThat(submenu.properties["children-display"]?.value).isEqualTo("submenu")
+            assertThat(submenu.children).isEmpty()
+            val choices =
+                menu
+                    .getLayout(submenu.id, 1, emptyList())
+                    .item.children
+                    .map { it.value as GnomePrayerMenuNode }
+            assertThat(choices.map { it.properties["label"]?.value })
+                .containsExactly("30 minutes", "1 hour", "8 hours", "Pause until I resume")
+
+            menu.event(submenu.id, "clicked", Variant(""), UInt32(0))
+            assertThat(clicks).isEmpty()
+            menu.event(choices[1].id, "clicked", Variant(""), UInt32(0))
+            assertThat(clicks).containsExactly("1 hour")
+        }
+    }
+
+    test("the Windows panel opens and closes the reminder pause submenu without dismissing the main menu") {
+        checkWindowsPauseSubmenu()
     }
 
     test("the widget fits between Widgets and the centered taskbar controls") {

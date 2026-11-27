@@ -4,6 +4,7 @@ import androidx.compose.runtime.Stable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
+import java.time.Instant
 
 /**
  * Writes for the queue's schedule, and nothing else.
@@ -32,7 +33,15 @@ class ReminderScheduleEditor(
     private val preferences: NotificationPreferencesRepository,
 ) {
     fun setEnabled(enabled: Boolean) {
-        scope.launch { preferences.updateQueue { it.copy(enabled = enabled) } }
+        scope.launch { preferences.updateQueue { it.copy(enabled = enabled, pausedUntilEpochMillis = null) } }
+    }
+
+    internal fun pauseFor(duration: ReminderPauseDuration) {
+        scope.launch { preferences.updateQueue { it.pausedFor(duration, Instant.now()) } }
+    }
+
+    internal fun resume() {
+        scope.launch { preferences.updateQueue { it.resumedAt(Instant.now()) } }
     }
 
     fun setMode(mode: QueueMode) {

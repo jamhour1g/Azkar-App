@@ -10,6 +10,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import org.assertj.core.api.Assertions.assertThat
 import java.io.IOException
+import java.time.Instant
 
 /**
  * That every value the manager screen writes is a value the next launch reads.
@@ -32,6 +33,33 @@ import java.io.IOException
  */
 @Suppress("unused")
 val NotificationPreferencesRepositorySuite by testSuite("The notification preferences") {
+    test("a timed reminder pause survives restart with the selected deadline") {
+        withInMemorySettings { scope, store, dataStore ->
+            val preferences = NotificationPreferencesRepository(store)
+            val nextLaunch =
+                NotificationPreferencesRepository(SettingsStore(dataStore, scope)) {
+                    "/notification.mp3" to "/prayer.mp3"
+                }
+            val now = Instant.parse("2026-01-15T12:00:00Z")
+            val deadlines =
+                mapOf(
+                    ReminderPauseDuration.HALF_HOUR to Instant.parse("2026-01-15T12:30:00Z"),
+                    ReminderPauseDuration.ONE_HOUR to Instant.parse("2026-01-15T13:00:00Z"),
+                    ReminderPauseDuration.EIGHT_HOURS to Instant.parse("2026-01-15T20:00:00Z"),
+                )
+
+            for ((duration, deadline) in deadlines) {
+                preferences.updateQueue { ReminderQueueConfig().pausedFor(duration, now) }
+                nextLaunch.refresh()
+
+                val queue = nextLaunch.queue.value
+                assertThat(queue.activePauseUntil(deadline.minusMillis(1))).isEqualTo(deadline)
+                assertThat(queue.activePauseUntil(deadline)).isNull()
+                assertThat(queue.enabled).isTrue()
+            }
+        }
+    }
+
     test("the desktop prayer display defaults to on and a saved off setting survives restart") {
         withInMemorySettings { scope, store, dataStore ->
             val preferences = NotificationPreferencesRepository(store) { "/notification.mp3" to "/prayer.mp3" }

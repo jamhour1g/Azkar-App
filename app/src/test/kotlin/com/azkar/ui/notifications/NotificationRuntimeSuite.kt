@@ -50,6 +50,54 @@ import kotlin.time.Duration.Companion.milliseconds
  * on the same minute cannot turn a statement about the scheduler into a statement about the calendar.
  */
 val NotificationRuntimeSuite by testSuite("The notification scheduler") {
+    test("a reminder pause expires without replaying a slot that fell inside it") {
+        withInMemorySettings { _, store, _ ->
+            val preferences = NotificationPreferencesRepository(store) { "/notification.mp3" to "/prayer.mp3" }
+            preferences.savePrayerLocation(TEST_LOCATION)
+            preferences.silencePrayerBells()
+            val pauseStart = localInstantAt(LocalTime.of(11, 45))
+            preferences.updateQueue { TEST_QUEUE_CONFIG.pausedFor(ReminderPauseDuration.HALF_HOUR, pauseStart) }
+            val world = SchedulerWorld()
+            world.clock.set(pauseStart)
+
+            withScheduler(world, preferences) {
+                world.clock.set(localInstantAt(QUEUE_SLOT))
+                settleOnRealClock()
+                assertThat(world.publisher.notices).isEmpty()
+
+                world.clock.set(localInstantAt(LocalTime.of(12, 15)))
+                settleOnRealClock()
+                assertThat(world.publisher.notices).isEmpty()
+
+                world.clock.set(localInstantAt(QUEUE_NEXT_SLOT))
+                assertThat(world.publisher.awaitNotice()?.action).isEqualTo(NotificationAction.Remembrance(PASSAGE_ID))
+            }
+        }
+    }
+
+    test("resuming reminders early skips the missed slot and restores the original schedule") {
+        withInMemorySettings { _, store, _ ->
+            val preferences = NotificationPreferencesRepository(store) { "/notification.mp3" to "/prayer.mp3" }
+            preferences.savePrayerLocation(TEST_LOCATION)
+            preferences.silencePrayerBells()
+            val pauseStart = localInstantAt(LocalTime.of(11, 45))
+            preferences.updateQueue { TEST_QUEUE_CONFIG.pausedFor(ReminderPauseDuration.EIGHT_HOURS, pauseStart) }
+            val world = SchedulerWorld()
+            world.clock.set(pauseStart)
+
+            withScheduler(world, preferences) {
+                val resumeAt = localInstantAt(QUEUE_OPENED_AFTER_SLOT)
+                preferences.updateQueue { it.resumedAt(resumeAt) }
+                world.clock.set(resumeAt)
+                settleOnRealClock()
+                assertThat(world.publisher.notices).isEmpty()
+
+                world.clock.set(localInstantAt(QUEUE_NEXT_SLOT))
+                assertThat(world.publisher.awaitNotice()?.action).isEqualTo(NotificationAction.Remembrance(PASSAGE_ID))
+            }
+        }
+    }
+
     test("a queue slot that came due before the scheduler started is missed, and the next one is not") {
         withInMemorySettings { _, store, _ ->
             val preferences = NotificationPreferencesRepository(store)

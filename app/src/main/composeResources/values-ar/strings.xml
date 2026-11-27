@@ -10,6 +10,12 @@
     <string name="trayMenuOpen">فتح الأذكار</string>
     <string name="trayMenuPause">إيقاف التذكيرات مؤقتًا</string>
     <string name="trayMenuResume">استئناف التذكيرات</string>
+    <string name="trayMenuPauseIndefinitely">إيقاف مؤقت حتى الاستئناف يدويًا</string>
+    <string name="reminderPauseChooseDuration">المدة</string>
+    <string name="reminderPauseHint">تُستأنف التذكيرات تلقائيًا بعد انتهاء المدة المحددة.</string>
+    <string name="reminderPauseOneHour">ساعة واحدة</string>
+    <string name="reminderPauseEightHours">٨ ساعات</string>
+    <string name="reminderPausedUntil">التذكيرات متوقفة مؤقتًا حتى %1$s</string>
     <string name="trayMenuQuit">خروج</string>
     <string name="trayNextPrayerCountdown">%1$s في %2$s</string>
     <string name="previewPrayerLocation">رام الله، فلسطين</string>
