@@ -17,7 +17,7 @@ be called explicitly: `./scripts/release/kotlin.sh SCRIPT.main.kts [arguments...
 - `ci/check_workflows.sh`: validate workflow YAML, expressions, embedded shell, and release shell scripts.
 - `release/kotlin.sh`: run a Kotlin script with its matching serialization compiler plugin.
 - `release/metadata.main.kts`: `select-batch`, `resolve-version`, `latest-dev-tag`, `latest-stable-tag`, or `verify-stable-source`.
-- `release/github-release.sh`: `prepare-draft` or `publish`.
+- `release/github-release.sh`: `prepare-draft` or `publish <asset-checksums>`.
 - `release/repository-site.sh`: `import-key`, `collect-packages`, `build`, or `verify`.
 - `release/merge_nucleus_release.main.kts`: merge and validate installers and update manifests.
 - `release/publish_linux_repositories.main.kts`: build and sign the repository site.

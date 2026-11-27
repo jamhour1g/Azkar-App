@@ -114,7 +114,9 @@ and retries once after a Maven Central HTTP 429.
 Repositories contain only the newest Stable and newest Dev DEB/RPM pair. Publication
 builds a fresh signed site from those GitHub release assets, deploys it explicitly with
 Pages Actions, verifies every live file against the generated site's checksums, and
-then publishes the draft GitHub release. No package binaries are committed to Git.
+compares the GitHub draft's asset names and SHA-256 digests with the build before
+publishing. If an old asset remains on a resumed draft, remove it before retrying.
+No package binaries are committed to Git.
 See [releasing](releasing.md) for secrets and recovery.
 
 Local `act` runs cannot upload artifacts or reach publication: all CI/package uploads
