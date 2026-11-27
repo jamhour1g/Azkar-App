@@ -1,4 +1,5 @@
 #!/usr/bin/env -S kotlinc -script
+@file:Repository("https://maven-central.storage-download.googleapis.com/maven2/")
 @file:DependsOn("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0")
 @file:Import("../release/release-rules.main.kts")
 
@@ -18,11 +19,21 @@ val mocks =
             set -euo pipefail
             printf '%s\n' "${'$'}*" >> "${'$'}MOCK_LOG"
             if [[ "${'$'}1" == api ]]; then
-              if [[ "${'$'}*" == *generate-notes* ]]; then echo 'Release notes';
-              else echo 'Unexpected GitHub CLI API request' >&2; exit 1; fi
-            elif [[ "${'$'}1 ${'$'}2" == 'release view' ]]; then
-              if [[ "${'$'}*" == *'--json isDraft'* ]]; then echo "${'$'}MOCK_DRAFT";
-              else [[ "${'$'}MOCK_EXISTS" == true ]]; fi
+              case "${'$'}*" in
+                *generate-notes*) echo 'Release notes' ;;
+                */releases/42/assets\?*) printf '%s\n' "${'$'}MOCK_ASSETS" ;;
+                */releases\?*)
+                  if [[ "${'$'}MOCK_LOOKUP_FAILURE" == true ]]; then
+                    echo 'GitHub API unavailable' >&2
+                    exit 1
+                  fi
+                  echo '[]'
+                  if [[ "${'$'}MOCK_EXISTS" == true ]]; then
+                    jq -nc --arg tag "${'$'}RELEASE_TAG" --argjson draft "${'$'}MOCK_DRAFT" \
+                      '[{tag_name: ${'$'}tag, id: 42, draft: ${'$'}draft}]'
+                  fi ;;
+                *) echo 'Unexpected GitHub CLI API request' >&2; exit 1 ;;
+              esac
             fi
             """.trimIndent(),
         "metadata.main.kts" to
@@ -109,7 +120,8 @@ fun runScript(
                     listOf(scripts.resolve("kotlin.sh").toString(), scripts.resolve(script).toString(), command)
                 } else {
                     // Copy shell entry points so their sibling metadata command can be mocked.
-                    listOf("bash", Files.copy(scripts.resolve(script), root.resolve(script)).toString(), command)
+                    listOf("bash", Files.copy(scripts.resolve(script), root.resolve(script)).toString(), command) +
+                        if (command == "publish") listOf("expected-assets") else emptyList()
                 },
             ).directory(root.toFile())
                 .redirectErrorStream(true)
@@ -132,6 +144,8 @@ fun runScript(
                 "MOCK_ANCESTOR_EXIT" to "0",
                 "MOCK_EXISTS" to "false",
                 "MOCK_DRAFT" to "true",
+                "MOCK_LOOKUP_FAILURE" to "false",
+                "MOCK_ASSETS" to "[]",
                 "MOCK_SITE" to root.resolve("mock-site").toString(),
                 "PAGE_URL" to "https://example.invalid/",
                 "CHANNEL" to "dev",
@@ -283,6 +297,17 @@ runBlocking {
         check("release upload" !in result.calls)
     }
 
+    test("failed release lookup cannot create a draft") {
+        val result =
+            runScript(
+                "github-release.sh",
+                "prepare-draft",
+                environment = mapOf("MOCK_LOOKUP_FAILURE" to "true"),
+            )
+        check(result.exit != 0 && "GitHub API unavailable" in result.log) { result.log }
+        check("release create" !in result.calls)
+    }
+
     test("Dev batch decisions") {
         val previous = Release("v1.2.4-beta.23.1")
         val cases =
@@ -409,19 +434,48 @@ runBlocking {
         }
     }
 
+    val assetDigest = "a".repeat(64)
+    val expectedAssets = mapOf("expected-assets" to "$assetDigest  installer.deb\n")
+
+    fun asset(
+        name: String,
+        digest: String = assetDigest,
+    ): String = """{"name":"$name","state":"uploaded","digest":"sha256:$digest"}"""
+
     test("final publication labels") {
         listOf("true" to "false", "false" to "true").forEach { (prerelease, latest) ->
             val result =
                 runScript(
                     "github-release.sh",
                     "publish",
+                    files = expectedAssets,
                     environment =
                         mapOf(
+                            "MOCK_EXISTS" to "true",
+                            "MOCK_ASSETS" to "[${asset("installer.deb")}]",
                             "PRE_RELEASE" to prerelease,
                             "RELEASE_TAG" to if (prerelease == "true") "v1.2.4-beta.24" else "v1.2.4",
                         ),
                 ).succeeds()
             check("--draft=false --prerelease=$prerelease --latest=$latest" in result.calls)
+        }
+    }
+
+    test("unexpected, missing, or altered assets keep a release in draft") {
+        listOf(
+            "[${asset("installer.deb")},${asset("old-installer.deb")}]",
+            "[]",
+            "[${asset("installer.deb", "b".repeat(64))}]",
+        ).forEach { assets ->
+            val result =
+                runScript(
+                    "github-release.sh",
+                    "publish",
+                    files = expectedAssets,
+                    environment = mapOf("MOCK_EXISTS" to "true", "MOCK_ASSETS" to assets),
+                )
+            check(result.exit != 0 && "assets differ" in result.log) { result.log }
+            check("release edit" !in result.calls)
         }
     }
 

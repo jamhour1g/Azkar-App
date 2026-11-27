@@ -37,6 +37,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Check GitHub workflows
+        run: ./scripts/ci/check_workflows.sh
       - name: Set up JDK 25 for release metadata
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
@@ -60,9 +62,6 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: ./scripts/release/metadata.main.kts select-batch
 
-      - name: Check GitHub workflows
-        if: steps.batch.outputs.publish == 'true'
-        run: ./scripts/ci/check_workflows.sh
       - name: Resolve version
         id: version
         if: steps.batch.outputs.publish == 'true'
@@ -326,7 +325,9 @@ jobs:
       - name: Prepare release assets and merge architecture manifests
         env:
           APP_VERSION: ${{ needs.prepare.outputs.app_version }}
-        run: ./scripts/release/merge_nucleus_release.main.kts release-input release-assets "$APP_VERSION"
+        run: |
+          ./scripts/release/merge_nucleus_release.main.kts release-input release-assets "$APP_VERSION"
+          (cd release-assets && sha256sum -- *) > "$RUNNER_TEMP/release-asset-SHA256SUMS"
       - name: Install repository tooling
         run: sudo apt-get update && sudo apt-get install -y apt-utils createrepo-c gnupg libgl1
       - name: Import and verify Linux repository signing key
@@ -355,11 +356,13 @@ jobs:
           REPO_PASSPHRASE: ${{ secrets.LINUX_REPO_SIGNING_PASSPHRASE }}
         run: ./scripts/release/repository-site.sh build
 
-      - name: Upload expected deployed-file checksums
+      - name: Upload expected site and release asset checksums
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: repository-site-checksums
-          path: ${{ runner.temp }}/site-SHA256SUMS
+          path: |
+            ${{ runner.temp }}/site-SHA256SUMS
+            ${{ runner.temp }}/release-asset-SHA256SUMS
           if-no-files-found: error
           retention-days: 3
       - name: Upload generated Pages site
@@ -414,4 +417,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
           PRE_RELEASE: ${{ needs.prepare.outputs.prerelease }}
-        run: ./scripts/release/github-release.sh publish
+        run: ./scripts/release/github-release.sh publish expected/release-asset-SHA256SUMS
