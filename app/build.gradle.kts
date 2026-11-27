@@ -410,6 +410,8 @@ val collectProguardRules =
 
 // Installer platform detection falls back to Linux for unknown hosts.
 if (providers.systemProperty("os.name").orNull.equals("Linux", ignoreCase = true)) {
+    val extensionSource = layout.projectDirectory.dir("packaging/linux/gnomeExtension")
+    val extensionDevScripts = extensionSource.dir("scripts/dev")
     tasks.register<Exec>("runGnomePanel") {
         val appRun = tasks.named<JavaExec>("run")
         group = "application"
@@ -422,7 +424,7 @@ if (providers.systemProperty("os.name").orNull.equals("Linux", ignoreCase = true
             environment("AZKAR_EXTENSION", resources.resolve("gnome/azkar-prayers@azkar.app"))
             workingDir(run.workingDir)
             commandLine(
-                listOf(rootProject.file("scripts/dev/run-gnome-panel"), run.javaLauncher.get().executablePath) +
+                listOf(extensionDevScripts.file("run-gnome-panel").asFile, run.javaLauncher.get().executablePath) +
                     run.allJvmArgs +
                     listOf("-cp", run.classpath.asPath, desktopMainClass) +
                     run.args.orEmpty(),
@@ -436,7 +438,7 @@ if (providers.systemProperty("os.name").orNull.equals("Linux", ignoreCase = true
         dependsOn(resources)
         doFirst {
             commandLine(
-                rootProject.file("scripts/dev/capture-gnome-panel"),
+                extensionDevScripts.file("capture-gnome-panel").asFile,
                 resources.get().destinationDir.resolve("gnome/azkar-prayers@azkar.app"),
                 layout.projectDirectory.dir("src/preview/images").asFile,
             )
@@ -458,7 +460,6 @@ if (providers.systemProperty("os.name").orNull.equals("Linux", ignoreCase = true
         }
     val iconShape = Regex("<(path|line|rect|circle|polyline|polygon|ellipse) ")
     val extensionVersion = version.toString()
-    val extensionSource = layout.projectDirectory.dir("packaging/linux/gnomeExtension")
     val extensionResources = extensionSource.dir("resources")
     val extensionOutput = layout.buildDirectory.dir("generated/gnomeExtension")
     val extensionWorkspace = layout.buildDirectory.dir("gnomeExtension")
