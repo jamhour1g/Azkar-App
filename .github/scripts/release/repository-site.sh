@@ -9,7 +9,7 @@ import_key() {
   printf '%s\n' "$REPO_PRIVATE_KEY" | gpg --batch --import
   key_id="$(gpg --batch --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')"
   test -n "$key_id"
-  expected_key="$(gpg --batch --with-colons --show-keys assets/keys/azkar-repository.asc | awk -F: '$1 == "fpr" { print $10; exit }')"
+  expected_key="$(gpg --batch --with-colons --show-keys .github/keys/azkar-repository.asc | awk -F: '$1 == "fpr" { print $10; exit }')"
   test "$key_id" = "$expected_key" || { echo 'Signing key does not match the pinned repository public key.' >&2; return 1; }
   echo "$key_id" > "$RUNNER_TEMP/azkar-repo-key-id"
   gpg --batch --armor --export "$key_id" > "$RUNNER_TEMP/azkar-repo.asc"
