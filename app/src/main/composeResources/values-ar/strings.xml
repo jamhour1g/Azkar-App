@@ -620,6 +620,10 @@
     <string name="settingsPrayerCalculationTitle">الحساب</string>
     <string name="settingsDesktopPrayer">عرض مواقيت الصلاة باستخدام</string>
     <string name="settingsDesktopPrayerGnomeHint">عند اختيار إضافة جنوم، يستخدم أذكار اللوحة العادية إلى أن تصبح الإضافة متاحة. قد تحتاج إلى تسجيل الخروج والدخول مجددًا بعد تثبيت الإضافة.</string>
+    <string name="settingsExtensionBackupFailed">تعذّر على أذكار تبديل الإضافة. يمكنك المحاولة مجددًا.</string>
+    <string name="settingsExtensionConflict">يستخدم جنوم نسختك الشخصية من الإضافة. يمكنك الاحتفاظ بها أو نسخها احتياطيًا والتبديل إلى الإضافة المثبّتة مع أذكار.</string>
+    <string name="settingsExtensionPackaged">نسخ الإضافة احتياطيًا واستخدام النسخة المرفقة</string>
+    <string name="settingsExtensionSignIn">سجّل الخروج ثم ادخل مجددًا لتحميل الإضافة المرفقة.</string>
     <string name="settingsDesktopPrayerExtension">إضافة جنوم</string>
     <string name="settingsDesktopPrayerStandardPanel">اللوحة العادية</string>
     <string name="settingsDesktopPrayerTray">علبة النظام فقط</string>

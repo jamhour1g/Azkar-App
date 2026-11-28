@@ -607,6 +607,10 @@
     <string name="settingsPrayerCalculationTitle">Calculation</string>
     <string name="settingsDesktopPrayer">Show prayer times using</string>
     <string name="settingsDesktopPrayerGnomeHint">When you choose the GNOME extension, Azkar uses the standard panel until the extension is available. After installing the extension, you may need to sign out and back in.</string>
+    <string name="settingsExtensionBackupFailed">Azkar could not switch extensions. You can try again.</string>
+    <string name="settingsExtensionConflict">GNOME is using your personal copy of the extension. You can keep it or back it up and switch to the extension installed with Azkar.</string>
+    <string name="settingsExtensionPackaged">Back up and use packaged extension</string>
+    <string name="settingsExtensionSignIn">Sign out and back in to load the packaged extension.</string>
     <string name="settingsDesktopPrayerExtension">GNOME extension</string>
     <string name="settingsDesktopPrayerStandardPanel">Standard panel</string>
     <string name="settingsDesktopPrayerTray">System tray only</string>
