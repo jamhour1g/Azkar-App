@@ -7,7 +7,7 @@ import java.security.MessageDigest
 import java.util.HexFormat
 
 // The five-file legacy distribution predates the symbolic icons and version-name metadata.
-// TODO: Remove this one-time migration and its test fixture once upgrades from that distribution are no longer supported.
+// Remove this one-time migration and its test fixture when support for upgrades from this bundle ends.
 private val legacyFiles =
     mapOf(
         "azkar.png" to (12968L to "be58938ed29f6e4d243b20d84b2b7405c85bfd2063899c1db600086ce91e175e"),
