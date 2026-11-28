@@ -1,6 +1,8 @@
 package com.azkar.ui.shell
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -13,6 +15,10 @@ import com.azkar.generated.resources.settingsDesktopPrayerExtension
 import com.azkar.generated.resources.settingsDesktopPrayerStandardPanel
 import com.azkar.generated.resources.settingsDesktopPrayerTaskbar
 import com.azkar.generated.resources.settingsDesktopPrayerTray
+import com.azkar.generated.resources.settingsExtensionBackupFailed
+import com.azkar.generated.resources.settingsExtensionConflict
+import com.azkar.generated.resources.settingsExtensionPackaged
+import com.azkar.generated.resources.settingsExtensionSignIn
 import com.azkar.generated.resources.settingsPrayerPanelMenuCompact
 import com.azkar.generated.resources.settingsPrayerPanelMenuExtended
 import com.azkar.generated.resources.settingsPrayerPanelMenuHint
@@ -27,6 +33,8 @@ import com.azkar.ui.notifications.NotificationPreferencesRepository
 import com.azkar.ui.notifications.PrayerMenuLayout
 import com.azkar.ui.notifications.PrayerMenuSurface
 import com.azkar.ui.theme.AzkarSpacing
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -137,7 +145,7 @@ internal fun DesktopPrayerPanelSetting() {
                     )
                 GnomePrayerDisplay.TRAY ->
                     PrayerMenuLayoutSetting(preferences, PrayerMenuSurface.TRAY, Res.string.settingsPrayerTrayMenu)
-                GnomePrayerDisplay.EXTENSION -> Unit
+                GnomePrayerDisplay.EXTENSION -> GnomeExtensionInstallationSetting()
             }
             return
         }
@@ -159,6 +167,30 @@ internal fun DesktopPrayerPanelSetting() {
     }
     if (prayerTrayLayoutAvailable) {
         PrayerMenuLayoutSetting(preferences, PrayerMenuSurface.TRAY, Res.string.settingsPrayerTrayMenu)
+    }
+}
+
+@Composable
+private fun GnomeExtensionInstallationSetting(ioDispatcher: CoroutineDispatcher = Dispatchers.IO) {
+    val status by gnomeExtensionStatus.collectAsState()
+    val scope = rememberCoroutineScope()
+    when (status) {
+        GnomeExtensionStatus.LOCAL_OVERRIDE, GnomeExtensionStatus.BACKUP_FAILED -> {
+            val hint =
+                if (status == GnomeExtensionStatus.BACKUP_FAILED) {
+                    Res.string.settingsExtensionBackupFailed
+                } else {
+                    Res.string.settingsExtensionConflict
+                }
+            Text(stringResource(hint))
+            TextButton(
+                onClick = { scope.launch(ioDispatcher) { provisionGnomePrayerExtension(usePackagedCopy = true) } },
+            ) {
+                Text(stringResource(Res.string.settingsExtensionPackaged))
+            }
+        }
+        GnomeExtensionStatus.SIGN_IN_REQUIRED -> Text(stringResource(Res.string.settingsExtensionSignIn))
+        else -> Unit
     }
 }
 

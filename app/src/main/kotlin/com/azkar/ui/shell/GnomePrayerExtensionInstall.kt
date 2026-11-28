@@ -2,7 +2,11 @@ package com.azkar.ui.shell
 
 import com.azkar.settings.SettingsStore
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
@@ -11,7 +15,7 @@ import java.util.concurrent.TimeUnit
 private val logger = KotlinLogging.logger {}
 private const val EXTENSION_UUID = "azkar-prayers@azkar.app"
 private const val EXTENSION_DIRECTORY = "gnome-shell/extensions/$EXTENSION_UUID"
-private const val BUNDLE_MARKER = ".azkar-bundle"
+internal const val BUNDLE_MARKER = ".azkar-bundle"
 private const val METADATA = "metadata.json"
 private val extensionFiles =
     listOf("panelState.js", "extension.js", "stylesheet.css", "azkar.png", METADATA) +
@@ -31,38 +35,111 @@ private val extensionFiles =
             "visibility-off",
         ).map { "$it-symbolic.svg" }
 
-internal fun provisionGnomePrayerExtension() {
+internal enum class GnomeExtensionStatus { UNAVAILABLE, AVAILABLE, LOCAL_OVERRIDE, BACKUP_FAILED, SIGN_IN_REQUIRED }
+
+private val extensionStatus = MutableStateFlow(GnomeExtensionStatus.UNAVAILABLE)
+internal val gnomeExtensionStatus = extensionStatus.asStateFlow()
+
+@Synchronized
+internal fun provisionGnomePrayerExtension(usePackagedCopy: Boolean = false) {
     runCatching {
         val systemDirectories =
             System.getenv("XDG_DATA_DIRS")?.takeIf { it.isNotBlank() } ?: "/usr/local/share:/usr/share"
-        val systemInstalled =
-            systemDirectories.split(':').any {
-                Files.isRegularFile(Path.of(it, EXTENSION_DIRECTORY, METADATA))
-            }
-        val userDirectory = gnomeUserExtensionDirectory()
-        if (!systemInstalled && !System.getenv("APPIMAGE").isNullOrBlank()) {
-            installAppImageExtension(userDirectory)
-        }
-        if (systemInstalled || Files.isRegularFile(userDirectory.resolve(METADATA))) {
-            enableBundledExtensionOnce()
-        }
+        val bundledExtension =
+            System.getProperty("compose.application.resources.dir")?.let { Path.of(it, "gnome", EXTENSION_UUID) }
+        val status =
+            prepareGnomePrayerExtension(
+                gnomeUserDataHome(),
+                systemDirectories.split(':').filter { it.isNotBlank() }.map(Path::of),
+                bundledExtension,
+                isAppImage = !System.getenv("APPIMAGE").isNullOrBlank(),
+                usePackagedCopy = usePackagedCopy,
+            )
+        extensionStatus.value = status
+        if (status != GnomeExtensionStatus.UNAVAILABLE) enableBundledExtensionOnce()
     }.onFailure {
+        if (usePackagedCopy) extensionStatus.value = GnomeExtensionStatus.BACKUP_FAILED
         logger.debug(it) { "Could not set up the bundled GNOME prayer extension" }
     }
 }
 
-private fun gnomeUserExtensionDirectory(): Path {
-    val dataHome =
-        System.getenv("XDG_DATA_HOME")?.takeIf { it.isNotBlank() }?.let(Path::of)
-            ?: Path.of(System.getProperty("user.home"), ".local", "share")
-    return dataHome.resolve(EXTENSION_DIRECTORY)
+private fun gnomeUserDataHome(): Path =
+    System.getenv("XDG_DATA_HOME")?.takeIf { it.isNotBlank() }?.let(Path::of)
+        ?: Path.of(System.getProperty("user.home"), ".local", "share")
+
+internal fun prepareGnomePrayerExtension(
+    dataHome: Path,
+    systemDataDirectories: List<Path>,
+    bundledExtension: Path?,
+    isAppImage: Boolean,
+    usePackagedCopy: Boolean = false,
+): GnomeExtensionStatus {
+    val userExtension = dataHome.resolve(EXTENSION_DIRECTORY)
+    val systemExtension =
+        systemDataDirectories.asSequence().map { it.resolve(EXTENSION_DIRECTORY) }.firstOrNull {
+            Files.isRegularFile(it.resolve(METADATA))
+        }
+    if (systemExtension == null) {
+        if (isAppImage && bundledExtension != null) {
+            installAppImageExtension(bundledExtension, userExtension)
+        }
+        val available = Files.isRegularFile(userExtension.resolve(METADATA))
+        return if (available) GnomeExtensionStatus.AVAILABLE else GnomeExtensionStatus.UNAVAILABLE
+    }
+    val packageOwnsExtension = !isAppImage && bundledExtension != null && Files.exists(bundledExtension)
+    val hasOverride = Files.isDirectory(userExtension) && !Files.isSameFile(userExtension, systemExtension)
+    return if (packageOwnsExtension && hasOverride &&
+        Files.isSameFile(systemExtension, bundledExtension)
+    ) {
+        resolveUserExtension(userExtension, systemExtension, usePackagedCopy)
+    } else {
+        GnomeExtensionStatus.AVAILABLE
+    }
 }
 
-private fun installAppImageExtension(destination: Path) {
-    val resources = System.getProperty("compose.application.resources.dir") ?: return
-    val source = Path.of(resources, "gnome", EXTENSION_UUID)
+private fun resolveUserExtension(
+    userExtension: Path,
+    systemExtension: Path,
+    usePackagedCopy: Boolean,
+): GnomeExtensionStatus {
+    if (extensionFiles.any { !Files.isRegularFile(systemExtension.resolve(it)) }) return GnomeExtensionStatus.AVAILABLE
+    val backups = userExtension.parent.parent.resolve("azkar-extension-backups")
+    // After migration, a restored override is an explicit user choice.
+    val migrate = usePackagedCopy || (!hasExtensionBackup(backups) && isAzkarUserExtension(userExtension))
+    return if (migrate) {
+        backUpUserExtension(userExtension, backups)
+        GnomeExtensionStatus.SIGN_IN_REQUIRED
+    } else {
+        GnomeExtensionStatus.LOCAL_OVERRIDE
+    }
+}
+
+private fun hasExtensionBackup(backups: Path): Boolean =
+    Files.exists(backups) && Files.list(backups).use { it.findAny().isPresent }
+
+private fun backUpUserExtension(
+    userExtension: Path,
+    backups: Path,
+) {
+    Files.createDirectories(backups)
+    val backup = Files.createTempDirectory(backups, "backup-")
+    val savedExtension =
+        try {
+            Files.move(userExtension, backup.resolve(userExtension.fileName), ATOMIC_MOVE)
+        } catch (failure: IOException) {
+            Files.deleteIfExists(backup)
+            throw failure
+        }
+    logger.info { "Backed up GNOME prayer extension to $savedExtension. Sign in again to load the system copy." }
+}
+
+private fun installAppImageExtension(
+    source: Path,
+    destination: Path,
+) {
     val marker = destination.resolve(BUNDLE_MARKER)
-    val managed = Files.exists(marker) || Files.notExists(destination.resolve(METADATA))
+    if (Files.isSymbolicLink(destination)) return
+    val managed = Files.isRegularFile(marker, NOFOLLOW_LINKS) || Files.notExists(destination.resolve(METADATA))
     if (!managed || extensionFiles.any { !Files.isRegularFile(source.resolve(it)) }) return
     Files.createDirectories(destination)
     Files.writeString(marker, "")
